@@ -1164,7 +1164,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 10
 
-            # Table: eg_port_forward_tbl (default: nop; size: < 2048 < 8192)
+            # Table: eg_port_forward_tbl (default: nop; size: < 2048)
             print "Configuring eg_port_forward_tbl"
             if RANGE_SUPPORT == False:
                 self.configure_eg_port_forward_tbl()
@@ -1401,7 +1401,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     (self.sess_hdl, self.dev_tgt, entry.match_spec)
 
     def configure_eg_port_forward_tbl(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num=27+852*2=1731 < 2048 < 27+852*8=6843 < 8192)
+        # Table: eg_port_forward_tbl (default: nop; size: 21+2*server_physical_num+32*spine_physical_num*server_physical_num=89 < 2048)
         tmp_client_sids = [0, self.spineswitch_sid]
         tmp_server_sids = [0] + self.server_sids
         for is_cached in cached_list:
@@ -1422,7 +1422,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     for tmp_server_sid in tmp_server_sids: # Only work for NETCACHE_GETREQ_POP
                                         # is_lastclone_for_pktloss should be 0 for GETREQ_INSWITCH
                                         if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and tmp_server_sid != 0:
-                                            # size: 32*client_physical_num*server_physical_num=128 < 32*8*8=2048
+                                            # size: 32*spine_physical_num*server_physical_num=64
                                             # NOTE: tmp_client_sid != 0 to prepare for cache hit; tmp_server_sid != 0 to prepare for cache pop (clone last NETCACHE_GETREQ_POP as GETREQ to server)
                                             matchspec0 = distcacheleaf_eg_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = GETREQ_INSWITCH,
@@ -1464,8 +1464,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         # is_cached=0 (no inswitch_hdr), is_hot=0 (not access CM), is_report=0 (not access BF), is_latest=0, is_deleted=0, tmp_client_sid=0 (no inswitch_hdr), tmp_server_sid!=0 for NETCACHE_GETREQ_POP
+                                        # size: 2*server_physical_num=4
                                         if is_cached == 0 and is_hot == 0 and is_report == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and tmp_server_sid != 0:
-                                            # size: 2*server_physical_num = 4 < 16
                                             matchspec0 = distcacheleaf_eg_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = NETCACHE_GETREQ_POP,
                                                 inswitch_hdr_is_cached = is_cached,
@@ -1636,7 +1636,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_eg_port_forward_tbl_with_range(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num+2*server_physical_num=27+854*2=1735 < 2048 < 21+854*8=6859 < 8192)
+        # Table: eg_port_forward_tbl (default: nop; size: 21+4*server_physical_num+32*spine_physical_num*server_physical_num=93 < 2048)
         tmp_client_sids = [0, self.spineswitch_sid]
         tmp_server_sids = [0] + self.server_sids
         for is_cached in cached_list:
@@ -1659,7 +1659,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             # is_lastclone_for_pktloss and is_last_scansplit should be 0 for GETREQ_INSWITCH
                                             # NOTE: tmp_client_sid != 0 to prepare for cache hit; tmp_server_sid != 0 to prepare for cache pop (clone last NETCACHE_GETREQ_POP as GETREQ to server)
                                             if is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid != 0 and tmp_client_sid != 0:
-                                                # size: 32*client_physical_num*server_physical_num=128 < 32*8*8=2048
+                                                # size: 32*spine_physical_num*server_physical_num=64
                                                 matchspec0 = distcacheleaf_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = GETREQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
@@ -1701,8 +1701,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=0 (no inswitch_hdr), is_hot=0 (not access CM), is_report=0 (not access BF), is_latest=0, is_deleted=0, tmp_client_sid=0 (no inswitch_hdr), tmp_server_sid!=0 for NETCACHE_GETREQ_POP
+                                            # size: 2*server_physical_num
                                             if is_cached == 0 and is_hot == 0 and is_report == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_last_scansplit == 0 and tmp_server_sid != 0:
-                                                # size: 2*server_physical_num = 4 < 16
                                                 matchspec0 = distcacheleaf_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = NETCACHE_GETREQ_POP,
                                                     inswitch_hdr_is_cached = is_cached,
@@ -1825,7 +1825,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_netcache_delreq_seq_cached(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                             # is_cached=0 (no inswitch_hdr after entering egress pipeline), is_hot, is_latest, is_deleted, client_sid, is_lastclone_for_pktloss must be 0 for SCANREQ_SPLIT
-                                            # size: 2*server_physical_num=4 < 2*8=16
+                                            # size: 2*server_physical_num=4
                                             if is_cached == 0 and is_hot == 0 and is_report == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid != 0:
                                                 matchspec0 = distcacheleaf_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = SCANREQ_SPLIT,

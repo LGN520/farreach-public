@@ -228,7 +228,7 @@ control ingress {
 
 	/* else if meta.need_recirculate == 0 */
 
-	// Stage 1
+	// Stage 1~2
 #ifndef RANGE_SUPPORT
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
@@ -238,15 +238,15 @@ control ingress {
 	// NOTE: match op_hdr.globalswitchidx as spineswitchidx
 	apply(cache_lookup_tbl); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
 
-	// Stage 2
+	// Stage 3
 	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 	apply(snapshot_flag_tbl); // for snapshot (access inswitch_hdr.snapshot_flag)
 
-	// Stage 3
+	// Stage 4
 	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
-	// Stage 4~5 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
+	// Stage 5~6 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 	// NOTE: we reserve two stages for partition_tbl now as range matching needs sufficient TCAM
 	// NOTE: change op_hdr.globalswitchidx as leafswitchidx
 #ifdef RANGE_SUPPORT
@@ -255,12 +255,12 @@ control ingress {
 	apply(hash_partition_tbl);
 #endif
 
-	// Stage 6
+	// Stage 7
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
 
-	// Stage 7
+	// Stage 8
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
 	apply(ig_port_forward_tbl); // update op_hdr.optype
 }

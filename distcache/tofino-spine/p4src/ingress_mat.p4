@@ -80,7 +80,7 @@ table set_hot_threshold_tbl {
 	size: 1;
 }
 
-// Stage 1
+// Stage 1~2
 
 /*action reset_is_wrong_pipeline() {
 	modify_field(inswitch_hdr.is_wrong_pipeline, 0);
@@ -112,7 +112,8 @@ action uncached_action() {
 	modify_field(inswitch_hdr.is_cached, 0);
 }
 
-@pragma stage 1
+@pragma stage 1 16384
+@pragma stage 2
 table cache_lookup_tbl {
 	reads {
 		op_hdr.keylolo: exact;
@@ -131,13 +132,13 @@ table cache_lookup_tbl {
 	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
 }
 
-// Stage 2
+// Stage 3
 
 action hash_for_seq() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
 }
 
-@pragma stage 2
+@pragma stage 3
 table hash_for_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -150,7 +151,7 @@ table hash_for_seq_tbl {
 	size: 2;
 }
 
-// Stage 3
+// Stage 4
 
 /*action set_client_sid(client_sid, eport) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
@@ -165,7 +166,7 @@ action set_client_sid(client_sid) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
 }
 
-@pragma stage 3
+@pragma stage 4
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -192,7 +193,7 @@ counter ipv4_forward_counter {
 }
 #endif
 
-@pragma stage 3
+@pragma stage 4
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -206,15 +207,15 @@ table ipv4_forward_tbl {
 	size: 64;
 }
 
-// Stage 4~5
+// Stage 5~6
 
 #ifdef RANGE_SUPPORT
 action range_partition(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
-//@pragma stage 4 2048
-//@pragma stage 5
+//@pragma stage 5 2048
+//@pragma stage 6
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -232,8 +233,8 @@ action hash_partition(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
-@pragma stage 4
-@pragma stage 5
+//@pragma stage 5 2048
+//@pragma stage 6
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -248,7 +249,7 @@ table hash_partition_tbl {
 }
 #endif
 
-// Stage 6
+// Stage 7
 
 #ifdef RANGE_SUPPORT
 action range_partition_for_scan_endkey(end_globalswitchidx_plus_one) {
@@ -257,7 +258,7 @@ action range_partition_for_scan_endkey(end_globalswitchidx_plus_one) {
 	subtract(split_hdr.max_scanswitchnum, end_globalswitchidx_plus_one, op_hdr.globalswitchidx);
 }
 
-@pragma stage 6
+@pragma stage 7
 table range_partition_for_scan_endkey_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -273,14 +274,14 @@ table range_partition_for_scan_endkey_tbl {
 }
 #endif
 
-// Stage 7
+// Stage 8
 
 action sample() {
 	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2); // WRONG: we should not sample key
 	modify_field_rng_uniform(inswitch_hdr.is_sampled, 0, 1); // generate a random value in [0, 1] to sample packet
 }
 
-@pragma stage 7
+@pragma stage 8
 table sample_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -354,7 +355,7 @@ counter ig_port_forward_counter {
 }
 #endif
 
-@pragma stage 7
+@pragma stage 8
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;

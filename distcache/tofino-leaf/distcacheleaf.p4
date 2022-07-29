@@ -197,24 +197,24 @@ control ingress {
 	apply(spineselect_tbl); // forward requests from client to spine switch
 	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 
-	// Stage 3
+	// Stage 3~4
+	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
+	apply(hash_for_bf1_tbl);
 	// IMPORTANT: to save TCAM, we do not match op_hdr.optype in cache_lookup_tbl 
 	// -> so as long as op_hdr.key matches an entry in cache_lookup_tbl, inswitch_hdr.is_cached must be 1 (e.g., CACHE_EVICT_LOADXXX)
 	// -> but note that if the optype does not have inswitch_hdr, is_cached of 1 will be dropped after entering egress pipeline, and is_cached is still 0 (e.g., SCANREQ_SPLIT)
 	apply(cache_lookup_tbl); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
-	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
-	apply(hash_for_bf1_tbl);
 
-	// Stage 4
+	// Stage 5
 	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
 	apply(hash_for_bf2_tbl);
 
-	// Stage 5
+	// Stage 6
 	apply(hash_for_bf3_tbl);
 	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
-	// Stage 6~7 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
+	// Stage 7~8 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 	// NOTE: we reserve two stages for partition_tbl now as range matching needs sufficient TCAM
 #ifdef RANGE_SUPPORT
 	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
@@ -222,12 +222,12 @@ control ingress {
 	apply(hash_partition_tbl);
 #endif
 
-	// Stage 8
+	// Stage 9
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
 
-	// Stage 9
+	// Stage 10
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
 	apply(ig_port_forward_tbl); // update op_hdr.optype (update egress_port for NETCACHE_VALUEUPDATE)
 }
@@ -276,10 +276,14 @@ control egress {
 	apply(update_valhi2_tbl);
 
 	// Stage 5
+	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
 	apply(update_vallo4_tbl);
 	apply(update_valhi4_tbl);
+
+	// Stage 6~9
+	apply(eg_port_forward_tbl); // including scan forwarding
 
 	// Stage 6
 	apply(update_vallo5_tbl);
@@ -295,14 +299,12 @@ control egress {
 	apply(update_valhi8_tbl);
 
 	// Stage 8
-	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 	apply(update_vallo9_tbl);
 	apply(update_valhi9_tbl);
 	apply(update_vallo10_tbl);
 	apply(update_valhi10_tbl);
 
 	// Stage 9
-	apply(eg_port_forward_tbl); // including scan forwarding
 	// NOTE: Comment val11 and val12 in debug mode to save resources for eg_port_forward_counter -> you need to disable debug mode in evaluation
 #ifndef DEBUG
 	apply(update_vallo11_tbl);

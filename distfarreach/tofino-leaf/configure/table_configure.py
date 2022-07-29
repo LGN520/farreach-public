@@ -1329,7 +1329,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 10
 
-            # Table: eg_port_forward_tbl (default: nop; size: < 2048 < 8192)
+            # Table: eg_port_forward_tbl (default: nop; size: < 2048)
             print "Configuring eg_port_forward_tbl"
             if RANGE_SUPPORT == False:
                 self.configure_eg_port_forward_tbl()
@@ -1585,7 +1585,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     (self.sess_hdl, self.dev_tgt, entry.match_spec)
 
     def configure_eg_port_forward_tbl(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num=27+852*2=1731 < 2048 < 27+852*8=6843 < 8192)
+        # Table: eg_port_forward_tbl (default: nop; size: 131+340*spine_physical_num=471 < 2048)
         tmp_client_sids = [0, self.spineswitch_sid]
         for is_cached in cached_list:
             for is_hot in hot_list:
@@ -1606,7 +1606,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         for is_case1 in case1_list:
                                             # is_lastclone_for_pktloss, snapshot_flag, and is_case1 should be 0 for GETREQ_INSWITCH
                                             if is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and tmp_client_sid != 0:
-                                                # size: 64*client_physical_num=128 < 64*8=512
+                                                # size: 48*spine_physical_num=48
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = GETREQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
@@ -1698,7 +1698,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_server_inswitch_to_getres(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                             # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_LATEST_SEQ_INSWITCH
-                                            # size: 128 -> 2
+                                            # size: 48 + 2 = 50
                                             #if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
                                             if is_hot == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
@@ -1796,7 +1796,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_inswitch_to_getres(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                             # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_DELETED_SEQ_INSWITCH
-                                            # size: 128 -> 2
+                                            # size: 48 + 2 = 50
                                             #if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
                                             if is_hot == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
@@ -1907,7 +1907,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                 pass
                                             # is_lastclone_for_pktloss should be 0 for PUTREQ_INSWITCH
-                                            # size: 512*client_physical_num=1024 < 512*8 = 4096
+                                            # size: 192*spine_physical_num=192
                                             if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = PUTREQ_SEQ_INSWITCH,
@@ -1966,8 +1966,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for PUTREQ_SEQ_INSWITCH_CASE1
-                                            # size: 4*client_physical_num=8 < 4*8=32
-                                            if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0:
+                                            # size: 2*spine_physical_num=2
+                                            # TODO: check tmp_client_sid != 0
+                                            if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0 and tmp_client_sid != 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = PUTREQ_SEQ_INSWITCH_CASE1,
                                                     inswitch_hdr_is_cached = is_cached,
@@ -1991,7 +1992,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_hot (cm_predicate=1), is_lastclone_for_pktloss should be 0 for DELREQ_INSWITCH
-                                            # size: 256*client_physical_num=512 < 256*8=2048
+                                            # size: 96*spine_physical_num=96
                                             if is_hot == 0 and is_lastclone_for_pktloss == 0 and tmp_client_sid != 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = DELREQ_SEQ_INSWITCH,
@@ -2040,8 +2041,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for DELREQ_SEQ_INSWITCH_CASE1
-                                            # size: 16*client_physical_num=32 < 16*8=128
-                                            if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0:
+                                            # size: 2*spine_physical_num=2
+                                            # TODO: check tmp_client_sid != 0
+                                            if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0 and tmp_client_sid != 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = DELREQ_SEQ_INSWITCH_CASE1,
                                                     inswitch_hdr_is_cached = is_cached,
@@ -2229,7 +2231,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 pass
 
     def configure_eg_port_forward_tbl_with_range(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num+2*server_physical_num=27+854*2=1735 < 2048 < 21+854*8=6859 < 8192)
+        # Table: eg_port_forward_tbl (default: nop; size: 131+340*spine_physical_num+2*server_physical_num=475 < 2048)
         tmp_client_sids = [0, self.spineswitch_sid]
         tmp_server_sids = [0] + self.server_sids
         for is_cached in cached_list:
@@ -2254,7 +2256,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     # is_lastclone_for_pktloss, snapshot_flag, and is_case1 should be 0 for GETREQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
                                                     if is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
-                                                        # size: 64*client_physical_num=128 < 64*8=512
+                                                        # size: 48*spine_physical_num=48
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                             op_hdr_optype = GETREQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
@@ -2354,7 +2356,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                     # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_LATEST_SEQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size: 128 -> 2
+                                                    # size: 48 + 2 = 50
                                                     #if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
                                                     if is_hot == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
@@ -2464,7 +2466,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                     # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_DELETED_SEQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size: 128 -> 2
+                                                    # size: 50
                                                     #if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
                                                     if is_hot == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
@@ -2587,7 +2589,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         pass
                                                     # is_lastclone_for_pktloss should be 0 for PUTREQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size: 512*client_physical_num=1024 < 512*8 = 4096
+                                                    # size: 192*spine_physical_num=192
                                                     if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                             op_hdr_optype = PUTREQ_SEQ_INSWITCH,
@@ -2649,8 +2651,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for PUTREQ_SEQ_INSWITCH_CASE1
                                                     # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size: 4*client_physical_num=8 < 4*8=32
-                                                    if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                    # size: 2*spine_physical_num=2
+                                                    # TODO: check tmp_client_sid != 0
+                                                    if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                             op_hdr_optype = PUTREQ_SEQ_INSWITCH_CASE1,
                                                             inswitch_hdr_is_cached = is_cached,
@@ -2677,7 +2680,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_hot (cm_predicate=1), is_lastclone_for_pktloss should be 0 for DELREQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size: 256*client_physical_num=512 < 256*8=2048
+                                                    # size: 96*spine_physical_num=96
                                                     if is_hot == 0 and is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                             op_hdr_optype = DELREQ_SEQ_INSWITCH,
@@ -2729,8 +2732,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for DELREQ_SEQ_INSWITCH_CASE1
                                                     # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size: 16*client_physical_num=32 < 16*8=128
-                                                    if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                    # size: 2*spine_physical_num=2
+                                                    # TODO: check tmp_client_sid != 0
+                                                    if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                             op_hdr_optype = DELREQ_SEQ_INSWITCH_CASE1,
                                                             inswitch_hdr_is_cached = is_cached,
@@ -2756,7 +2760,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached=0 (no inswitch_hdr after entering egress pipeline), is_hot, validvalue,  is_latest, is_deleted, client_sid, is_lastclone_for_pktloss, snapshot_flag, is_case1 must be 0 for SCANREQ_SPLIT
-                                                    # size: 2*server_physical_num=4 < 2*8=16
+                                                    # size: 2*server_physical_num=4
                                                     if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and tmp_server_sid != 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
                                                             op_hdr_optype = SCANREQ_SPLIT,

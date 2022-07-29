@@ -239,23 +239,23 @@ control ingress {
 	apply(hash_for_cm1_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
 
 	// Stage 2
-	apply(spineselect_tbl); // forward requests from client to spine switch
+	apply(spineselect_tbl); // forward requests from client to spine switch (access inswitch_hdr.globalswitchidx)
 	apply(snapshot_flag_tbl); // for snapshot (access inswitch_hdr.snapshot_flag)
 	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 
-	// Stage 3
+	// Stage 3~4
+	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
 	// IMPORTANT: to save TCAM, we do not match op_hdr.optype in cache_lookup_tbl 
 	// -> so as long as op_hdr.key matches an entry in cache_lookup_tbl, inswitch_hdr.is_cached must be 1 (e.g., CACHE_EVICT_LOADXXX)
 	// -> but note that if the optype does not have inswitch_hdr, is_cached of 1 will be dropped after entering egress pipeline, and is_cached is still 0 (e.g., SCANREQ_SPLIT)
-	apply(cache_lookup_tbl); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
-	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
+	apply(cache_lookup_tbl); // managed by controller (match inswitch_hdr.globalswitchidx; access inswitch_hdr.is_cached, inswitch_hdr.idx)
 
-	// Stage 4
+	// Stage 5
 	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
 
-	// Stage 5~6 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
+	// Stage 6~7 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 	// NOTE: we reserve two stages for partition_tbl now as range matching needs sufficient TCAM
 #ifdef RANGE_SUPPORT
 	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
@@ -263,12 +263,12 @@ control ingress {
 	apply(hash_partition_tbl);
 #endif
 
-	// Stage 7
+	// Stage 8
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
 
-	// Stage 8
+	// Stage 9
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
 	apply(ig_port_forward_tbl); // update op_hdr.optype
 }
@@ -301,41 +301,49 @@ control egress {
 	apply(access_savedseq_tbl);
 	apply(access_case1_tbl);
 
-	// Stage 4-7
+	// Stage 4
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
 	apply(update_vallo2_tbl);
 	apply(update_valhi2_tbl);
+
+	// Stage 5
+	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
 	apply(update_vallo4_tbl);
 	apply(update_valhi4_tbl);
+
+	// Stage 6~9
+	apply(eg_port_forward_tbl); // including scan forwarding
+
+	// Stage 6
 	apply(update_vallo5_tbl);
 	apply(update_valhi5_tbl);
 	apply(update_vallo6_tbl);
 	apply(update_valhi6_tbl);
+
+	// Stage 7
 	apply(update_vallo7_tbl);
 	apply(update_valhi7_tbl);
 	apply(update_vallo8_tbl);
 	apply(update_valhi8_tbl);
 
 	// Stage 8
-	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
+	// NOTE: Comment val9 and val10 in debug mode to save resources for eg_port_forward_counter -> you need to disable debug mode in evaluation
+#ifndef DEBUG
 	apply(update_vallo9_tbl);
 	apply(update_valhi9_tbl);
 	apply(update_vallo10_tbl);
 	apply(update_valhi10_tbl);
+#endif
 
 	// Stage 9
-	apply(eg_port_forward_tbl); // including scan forwarding
-	// NOTE: Comment val11 and val12 in debug mode to save resources for eg_port_forward_counter -> you need to disable debug mode in evaluation
-#ifndef DEBUG
 	apply(update_vallo11_tbl);
 	apply(update_valhi11_tbl);
 	apply(update_vallo12_tbl);
 	apply(update_valhi12_tbl);
-#endif
 
 	// stage 10
 	// NOTE: resource in stage 11 is not enough for update_ipmac_src_port_tbl, so we place it into stage 10
