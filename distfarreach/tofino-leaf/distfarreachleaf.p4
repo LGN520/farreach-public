@@ -301,20 +301,16 @@ control egress {
 	apply(access_savedseq_tbl);
 	apply(access_case1_tbl);
 
-	// Stage 4
+	// Stage 4~6
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
 	apply(update_vallo2_tbl);
 	apply(update_valhi2_tbl);
-
-	// Stage 5
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
 	apply(update_vallo4_tbl);
 	apply(update_valhi4_tbl);
-
-	// Stage 6
 	apply(update_vallo5_tbl);
 	apply(update_valhi5_tbl);
 	apply(update_vallo6_tbl);
@@ -327,23 +323,23 @@ control egress {
 	apply(update_vallo8_tbl);
 	apply(update_valhi8_tbl);
 
-	// Stage 8~9
-	apply(eg_port_forward_tbl); // including scan forwarding
-
 	// Stage 8
-	// NOTE: Comment val9 and val10 in debug mode to save resources for eg_port_forward_counter -> you need to disable debug mode in evaluation
-#ifndef DEBUG
+	// NOTE: we must guarantee that the output optype of another_eg_port_forward_tbl will NOT be matched in eg_port_forward_tbl
+	apply(another_eg_port_forward_tbl); // used to reduce VLIW usage of eg_port_forward_tbl
 	apply(update_vallo9_tbl);
 	apply(update_valhi9_tbl);
 	apply(update_vallo10_tbl);
 	apply(update_valhi10_tbl);
-#endif
 
 	// Stage 9
+	apply(eg_port_forward_tbl); // including scan forwarding
+	// NOTE: Comment val11 and val12 in debug mode to save resources for eg_port_forward_counter -> you need to disable debug mode in evaluation
+#ifndef DEBUG
 	apply(update_vallo11_tbl);
 	apply(update_valhi11_tbl);
 	apply(update_vallo12_tbl);
 	apply(update_valhi12_tbl);
+#endif
 
 	// stage 10
 	// NOTE: resource in stage 11 is not enough for update_ipmac_src_port_tbl, so we place it into stage 10
