@@ -132,8 +132,8 @@ SNAPSHOT_GETDATA_ACK = int(control_config.get("snapshot", "SNAPSHOT_GETDATA_ACK"
 
 # Set it as True if support range, or False otherwise
 # NOTE: update RANGE_SUPPORT in main.p4 accordingly
-#RANGE_SUPPORT = False
-RANGE_SUPPORT = True
+RANGE_SUPPORT = False
+#RANGE_SUPPORT = True
 
 # 0b0001
 PUTREQ = 0x0001
