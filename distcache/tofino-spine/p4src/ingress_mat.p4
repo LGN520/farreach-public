@@ -214,8 +214,8 @@ action range_partition(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
-//@pragma stage 5 2048
-//@pragma stage 6
+@pragma stage 5 2048
+@pragma stage 6
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;

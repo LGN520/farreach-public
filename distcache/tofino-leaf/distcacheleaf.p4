@@ -276,42 +276,42 @@ control egress {
 	apply(update_valhi2_tbl);
 
 	// Stage 5
-	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
 	apply(update_vallo4_tbl);
 	apply(update_valhi4_tbl);
 
-	// Stage 6~9
-	apply(eg_port_forward_tbl); // including scan forwarding
-
 	// Stage 6
+	apply(is_report_tbl); // NOTE: place is_report_tbl here due to tricky Tofino MAT placement limitation -> not sure the reason
 	apply(update_vallo5_tbl);
 	apply(update_valhi5_tbl);
 	apply(update_vallo6_tbl);
 	apply(update_valhi6_tbl);
 
 	// Stage 7
-	apply(is_report_tbl); // NOTE: place is_report_tbl here due to tricky Tofino MAT placement limitation -> not sure the reason
+	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 	apply(update_vallo7_tbl);
 	apply(update_valhi7_tbl);
 	apply(update_vallo8_tbl);
 	apply(update_valhi8_tbl);
 
+	// Stage 8~9
+	apply(eg_port_forward_tbl); // including scan forwarding
+
 	// Stage 8
+	// NOTE: Comment val9 and val10 in debug mode to save resources for eg_port_forward_counter -> you need to disable debug mode in evaluation
+#ifndef DEBUG
 	apply(update_vallo9_tbl);
 	apply(update_valhi9_tbl);
 	apply(update_vallo10_tbl);
 	apply(update_valhi10_tbl);
+#endif
 
 	// Stage 9
-	// NOTE: Comment val11 and val12 in debug mode to save resources for eg_port_forward_counter -> you need to disable debug mode in evaluation
-#ifndef DEBUG
 	apply(update_vallo11_tbl);
 	apply(update_valhi11_tbl);
 	apply(update_vallo12_tbl);
 	apply(update_valhi12_tbl);
-#endif
 
 	// stage 10
 	// NOTE: resource in stage 11 is not enough for update_ipmac_src_port_tbl, so we place it into stage 10

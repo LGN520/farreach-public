@@ -132,7 +132,7 @@ table is_hot_tbl {
 	size: 1;
 }
 
-// Stage 7
+// Stage 6
 
 action set_is_report() {
 	modify_field(meta.is_report, 1);
@@ -142,7 +142,7 @@ action reset_is_report() {
 	modify_field(meta.is_report, 0);
 }
 
-@pragma stage 7
+@pragma stage 6
 table is_report_tbl {
 	reads {
 		meta.is_report1: exact;
@@ -157,7 +157,7 @@ table is_report_tbl {
 	size: 1;
 }
 
-// Stage 5
+// Stage 7
 
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
@@ -190,7 +190,7 @@ action reset_is_lastclone_lastscansplit() {
 #endif
 }
 
-@pragma stage 5
+@pragma stage 7
 table lastclone_lastscansplit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -210,7 +210,7 @@ table lastclone_lastscansplit_tbl {
 	size: 8;
 }
 
-// Stage 6~9
+// Stage 8~9
 
 action update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(switchos_sid, reflector_port) {
 	modify_field(op_hdr.optype, NETCACHE_WARMUPREQ_INSWITCH_POP);
@@ -456,9 +456,9 @@ counter eg_port_forward_counter {
 }
 #endif
 
-@pragma stage 6 512
-@pragma stage 7 512
-@pragma stage 8 512
+//@pragma stage 6 512
+//@pragma stage 7 512
+@pragma stage 8 1024
 @pragma stage 9
 table eg_port_forward_tbl {
 	reads {

@@ -85,7 +85,7 @@ table save_client_info_tbl {
 	size: 4;
 }
 
-// Stage 5
+// Stage 7
 
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
@@ -118,7 +118,7 @@ action reset_is_lastclone_lastscansplit() {
 #endif
 }
 
-@pragma stage 5
+@pragma stage 7
 table lastclone_lastscansplit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -138,7 +138,7 @@ table lastclone_lastscansplit_tbl {
 	size: 8;
 }
 
-// Stage 6~9
+// Stage 8~9
 
 action update_getreq_inswitch_to_getreq() {
 	modify_field(op_hdr.optype, GETREQ);
@@ -764,9 +764,9 @@ counter eg_port_forward_counter {
 }
 #endif
 
-@pragma stage 6 512
-@pragma stage 7 512
-@pragma stage 8 512
+//@pragma stage 6 512
+//@pragma stage 7 512
+@pragma stage 8 1024
 @pragma stage 9
 table eg_port_forward_tbl {
 	reads {

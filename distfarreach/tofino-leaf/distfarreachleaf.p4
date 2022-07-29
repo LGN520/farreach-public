@@ -309,14 +309,10 @@ control egress {
 	apply(update_valhi2_tbl);
 
 	// Stage 5
-	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
 	apply(update_vallo4_tbl);
 	apply(update_valhi4_tbl);
-
-	// Stage 6~9
-	apply(eg_port_forward_tbl); // including scan forwarding
 
 	// Stage 6
 	apply(update_vallo5_tbl);
@@ -325,10 +321,14 @@ control egress {
 	apply(update_valhi6_tbl);
 
 	// Stage 7
+	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 	apply(update_vallo7_tbl);
 	apply(update_valhi7_tbl);
 	apply(update_vallo8_tbl);
 	apply(update_valhi8_tbl);
+
+	// Stage 8~9
+	apply(eg_port_forward_tbl); // including scan forwarding
 
 	// Stage 8
 	// NOTE: Comment val9 and val10 in debug mode to save resources for eg_port_forward_counter -> you need to disable debug mode in evaluation
