@@ -150,12 +150,14 @@
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (2B vallen + 128B value + 4B frequency + 1B status)
-#define KV_BUCKET_COUNT 32768
+//#define KV_BUCKET_COUNT 32768
+// NOTE: we use 16K cache entries (per-pipeline) to avoid power budget limitation of Tofino in leaf switch under switch simulation
+#define KV_BUCKET_COUNT 16384
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
 //#define HH_THRESHOLD 10
 // 32K * 4B counter
-#define SEQ_BUCKET_COUNT 32768
+#define SEQ_BUCKET_COUNT 4096
 
 #else
 
@@ -236,15 +238,14 @@ control ingress {
 #ifndef RANGE_SUPPORT
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
-	apply(hash_for_cm1_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
+	apply(hash_for_cm12_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
 
 	// Stage 2
 	apply(spineselect_tbl); // forward requests from client to spine switch (access inswitch_hdr.globalswitchidx)
 	apply(snapshot_flag_tbl); // for snapshot (access inswitch_hdr.snapshot_flag)
-	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
+	apply(hash_for_cm34_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 
 	// Stage 3~4
-	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
 	// IMPORTANT: to save TCAM, we do not match op_hdr.optype in cache_lookup_tbl 
 	// -> so as long as op_hdr.key matches an entry in cache_lookup_tbl, inswitch_hdr.is_cached must be 1 (e.g., CACHE_EVICT_LOADXXX)
 	// -> but note that if the optype does not have inswitch_hdr, is_cached of 1 will be dropped after entering egress pipeline, and is_cached is still 0 (e.g., SCANREQ_SPLIT)
@@ -253,7 +254,6 @@ control ingress {
 	// Stage 5
 	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
-	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
 
 	// Stage 6~7 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 	// NOTE: we reserve two stages for partition_tbl now as range matching needs sufficient TCAM

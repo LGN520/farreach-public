@@ -173,18 +173,19 @@ table hash_for_partition_tbl {
 }
 #endif
 
-action hash_for_cm1() {
+action hash_for_cm12() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm1, 0, hash_calc, CM_BUCKET_COUNT);
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);
 }
 
 @pragma stage 1
-table hash_for_cm1_tbl {
+table hash_for_cm12_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {
-		hash_for_cm1;
+		hash_for_cm12;
 		nop;
 	}
 	default_action: nop();
@@ -218,18 +219,19 @@ table spineselect_tbl {
 	size: SPINESELECT_ENTRY_NUM;
 }
 
-action hash_for_cm2() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);
+action hash_for_cm34() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc3, CM_BUCKET_COUNT);
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
 }
 
 @pragma stage 2
-table hash_for_cm2_tbl {
+table hash_for_cm34_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {
-		hash_for_cm2;
+		hash_for_cm34;
 		nop;
 	}
 	default_action: nop();
@@ -260,24 +262,6 @@ table snapshot_flag_tbl {
 }
 
 // Stage 3~4
-
-action hash_for_cm3() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc3, CM_BUCKET_COUNT);
-}
-
-@pragma stage 3
-table hash_for_cm3_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		hash_for_cm3;
-		nop;
-	}
-	default_action: nop();
-	size: 4;
-}
 
 action cached_action(idx) {
 	modify_field(inswitch_hdr.idx, idx);
@@ -310,24 +294,6 @@ table cache_lookup_tbl {
 }
 
 // Stage 5
-
-action hash_for_cm4() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
-}
-
-@pragma stage 5
-table hash_for_cm4_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		hash_for_cm4;
-		nop;
-	}
-	default_action: nop();
-	size: 4;
-}
 
 /*action set_client_sid(client_sid, eport) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
