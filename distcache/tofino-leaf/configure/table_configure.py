@@ -579,12 +579,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Leave cache_lookup_tbl managed by controller in runtime"
 
             # Table: hash_for_cm1/2/3/4_tbl (default: nop; size: 1)
-            for i in range(1, 5):
-                print "Configuring hash_for_cm{}_tbl".format(i)
-                for tmpoptype in [GETREQ_SPINE]:
-                    matchspec0 = eval("distcacheleaf_hash_for_cm{}_tbl_match_spec_t".format(i))(\
-                            op_hdr_optype = tmpoptype)
-                    eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(i, i))(\
+            # Table: hash_for_cm12/34_tbl (default: nop; size: 4)
+            for funcname in ["12", "34"]:
+                print "Configuring hash_for_cm{}_tbl".format(funcname)
+                for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, PUTREQ_SEQ_INSWITCH]:
+                    matchspec0 = eval("distcacheleaf_hash_for_cm{}_tbl_match_spec_t".format(funcname))(\
+                            op_hdr_optype = tmpoptype,
+                            meta_need_recirculate = 0)
+                    eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(funcname, funcname))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: hash_for_bf1/2/3_tbl (default: nop; size: 1)

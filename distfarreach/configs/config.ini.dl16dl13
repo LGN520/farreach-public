@@ -13,14 +13,14 @@ max_vallen=128
 ; data size of each batch when reading files to load workload
 load_batch_size=10000
 ; # of physical clients (update MAT size correspondingly)
-client_physical_num=1
+client_physical_num=2
 ; # of physical servers (update MAT size correspondingly)
-server_physical_num=1
+server_physical_num=2
 ; total # of client threads
-client_total_logical_num=512
+client_total_logical_num=1024
 ; total # of server threads (all server logical idxes must < server_total_logical_num)
 ; change MAX_SERVER_NUM in tofino/netbufferv4.p4 if necessary
-server_total_logical_num=4
+server_total_logical_num=8
 ; only used by remote_client for server rotation under static workload
 server_total_logical_num_for_rotation=128
 ; bottleneck server logical idx (bottleneck partition) for server rotation (change test_server_rotation.sh accordingly)
@@ -139,11 +139,14 @@ switchos_specialcaseserver_port=5005
 switchos_ptf_popserver_port=5006
 ; a single port
 switchos_ptf_snapshotserver_port=5007
-spineswitch_total_logical_num=4
-leafswitch_total_logical_num=16
+;4
+spineswitch_total_logical_num=2
+;16
+leafswitch_total_logical_num=4
 
 [spineswitch]
-switch_logical_idxes=0:1:2:3
+;0:1:2:3
+switch_logical_idxes=0:1
 ; bf2 -> bf1
 ;switchos_ip=172.16.112.18
 ;spineswitch_fpport_to_leaf=32/0
@@ -152,7 +155,8 @@ switchos_ip=172.16.112.19
 spineswitch_fpport_to_leaf=32/0
 
 [leafswitch]
-switch_logical_idxes=4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19
+;4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19
+switch_logical_idxes=2:3:4:5
 switchos_ip=172.16.112.17
 ; bf1 -> bf2
 ;leafswitch_fpport_to_spine=31/0
