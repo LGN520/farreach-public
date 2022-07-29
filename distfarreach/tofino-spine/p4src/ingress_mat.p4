@@ -325,8 +325,8 @@ action hash_partition(eport, globalswitchidx) {
 action hash_partition_for_special_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-//@pragma stage 5 2048
-//@pragma stage 6
+@pragma stage 5 2048
+@pragma stage 6
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;

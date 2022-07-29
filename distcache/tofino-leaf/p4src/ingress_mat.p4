@@ -391,8 +391,8 @@ action hash_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-//@pragma stage 7 2048
-//@pragma stage 8
+@pragma stage 7 2048
+@pragma stage 8
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
