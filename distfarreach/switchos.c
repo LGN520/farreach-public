@@ -492,6 +492,8 @@ void *run_switchos_popworker(void *param) {
 	bool switchos_evictstat = false;
 
 	// TMPDEBUG
+	//std::vector<double> pop_setvalid0_time_list, pop_cachepop_time_list, pop_addkey_time_list, pop_setvalid1_time_list, pop_total_time_list;
+	//struct timespec pop_setvalid0_t1, pop_setvalid0_t2, pop_setvalid0_t3, pop_cachepop_t1, pop_cachepop_t2, pop_cachepop_t3, pop_addkey_t1, pop_addkey_t2, pop_addkey_t3, pop_setvalid1_t1, pop_setvalid1_t2, pop_setvalid1_t3, pop_total_t1, pop_total_t2, pop_total_t3;
 	//std::vector<double> evict_load_time_list, evict_sendrecv_time_list, evict_remove_time_list, evict_total_time_list;
 	//struct timespec evict_load_t1, evict_load_t2, evict_load_t3, evict_sendrecv_t1, evict_sendrecv_t2, evict_sendrecv_t3, evict_remove_t1, evict_remove_t2, evict_remove_t3, evict_total_t1, evict_total_t2, evict_total_t3;
 
@@ -506,6 +508,8 @@ void *run_switchos_popworker(void *param) {
 				//cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptrs[switchos_tail_for_pop];
 				//INVARIANT(tmp_cache_pop_ptr != NULL);
 				
+				//CUR_TIME(pop_total_t1); // TMPDEBUG
+
 				// TMPDEBUG
 				bool is_valid = false;
 				for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
@@ -551,10 +555,11 @@ void *run_switchos_popworker(void *param) {
 					// NOTE: as freeidx of new record must > switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx], no case2 for cache population
 				}
 				else { // Without free idx
-					//CUR_TIME(evict_total_t1);
+					//CUR_TIME(evict_total_t1); // TMPDEBUG
+					
 					bool is_case2 = is_snapshot || (is_snapshot_end && !popworker_know_snapshot_end);
 
-					//CUR_TIME(evict_load_t1);
+					//CUR_TIME(evict_load_t1); // TMPDEBUG
 					
 					// get evictdata from ptf framework 
 					////system("bash tofino/get_evictdata_setvalid3.sh");
@@ -681,11 +686,11 @@ void *run_switchos_popworker(void *param) {
 						break;
 					}
 
-					//CUR_TIME(evict_load_t2);
+					//CUR_TIME(evict_load_t2); // TMPDEBUG
 
 					// switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
 					
-					//CUR_TIME(evict_sendrecv_t1);
+					//CUR_TIME(evict_sendrecv_t1); // TMPDEBUG
 					if (!is_case2) {
 						cache_evict_t tmp_cache_evict(cur_evictkey, \
 								//val_t(switchos_evictvalbytes, switchos_evictvallen),
@@ -720,7 +725,7 @@ void *run_switchos_popworker(void *param) {
 							break;
 						}
 					}
-					//CUR_TIME(evict_sendrecv_t2);
+					//CUR_TIME(evict_sendrecv_t2); // TMPDEBUG
 
 					// store case2
 					if (is_case2) {
@@ -730,14 +735,14 @@ void *run_switchos_popworker(void *param) {
 								uint32_t(switchos_evictseq), bool(switchos_evictstat));
 					}
 
-					//CUR_TIME(evict_remove_t1);
+					//CUR_TIME(evict_remove_t1); // TMPDEBUG
 					// remove evicted data from cache_lookup_tbl
 					//system("bash tofino/remove_cache_lookup.sh");
 					ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, cur_evictkey, switchidx_for_cur_evictkey);
 					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 					INVARIANT(*((int *)ptfbuf) == SWITCHOS_REMOVE_CACHE_LOOKUP_ACK); // wait for SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
-					//CUR_TIME(evict_remove_t2);
+					//CUR_TIME(evict_remove_t2); // TMPDEBUG
 
 					//printf("Evict %x to %x\n", cur_evictkey.keyhihi, tmp_cache_pop_ptr->key().keyhihi);
 
@@ -749,8 +754,9 @@ void *run_switchos_popworker(void *param) {
 					switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx] = netreach_key_t();
 					switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx] = -1;
 
-					//CUR_TIME(evict_total_t2);
+					//CUR_TIME(evict_total_t2); // TMPDEBUG
 
+					// TMPDEBUG
 					/*DELTA_TIME(evict_load_t2, evict_load_t1, evict_load_t3);
 					DELTA_TIME(evict_sendrecv_t2, evict_sendrecv_t1, evict_sendrecv_t3);
 					DELTA_TIME(evict_remove_t2, evict_remove_t1, evict_remove_t3);
@@ -788,6 +794,8 @@ void *run_switchos_popworker(void *param) {
 				//udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				//INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID0_ACK); // wait for SWITCHOS_SETVALID0_ACK
 				
+				//CUR_TIME(pop_setvalid0_t1); // TMPDEBUG
+
 				// set valid = 0 through reflector
 				// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
 				while (true) {
@@ -809,6 +817,9 @@ void *run_switchos_popworker(void *param) {
 					}
 					break;
 				}
+
+				//CUR_TIME(pop_setvalid0_t2); //TMPDEBUG
+				//CUR_TIME(pop_cachepop_t1); // TMPDEBUG
 
 				// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
 				cache_pop_inswitch_t tmp_cache_pop_inswitch(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
@@ -841,6 +852,9 @@ void *run_switchos_popworker(void *param) {
 					}
 				}
 
+				//CUR_TIME(pop_cachepop_t2); // TMPDEBUG
+				//CUR_TIME(pop_addkey_t1); // TMPDEBUG
+
 				// (1) add new <key, value> pair into cache_lookup_tbl; DEPRECATED: (2) and set valid=1 to enable the entry
 				////system("bash tofino/add_cache_lookup_setvalid1.sh");
 				//ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx, tmp_pipeidx);
@@ -849,6 +863,9 @@ void *run_switchos_popworker(void *param) {
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				//INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 				INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
+
+				//CUR_TIME(pop_addkey_t2); // TMPDEBUG
+				//CUR_TIME(pop_setvalid1_t1); // TMPDEBUG
 				
 				// set valid = 1 through reflector
 				// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
@@ -868,9 +885,41 @@ void *run_switchos_popworker(void *param) {
 					break;
 				}
 
+				//CUR_TIME(pop_setvalid1_t2); // TMPDEBUG
+
 				switchos_cached_keyidx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), switchos_freeidx));
 				switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_freeidx] = tmp_cache_pop_ptr->key();
 				switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_freeidx] = tmp_cache_pop_ptr->serveridx();
+
+				// TMPDEBUG
+				/*CUR_TIME(pop_total_t2);
+				DELTA_TIME(pop_setvalid0_t2, pop_setvalid0_t1, pop_setvalid0_t3);
+				pop_setvalid0_time_list.push_back(GET_MICROSECOND(pop_setvalid0_t3));
+				DELTA_TIME(pop_cachepop_t2, pop_cachepop_t1, pop_cachepop_t3);
+				pop_cachepop_time_list.push_back(GET_MICROSECOND(pop_cachepop_t3));
+				DELTA_TIME(pop_addkey_t2, pop_addkey_t1, pop_addkey_t3);
+				pop_addkey_time_list.push_back(GET_MICROSECOND(pop_addkey_t3));
+				DELTA_TIME(pop_setvalid1_t2, pop_setvalid1_t1, pop_setvalid1_t3);
+				pop_setvalid1_time_list.push_back(GET_MICROSECOND(pop_setvalid1_t3));
+				DELTA_TIME(pop_total_t2, pop_total_t1, pop_total_t3);
+				pop_total_time_list.push_back(GET_MICROSECOND(pop_total_t3));
+				if (((pop_total_time_list.size() + 1) % 100) == 0) {
+					double pop_setvalid0_time = 0.0, pop_cachepop_time = 0.0, pop_setvalid1_time = 0.0, pop_addkey_time = 0.0, pop_total_time = 0.0;
+					for (size_t i = 0; i < pop_total_time_list.size(); i++) {
+						pop_setvalid0_time += pop_setvalid0_time_list[i];
+						pop_cachepop_time += pop_cachepop_time_list[i];
+						pop_addkey_time += pop_addkey_time_list[i];
+						pop_setvalid1_time += pop_setvalid1_time_list[i];
+						pop_total_time += pop_total_time_list[i];
+					}
+					pop_setvalid0_time /= pop_total_time_list.size();
+					pop_cachepop_time /= pop_total_time_list.size();
+					pop_addkey_time /= pop_total_time_list.size();
+					pop_setvalid1_time /= pop_total_time_list.size();
+					pop_total_time /= pop_total_time_list.size();
+					printf("average pop setvalid0 time: %f, cachepop time: %f, addkey time: %f, setvalid1 time: %f, total time: %f\n", pop_setvalid0_time, pop_cachepop_time, pop_addkey_time, pop_setvalid1_time, pop_total_time);
+					fflush(stdout);
+				}*/
 
 				// free CACHE_POP
 				delete tmp_cache_pop_ptr;
@@ -975,6 +1024,7 @@ void *run_switchos_snapshotserver(void *param) {
 	int pktsize = 0;
 	int pkt_recvsize = 0;
 	struct timespec stop_cachepop_t1, stop_cachepop_t2, stop_cachepop_t3, enable_singlepath_t1, enable_singlepath_t2, enable_singlepath_t3, load_snapshotdata_t1, load_snapshotdata_t2, load_snapshotdata_t3;
+	bool is_duplicate = false;
 	while (switchos_running) {
 		// wait for control instruction from controller.snapshotclient
 		/*if (!with_controller_snapshotclient_addr) {
@@ -989,13 +1039,19 @@ void *run_switchos_snapshotserver(void *param) {
 		INVARIANT(recvsize == 2*sizeof(int));
 		// Fix duplicate packet
 		if (control_type == *((int *)recvbuf) && snapshotid == *((int *)(recvbuf + sizeof(int)))) {
+			is_duplicate = true;
 			printf("[switchos.snapshotserver] receive duplicate control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
-			continue;
+			fflush(stdout);
+			if (control_type != SNAPSHOT_GETDATA) {
+				continue;
+			}
 		}
 		else {
+			is_duplicate = false;
 			control_type = *((int *)recvbuf);
 			snapshotid = *((int *)(recvbuf + sizeof(int)));
 			printf("[switchos.snapshotserver] receive control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+			fflush(stdout);
 		}
 
 		if (control_type == SNAPSHOT_CLEANUP) {
@@ -1075,7 +1131,19 @@ void *run_switchos_snapshotserver(void *param) {
 				INVARIANT(switchos_perpipeline_snapshot_values[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_seqs[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_stats[tmp_pipeidx] == NULL);
 			}
 			INVARIANT(is_stop_cachepop == false && popworker_know_stop_cachepop == false);
-			INVARIANT(is_snapshot == false && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false);
+			if (unlikely(!(is_snapshot == false && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false))) {
+				printf("[WARNING] verification fail!\n");
+				COUT_VAR(is_first_snapshot);
+				COUT_VAR(is_snapshot);
+				COUT_VAR(is_snapshot_end);
+				COUT_VAR(popworker_know_snapshot_end);
+				COUT_VAR(specialcaseserver_know_snapshot_end);
+
+				is_snapshot = false;
+				is_snapshot_end = false;
+				popworker_know_snapshot_end = false;
+				specialcaseserver_know_snapshot_end = false;
+			}
 
 			// (2) init for new snapshot
 			
@@ -1243,130 +1311,134 @@ void *run_switchos_snapshotserver(void *param) {
 			udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_START_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
 		else if (control_type == SNAPSHOT_GETDATA) {
-			// reset snapshot flag as false in data plane
-			//system("bash tofino/reset_snapshot_flag_and_reg.sh");
-			memcpy(ptfbuf, &SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG, sizeof(int));
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
-			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
-			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK);
+			if (is_duplicate == false) {
+				// reset snapshot flag as false in data plane
+				//system("bash tofino/reset_snapshot_flag_and_reg.sh");
+				memcpy(ptfbuf, &SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG, sizeof(int));
+				udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+				udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+				INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK);
 
-			// finish snapshot
-			//INVARIANT(is_snapshot == true && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false);
-			if (unlikely(!(is_snapshot == true && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false))) {
-				COUT_VAR(is_snapshot);
-				COUT_VAR(is_snapshot_end);
-				COUT_VAR(popworker_know_snapshot_end);
-				COUT_VAR(specialcaseserver_know_snapshot_end);
-				exit(-1);
-			}
-			is_snapshot_end = true;
-			is_snapshot = false;
-			memory_fence();
+				// finish snapshot
+				//INVARIANT(is_snapshot == true && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false);
+				if (unlikely(!(is_snapshot == true && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false))) {
+					COUT_VAR(is_snapshot);
+					COUT_VAR(is_snapshot_end);
+					COUT_VAR(popworker_know_snapshot_end);
+					COUT_VAR(specialcaseserver_know_snapshot_end);
+					exit(-1);
+				}
+				is_snapshot_end = true;
+				is_snapshot = false;
+				memory_fence();
 
-			// wait for case2 from popworker and case1 from specialcaseserver
-			while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
+				// wait for case2 from popworker and case1 from specialcaseserver
+				while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
 
-			// end snapshot (by now popworker/specialcaseserver will not access switchos_perpipeline_specialcases_ptr and backuped metadata)
-			is_snapshot_end = false;
-			memory_fence();
-			popworker_know_snapshot_end = false;
-			specialcaseserver_know_snapshot_end = false;
+				// end snapshot (by now popworker/specialcaseserver will not access switchos_perpipeline_specialcases_ptr and backuped metadata)
+				is_snapshot_end = false;
+				memory_fence();
+				popworker_know_snapshot_end = false;
+				specialcaseserver_know_snapshot_end = false;
 
-			for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+				for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
 #ifdef DEBUG_SNAPSHOT
-				// TMPDEBUG
-				printf("[before rollback] snapshot size of pipeline %d: %d\n", tmp_pipeidx, switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
-				/*for (size_t debugi = 0; debugi < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; debugi++) {
-					char debugbuf[MAX_BUFSIZE];
-					uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
-					uint32_t debugvalsize = switchos_perpipeline_snapshot_values[tmp_pipeidx][debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
-					printf("serialized debug key-value[%d]:\n", int(debugi));
-					dump_buf(debugbuf, debugkeysize+debugvalsize);
-					printf("seq: %d, stat %d\n", switchos_perpipeline_snapshot_seqs[tmp_pipeidx][debugi], switchos_perpipeline_snapshot_stats[tmp_pipeidx][debugi]?1:0);
-				}*/
+					// TMPDEBUG
+					printf("[before rollback] snapshot size of pipeline %d: %d\n", tmp_pipeidx, switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
+					/*for (size_t debugi = 0; debugi < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; debugi++) {
+						char debugbuf[MAX_BUFSIZE];
+						uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
+						uint32_t debugvalsize = switchos_perpipeline_snapshot_values[tmp_pipeidx][debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
+						printf("serialized debug key-value[%d]:\n", int(debugi));
+						dump_buf(debugbuf, debugkeysize+debugvalsize);
+						printf("seq: %d, stat %d\n", switchos_perpipeline_snapshot_seqs[tmp_pipeidx][debugi], switchos_perpipeline_snapshot_stats[tmp_pipeidx][debugi]?1:0);
+					}*/
 #endif
 
-				// perform rollback (now both popserver/specicalserver will not touch specialcases)
-				/*for (std::map<uint16_t, special_case_t>::iterator iter = switchos_specialcases.begin(); iter != switchos_specialcases.end(); iter++) {
-					INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][iter->first] == iter->second._key);
-					switchos_perpipeline_snapshot_values[tmp_pipeidx][iter->first] = iter->second._val;
-					switchos_perpipeline_snapshot_seqs[tmp_pipeidx][iter->first] = iter->second._seq;
-					switchos_perpipeline_snapshot_stats[tmp_pipeidx][iter->first] = iter->second._valid;
-				}*/
-				INVARIANT(switchos_perpipeline_specialcases_ptr[tmp_pipeidx] != NULL);
-				concurrent_specialcase_map_t::DataSource source(0, (concurrent_specialcase_map_t *)switchos_perpipeline_specialcases_ptr[tmp_pipeidx]);
-				source.advance_to_next_valid();
-				int specialcase_cnt = 0;
-				while (source.has_next) {
-					special_case_t tmpcase = source.get_val();
-					INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][source.get_key()] == tmpcase._key);
-					switchos_perpipeline_snapshot_values[tmp_pipeidx][source.get_key()] = tmpcase._val;
-					switchos_perpipeline_snapshot_seqs[tmp_pipeidx][source.get_key()] = tmpcase._seq;
-					switchos_perpipeline_snapshot_stats[tmp_pipeidx][source.get_key()] = tmpcase._valid;
+					// perform rollback (now both popserver/specicalserver will not touch specialcases)
+					/*for (std::map<uint16_t, special_case_t>::iterator iter = switchos_specialcases.begin(); iter != switchos_specialcases.end(); iter++) {
+						INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][iter->first] == iter->second._key);
+						switchos_perpipeline_snapshot_values[tmp_pipeidx][iter->first] = iter->second._val;
+						switchos_perpipeline_snapshot_seqs[tmp_pipeidx][iter->first] = iter->second._seq;
+						switchos_perpipeline_snapshot_stats[tmp_pipeidx][iter->first] = iter->second._valid;
+					}*/
+					INVARIANT(switchos_perpipeline_specialcases_ptr[tmp_pipeidx] != NULL);
+					concurrent_specialcase_map_t::DataSource source(0, (concurrent_specialcase_map_t *)switchos_perpipeline_specialcases_ptr[tmp_pipeidx]);
 					source.advance_to_next_valid();
-					specialcase_cnt += 1;
-				}
-				COUT_VAR(specialcase_cnt);
+					int specialcase_cnt = 0;
+					while (source.has_next) {
+						special_case_t tmpcase = source.get_val();
+						INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][source.get_key()] == tmpcase._key);
+						switchos_perpipeline_snapshot_values[tmp_pipeidx][source.get_key()] = tmpcase._val;
+						switchos_perpipeline_snapshot_seqs[tmp_pipeidx][source.get_key()] = tmpcase._seq;
+						switchos_perpipeline_snapshot_stats[tmp_pipeidx][source.get_key()] = tmpcase._valid;
+						source.advance_to_next_valid();
+						specialcase_cnt += 1;
+					}
+					COUT_VAR(specialcase_cnt);
 
 #ifdef DEBUG_SNAPSHOT
-				// TMPDEBUG
-				printf("[after rollback] snapshot size of pipeline %d: %d\n", tmp_pipeidx, switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
-				/*for (size_t debugi = 0; debugi < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; debugi++) {
-					char debugbuf[MAX_BUFSIZE];
-					uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
-					uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
-					printf("serialized debug key-value[%d]:\n", int(debugi));
-					dump_buf(debugbuf, debugkeysize+debugvalsize);
-					printf("seq: %d, stat %d\n", switchos_perpipeline_snapshot_seqs[tmp_pipeidx][debugi], switchos_perpipeline_snapshot_stats[tmp_pipeidx][debugi]?1:0);
-				}*/
+					// TMPDEBUG
+					printf("[after rollback] snapshot size of pipeline %d: %d\n", tmp_pipeidx, switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
+					/*for (size_t debugi = 0; debugi < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; debugi++) {
+						char debugbuf[MAX_BUFSIZE];
+						uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
+						uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
+						printf("serialized debug key-value[%d]:\n", int(debugi));
+						dump_buf(debugbuf, debugkeysize+debugvalsize);
+						printf("seq: %d, stat %d\n", switchos_perpipeline_snapshot_seqs[tmp_pipeidx][debugi], switchos_perpipeline_snapshot_stats[tmp_pipeidx][debugi]?1:0);
+					}*/
 #endif
-			}
+				}
 
-			// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, per-server data>
-			// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
-			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-			memset((void *)tmp_send_bytes, 0, max_server_total_logical_num*sizeof(int));
-			memset((void *)tmp_record_cnts, 0, max_server_total_logical_num*sizeof(int));
-			for (size_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
-				tmp_sendbuf_list[tmp_global_server_logical_idx].clear();
-			}
-			sendbuf.clear();
-			for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
-				for (uint32_t tmpidx = 0; tmpidx < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; tmpidx++) { // prepare per-server per-record data
-					uint16_t tmp_serveridx = switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx][tmpidx];
-					dynamic_array_t &tmp_sendbuf = tmp_sendbuf_list[tmp_serveridx];
-					uint32_t tmp_keysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmpidx].dynamic_serialize(tmp_sendbuf, tmp_send_bytes[tmp_serveridx]);
-					tmp_send_bytes[tmp_serveridx] += tmp_keysize;
-					uint32_t tmp_valsize = switchos_perpipeline_snapshot_values[tmp_pipeidx][tmpidx].dynamic_serialize(tmp_sendbuf, tmp_send_bytes[tmp_serveridx]);
-					tmp_send_bytes[tmp_serveridx] += tmp_valsize;
-					tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_perpipeline_snapshot_seqs[tmp_pipeidx][tmpidx], sizeof(uint32_t));
-					tmp_send_bytes[tmp_serveridx] += sizeof(uint32_t);
-					tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_perpipeline_snapshot_stats[tmp_pipeidx][tmpidx], sizeof(bool));
-					tmp_send_bytes[tmp_serveridx] += sizeof(bool);
-					tmp_record_cnts[tmp_serveridx] += 1;
+				// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, per-server data>
+				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
+				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
+				memset((void *)tmp_send_bytes, 0, max_server_total_logical_num*sizeof(int));
+				memset((void *)tmp_record_cnts, 0, max_server_total_logical_num*sizeof(int));
+				for (size_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
+					tmp_sendbuf_list[tmp_global_server_logical_idx].clear();
 				}
-			}
-			int total_bytes = sizeof(int) + sizeof(int32_t); // leave 4B for SNAPSHOT_DATA and total_bytes
-			for (uint16_t tmp_serveridx = 0; tmp_serveridx < max_server_total_logical_num; tmp_serveridx++) {
-				if (tmp_record_cnts[tmp_serveridx] > 0) {
-					int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int);
-					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_perserver_bytes, sizeof(int32_t));
-					total_bytes += sizeof(int32_t);
-					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_serveridx, sizeof(uint16_t));
-					total_bytes += sizeof(uint16_t);
-					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_record_cnts[tmp_serveridx], sizeof(int));
-					total_bytes += sizeof(int);
-					sendbuf.dynamic_memcpy(total_bytes, tmp_sendbuf_list[tmp_serveridx].array(), tmp_send_bytes[tmp_serveridx]);
-					total_bytes += tmp_send_bytes[tmp_serveridx];
+				sendbuf.clear();
+				for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+					for (uint32_t tmpidx = 0; tmpidx < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; tmpidx++) { // prepare per-server per-record data
+						uint16_t tmp_serveridx = switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx][tmpidx];
+						dynamic_array_t &tmp_sendbuf = tmp_sendbuf_list[tmp_serveridx];
+						uint32_t tmp_keysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmpidx].dynamic_serialize(tmp_sendbuf, tmp_send_bytes[tmp_serveridx]);
+						tmp_send_bytes[tmp_serveridx] += tmp_keysize;
+						uint32_t tmp_valsize = switchos_perpipeline_snapshot_values[tmp_pipeidx][tmpidx].dynamic_serialize(tmp_sendbuf, tmp_send_bytes[tmp_serveridx]);
+						tmp_send_bytes[tmp_serveridx] += tmp_valsize;
+						tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_perpipeline_snapshot_seqs[tmp_pipeidx][tmpidx], sizeof(uint32_t));
+						tmp_send_bytes[tmp_serveridx] += sizeof(uint32_t);
+						tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_perpipeline_snapshot_stats[tmp_pipeidx][tmpidx], sizeof(bool));
+						tmp_send_bytes[tmp_serveridx] += sizeof(bool);
+						tmp_record_cnts[tmp_serveridx] += 1;
+					}
 				}
+				int total_bytes = sizeof(int) + sizeof(int32_t); // leave 4B for SNAPSHOT_DATA and total_bytes
+				for (uint16_t tmp_serveridx = 0; tmp_serveridx < max_server_total_logical_num; tmp_serveridx++) {
+					if (tmp_record_cnts[tmp_serveridx] > 0) {
+						int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int);
+						sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_perserver_bytes, sizeof(int32_t));
+						total_bytes += sizeof(int32_t);
+						sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_serveridx, sizeof(uint16_t));
+						total_bytes += sizeof(uint16_t);
+						sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_record_cnts[tmp_serveridx], sizeof(int));
+						total_bytes += sizeof(int);
+						sendbuf.dynamic_memcpy(total_bytes, tmp_sendbuf_list[tmp_serveridx].array(), tmp_send_bytes[tmp_serveridx]);
+						total_bytes += tmp_send_bytes[tmp_serveridx];
+					}
+				}
+				sendbuf.dynamic_memcpy(0, (char *)&SNAPSHOT_GETDATA_ACK, sizeof(int)); // set 1st 4B as SNAPSHOT_GETDATA_ACK
+				sendbuf.dynamic_memcpy(0 + sizeof(int), (char *)&total_bytes, sizeof(int32_t)); // set 2nd 4B as total_bytes
+				INVARIANT(total_bytes <= MAX_LARGE_BUFSIZE);
+				INVARIANT(total_bytes == sendbuf.size());
 			}
-			sendbuf.dynamic_memcpy(0, (char *)&SNAPSHOT_GETDATA_ACK, sizeof(int)); // set 1st 4B as SNAPSHOT_GETDATA_ACK
-			sendbuf.dynamic_memcpy(0 + sizeof(int), (char *)&total_bytes, sizeof(int32_t)); // set 2nd 4B as total_bytes
-			INVARIANT(total_bytes <= MAX_LARGE_BUFSIZE);
 
 			// send rollbacked snapshot data to controller.snapshotserver
 			printf("[switchos.snapshotserver] send snapshot data to controller\n"); // TMPDEBUG
-			udpsendlarge_udpfrag(switchos_snapshotserver_udpsock, sendbuf.array(), total_bytes, 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
+			fflush(stdout);
+			udpsendlarge_udpfrag(switchos_snapshotserver_udpsock, sendbuf.array(), sendbuf.size(), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
 		else {
 			printf("[switchos.snapshotserver] invalid control type: %d\n", control_type);

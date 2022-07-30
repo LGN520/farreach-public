@@ -427,12 +427,16 @@ void *run_switchos_popworker(void *param) {
 	bool switchos_evictstat = false;
 
 	// TMPDEBUG
+	//std::vector<double> pop_setvalid0_time_list, pop_cachepop_time_list, pop_addkey_time_list, pop_setvalid1_time_list, pop_total_time_list;
+	//struct timespec pop_setvalid0_t1, pop_setvalid0_t2, pop_setvalid0_t3, pop_cachepop_t1, pop_cachepop_t2, pop_cachepop_t3, pop_addkey_t1, pop_addkey_t2, pop_addkey_t3, pop_setvalid1_t1, pop_setvalid1_t2, pop_setvalid1_t3, pop_total_t1, pop_total_t2, pop_total_t3;
 	//std::vector<double> evict_load_time_list, evict_sendrecv_time_list, evict_remove_time_list, evict_total_time_list;
 	//struct timespec evict_load_t1, evict_load_t2, evict_load_t3, evict_sendrecv_t1, evict_sendrecv_t2, evict_sendrecv_t3, evict_remove_t1, evict_remove_t2, evict_remove_t3, evict_total_t1, evict_total_t2, evict_total_t3;
 
 	while (switchos_running) {
 		cache_pop_t tmp_cache_pop_ptr = switchos_cache_pop_ptr_queue.read();
 		if (tmp_cache_pop_ptr != NULL) {
+				
+			//CUR_TIME(pop_total_t1); // TMPDEBUG
 
 			uint32_t tmp_global_server_logical_idx = tmp_cache_pop_ptr->serveridx();
 			
@@ -480,9 +484,9 @@ void *run_switchos_popworker(void *param) {
 				switchos_perpipeline_cached_empty_index[tmp_pipeidx] += 1;
 			}
 			else { // Without free idx
-				//CUR_TIME(evict_total_t1);
+				//CUR_TIME(evict_total_t1); // TMPDEBUG
 
-				//CUR_TIME(evict_load_t1);
+				//CUR_TIME(evict_load_t1); // TMPDEBUG
 				
 				// get evictdata from ptf framework 
 				////system("bash tofino/get_evictdata_setvalid3.sh");
@@ -604,23 +608,23 @@ void *run_switchos_popworker(void *param) {
 					exit(-1);
 				}
 
-				//CUR_TIME(evict_load_t2);
+				//CUR_TIME(evict_load_t2); // TMPDEBUG
 
 				// calculate correpsonding switchidx
 				uint16_t switchidx_for_cur_evictkey = calculate_switchidx(cur_evictkey);
 
-				//CUR_TIME(evict_remove_t1);
+				//CUR_TIME(evict_remove_t1); // TMPDEBUG
 				// remove evicted data from cache_lookup_tbl
 				//system("bash tofino/remove_cache_lookup.sh");
 				ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, cur_evictkey, switchidx_for_cur_evictkey);
 				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				INVARIANT(*((int *)ptfbuf) == SWITCHOS_REMOVE_CACHE_LOOKUP_ACK); // wait for SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
-				//CUR_TIME(evict_remove_t2);
+				//CUR_TIME(evict_remove_t2); // TMPDEBUG
 
 				// switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
 				
-				//CUR_TIME(evict_sendrecv_t1);
+				//CUR_TIME(evict_sendrecv_t1); // TMPDEBUG
 				netcache_cache_evict_t tmp_netcache_cache_evict(cur_evictkey, switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx]);
 				pktsize = tmp_netcache_cache_evict.serialize(pktbuf, MAX_BUFSIZE);
 				while (true) {
@@ -640,7 +644,7 @@ void *run_switchos_popworker(void *param) {
 						break;
 					}
 				}
-				//CUR_TIME(evict_sendrecv_t2);
+				//CUR_TIME(evict_sendrecv_t2); // TMPDEBUG
 
 				//printf("Evict %x to %x\n", cur_evictkey.keyhihi, tmp_cache_pop_ptr->key().keyhihi);
 
@@ -658,8 +662,9 @@ void *run_switchos_popworker(void *param) {
 				switchos_dppopserver_cached_keyset.erase(cur_evictkey);
 				mutex_for_cached_keyset.unlock();
 
-				//CUR_TIME(evict_total_t2);
+				//CUR_TIME(evict_total_t2); // TMPDEBUG
 
+				// TMPDEBUG
 				/*DELTA_TIME(evict_load_t2, evict_load_t1, evict_load_t3);
 				DELTA_TIME(evict_sendrecv_t2, evict_sendrecv_t1, evict_sendrecv_t3);
 				DELTA_TIME(evict_remove_t2, evict_remove_t1, evict_remove_t3);
@@ -689,6 +694,8 @@ void *run_switchos_popworker(void *param) {
 
 			INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < switch_kv_bucket_num);
 			//printf("[switchos.popworker] switchos_perpipeline_cached_empty_index[%d]: %d, switchos_freeidx: %d\n", tmp_pipeidx, int(switchos_perpipeline_cached_empty_index[tmp_pipeidx]), int(switchos_freeidx)); // TMPDEBUG
+			
+			//CUR_TIME(pop_cachepop_t1); // TMPDEBUG
 
 			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
 			cache_pop_inswitch_t tmp_cache_pop_inswitch(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
@@ -721,6 +728,9 @@ void *run_switchos_popworker(void *param) {
 				}
 			}
 
+			//CUR_TIME(pop_cachepop_t2); // TMPDEBUG
+			//CUR_TIME(pop_addkey_t1); // TMPDEBUG
+
 			// (1) add new <key, value> pair into cache_lookup_tbl; DEPRECATED: (2) and set valid=1 to enable the entry
 			////system("bash tofino/add_cache_lookup_setvalid1.sh");
 			//ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx, tmp_pipeidx);
@@ -729,6 +739,8 @@ void *run_switchos_popworker(void *param) {
 			udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 			//INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 			INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
+
+			//CUR_TIME(pop_addkey_t2); // TMPDEBUG
 
 			// update inswitch cache metadata
 			switchos_cached_keyidx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), switchos_freeidx));
@@ -751,6 +763,28 @@ void *run_switchos_popworker(void *param) {
 					break;
 				}
 			}
+
+			// TMPDEBUG
+			/*CUR_TIME(pop_total_t2);
+			DELTA_TIME(pop_cachepop_t2, pop_cachepop_t1, pop_cachepop_t3);
+			pop_cachepop_time_list.push_back(GET_MICROSECOND(pop_cachepop_t3));
+			DELTA_TIME(pop_addkey_t2, pop_addkey_t1, pop_addkey_t3);
+			pop_addkey_time_list.push_back(GET_MICROSECOND(pop_addkey_t3));
+			DELTA_TIME(pop_total_t2, pop_total_t1, pop_total_t3);
+			pop_total_time_list.push_back(GET_MICROSECOND(pop_total_t3));
+			if (((pop_total_time_list.size() + 1) % 100) == 0) {
+				double pop_cachepop_time = 0.0, pop_addkey_time = 0.0, pop_total_time = 0.0;
+				for (size_t i = 0; i < pop_total_time_list.size(); i++) {
+					pop_cachepop_time += pop_cachepop_time_list[i];
+					pop_addkey_time += pop_addkey_time_list[i];
+					pop_total_time += pop_total_time_list[i];
+				}
+				pop_cachepop_time /= pop_total_time_list.size();
+				pop_addkey_time /= pop_total_time_list.size();
+				pop_total_time /= pop_total_time_list.size();
+				printf("average pop cachepop time: %f, addkey time: %f, total time: %f\n", pop_cachepop_time, pop_addkey_time, pop_total_time);
+				fflush(stdout);
+			}*/
 
 			// free NETCACHE_GETREQ_POP
 			delete tmp_cache_pop_ptr;

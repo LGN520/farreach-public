@@ -226,8 +226,11 @@ void prepare_controller() {
 	controller_load_snapshotid();
 
 	// prepare snapshotclient
-	create_udpsock(controller_snapshotclient_for_spineswitchos_udpsock, true, "controller.snapshotclient_for_spineswitchos", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
-	create_udpsock(controller_snapshotclient_for_leafswitchos_udpsock, true, "controller.snapshotclient_for_leafswitchos", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
+	//create_udpsock(controller_snapshotclient_for_spineswitchos_udpsock, true, "controller.snapshotclient_for_spineswitchos", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
+	//create_udpsock(controller_snapshotclient_for_leafswitchos_udpsock, true, "controller.snapshotclient_for_leafswitchos", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
+	// NOTE: for low snapshot latency
+	create_udpsock(controller_snapshotclient_for_spineswitchos_udpsock, true, "controller.snapshotclient_for_spineswitchos", 0, CONTROLLER_SNAPSHOTCLIENT_FOR_SPINESWITCHOS_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE);
+	create_udpsock(controller_snapshotclient_for_leafswitchos_udpsock, true, "controller.snapshotclient_for_leafswitchos", 0, CONTROLLER_SNAPSHOTCLIENT_FOR_LEAFSWITCHOS_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE);
 	controller_snapshotclient_for_server_udpsock_list = new int[max_server_total_logical_num];
 	controller_snapshotclient_for_server_databuf_list = new dynamic_array_t[max_server_total_logical_num];
 	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
@@ -813,6 +816,7 @@ void *run_controller_snapshotclient(void *param) {
 		CUR_TIME(snapshot_t2);
 		DELTA_TIME(snapshot_t2, snapshot_t1, snapshot_t3);
 		printf("Time of making consistent system snapshot: %f s\n", GET_MICROSECOND(snapshot_t3) / 1000.0 / 1000.0);
+		fflush(stdout);
 		
 		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databufs) for controller failure recovery
 		controller_update_snapshotid(databufs[0].array(), databufs[0].size(), databufs[1].array(), databufs[1].size());

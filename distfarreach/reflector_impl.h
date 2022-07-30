@@ -27,6 +27,11 @@ int reflector_dp2cpserver_popclient_udpsock = -1;
 // reflector.dp2cpserver -> switchos.specialcaseserver
 int reflector_dp2cpserver_specialcaseclient_udpsock = -1;
 
+// TMPDEBUG
+/*struct timespec cp2dp_t1, dp2cp_t2, t3;
+std::vector<double> latency_list;
+std::vector<size_t> unmatched_cnt_list;*/
+
 void prepare_reflector();
 void *run_reflector_cp2dpserver(void *param);
 void *run_reflector_dp2cpserver(void *param);
@@ -90,6 +95,8 @@ void *run_reflector_cp2dpserver(void *param) {
 
 		INVARIANT(recvsize >= 0);
 
+		//CUR_TIME(cp2dp_t1); // TMPDEBUG
+
 		packet_type_t tmp_optype = packet_type_t(get_packet_type(buf, recvsize));
 		switch (tmp_optype) {
 			case packet_type_t::CACHE_POP_INSWITCH:
@@ -144,9 +151,16 @@ void *run_reflector_dp2cpserver(void *param) {
 	bool is_timeout = false;
 	char *srcip = NULL;
 	short srcport = 0;
+	//size_t total_unmatched_cnt = 0; // TMPDEBUG
+	//size_t tmp_unmatched_cnt = 0; // TMPDEBUG
 	while (reflector_running) {
 
 		if (strcmp(reflector_role, "spine") == 0) {
+			// TMPDEBUG
+			/*tmp_unmatched_cnt = 0;
+			is_timeout = rawrecvfrom(reflector_dp2cpserver_udpsock, buf, MAX_BUFSIZE, 0, &srcip, "10.0.2.11", srcport, reflector_dp2cpserver_port, NULL, NULL, recvsize, "reflector.dp2cpserver", tmp_unmatched_cnt);
+			total_unmatched_cnt += tmp_unmatched_cnt;*/
+			
 			is_timeout = rawrecvfrom(reflector_dp2cpserver_udpsock, buf, MAX_BUFSIZE, 0, &srcip, "10.0.2.11", srcport, reflector_dp2cpserver_port, NULL, NULL, recvsize, "reflector.dp2cpserver");
 		}
 		else {
@@ -156,6 +170,15 @@ void *run_reflector_dp2cpserver(void *param) {
 			continue;
 		}
 		INVARIANT(recvsize > 0);
+
+		// TMPDEBUG
+		/*CUR_TIME(dp2cp_t2);
+		DELTA_TIME(dp2cp_t2, cp2dp_t1, t3);
+		double tmp_latency = GET_MICROSECOND(t3);
+		if (tmp_latency > 0) {
+			latency_list.push_back(tmp_latency);
+			unmatched_cnt_list.push_back(tmp_unmatched_cnt);
+		}*/
 
 		packet_type_t pkt_type = get_packet_type(buf, recvsize);
 		switch (pkt_type) {

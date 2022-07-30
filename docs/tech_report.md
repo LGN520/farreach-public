@@ -244,3 +244,7 @@
 - Performance monitoring
 	* Use PerfStat and IOStat in rocksdb (see rocksdb_wrapper.c)
 	* Use htop, iotop (e.g., sudo iotop -u ssy), and iostat (e.g., iostat -x 1)
+- Install bpftools for spine reflector
+	* `git clone https://github.com/cloudflare/bpftools.git`
+	* `cd bpftools`
+	* `make`

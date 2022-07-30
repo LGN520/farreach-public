@@ -263,6 +263,8 @@ void rawsendto(int sockfd, const void *buf, size_t len, int flags, const char *s
 }
 
 bool rawrecvfrom(int sockfd, void *buf, size_t len, int flags, char **src_ip, const char *dst_ip, short &src_port, const short &dst_port, struct sockaddr_ll *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
+// TMPDEBUG
+//bool rawrecvfrom(int sockfd, void *buf, size_t len, int flags, char **src_ip, const char *dst_ip, short &src_port, const short &dst_port, struct sockaddr_ll *src_addr, socklen_t *addrlen, int &recvsize, const char* role, size_t &unmatched_cnt) {
 	bool need_timeout = false;
 	struct timeval tv;
 	tv.tv_sec = 0;
@@ -277,6 +279,7 @@ bool rawrecvfrom(int sockfd, void *buf, size_t len, int flags, char **src_ip, co
 	bool is_timeout = false;
 	char totalbuf[MAX_BUFSIZE];
 	int totalsize = 0;
+	//unmatched_cnt = 0; // TMPDEBUG
 	while (true) {
 		totalsize = recvfrom(sockfd, totalbuf, MAX_BUFSIZE, flags, (struct sockaddr *)src_addr, addrlen);
 		if (totalsize < 0) {
@@ -304,17 +307,25 @@ bool rawrecvfrom(int sockfd, void *buf, size_t len, int flags, char **src_ip, co
 						*src_ip = inet_ntoa(tmp_sin_addr);
 					}
 					src_port = ntohs(udph->source);
-					COUT_VAR(ntohs(udph->dest));
+					//COUT_VAR(ntohs(udph->dest));
 
 					int headersize = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr);
 					recvsize = totalsize - headersize;
 					INVARIANT(recvsize <= len);
 					memcpy(buf, totalbuf + headersize, recvsize);
-					dump_buf((char *)buf, recvsize);
+					//dump_buf((char *)buf, recvsize);
 					break;
 				}
+				//printf("unmatched srcport %d dstport %d\n", ntohs(udph->source), ntohs(udph->dest));
 			}
+			//struct in_addr tmp_sin_addr;
+			//tmp_sin_addr.s_addr = iph->daddr;
+			//printf("unmatched protocol: %x dstip: %s\n", iph->protocol, inet_ntoa(tmp_sin_addr));
 		}
+		//printf("unmatched ether type: %x\n", eh->ether_type);
+		//fflush(stdout);
+		//unmatched_cnt += 1; // TMPDEBUG
+
 		//continue;
 	}
 
@@ -329,6 +340,18 @@ void prepare_rawserver(int &sockfd, bool need_timeout, const char * ifname, cons
 	// Set listen interface
 	if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname)) != 0) {
 		printf("[%s] fail to bind raw socket on interface %s, errno: %d!\n", role, ifname, errno);
+		exit(-1);
+	}
+	// filter for specific udp port
+	uint32_t udpport = 5018;
+	struct sock_filter tmp_bpf_code[bpf_codelen];
+	memcpy(tmp_bpf_code, bpf_code, bpf_codelen * sizeof(struct sock_filter));
+	tmp_bpf_code[5].k = udpport; // change to specific udp port
+	struct sock_fprog bpf_filter;
+	bpf_filter.len = bpf_codelen;
+	bpf_filter.filter = tmp_bpf_code;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_ATTACH_FILTER, &bpf_filter, sizeof(bpf_filter)) < 0) {
+		printf("[%s] fail to attach bpf filter for udp port %d, errno: %d\n", role, udpport, errno);
 		exit(-1);
 	}
 }

@@ -11,6 +11,7 @@
 #include <sys/ioctl.h> // ioctl
 #include <netpacket/packet.h> // sockaddr_ll
 #include <arpa/inet.h> // htons htonl
+#include <linux/filter.h> // sock filter
 
 #include "helper.h"
 #include "dynamic_array.h"
@@ -29,6 +30,8 @@
 #define SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS 100000 // 0.1s
 #define SWITCHOS_SNAPSHOTCLIENT_FOR_REFLECTOR_TIMEOUT_USECS 100000 // 0.1s
 #define SWITCHOS_SPECIALCASESERVER_TIMEOUT_USECS 1000 // 1ms
+#define CONTROLLER_SNAPSHOTCLIENT_FOR_SPINESWITCHOS_TIMEOUT_USECS 100000 // 0.1s
+#define CONTROLLER_SNAPSHOTCLIENT_FOR_LEAFSWITCHOS_TIMEOUT_USECS 100000 // 0.1s
 
 // payload only used by end-hosts -> linux kernel performs ip-level fragmentation
 // max payload size to avoid udp fragmentation (manual udp fragmentation): 65535(ipmax) - 20(iphdr) - 8(udphdr)
@@ -44,6 +47,22 @@
 // udp server: prepare_udpserver -> udprecvfrom
 // tcp client: create_tcpsock -> tcpconnect -> tcpsend
 // tcp server: prepare_tcpserver -> tcpaccept -> tcprecv
+
+// bpf asm code for raw socket (used by spine.reflector.dp2cpserver to filter specific udp.dstport, e.g., 5018 aka 0x139a)
+// NOTE: if port changes in config.ini, we need to change bpf.asm and use bpf_asm to re-generate the following code
+static struct sock_filter bpf_code[] = {
+	{ 0x28,  0,  0, 0x0000000c },
+	{ 0x15,  0,  5, 0x00000800 },
+	{ 0x30,  0,  0, 0x00000017 },
+	{ 0x15,  0,  3, 0x00000011 },
+	{ 0x28,  0,  0, 0x00000024 },
+	{ 0x15,  0,  1, 0x0000139a },
+	{ 0x06,  0,  0, 0xffffffff },
+	{ 0x06,  0,  0, 0000000000 },
+};
+// NOTE: change codelen accordingly if code changes
+static unsigned short bpf_codelen = 8;
+//unsigned short bpf_codelen = ARRAY_SIZE(bpf_code);
 
 // utils for raw socket
 uint16_t checksum (uint16_t *addr, int len);
@@ -64,6 +83,8 @@ void rawsendto(int sockfd, const void *buf, size_t len, int flags, uint8_t *src_
 void rawsendto(int sockfd, const void *buf, size_t len, int flags, const char *src_ip, const char *dst_ip, short src_port, short dst_port, const struct sockaddr_ll *dest_addr, socklen_t addrlen, const char* role);
 #endif
 bool rawrecvfrom(int sockfd, void *buf, size_t len, int flags, char **src_ip, const char *dst_ip, short &src_port, const short &dst_port, struct sockaddr_ll *src_addr, socklen_t *addrlen, int &recvsize, const char* role);
+// TMPDEBUG
+//bool rawrecvfrom(int sockfd, void *buf, size_t len, int flags, char **src_ip, const char *dst_ip, short &src_port, const short &dst_port, struct sockaddr_ll *src_addr, socklen_t *addrlen, int &recvsize, const char* role, size_t &unmatched_cnt);
 void prepare_rawserver(int &sockfd, bool need_timeout, const char * ifname, const char* role, int timeout_sec, int timeout_usec, int raw_rcvbufsize);
 
 // NOTE: we use uint32_t for ipaddr due to htonl(INADDR_ANY)

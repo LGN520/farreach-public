@@ -199,4 +199,20 @@ bool validate_reflector_ip() {
 void kill(int signum) {
 	COUT_THIS("[transaction phase] receive SIGKILL!")
 	killed = true;
+
+	// TMPDEBUG
+	/*for (size_t tmpsize = 0; tmpsize < latency_list.size(); tmpsize++) {
+		if (((tmpsize + 1) % 100) == 0) {
+			double avg_latency = 0.0;
+			double avg_unmatched_cnt = 0.0;
+			for (size_t i = 0; i < tmpsize; i++) {
+				avg_latency += latency_list[i];
+				avg_unmatched_cnt += unmatched_cnt_list[i];
+			}
+			avg_latency /= tmpsize;
+			avg_unmatched_cnt /= tmpsize;
+			COUT_VAR(avg_latency);
+			COUT_VAR(avg_unmatched_cnt);
+		}
+	}*/
 }
