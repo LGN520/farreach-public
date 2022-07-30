@@ -1,4 +1,4 @@
-switchpids=( $(ps -aux | grep "switch" | grep -v "grep" | awk '{print $2}') )
+switchpids=( "$(ps -aux | grep "switch" | grep -v "grep" | grep -v "stop_switch.sh" | grep -v "stopswitchtestbed.sh" | awk '{print $2}')" )
 
 if [ ${#switchpids[@]} -gt 0 ]
 then

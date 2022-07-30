@@ -1,6 +1,6 @@
 #!/use/bin/env bash
 
-reflectorpids=( $(ps -aux | grep "./reflector" | grep -v "grep" | awk '{print $2}') )
+reflectorpids=( "$(ps -aux | grep "./reflector" | grep -v "grep" | awk '{print $2}')" )
 
 if [ ${#reflectorpids[@]} -gt 0 ]
 then

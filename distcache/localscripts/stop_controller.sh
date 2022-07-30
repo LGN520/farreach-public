@@ -1,6 +1,6 @@
 #!/use/bin/env bash
 
-controllerpids=( $(ps -aux | grep "./controller" | grep -v "grep" | awk '{print $2}') )
+controllerpids=( "$(ps -aux | grep "./controller" | grep -v "grep" | awk '{print $2}')" )
 
 if [ ${#controllerpids[@]} -gt 0 ]
 then

@@ -1,4 +1,4 @@
-ptf_popserverpids=( $(ps -aux | grep "ptf_popserver" | grep -v "grep" | awk '{print $2}') )
+ptf_popserverpids=( "$(ps -aux | grep "ptf_popserver" | grep -v "grep" | awk '{print $2}')" )
 
 if [ ${#ptf_popserverpids[@]} -gt 0 ]
 then
@@ -11,7 +11,7 @@ then
 	done
 fi
 
-ptf_cleanerpids=( $(ps -aux | grep "ptf_cleaner" | grep -v "grep" | awk '{print $2}') )
+ptf_cleanerpids=( "$(ps -aux | grep "ptf_cleaner" | grep -v "grep" | awk '{print $2}')" )
 
 if [ ${#ptf_cleanerpids[@]} -gt 0 ]
 then
