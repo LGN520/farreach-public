@@ -18,6 +18,32 @@
 			+ Spine switch converts PUT/DELREQ as DISTNOCACHE_PUT/DELREQ_SPINE to server-leaf (files: tofino-spine/p4src/ingress_mat.p4, tofino-spine/configure/table_configure.py)
 			+ Server-leaf switch converts DISTNOCACHE_PUT/DELREQ_SPINE as PUT/DELREQ to server (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
 
++ Compile and test DistNoCache
+	* Range partition w/ debug mode
+		- Fix p4 syntax errors
+		- Issue: NO response of GETREQ -> SYNC to distfarreach/distcache
+			+ Reason: key is partitioned into the last server with the largest leaf switch logical idx, while range_partition_tbl has wrong matching rules (keystart=0 and keyend=0 for the largest leafswitchidx)
+			+ Solution: fix matching rule issue in range_partition_tbl (files: tofino-*/configure/table_configure.py)
+		- Issue: NO response of SCANREQ -> SYNC to distfarreach/distcache
+			+ Observation: split_hdr.max_scannum = 0 -> server-leaf switch generates multiple SCANREQ_SPLITs to all servers which breaks the key range limitation of some servers -> server-leaf switch clones SCANREQ_SPLIT until global_serveridx >= logical_servernum, and process_scanreq_split_tbl will reset server_sid = 0 and hence NO SCANREQ_SPLIT further
+			+ [DEPRECATED] Reason: Tofino compiler's bug for PHV allocation (similar as 8b stat_hdr.stat and 8b clone_hdr.clonenum_for_pktloss) -> FAIL
+			+ [HOLD] Solution: use 16b split_hdr.is_clone instead of 8b split_hdr.is_clone, and update pktlen accordingly (files: tofino-*/p4src/header.p4, packet_format.h, tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py) -> FAIL
+				* NOTE: although it is NOT due to PHV allocation bug, we still change split_hdr.is_clone from 8b to 16b to avoid the bug in the future
+			+ Reason: server-leaf range_partition_for_scan_endkey_tbl mis-matches SCANREQ -> no matching entry, and clone_hdr.max_scannum is 0 by default
+			+ Solution: match SCANREQ_SPLIT instead of SCANREQ (files: tofino-leaf/configure/table_configure.py)
+		- Issue: client NIC receives SCANRES_SPLIT, yet remote_client does NOT deparse it -> SYNC to distfarreach/distcache
+			+ Reason: socket_helper does NOT consider op_hdr.globalswitchidx when extracting key
+			+ Solution: extract key from buf + sizeof(optype_t) + sizeof(switchidx_t) to consider op_hdr.globalswitchidx
+	* Range partition w/o debug mode
+		- Test write-only dynamic workload -> 0.27 MOPS for 1024/2 clients + 8/2 servers
+			+ Issue: client 0 CANNOT receive any response -> SYNC to distfarreac/distcache
+				* Reason: leaf's ipv4_forward_tbl only matches src.dstip of client 1 for XXX_SERVER
+				* Reason: match all possible client ips for leaf's ipv4_forward_tbl (tofino-leaf/configure/table_configure.py)
+		- Update distnocache visualization under range partition
+	* Hash partition w/o debug mode
+		- Test dynamic workload -> 0.54 MOPS for 1024/2 clients + 8/2 servers
+		- Update distnocache visualization under hash partition
+
 ## Run
 
 - Hardware configure

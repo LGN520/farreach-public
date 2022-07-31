@@ -13,6 +13,31 @@
 		+ Due to switch simulation, inswitch_hdr.idx must be different; however, if w/ individual physical switches w/o simulation, inswitch_hdr.idx can be the same for different op_hdr.globalswitchidx
 + NOTE: we avoid dependency on ingress port; see details in [implementation log after/during DistFarReach](netreach-v4-lsm.md)
 
+- [IMPORTANT] NOTE for compilation error of pragma stage limitation
+	+ Reason 1: too many entries which exceeds one-stage SRAM due to exact matching (e.g., cache_lookup_tbl) or TCAM due to non-exact matching (e.g., range/ternary/lpm matching; range_partition_tbl)
+	+ Solution 1: use multiple pragmas to split table entries into different stages
+	+ Reason 2: too many actions and action parameters which exceeds one-stage VLIW
+		* NOTE: even if we split the table into multiple stages, each stage still needs enough VLIW for all possible actions as Tofino does NOT know which MAT entries you will configure into the current stage
+	+ Solution 2: split the MAT table into multiple tables such that each table is responsible for a part of actions
+
+- [IMPORTANT] NOTE for exceeding power budget for the worst case of MAT access flow
+	+ Reason: access too much SRAM/TCAM in the worst case
+	+ Possible solutions
+		- For MAT: **reduce MAT number**; reduce MAT size; add control flow to avoid unnecessary MAT access; split large MAT into small MATs if total size decreases
+		- For reg: **reduce register size**
+		- NOTE: distributing MAT entries into multiple stages does NOT work, as you need to access the same amount of TCAM/SRAM as in single stage
+
+- [IMPORTANT] NOTEs for methodology change
+	+ For hash/range partition strategy
+		* Change USE_HASH/RANGE in helper.h
+		* Change RANGE_SUPPORT in tofino-*/main.p4 and recompile
+		* Change RANGE_SUPPORT in tofino-*/common.py
+	+ For server rotation or not
+		* Change bottleneck_partitionidx in config.ini and test_server_rotation.sh
+			- NOTE: for different partition strategy (hash/range) and different workloads, bottleneck partition is different
+		* Change workload_mode as 0 in config.ini
+		* Change SERVER_ROTATION in helper.h
+
 ## Overview
 
 + Design for distributed extension of FarReach
@@ -426,6 +451,125 @@
 	* Check all possible packet types from spine switch to server-leaf switch (e.g., GETREQ_NLATEST)
 		- For GETREQ_NLATEST from spine switch in DistFarReach, server-leaf directly forwards it to server by accessing partition_tbl and update_ipmac_srcport_tbl as client2server (files: tofino-leaf/configure/table_configure.py)
 		- NOTE: for NETCACHE_PUT/DELREQ_SEQ_CACHED from spine switch in DistCache, server-leaf ingress processes it as PUT/DELREQ_SEQ, i.e., converting it into PUT/DELREQ_SEQ_INSWITCH, which will be converted as NETCACHE_PUT/DELREQ_SEQ_CACHED to server (NOTE: if spine caches the key, server-leaf must also cache the key)
+
+## Implementation log after debug and sync from distnocache
+
++ Compile and test DistFarReach
+	* Range partition w/ debug mode
+		- Issue: we CANNOT use pragma stage X to specify stage ID for range/hash_partition_tbl -> SYNC to distcache
+			+ Reason: one stage TCAM CANNOT accommodate 4096 entries for range/hash_partition_tbl due to range matching
+			+ Solution: NOT use pragma stage X; move hash/range_partition_tbl as late as possible, and reserve two stages for them (files: tofino-*/main.p4, tofino-*/p4src/ingress_mat.p4)
+			+ Observation: based on visualization, range/hash_paritition_tbl needs TCAM of two stages to support range matching
+		- Pass correctness test of normal requests/responses
+			+ Issue: spine switch sets cur_scanswithidx = 1&1 instead of 1&2 for two SCANREQ_SPLITs -> error in socket_helper.recvlarge_multisrc; yet server-leaf switch sets cur_scanidx = 1&2 correctly -> SYNC to distcache
+				* Observation: the last cloned SCANREQ_SPLIT hits correct MAT entry, i.e., forward_scanreq_split(), in eg_port_forward_tbl to increase split_hdr.cur_scanswitchidx by 1
+				* Possible reason: Tofino compiler's PHV allocation bug
+				* [DEPRECATED] Solutions
+					- Re-compile distfarreach.spine -> FAIL
+					- Use 32b for split_hdr.cur_scanswitchidx, split_hdr.max_scanswitchnum, and meta.remain_scannum; update pktlen accordingly (files: tofino-*/p4src/header.p4, packet_format.*; tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py) -> FAIL: CANNOT pass compilation due to PHV limitation
+					- Introduce increase_globalswitchidx_for_cloned_scanreq_split_tbl after process_scanreq_split_tbl in spine switch such that split_hdr.cur_scanswitchidx/max_scanswitchnum do NOT need to be placed in the same group as op_hdr.globalswitchidx (files: tofino-spine/main.p4, tofino-spine/p4src/egress_mat.p4, tofino-spine/configure/table_configure.py) -> FAIL
+					- Extract split_hdr.cur_scanswitchidx/max_scanswitchnum as splitswitch_hdr to change spine-switch packet format and hence PHV allocation (files: tofino-spine/p4src/header.p4, tofino-spine/p4src/parser.py, tofino-spine/p4src/ingress_mat.p4, tofino-spine/p4src/egress_mat.p4) -> FAIL
+					- Use 32b for splitswitch_hdr.cur_scanswitchidx, splitswitch_hdr.max_scanswitchnum, and meta.remain_scannum; update pktlen accordingly (files: tofino-*/p4src/header.p4, packet_format.*; tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py) -> FAIL due to PHV limitation
+					- Swap cur_scanidx/max_scannum and cur_scanswitchidx/max_scanswitchnum (files: tofino-*/header.p4, packet_format.*) -> FAIL
+					- Use 8b split_hdr.is_clone; update pktlen accordingly (files: tofino-*/p4src/header.p4, packet_format.*; tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py) -> FAIL: split_hdr.cur_scanswitchidx = 1&0 now
+					- Add one/two 16b padding into split_hdr (files: tofino-*/p4src/header.p4, packet_format.*) -> FAIL
+				* [CORRECT] Solution: use pragma no_overlay to disable PHV overlay of split_hdr.cur_scanswitchidx (files: tofino-spine/p4src/header.p4) -> OK for cur_scanswitchidx, yet max_scanswitchnum becomes 0 -> WORK -> sync to distcache
+					- Also use pragma no_overlay for split_hdr.max_scanswitchnum
+		- Code change
+			+ Add local/remotescripts for static/dynamic workload -> sync to farreach/nocache/netcache/distnocache/distcache
+			+ Update docs -> sync to farreach/nocache/netcache/distnocache/distcache
+		- Pass correctness of cache population/eviction
+			+ Issue: no SETVALID_INSWITCH_ACK to leaf reflector -> SYNC to distnocache/distcache
+				* Reason: server-leaf.range_partition_tbl matches op_hdr.globalswitchidx -> NOT set leafswitchidx for SETVALID_INSWITCH means no matching entry in range_partition_tbl -> pkt is dropped by ingress.deparser
+				* Solution: set globalswitchidx for SETVALID_INSWITCH, CACHE_POP_INSWITCH, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, GETRES_LATEST/DELETED_SEQ_SERVER (files: packet_format.*, switchos.c) -> sync to distnocache/distcache
+			+ Issue: no GETRES to spine switch and client for GETRES_DELETED_SEQ_SERVER hit in leaf switch -> ONLY for distfarreach
+				* Reason: pkt cloned by clone_i2e is GETRES_LATEST/DELETED_SEQ_SERVER/_INSWITCH instead of GETRES_LATEST/DELETED_SEQ
+				* Solution: leaf switch should convert GETRES_LATEST/DELETED_SEQ_SERVER/_INSWITCH as GETRES to spine switch (files: tofino-leaf/p4src/egress_mat.p4, tofino-leaf/configure/table_configure.py)
+			+ Issue: w/ SETVALID_INSWITCH_ACK to spine reflector NIC, yet NOT received by dp2cpserver -> SYNC to distnocache/distcache
+				* Reason 1: spine switch uses 10.0.1.11 as srcip which is the local IP of client 0, where spine reflector is deployed
+				* Solution 1: use reflector_dp2cp_dstip as srcip for switch2switchos (files: config.ini, configs/*, tofino-*/comon.py, tofino-*/configure/table_configure.py) -> sync to distnocache/distcache
+				* [DEPRECATED]
+					* Reason 2: due to dp2cpserver.udpport of 5018?
+					* Solution 2: try udpport of 5028 -> FAIL
+					* Reason 3: port collision?
+					* Solution 3: netstat -tunlp -> sudo lsof -i:123 -> kill ntpd -> FAIL
+					* Reason 4: ip configuration error?
+					* Solution 4: change ip from 10.0.2.X into 10.2.2.X
+					* Reason 5: firewall; route/iptable rules; rpfilter rule?
+					* Solution 5: sudo ufw disable; check by route -n and iptables -L; sysctl net.ipv4.conf.all.rp_filter=0 + sysctl net.ipv4.conf.default.rp_filter=0 -> FAIL
+					* Reason 6: kernel packet drop?
+					* Solution 6: install dropwatch; run `sudo dropwatch -l kas` to use /proc/kallsyms to find corresponding kernel function -> FAIL
+					* Solution 7: reboot -> FAIL
+					* Solution 8: use `sudo perf record -g -a -e skb:kfree_skb` + `sudo perf script` to find pkt drop -> FAIL
+					* Solution 9: use kernel dynamic debug mechanism to find pkt drop -> FAIL (no error message)
+						- `sudo dmesg -C`
+						- `echo "file net/ipv4/udp.c +p" > /sys/kernel/debug/dynamic_debug/control`
+						- `cat /sys/kernel/debug/dynamic_debug/control | grep "udp.c"`
+						- Run testbed to receive SETVALID_INSWITCH_ACK from NIC, and run `sudo dmesg` to see kernel debug messages
+						- `echo "file net/ipv4/udp.c -p" > /sys/kernel/debug/dynamic_debug/control`
+				* Reason: unclear
+				* Solution: use AF_PACKET raw socket for spine switch reflector; launch/stop spine reflector w/ sudo permission (files: socket_helper.*, reflector_impl.h, remotescripts/launchservertestbed.sh, remotescripts/stopservertestbed.sh)
+			+ Pass WARMUPREQ/GETREQ_POP/PUTREQ_POP in leaf switch
+			+ Pass GET/PUT/DELREQ of cache hit and GETRES_LATEST/DELETED_SEQ_SERVER of conservative read in leaf switch
+			+ Pass WARMUPREQ in spine switch
+			+ Pass GET/PUT/DELREQ of cache hit and GETRES_LATEST/DELETED_SEQ_SERVER of conservative read in spine switch
+		- Pass correctness of crash-consistent snapshot and special cases
+			+ Issue: no DELREQ_SEQ_CASE3 for DELREQ_SEQ_INSWITCH under snapshot -> ONLY for distfarreach
+				* Reason: snapshot_flag is reset by default action of snapshot_flag_tbl for DELREQ_SEQ_INSWITCH
+				* Solution: explictily invoke nop() in snapshot_flag_tbl for PUT/DELREQ_SEQ_INSWITCH and GETRES_LATEST/DELETED_SEQ_SERVER_INSWITCH (tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+			+ Issue: no GETRES_DELETED_SEQ_SERVER_INSWITCH during single path -> ONLY for distfarreach
+				* Reason: GETRES_DELETED_SEQ_SERVER being forwarded to spine switch is converted as GETRES in egress pipeline
+				* Solution: use bypass_egress for recirculated PUT/DELREQ_SEQ and GETRES_LATEST/DELTED_SEQ_SERVER (files: tofino-leaf/p4src/ingress_mat.p4)
+			+ Strage observation: the counter of entry 8 of ipv4_forward_tbl in both spine and leaf switch is continuously increasing, which may be caused by Tofino bug
+				* In leaf switch. entry 8 is to forward GETRES_DELETED_SEQ_SERVER to spine switch, however the entry of ig_port_forward_tbl to convert GETRES_DELETED_SEQ_SERVER into GETRES_DELETED_SEQ_INSWITCH does NOT have corresponding counter
+				* In spine switch, entry 8 is to clone GETRES_DELETED_SEQ for GETRES and forward it to update registers, however both the entry of ig_port_forward_tbl to convert GETRES_DELETED_SEQ into GETRES_DELETED_SEQ_INSWITCH and the entry of update_ipmac_srcport_tbl for GETRES as server2client do NOT have corresponding counter
+				* Server does NOT send repeat GETRES_DELETED_SEQ_SERVER and client does NOT receive repeat GETRES
+			+ Issue: no CACHE_EVICT_LOADFREQ_INSWITCH_ACK to spine reflector -> SYNC to distnocache/distcache
+				* Reason: spine.cache_lookup_tbl matches op_hdr.globalswitchidx, while set leafswitchidx for CACHE_EVICT_LOADFREQ_INSWITCH -> is_cached = 0 and hence not converted into ACK in eg_port_forward_tbl
+				* [IMPORTANT]: we need to set op_hdr.globalswitchidx for GETRES_LATEST/DELETED_SEQ_SERVER and all pkts from control plane to data plane including SET_VALID_INSWITCH, CACHE_POP_INSWITCH, CACHE_EVICT_LOADFREQ/DATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH
+					- In server-leaf switch, we use globalswitchidx for both range_partition_tbl and cache_lookup_tbl
+					- In spine switch, we use globalswitchidx for cache_lookup_tbl
+				* Solution: set globalswitchidx based on role (i.e., spine/leaf) for SETVALID_INSWITCH, CACHE_POP_INSWITCH, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, GETRES_LATEST/DELETED_SEQ_SERVER (files: packet_format.*, switchos.c) -> sync to distnocache/distcache
+			+ Pass PUT/DELREQ_SEQ_INSWITCH during single path
+			+ Pass PUT/DELEQ_SEQ_CASE3
+			+ Populate a key in leaf switch
+				+ Pass GETRES_LATEST/DELETED_SEQ_SERVER_INSWITCH during single path
+				+ Pass PUT/DELREQ_SEQ_INSWITCH_CASE1
+				+ Pass GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1
+				+ Pass CACHE_EVICT_CASE2
+				+ Pass LOADSNAPSHOTDATA_INSWITCH
+			+ Populate a key in spine switch
+				+ Pass GETRES_LATEST/DELETED_SEQ_SERVER_INSWITCH during single path
+				+ Pass PUT/DELREQ_SEQ_INSWITCH_CASE1
+				+ Pass GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1
+				+ Pass CACHE_EVICT_CASE2
+				+ Pass LOADSNAPSHOTDATA_INSWITCH
+		- Pass correctness test of multiple clients + multiple servers
+	* Code change after debugging range partition
+		- Code for controller.snapshotclient to get snapshot from both spine and leaf switchos
+		- Use identity for spineselect_tbl (i.e., using two different hash functions to simulate independent hash functions) (files: tofino-leaf/p4src/ingress_mat.p4, key.c) -> sync to distnocache/distcache
+			+ We can confirm whether Tofino-based identity = CPU-based identity during correctness test of cache population (CPU-based hash) and cache hit (Tofino-based hash)
+			+ TODO: Recompile distnocache under hash partition
+	* Code change for issues
+		- Under server rotation, rotated server thread should use the same udp port for worker in transaction phase as in loading and warmup phase -> SYNC to farreach/nocache/netcache/distnocache/distcache
+			+ Add bottleneck_partitionidx in configuration (files: config.ini, configs/*, common_impl.h, iniparser/iniparser_wrapper.*)
+			+ Update config file line number in script (files: remotescripts/test_server_rotation.sh)
+			+ Non-bottleneck server worker calculates port based on its global logical idx and bottleneck serveridx (files: server_impl.h)
+		- Split cache_lookup_tbl and range/hash_partition_tbl into multiple stages to fix TCAM/SRAM issues in spine/leaf switch (files: tofino-*/p4src/ingress_mat.p4, tofino-*/main.p4) -> SYNC to distcache
+		- Split part of eg_port_forward_tbl into another_eg_port_forward_tbl to fix VLIW issue in leaf switch (files: tofino-leaf/p4src/egress_mat.p4, tofino-leaf/main.p4, tofino-leaf/configure/table_configure.py) -> ONLY for distfarreach
+			+ NOTE: as DistCache does NOT use too much VLIW for eg_port_forward_tbl, we do NOT need to split it
+		- Reduce power budget cost by: (1) introduce hash_for_cm12_tbl and hash_for_cm34_tbl; (2) reduce SEQ_BUCKET_COUNT to 4096; (3) reduce eg_port_forward_tbl to 1024; (4) use 16K instead of 32K cache entries in leaf switch -> SYNC to distcache
+	* Range partition w/o debug mode
+		- Test write-only dynamic workload -> from 0.34 to 0.51 MOPS for 1024/2 clients + 8/2 servers
+		- Try server rotation scripts -> OK (NOTE: bottlenect partition is NOT 123 under range partition)
+		- Update distfarreac visualization under range partition
+	* Code change
+		- Use bpf_filter to avoid long latency issue of raw socket due to receiving many unmatched packets (files: socket_helper.*) -> sync to distnocache/distcache
+		- Fix duplicate SNAPSHOT_GETDATA by re-sending snapshot data from switchos to controller; reduce controller.snapshotclient timeout value (files: switchos.c, controller.c, socket_helper.h) -> ONLY for distfarreach
+			* TODO: Use subthreads to get snapshot data from spine/leaf switch
+	* Hash partition w/o debug mode
+		- Test dynamic workload -> from 1.1 to 1.2 MOPS MOPS for 1024/2 clients + 8/2 servers
+		- Update distfarreach visualization under hash partition
 
 ## Run
 
