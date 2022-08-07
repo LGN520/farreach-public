@@ -39,7 +39,8 @@ header_type udp_t {
 header_type op_t {
 	fields {
 		optype: 16;
-		globalswitchidx: 16;
+		spineswitchidx: 16;
+		leafswitchidx: 16;
 		keylolo: 32;
 		keylohi: 32;
 		keyhilo: 32;

@@ -462,7 +462,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     op_hdr_optype = tmpoptype,
                                     op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
                                     op_hdr_keyhihihi_end = convert_u16_to_i16(key_end),
-                                    op_hdr_globalswitchidx = convert_u16_to_i16(global_leafswitch_logical_idx))
+                                    op_hdr_leafswitchidx = convert_u16_to_i16(global_leafswitch_logical_idx))
                             # Forward to the egress pipeline of server
                             server_physical_idx = -1
                             local_server_logical_idx = -1
@@ -566,7 +566,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 op_hdr_optype = SCANREQ_SPLIT,
                                 scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
                                 scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end),
-                                op_hdr_globalswitchidx = convert_u16_to_i16(global_leafswitch_logical_idx))
+                                op_hdr_leafswitchidx = convert_u16_to_i16(global_leafswitch_logical_idx))
                         end_globalserveridx_plus_one = global_server_logical_idx + 1 # used to calculate max_scannum in data plane
                         actnspec0 = distcacheleaf_range_partition_for_scan_endkey_action_spec_t(end_globalserveridx_plus_one)
                         # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
@@ -1184,10 +1184,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_start = (i-1)*8+1 # 1, 9, ..., 121
                     vallen_end = (i-1)*8+8 # 8, 16, ..., 128
                     aligned_vallen = vallen_end # 8, 16, ..., 128
-                val_stat_udplen = aligned_vallen + 36
-                val_stat_iplen = aligned_vallen + 56
-                val_seq_udplen = aligned_vallen + 36
-                val_seq_iplen = aligned_vallen + 56
+                val_stat_udplen = aligned_vallen + 38
+                val_stat_iplen = aligned_vallen + 58
+                val_seq_udplen = aligned_vallen + 38
+                val_seq_iplen = aligned_vallen + 58
                 matchspec0 = distcacheleaf_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=GETRES,
                         vallen_hdr_vallen_start=vallen_start,
@@ -1203,16 +1203,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     actnspec0 = distcacheleaf_update_pktlen_action_spec_t(val_seq_udplen, val_seq_iplen)
                     self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-            onlyop_udplen = 28
-            onlyop_iplen = 48
-            seq_udplen = 34
-            seq_iplen = 54
-            scanreqsplit_udplen = 56
-            scanreqsplit_iplen = 76
-            frequency_udplen = 32
-            frequency_iplen = 52
-            op_clone_udplen = 46
-            op_clone_iplen = 66
+            onlyop_udplen = 30
+            onlyop_iplen = 50
+            seq_udplen = 36
+            seq_iplen = 56
+            scanreqsplit_udplen = 58
+            scanreqsplit_iplen = 78
+            frequency_udplen = 34
+            frequency_iplen = 54
+            op_clone_udplen = 48
+            op_clone_iplen = 68
             # NETCACHE_WARMUPREQ_INSWITCH_POP is processed by spine switch
             #op_inswitch_clone_udplen = 74
             #op_inswitch_clone_iplen = 94

@@ -196,6 +196,7 @@ control ingress {
 	apply(hash_for_cm12_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
 
 	// Stage 2
+	// NOTE: change op_hdr.spineswitchidx as spineswitchidx
 	apply(spineselect_tbl); // forward requests from client to spine switch
 	apply(hash_for_cm34_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 

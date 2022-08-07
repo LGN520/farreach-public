@@ -142,9 +142,9 @@ table hash_for_cm12_tbl {
 
 // Stage 2
 
-action spineselect(eport, globalswitchidx) {
+action spineselect(eport, spineswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(op_hdr.globalswitchidx, globalswitchidx);
+	modify_field(op_hdr.spineswitchidx, spineswitchidx);
 }
 
 @pragma stage 2
@@ -217,7 +217,7 @@ table cache_lookup_tbl {
 		//op_hdr.keyhihi: exact;
 		op_hdr.keyhihilo: exact;
 		op_hdr.keyhihihi: exact;
-		op_hdr.globalswitchidx: exact;
+		op_hdr.leafswitchidx: exact;
 	}
 	actions {
 		cached_action;
@@ -337,7 +337,7 @@ table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
 		op_hdr.keyhihihi: range;
-		op_hdr.globalswitchidx: exact;
+		op_hdr.leafswitchidx: exact;
 	}
 	actions {
 		range_partition;
@@ -394,7 +394,7 @@ table range_partition_for_scan_endkey_tbl {
 	reads {
 		op_hdr.optype: exact;
 		scan_hdr.keyhihihi: range;
-		op_hdr.globalswitchidx: exact;
+		op_hdr.leafswitchidx: exact;
 	}
 	actions {
 		range_partition_for_scan_endkey;

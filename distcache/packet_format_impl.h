@@ -7,13 +7,13 @@
 // Packet
 template<class key_t>
 Packet<key_t>::Packet() 
-	: _type(static_cast<optype_t>(0)), _globalswitchidx(0), _key(key_t::min())
+	: _type(static_cast<optype_t>(0)), _spineswitchidx(0), _leafswitchidx(0), _key(key_t::min())
 {
 }
 
 template<class key_t>
-Packet<key_t>::Packet(packet_type_t type, switchidx_t globalswitchidx, key_t key)
-	: _type(static_cast<optype_t>(type)), _globalswitchidx(globalswitchidx), _key(key)
+Packet<key_t>::Packet(packet_type_t type, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key)
+	: _type(static_cast<optype_t>(type)), _spineswitchidx(spineswitchidx), _leafswitchidx(leafswitchidx), _key(key)
 {
 }
 
@@ -23,8 +23,13 @@ packet_type_t Packet<key_t>::type() const {
 }
 
 template<class key_t>
-switchidx_t Packet<key_t>::globalswitchidx() const {
-	return _globalswitchidx;
+switchidx_t Packet<key_t>::spineswitchidx() const {
+	return _spineswitchidx;
+}
+
+template<class key_t>
+switchidx_t Packet<key_t>::leafswitchidx() const {
+	return _leafswitchidx;
 }
 
 template<class key_t>
@@ -34,17 +39,19 @@ key_t Packet<key_t>::key() const {
 
 template<class key_t>
 uint32_t Packet<key_t>::serialize_ophdr(char * const data, uint32_t max_size) {
-	uint32_t ophdr_size = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t);
+	uint32_t ophdr_size = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t) + sizeof(key_t);
 	INVARIANT(max_size >= ophdr_size);
 
 	char *begin = data;
 	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
 	begin += tmp_typesize;
-	uint32_t tmp_switchidxsize = serialize_switchidx(this->_globalswitchidx, begin, max_size - tmp_typesize);
-	begin += tmp_switchidxsize;
-	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize - tmp_switchidxsize);
+	uint32_t tmp_spineswitchidxsize = serialize_switchidx(this->_spineswitchidx, begin, max_size - tmp_typesize);
+	begin += tmp_spineswitchidxsize;
+	uint32_t tmp_leafswitchidxsize = serialize_switchidx(this->_leafswitchidx, begin, max_size - tmp_typesize - tmp_spineswitchidxsize);
+	begin += tmp_leafswitchidxsize;
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize - tmp_spineswitchidxsize - tmp_leafswitchidxsize);
 	begin += tmp_keysize;
-	return tmp_typesize + tmp_switchidxsize + tmp_keysize;
+	return tmp_typesize + tmp_spineswitchidxsize + tmp_leafswitchidxsize + tmp_keysize;
 }
 
 template<class key_t>
@@ -52,26 +59,35 @@ uint32_t Packet<key_t>::dynamic_serialize_ophdr(dynamic_array_t &dynamic_data) {
 	int tmpoff = 0;
 	uint32_t tmp_typesize = dynamic_serialize_packet_type(this->_type, dynamic_data, tmpoff);
 	tmpoff += tmp_typesize;
-	uint32_t tmp_switchidxsize = dynamic_serialize_switchidx(this->_globalswitchidx, dynamic_data, tmpoff);
-	tmpoff += tmp_switchidxsize;
+	uint32_t tmp_spineswitchidxsize = dynamic_serialize_switchidx(this->_spineswitchidx, dynamic_data, tmpoff);
+	tmpoff += tmp_spineswitchidxsize;
+	uint32_t tmp_leafswitchidxsize = dynamic_serialize_switchidx(this->_leafswitchidx, dynamic_data, tmpoff);
+	tmpoff += tmp_leafswitchidxsize;
 	uint32_t tmp_keysize = this->_key.dynamic_serialize(dynamic_data, tmpoff);
 	tmpoff += tmp_keysize;
-	return tmp_typesize + tmp_switchidxsize + tmp_keysize;
+	return tmp_typesize + tmp_spineswitchidxsize + tmp_leafswitchidxsize + tmp_keysize;
 }
 
 template<class key_t>
 uint32_t Packet<key_t>::deserialize_ophdr(const char * data, uint32_t recv_size) {
-	uint32_t ophdr_size = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t);
+	uint32_t ophdr_size = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t) + sizeof(key_t);
 	INVARIANT(recv_size >= ophdr_size);
 
 	const char *begin = data;
 	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
 	begin += tmp_typesize;
-	uint32_t tmp_switchidxsize = deserialize_switchidx(this->_globalswitchidx, begin, recv_size - tmp_typesize);
-	begin += tmp_switchidxsize;
-	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize - tmp_switchidxsize);
+	uint32_t tmp_spineswitchidxsize = deserialize_switchidx(this->_spineswitchidx, begin, recv_size - tmp_typesize);
+	begin += tmp_spineswitchidxsize;
+	uint32_t tmp_leafswitchidxsize = deserialize_switchidx(this->_leafswitchidx, begin, recv_size - tmp_typesize - tmp_spineswitchidxsize);
+	begin += tmp_leafswitchidxsize;
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize - tmp_spineswitchidxsize - tmp_leafswitchidxsize);
 	begin += tmp_keysize;
-	return tmp_typesize + tmp_switchidxsize + tmp_keysize;
+	return tmp_typesize + tmp_spineswitchidxsize + tmp_leafswitchidxsize + tmp_keysize;
+}
+
+template<class key_t>
+uint32_t Packet<key_t>::get_ophdrsize() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t) + sizeof(key_t);
 }
 
 
@@ -85,7 +101,7 @@ GetRequest<key_t>::GetRequest()
 
 template<class key_t>
 GetRequest<key_t>::GetRequest(key_t key)
-	: Packet<key_t>(packet_type_t::GETREQ, 0, key)
+	: Packet<key_t>(packet_type_t::GETREQ, 0, 0, key)
 {
 }
 
@@ -97,7 +113,7 @@ GetRequest<key_t>::GetRequest(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 uint32_t GetRequest<key_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t);
+	return this->get_ophdrsize();
 }
 
 template<class key_t>
@@ -129,7 +145,7 @@ PutRequest<key_t, val_t>::PutRequest()
 
 template<class key_t, class val_t>
 PutRequest<key_t, val_t>::PutRequest(key_t key, val_t val) 
-	: Packet<key_t>(PacketType::PUTREQ, 0, key), _val(val)
+	: Packet<key_t>(PacketType::PUTREQ, 0, 0, key), _val(val)
 {	
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
@@ -148,7 +164,7 @@ val_t PutRequest<key_t, val_t>::val() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequest<key_t, val_t>::size() { // not used
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t);
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t);
 }
 
 template<class key_t, class val_t>
@@ -187,7 +203,7 @@ DelRequest<key_t>::DelRequest()
 
 template<class key_t>
 DelRequest<key_t>::DelRequest(key_t key)
-	: Packet<key_t>(packet_type_t::DELREQ, 0, key)
+	: Packet<key_t>(packet_type_t::DELREQ, 0, 0, key)
 {
 }
 
@@ -199,7 +215,7 @@ DelRequest<key_t>::DelRequest(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 uint32_t DelRequest<key_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t);
+	return this->get_ophdrsize();
 }
 
 template<class key_t>
@@ -236,7 +252,7 @@ ScanRequest<key_t>::ScanRequest(key_t key, key_t endkey, uint32_t num)
 }*/
 template<class key_t>
 ScanRequest<key_t>::ScanRequest(key_t key, key_t endkey)
-	: Packet<key_t>(packet_type_t::SCANREQ, 0, key), _endkey(endkey)
+	: Packet<key_t>(packet_type_t::SCANREQ, 0, 0, key), _endkey(endkey)
 {
 }
 
@@ -258,7 +274,7 @@ uint32_t ScanRequest<key_t>::num() const {
 
 template<class key_t>
 uint32_t ScanRequest<key_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t);// + sizeof(uint32_t);
+	return this->get_ophdrsize() + sizeof(key_t);// + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -297,7 +313,7 @@ GetResponse<key_t, val_t>::GetResponse()
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
-	: Packet<key_t>(PacketType::GETRES, 0, key), _val(val), _stat(stat), _nodeidx_foreval(nodeidx_foreval)
+	: Packet<key_t>(PacketType::GETRES, 0, 0, key), _val(val), _stat(stat), _nodeidx_foreval(nodeidx_foreval)
 {	
 }
 
@@ -324,7 +340,7 @@ uint16_t GetResponse<key_t, val_t>::nodeidx_foreval() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -378,7 +394,7 @@ GetResponseServer<key_t, val_t>::GetResponseServer(key_t key, val_t val, bool st
 
 template<class key_t>
 PutResponse<key_t>::PutResponse(key_t key, bool stat, uint16_t nodeidx_foreval) 
-	: Packet<key_t>(PacketType::PUTRES, 0, key), _stat(stat), _nodeidx_foreval(nodeidx_foreval)
+	: Packet<key_t>(PacketType::PUTRES, 0, 0, key), _stat(stat), _nodeidx_foreval(nodeidx_foreval)
 {	
 }
 
@@ -400,7 +416,7 @@ uint16_t PutResponse<key_t>::nodeidx_foreval() const {
 
 template<class key_t>
 uint32_t PutResponse<key_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return this->get_ophdrsize() + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t>
@@ -450,7 +466,7 @@ PutResponseServer<key_t>::PutResponseServer(key_t key, bool stat, uint16_t nodei
 
 template<class key_t>
 DelResponse<key_t>::DelResponse(key_t key, bool stat, uint16_t nodeidx_foreval) 
-	: Packet<key_t>(PacketType::DELRES, 0, key), _stat(stat), _nodeidx_foreval(nodeidx_foreval)
+	: Packet<key_t>(PacketType::DELRES, 0, 0, key), _stat(stat), _nodeidx_foreval(nodeidx_foreval)
 {	
 }
 
@@ -472,7 +488,7 @@ uint16_t DelResponse<key_t>::nodeidx_foreval() const {
 
 template<class key_t>
 uint32_t DelResponse<key_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return this->get_ophdrsize() + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t>
@@ -566,7 +582,7 @@ std::vector<std::pair<key_t, snapshot_record_t>> ScanResponseSplit<key_t, val_t>
 
 template<class key_t, class val_t>
 uint32_t ScanResponseSplit<key_t, val_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int) + sizeof(int32_t); // ophdr + scanhdr.endkey + splithdr (isclone + globalserveridx + cur_scanidx, max_scannum, cur_scanswitchidx, max_scanswitchnum) + nodeidx_foreval + snapshotid + pairnum
+	return this->get_ophdrsize() + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int) + sizeof(int32_t); // ophdr + scanhdr.endkey + splithdr (isclone + globalserveridx + cur_scanidx, max_scannum, cur_scanswitchidx, max_scanswitchnum) + nodeidx_foreval + snapshotid + pairnum
 }
 
 template<class key_t, class val_t>
@@ -710,12 +726,12 @@ template<class key_t, class val_t>
 size_t ScanResponseSplit<key_t, val_t>::get_frag_hdrsize() {
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr + nodeidx_foreval (used to identify fragments from different servers)
 	// NOTE: we only need nodeidx_foreval for entire split packet instead of each fragment; so we can place it in fragment body isntead of fragment header in udpsendlarge_ipfrag (see socket_helper.c)
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr (isclone + globalserveridx + cur_scanidx + max_scannum + cur_scanswitchidx + max_scanswitchnum)
+	return this->get_ophdrsize() + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr (isclone + globalserveridx + cur_scanidx + max_scannum + cur_scanswitchidx + max_scanswitchnum)
 }
 
 template<class key_t, class val_t>
 size_t ScanResponseSplit<key_t, val_t>::get_srcnum_off() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t); // offset of split_hdr.max_scannum
+	return this->get_ophdrsize() + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t); // offset of split_hdr.max_scannum
 }
 
 template<class key_t, class val_t>
@@ -730,7 +746,7 @@ bool ScanResponseSplit<key_t, val_t>::get_srcnum_conversion() {
 
 template<class key_t, class val_t>
 size_t ScanResponseSplit<key_t, val_t>::get_srcid_off() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES; // offset of split_hdr.cur_scanidx
+	return this->get_ophdrsize() + sizeof(key_t) + SPLIT_PREV_BYTES; // offset of split_hdr.cur_scanidx
 }
 
 template<class key_t, class val_t>
@@ -745,7 +761,7 @@ bool ScanResponseSplit<key_t, val_t>::get_srcid_conversion() {
 
 template<class key_t, class val_t>
 size_t ScanResponseSplit<key_t, val_t>::get_srcswitchnum_off() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // offset of split_hdr.max_scanswitchnum
+	return this->get_ophdrsize() + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // offset of split_hdr.max_scanswitchnum
 }
 
 template<class key_t, class val_t>
@@ -760,7 +776,7 @@ bool ScanResponseSplit<key_t, val_t>::get_srcswitchnum_conversion() {
 
 template<class key_t, class val_t>
 size_t ScanResponseSplit<key_t, val_t>::get_srcswitchid_off() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t); // offset of split_hdr.cur_scanswitchidx
+	return this->get_ophdrsize() + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t); // offset of split_hdr.cur_scanswitchidx
 }
 
 template<class key_t, class val_t>
@@ -863,7 +879,7 @@ uint16_t GetResponseLatestSeq<key_t, val_t>::nodeidx_foreval() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeq<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -879,7 +895,7 @@ GetResponseLatestSeqServer<key_t, val_t>::GetResponseLatestSeqServer(switchidx_t
 	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, nodeidx_foreval)
 {
 	this->_type = optype_t(packet_type_t::GETRES_LATEST_SEQ_SERVER);
-	this->_globalswitchidx = switchidx;
+	this->_leafswitchidx = switchidx;
 }
 
 // GetResponseLatestSeqInswitchCase1 (value must <= 128B)
@@ -922,7 +938,7 @@ bool GetResponseLatestSeqInswitchCase1<key_t, val_t>::stat() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES + CLONE_BYTES;
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES + CLONE_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1003,7 +1019,7 @@ GetResponseDeletedSeqServer<key_t, val_t>::GetResponseDeletedSeqServer(switchidx
 	: GetResponseDeletedSeq<key_t, val_t>(key, val, seq, nodeidx_foreval)
 {
 	this->_type = static_cast<optype_t>(PacketType::GETRES_DELETED_SEQ_SERVER);
-	this->_globalswitchidx = switchidx;
+	this->_leafswitchidx = switchidx;
 }
 
 // GetResponseDeletedSeqInswitchCase1 (value must <= 128B)
@@ -1038,7 +1054,7 @@ PutRequestSeq<key_t, val_t>::PutRequestSeq()
 
 template<class key_t, class val_t>
 PutRequestSeq<key_t, val_t>::PutRequestSeq(key_t key, val_t val, uint32_t seq)
-	: Packet<key_t>(packet_type_t::PUTREQ_SEQ, 0, key), _val(val), _seq(seq)
+	: Packet<key_t>(packet_type_t::PUTREQ_SEQ, 0, 0, key), _val(val), _seq(seq)
 {
 }
 
@@ -1063,7 +1079,7 @@ uint32_t PutRequestSeq<key_t, val_t>::seq() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequestSeq<key_t, val_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t);
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t);
 }
 
 template<class key_t, class val_t>
@@ -1181,7 +1197,7 @@ uint32_t DelRequestSeq<key_t>::seq() const {
 template<class key_t>
 uint32_t DelRequestSeq<key_t>::size() {
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t);
+	return this->get_ophdrsize() + sizeof(optype_t) + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -1281,7 +1297,7 @@ uint16_t ScanRequestSplit<key_t>::max_scanswitchnum() const {
 
 template<class key_t>
 uint32_t ScanRequestSplit<key_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t);// + sizeof(uint32_t);
+	return this->get_ophdrsize() + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t);// + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -1376,7 +1392,7 @@ uint16_t CachePop<key_t, val_t>::serveridx() const {
 
 template<class key_t, class val_t>
 uint32_t CachePop<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
 }
 
 template<class key_t, class val_t>
@@ -1401,11 +1417,12 @@ void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 // CachePopInswitch (value must <= 128B)
 
 template<class key_t, class val_t>
-CachePopInswitch<key_t, val_t>::CachePopInswitch(switchidx_t switchidx, key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat)
+CachePopInswitch<key_t, val_t>::CachePopInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat)
 	: PutRequestSeq<key_t, val_t>(key, val, seq), _freeidx(freeidx), _stat(stat)
 {
 	this->_type = static_cast<optype_t>(PacketType::CACHE_POP_INSWITCH);
-	this->_globalswitchidx = switchidx;
+	this->_spineswitchidx = spineswitchidx;
+	this->_leafswitchidx = leafswitchidx;
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
 	INVARIANT(freeidx >= 0);
@@ -1451,7 +1468,7 @@ bool CachePopInswitch<key_t, val_t>::stat() const {
 template<class key_t, class val_t>
 uint32_t CachePopInswitch<key_t, val_t>::size() { // unused
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1513,7 +1530,7 @@ uint16_t CacheEvict<key_t, val_t>::serveridx() const {
 
 template<class key_t, class val_t>
 uint32_t CacheEvict<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
 }
 
 template<class key_t, class val_t>
@@ -1686,8 +1703,8 @@ CacheEvictLoadfreqInswitch<key_t>::CacheEvictLoadfreqInswitch()
 }
 
 template<class key_t>
-CacheEvictLoadfreqInswitch<key_t>::CacheEvictLoadfreqInswitch(switchidx_t switchidx, key_t key, uint16_t evictidx)
-	: Packet<key_t>(PacketType::CACHE_EVICT_LOADFREQ_INSWITCH, switchidx, key), _evictidx(evictidx)
+CacheEvictLoadfreqInswitch<key_t>::CacheEvictLoadfreqInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint16_t evictidx)
+	: Packet<key_t>(PacketType::CACHE_EVICT_LOADFREQ_INSWITCH, spineswitchidx, leafswitchidx, key), _evictidx(evictidx)
 {
 	INVARIANT(evictidx >= 0);
 }
@@ -1715,7 +1732,7 @@ uint16_t CacheEvictLoadfreqInswitch<key_t>::evictidx() const {
 
 template<class key_t>
 uint32_t CacheEvictLoadfreqInswitch<key_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t);
+	return this->get_ophdrsize() + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t);
 }
 
 template<class key_t>
@@ -1752,7 +1769,7 @@ uint32_t CacheEvictLoadfreqInswitchAck<key_t>::frequency() const {
 
 template<class key_t>
 uint32_t CacheEvictLoadfreqInswitchAck<key_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint32_t);
+	return this->get_ophdrsize() + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -1763,8 +1780,8 @@ uint32_t CacheEvictLoadfreqInswitchAck<key_t>::serialize(char * const data, uint
 // CacheEvictLoaddataInswitch
 
 template<class key_t>
-CacheEvictLoaddataInswitch<key_t>::CacheEvictLoaddataInswitch(switchidx_t switchidx, key_t key, uint16_t evictidx)
-	: CacheEvictLoadfreqInswitch<key_t>(switchidx, key, evictidx)
+CacheEvictLoaddataInswitch<key_t>::CacheEvictLoaddataInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint16_t evictidx)
+	: CacheEvictLoadfreqInswitch<key_t>(spineswitchidx, leafswitchidx, key, evictidx)
 {
 	this->_type = optype_t(packet_type_t::CACHE_EVICT_LOADDATA_INSWITCH);
 	INVARIANT(evictidx >= 0);
@@ -1797,7 +1814,7 @@ bool CacheEvictLoaddataInswitchAck<key_t, val_t>::stat() const {
 
 template<class key_t, class val_t>
 uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1827,8 +1844,8 @@ uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::serialize(char * const dat
 // LoadsnapshotdataInswich
 
 template<class key_t>
-LoadsnapshotdataInswitch<key_t>::LoadsnapshotdataInswitch(switchidx_t switchidx, key_t key, uint16_t loadidx)
-	: CacheEvictLoadfreqInswitch<key_t>(switchidx, key, loadidx)
+LoadsnapshotdataInswitch<key_t>::LoadsnapshotdataInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint16_t loadidx)
+	: CacheEvictLoadfreqInswitch<key_t>(spineswitchidx, leafswitchidx, key, loadidx)
 {
 	this->_type = optype_t(packet_type_t::LOADSNAPSHOTDATA_INSWITCH);
 	INVARIANT(loadidx >= 0);
@@ -1851,7 +1868,7 @@ LoadsnapshotdataInswitchAck<key_t, val_t>::LoadsnapshotdataInswitchAck(const cha
 
 template<class key_t, class val_t>
 uint32_t LoadsnapshotdataInswitchAck<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1880,8 +1897,8 @@ void LoadsnapshotdataInswitchAck<key_t, val_t>::deserialize(const char * data, u
 // SetvalidInswitch
 
 template<class key_t>
-SetvalidInswitch<key_t>::SetvalidInswitch(switchidx_t switchidx, key_t key, uint16_t idx, uint8_t validvalue)
-	: Packet<key_t>(PacketType::SETVALID_INSWITCH, switchidx, key), _idx(idx), _validvalue(validvalue)
+SetvalidInswitch<key_t>::SetvalidInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint16_t idx, uint8_t validvalue)
+	: Packet<key_t>(PacketType::SETVALID_INSWITCH, spineswitchidx, leafswitchidx, key), _idx(idx), _validvalue(validvalue)
 {
 	INVARIANT(idx >= 0);
 	INVARIANT(validvalue == 0 || validvalue == 1 || validvalue == 3);
@@ -1917,7 +1934,7 @@ uint8_t SetvalidInswitch<key_t>::validvalue() const {
 
 template<class key_t>
 uint32_t SetvalidInswitch<key_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(uint8_t);
+	return this->get_ophdrsize() + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(uint8_t);
 }
 
 template<class key_t>
@@ -1957,7 +1974,7 @@ NetcacheGetRequestPop<key_t>::NetcacheGetRequestPop(const char * data, uint32_t 
 
 template<class key_t>
 uint32_t NetcacheGetRequestPop<key_t>::size() {
-	return sizeof(optype_t) + sizeof(key_t) + CLONE_BYTES;
+	return this->get_ophdrsize() + CLONE_BYTES;
 }
 
 template<class key_t>
@@ -1970,10 +1987,8 @@ void NetcacheGetRequestPop<key_t>::deserialize(const char * data, uint32_t recv_
 	uint32_t my_size = this->size();
 	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
-	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
-	begin += tmp_typesize;
-	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
-	//begin += tmp_keysize;
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+	begin += tmp_ophdrsize;
 	//begin += CLONE_BYTES;
 }
 
@@ -2007,13 +2022,11 @@ uint32_t NetcacheCachePop<key_t>::serialize(char * const data, uint32_t max_size
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
 	char *begin = data;
-	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
-	begin += tmp_typesize;
-	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
-	begin += tmp_keysize;
+	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+	begin += tmp_ophdrsize;
 	uint16_t bigendian_serveridx = htons(uint16_t(this->_serveridx));
 	memcpy(begin, (void *)&bigendian_serveridx, sizeof(uint16_t)); // little-endian to big-endian
-	return tmp_typesize + tmp_keysize + sizeof(uint16_t);
+	return tmp_ophdrsize + sizeof(uint16_t);
 }
 
 template<class key_t>
@@ -2023,7 +2036,7 @@ uint16_t NetcacheCachePop<key_t>::serveridx() const {
 
 template<class key_t>
 uint32_t NetcacheCachePop<key_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t);
+	return this->get_ophdrsize() + sizeof(uint16_t);
 }
 
 template<class key_t>
@@ -2032,10 +2045,8 @@ void NetcacheCachePop<key_t>::deserialize(const char * data, uint32_t recv_size)
 	uint32_t my_size = this->size();
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
-	begin += tmp_typesize;
-	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
-	begin += tmp_keysize;
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+	begin += tmp_ophdrsize;
 	memcpy((void *)&this->_serveridx, begin, sizeof(uint16_t));
 	this->_serveridx = ntohs(this->_serveridx); // Big-endian to little-endian
 }
@@ -2099,7 +2110,7 @@ NetcacheCachePopFinishAck<key_t>::NetcacheCachePopFinishAck(const char * data, u
 
 template<class key_t>
 NetcacheWarmupRequestInswitchPop<key_t>::NetcacheWarmupRequestInswitchPop(key_t key)
-	: CacheEvictLoadfreqInswitch<key_t>(key, 0)
+	: CacheEvictLoadfreqInswitch<key_t>(key, 0, 0)
 {
 	this->_type = static_cast<optype_t>(PacketType::NETCACHE_WARMUPREQ_INSWITCH_POP);
 }
@@ -2115,23 +2126,21 @@ uint32_t NetcacheWarmupRequestInswitchPop<key_t>::serialize(char * const data, u
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
 	char *begin = data;
-	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
-	begin += tmp_typesize;
-	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
-	begin += tmp_keysize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+	begin += tmp_ophdrsize;
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
 	begin += INSWITCH_PREV_BYTES;
 	memset(begin, 0, sizeof(uint16_t)); // inswitch_hdr.idx
 	begin += sizeof(uint16_t);
 	begin += CLONE_BYTES; // clone_hdr
-	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + INSWITCH_PREV_BYTES + sizeof(uint16_t);
+	return tmp_ophdrsize + tmp_shadowtypesize + INSWITCH_PREV_BYTES + sizeof(uint16_t);
 }
 
 template<class key_t>
 uint32_t NetcacheWarmupRequestInswitchPop<key_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + CLONE_BYTES;
+	return this->get_ophdrsize() + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + CLONE_BYTES;
 }
 
 template<class key_t>
@@ -2139,11 +2148,9 @@ void NetcacheWarmupRequestInswitchPop<key_t>::deserialize(const char * data, uin
 	uint32_t my_size = this->size();
 	INVARIANT(recv_size >= my_size);
 	const char *begin = data;
-	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
-	begin += tmp_typesize;
-	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
-	begin += tmp_keysize;
-	uint32_t tmp_shadowtypesize = deserialize_packet_type(this->_type, begin, recv_size - tmp_typesize - tmp_keysize); // shadowtype
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+	begin += tmp_ophdrsize;
+	uint32_t tmp_shadowtypesize = deserialize_packet_type(this->_type, begin, recv_size - tmp_ophdrsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	begin += INSWITCH_PREV_BYTES; // the first bytes of inswitch_hdr
 	begin += sizeof(uint16_t); // inswitch_hdr.idx
@@ -2246,7 +2253,7 @@ DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim()
 
 template<class key_t>
 DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim(key_t key, key_t victimkey, uint16_t victimidx)
-	: Packet<key_t>(packet_type_t::DISTCACHE_CACHE_EVICT_VICTIM, 0, key), _victimkey(victimkey), _victimidx(victimidx)
+	: Packet<key_t>(packet_type_t::DISTCACHE_CACHE_EVICT_VICTIM, 0, 0, key), _victimkey(victimkey), _victimidx(victimidx)
 {
 }
 
@@ -2258,7 +2265,7 @@ DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim(const char * data, u
 
 template<class key_t>
 uint32_t DistcacheCacheEvictVictim<key_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint16_t);
+	return this->get_ophdrsize() + sizeof(key_t) + sizeof(uint16_t);
 }
 
 template<class key_t>

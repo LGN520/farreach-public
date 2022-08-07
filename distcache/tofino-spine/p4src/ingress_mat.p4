@@ -122,7 +122,7 @@ table cache_lookup_tbl {
 		//op_hdr.keyhihi: exact;
 		op_hdr.keyhihilo: exact;
 		op_hdr.keyhihihi: exact;
-		op_hdr.globalswitchidx: exact;
+		op_hdr.spineswitchidx: exact;
 	}
 	actions {
 		cached_action;
@@ -210,9 +210,9 @@ table ipv4_forward_tbl {
 // Stage 5~6
 
 #ifdef RANGE_SUPPORT
-action range_partition(eport, globalswitchidx) {
+action range_partition(eport, leafswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(op_hdr.globalswitchidx, globalswitchidx);
+	modify_field(op_hdr.leafswitchidx, leafswitchidx);
 }
 @pragma stage 5 2048
 @pragma stage 6
@@ -229,9 +229,9 @@ table range_partition_tbl {
 	size: RANGE_PARTITION_ENTRY_NUM;
 }
 #else
-action hash_partition(eport, globalswitchidx) {
+action hash_partition(eport, leafswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(op_hdr.globalswitchidx, globalswitchidx);
+	modify_field(op_hdr.leafswitchidx, leafswitchidx);
 }
 @pragma stage 5 2048
 @pragma stage 6
@@ -255,7 +255,7 @@ table hash_partition_tbl {
 action range_partition_for_scan_endkey(end_globalswitchidx_plus_one) {
 	modify_field(split_hdr.is_clone, 0);
 	modify_field(split_hdr.cur_scanswitchidx, 0);
-	subtract(split_hdr.max_scanswitchnum, end_globalswitchidx_plus_one, op_hdr.globalswitchidx);
+	subtract(split_hdr.max_scanswitchnum, end_globalswitchidx_plus_one, op_hdr.leafswitchidx);
 }
 
 @pragma stage 7

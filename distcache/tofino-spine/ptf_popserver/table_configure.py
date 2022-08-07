@@ -82,7 +82,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.register_write_validvalue_reg(self.sess_hdl, tmp_devtgt, index, value)
 
     #def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, piptidx):
-    def add_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, globalswitchidx, freeidx):
+    def add_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, spineswitchidx, freeidx):
         #print "Add key into cache_lookup_tbl for all pipelines"
         matchspec0 = distcachespine_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
@@ -91,7 +91,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 #op_hdr_keyhihi = convert_u32_to_i32(keyhihi),
                 op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
                 op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
-                op_hdr_globalswitchidx = convert_u16_to_i16(globalswitchidx))
+                op_hdr_spineswitchidx = convert_u16_to_i16(spineswitchidx))
         actnspec0 = distcachespine_cached_action_action_spec_t(freeidx)
         self.client.cache_lookup_tbl_table_add_with_cached_action(\
                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -168,7 +168,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #sendbuf = sendbuf + struct.pack("={}sI?".format(len(evictvalbytes)), evictvalbytes, evictseq, evictstat)
         #return sendbuf
 
-    def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, globalswitchidx):
+    def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, spineswitchidx):
         #print "Remove key from cache_lookup_tbl for all pipelines"
         matchspec0 = distcachespine_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
@@ -177,7 +177,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 #op_hdr_keyhihi = convert_u32_to_i32(keyhihi),
                 op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
                 op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
-                op_hdr_globalswitchidx = convert_u16_to_i16(globalswitchidx))
+                op_hdr_spineswitchidx = convert_u16_to_i16(spineswitchidx))
         #actnspec0 = distcachespine_cached_action_action_spec_t(evictidx)
         self.client.cache_lookup_tbl_table_delete_by_match_spec(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
@@ -214,14 +214,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 # parse key and freeidx
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, recvbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
                 #freeidx, pipeidx = struct.unpack("=HI", recvbuf)
-                globalswitchidx, freeidx = struct.unpack("=2H", recvbuf)
+                spineswitchidx, freeidx = struct.unpack("=2H", recvbuf)
 
                 #if (keylolo, keylohi, keyhilo, keyhihilo, keyhihihi) not in ptf_cached_keyset:
                 #   ptf_cached_keyset.add((keylolo, keylohi, keyhilo, keyhihilo, keyhihihi))
 
                 # add <key, idx> into cache_lookup_tbl, and set valid = 1
                 #self.add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, pipeidx)
-                self.add_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, globalswitchidx, freeidx)
+                self.add_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, spineswitchidx, freeidx)
 
                 #else:
                 #    print "Duplicate cache population key {} {} {} {} {}".format(hex(keylolo), hex(keylohi), hex(keyhilo), hex(kyhihilo), hex(keyhihihi))
@@ -249,10 +249,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             elif control_type == SWITCHOS_REMOVE_CACHE_LOOKUP:
                 # parse key
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, recvbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
-                globalswitchidx = struct.unpack("=H", recvbuf)[0]
+                spineswitchidx = struct.unpack("=H", recvbuf)[0]
 
                 # remove key from cache_lookup_tbl
-                self.remove_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, globalswitchidx)
+                self.remove_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, spineswitchidx)
 
                 # send back SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_REMOVE_CACHE_LOOKUP_ACK)

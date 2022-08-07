@@ -542,12 +542,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
                         matchspec0 = distcachespine_process_scanreq_split_tbl_match_spec_t(\
                                 op_hdr_optype = SCANREQ_SPLIT,
-                                op_hdr_globalswitchidx = global_leafswitch_logical_idx,
+                                op_hdr_leafswitchidx = global_leafswitch_logical_idx,
                                 split_hdr_is_clone = is_clone)
                                 #eg_intr_md_from_parser_aux_clone_src = clone_src)
                         #if clone_src == NOT_CLONED:
                         if is_clone == 0:
-                            # get server-leaf logical idx for op_hdr.globalswitchidx + 1 (next SCANREQ_SPLIT)
+                            # get server-leaf logical idx for op_hdr.leafswitchidx + 1 (next SCANREQ_SPLIT)
                             tmpidx = global_leafswitch_logical_idx + 1
                             if global_leafswitch_logical_idx >= leafswitch_total_logical_num - 1: # NOTE: we do not check tmpidx here
                                 # max_scannum must be 1 -> is_last_scansplit must be 1 -> direct forward SCANREQ_SPLIT without cloning (meta.server_sid is not used in eg_port_forward_tbl)
@@ -559,10 +559,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                         #elif clone_src == CLONED_FROM_EGRESS:
                         elif is_clone == 1:
-                            # get server-leaf logical idx for op_hdr.globalswitchidx + 2 (NOTE: we do NOT increase op_hdr.globalswitchidx in eg_port_forward_tbl as split_hdr.cur_scanidx)
+                            # get server-leaf logical idx for op_hdr.leafswitchidx + 2 (NOTE: we do NOT increase op_hdr.leafswitchidx in eg_port_forward_tbl as split_hdr.cur_scanidx)
                             tmpidx = global_leafswitch_logical_idx + 2
                             if global_leafswitch_logical_idx >= leafswitch_total_logical_num - 2: # NOTE: we do not check tmpidx here
-                                # op_hdr.globalswitchidx+1 (increased by current action) == the last logical server-leaf -> current pkt must be cloned to the last logical server-leaf -> is_last_scansplit must be 1 -> direct forward SCANREQ_SPLIT without cloning (meta.server_sid is not used in eg_port_forward_tbl)
+                                # op_hdr.leafswitchidx+1 (increased by current action) == the last logical server-leaf -> current pkt must be cloned to the last logical server-leaf -> is_last_scansplit must be 1 -> direct forward SCANREQ_SPLIT without cloning (meta.server_sid is not used in eg_port_forward_tbl)
                                 tmpidx = leafswitch_total_logical_num - 1
                             # get server-leaf sid for global_leafswitch_logical_idx + 2 (next SCANREQ_SPLIT)
                             tmp_serverleaf_sid = self.serverleafswitch_sid
@@ -900,10 +900,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_start = (i-1)*8+1 # 1, 9, ..., 121
                     vallen_end = (i-1)*8+8 # 8, 16, ..., 128
                     aligned_vallen = vallen_end # 8, 16, ..., 128
-                val_stat_udplen = aligned_vallen + 36
-                val_stat_iplen = aligned_vallen + 56
-                val_seq_udplen = aligned_vallen + 36
-                val_seq_iplen = aligned_vallen + 56
+                val_stat_udplen = aligned_vallen + 38
+                val_stat_iplen = aligned_vallen + 58
+                val_seq_udplen = aligned_vallen + 38
+                val_seq_iplen = aligned_vallen + 58
                 matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=GETRES,
                         vallen_hdr_vallen_start=vallen_start,
@@ -919,18 +919,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     actnspec0 = distcachespine_update_pktlen_action_spec_t(val_seq_udplen, val_seq_iplen)
                     self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-            onlyop_udplen = 28
-            onlyop_iplen = 48
-            seq_udplen = 34
-            seq_iplen = 54
-            scanreqsplit_udplen = 56
-            scanreqsplit_iplen = 76
-            frequency_udplen = 32
-            frequency_iplen = 52
-            op_clone_udplen = 46
-            op_clone_iplen = 66
-            op_inswitch_clone_udplen = 76
-            op_inswitch_clone_iplen = 96
+            onlyop_udplen = 30
+            onlyop_iplen = 50
+            seq_udplen = 36
+            seq_iplen = 56
+            scanreqsplit_udplen = 58
+            scanreqsplit_iplen = 78
+            frequency_udplen = 34
+            frequency_iplen = 54
+            op_clone_udplen = 48
+            op_clone_iplen = 68
+            op_inswitch_clone_udplen = 78
+            op_inswitch_clone_iplen = 98
             for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETREQ, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
                 matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,

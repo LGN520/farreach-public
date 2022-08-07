@@ -212,44 +212,6 @@ table lastclone_lastscansplit_tbl {
 
 // Stage 9
 
-action update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(switchos_sid, reflector_port) {
-	modify_field(op_hdr.optype, NETCACHE_WARMUPREQ_INSWITCH_POP);
-	modify_field(shadowtype_hdr.shadowtype, NETCACHE_WARMUPREQ_INSWITCH_POP);
-	modify_field(udp_hdr.dstPort, reflector_port);
-	modify_field(clone_hdr.clonenum_for_pktloss, 3); // 3 ACKs (drop w/ 3 -> clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> drop and clone for WARMUPACK to client)
-
-	add_header(clone_hdr); // NOTE: clone_hdr.server_sid is reset as 0 in process_scanreq_split_tbl and prepare_for_cachepop_tbl
-
-	//modify_field(eg_intr_md.egress_port, port); // set eport to switchos
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
-}
-
-action forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(switchos_sid) {
-	subtract_from_field(clone_hdr.clonenum_for_pktloss, 1);
-
-	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
-}
-
-action update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(client_sid, server_port) {
-	modify_field(op_hdr.optype, WARMUPACK);
-	// DEPRECATED: udp.srcport will be set as server_worker_port_start in update_ipmac_srcport_tbl
-	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports
-
-	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
-	modify_field(udp_hdr.srcPort, server_port);
-	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
-	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
-	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
-
-	remove_header(shadowtype_hdr);
-	remove_header(inswitch_hdr);
-	remove_header(clone_hdr);
-
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
-}
-
 action update_getreq_inswitch_to_getreq() {
 	modify_field(op_hdr.optype, GETREQ);
 
@@ -476,9 +438,6 @@ table eg_port_forward_tbl {
 		clone_hdr.server_sid: exact;
 	}
 	actions {
-		update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack;
-		forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack;
-		update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring;
 		update_getreq_inswitch_to_getreq;
 		update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq;
 		forward_netcache_getreq_pop_clone_for_pktloss_and_getreq;
@@ -578,65 +537,65 @@ table update_ipmac_srcport_tbl {
 /*
 // CACHE_POP_INSWITCH_ACK, GETREQ (cloned by NETCACHE_GETREQ_POP), WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP), NETCACHE_VALUEUPDATE_ACK
 action update_onlyop_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 20(ophdr)
-	modify_field(udp_hdr.hdrlen, 28);
-	modify_field(ipv4_hdr.totalLen, 48);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr)
+	modify_field(udp_hdr.hdrlen, 30);
+	modify_field(ipv4_hdr.totalLen, 50);
 }
 
 // GETRES
 action update_val_stat_pktlen(aligned_vallen) {
-	// 20[iphdr] + 8(udphdr) + 20(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(stat)
-	add(udp_hdr.hdrlen, aligned_vallen, 36);
-	add(ipv4_hdr.totalLen, aligned_vallen, 56);
+	// 20[iphdr] + 8(udphdr) + 22(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(stat)
+	add(udp_hdr.hdrlen, aligned_vallen, 38);
+	add(ipv4_hdr.totalLen, aligned_vallen, 58);
 }
 
 // PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED
 action update_val_seq_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq)
-	add(udp_hdr.hdrlen, aligned_vallen, 36);
-	add(ipv4_hdr.totalLen, aligned_vallen, 56);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq)
+	add(udp_hdr.hdrlen, aligned_vallen, 38);
+	add(ipv4_hdr.totalLen, aligned_vallen, 58);
 }
 
 // PUTRES, DELRES (DistCache does NOT need)
 action update_stat_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(shadowtype) + 4(stat)
-	modify_field(udp_hdr.hdrlen, 34);
-	modify_field(ipv4_hdr.totalLen, 54);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 2(shadowtype) + 4(stat)
+	modify_field(udp_hdr.hdrlen, 36);
+	modify_field(ipv4_hdr.totalLen, 56);
 }
 
 // DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED
 action update_seq_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(shadowtype) + 4(seq) 
-	modify_field(udp_hdr.hdrlen, 34);
-	modify_field(ipv4_hdr.totalLen, 54);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 2(shadowtype) + 4(seq) 
+	modify_field(udp_hdr.hdrlen, 36);
+	modify_field(ipv4_hdr.totalLen, 56);
 }
  
 // SCANREQ_SPLIT
 action update_scanreqsplit_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 16(endkey) + 12(split_hdr)
-	modify_field(udp_hdr.hdrlen, 56);
-	modify_field(ipv4_hdr.totalLen, 76);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 16(endkey) + 12(split_hdr)
+	modify_field(udp_hdr.hdrlen, 58);
+	modify_field(ipv4_hdr.totalLen, 78);
 }
  
 // CACHE_EVICT_LOADFREQ_INSWITCH_ACK
 action update_frequency_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 4(frequency)
-	modify_field(udp_hdr.hdrlen, 32);
-	modify_field(ipv4_hdr.totalLen, 52);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 4(frequency)
+	modify_field(udp_hdr.hdrlen, 34);
+	modify_field(ipv4_hdr.totalLen, 54);
 }
 
 // NETCACHE_GETREQ_POP
 action update_ophdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 18(clonehdr)
-	modify_field(udp_hdr.hdrlen, 46);
-	modify_field(ipv4_hdr.totalLen, 66);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 18(clonehdr)
+	modify_field(udp_hdr.hdrlen, 48);
+	modify_field(ipv4_hdr.totalLen, 68);
 }
 
 // NETCACHE_WARMUPREQ_INSWITCH_POP
 action update_ophdr_inswitchhdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(shadowtype) + 28(inswitchhdr) + 18(clonehdr)
-	modify_field(udp_hdr.hdrlen, 76);
-	modify_field(ipv4_hdr.totalLen, 96);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 2(shadowtype) + 28(inswitchhdr) + 18(clonehdr)
+	modify_field(udp_hdr.hdrlen, 78);
+	modify_field(ipv4_hdr.totalLen, 98);
 }
 */
 

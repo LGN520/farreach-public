@@ -200,7 +200,7 @@ control ingress {
 
 	// Stage 5~6 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 	// NOTE: we reserve two stages for partition_tbl now as range matching needs sufficient TCAM
-	// NOTE: change op_hdr.globalswitchidx as leafswitchidx
+	// NOTE: change op_hdr.leafswitchidx as leafswitchidx
 #ifdef RANGE_SUPPORT
 	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
 #else
