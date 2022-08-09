@@ -247,11 +247,12 @@ action update_getreq_inswitch_to_getreq_spine() {
 
 	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
+	remove_header(switchload_hdr);
 }
 
-action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
-	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
+action update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(client_sid, server_port, stat) {
+	modify_field(op_hdr.optype, DISTCACHE_GETRES_SPINE);
+	modify_field(shadowtype_hdr.shadowtype, DISTCACHE_GETRES_SPINE);
 	modify_field(stat_hdr.stat, stat);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
@@ -263,6 +264,7 @@ action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, st
 
 	remove_header(inswitch_hdr);
 	add_header(stat_hdr);
+	// NOTE: hold switchload_hdr from GETREQ_INSWITCH in DISTCACHE_GETRES_SPINE
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
@@ -435,7 +437,7 @@ table eg_port_forward_tbl {
 		forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack;
 		update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring;
 		update_getreq_inswitch_to_getreq_spine;
-		update_getreq_inswitch_to_getres_by_mirroring;
+		update_getreq_inswitch_to_distcache_getres_spine_by_mirroring;
 		//update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // clone for first CACHE_POP_INSWITCH_ACK
 		//forward_cache_pop_inswitch_ack_clone_for_pktloss; // not last clone of CACHE_POP_INSWITCH_ACK
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
@@ -518,11 +520,11 @@ action update_onlyop_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 50);
 }
 
-// GETRES
+// GETRES, DISTCACHE_GETRES_SPINE
 action update_val_stat_pktlen(aligned_vallen) {
-	// 20[iphdr] + 8(udphdr) + 22(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(stat)
-	add(udp_hdr.hdrlen, aligned_vallen, 38);
-	add(ipv4_hdr.totalLen, aligned_vallen, 58);
+	// 20[iphdr] + 8(udphdr) + 22(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(stat) + 8(switchload)
+	add(udp_hdr.hdrlen, aligned_vallen, 46);
+	add(ipv4_hdr.totalLen, aligned_vallen, 66);
 }
 
 // PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED

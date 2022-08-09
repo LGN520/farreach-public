@@ -147,6 +147,11 @@ action spineselect(eport, spineswitchidx) {
 	modify_field(op_hdr.spineswitchidx, spineswitchidx);
 }
 
+action spineselect_for_getres_server(spineswitchidx) {
+	// NOTE: eport will be set by ipv4_forward_tbl for GETRES_SERVER
+	modify_field(op_hdr.spineswitchidx, spineswitchidx);
+}
+
 @pragma stage 2
 table spineselect_tbl {
 	reads {
@@ -155,6 +160,7 @@ table spineselect_tbl {
 	}
 	actions {
 		spineselect;
+		spineselect_for_getres_server;
 		nop;
 	}
 	default_action: nop();
@@ -246,80 +252,7 @@ table hash_for_bf2_tbl {
 	size: 2;
 }
 
-// Stage 6
-
-action hash_for_bf3() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
-}
-
-@pragma stage 6
-table hash_for_bf3_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf3;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
-/*action set_client_sid(client_sid, eport) {
-	modify_field(inswitch_hdr.client_sid, client_sid);
-	// NOTE: eport_for_res and client_sid must be in the same group for ALU access; as compiler aims to place them into the same container, they must come from the same source (action parameter or PHV)
-	//modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
-	modify_field(inswitch_hdr.eport_for_res, eport);
-}*/
-
-// NOTE: eg_intr_md.egress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
-// NOTE: using inswitch_hdr.client_sid for clone_e2e in ALU needs to maintain inswitch_hdr.client_sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
-action set_client_sid(client_sid) {
-	modify_field(inswitch_hdr.client_sid, client_sid);
-}
-
-@pragma stage 6
-table prepare_for_cachehit_tbl {
-	reads {
-		op_hdr.optype: exact;
-		//ig_intr_md.ingress_port: exact;
-		ipv4_hdr.srcAddr: lpm;
-	}
-	actions {
-		set_client_sid;
-		nop;
-	}
-	default_action: set_client_sid(0); // deprecated: configured as set_client_sid(sids[0]) in ptf
-	size: 32;
-}
-
-action forward_normal_response(eport) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-
-#ifdef DEBUG
-// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
-counter ipv4_forward_counter {
-	type : packets_and_bytes;
-	direct: ipv4_forward_tbl;
-}
-#endif
-
-@pragma stage 6
-table ipv4_forward_tbl {
-	reads {
-		op_hdr.optype: exact;
-		ipv4_hdr.dstAddr: lpm;
-	}
-	actions {
-		forward_normal_response;
-		nop;
-	}
-	default_action: nop();
-	size: 256;
-}
-
-// Stage 7~8
+// Stage 6~7
 
 #ifdef RANGE_SUPPORT
 action range_partition(udpport, eport) {
@@ -331,8 +264,8 @@ action range_partition_for_scan(udpport, eport, start_globalserveridx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(split_hdr.globalserveridx, start_globalserveridx);
 }
-@pragma stage 7 2048
-@pragma stage 8
+@pragma stage 6 2048
+@pragma stage 7
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -359,8 +292,8 @@ action hash_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-@pragma stage 7 2048
-@pragma stage 8
+@pragma stage 6 2048
+@pragma stage 7
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -378,7 +311,7 @@ table hash_partition_tbl {
 }
 #endif
 
-// Stage 9
+// Stage 8
 
 #ifdef RANGE_SUPPORT
 //action range_partition_for_scan_endkey(last_udpport_plus_one) {
@@ -389,7 +322,7 @@ action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
 	subtract(split_hdr.max_scannum, end_globalserveridx_plus_one, split_hdr.globalserveridx);
 }
 
-@pragma stage 9
+@pragma stage 8
 table range_partition_for_scan_endkey_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -404,6 +337,79 @@ table range_partition_for_scan_endkey_tbl {
 	size: RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM;
 }
 #endif
+
+// Stage 9
+
+action hash_for_bf3() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
+}
+
+@pragma stage 9
+table hash_for_bf3_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_bf3;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
+
+/*action set_client_sid(client_sid, eport) {
+	modify_field(inswitch_hdr.client_sid, client_sid);
+	// NOTE: eport_for_res and client_sid must be in the same group for ALU access; as compiler aims to place them into the same container, they must come from the same source (action parameter or PHV)
+	//modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
+	modify_field(inswitch_hdr.eport_for_res, eport);
+}*/
+
+// NOTE: eg_intr_md.egress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
+// NOTE: using inswitch_hdr.client_sid for clone_e2e in ALU needs to maintain inswitch_hdr.client_sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
+action set_client_sid(client_sid) {
+	modify_field(inswitch_hdr.client_sid, client_sid);
+}
+
+@pragma stage 9
+table prepare_for_cachehit_tbl {
+	reads {
+		op_hdr.optype: exact;
+		//ig_intr_md.ingress_port: exact;
+		ipv4_hdr.srcAddr: lpm;
+	}
+	actions {
+		set_client_sid;
+		nop;
+	}
+	default_action: set_client_sid(0); // deprecated: configured as set_client_sid(sids[0]) in ptf
+	size: 32;
+}
+
+action forward_normal_response(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter ipv4_forward_counter {
+	type : packets_and_bytes;
+	direct: ipv4_forward_tbl;
+}
+#endif
+
+@pragma stage 9
+table ipv4_forward_tbl {
+	reads {
+		op_hdr.optype: exact;
+		ipv4_hdr.dstAddr: lpm;
+	}
+	actions {
+		forward_normal_response;
+		nop;
+	}
+	default_action: nop();
+	size: 256;
+}
 
 // Stage 10
 
@@ -497,6 +503,11 @@ action update_loadack_server_to_loadack() {
 	modify_field(op_hdr.optype, LOADACK);
 }
 
+action update_distcache_getres_spine_to_getres() {
+	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ig_port_forward_counter {
@@ -523,8 +534,9 @@ table ig_port_forward_tbl {
 		update_delres_server_to_delres;
 		update_loadreq_spine_to_loadreq;
 		update_loadack_server_to_loadack;
+		update_distcache_getres_spine_to_getres;
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 16;
 }

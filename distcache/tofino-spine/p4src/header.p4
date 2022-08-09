@@ -153,6 +153,13 @@ header_type frequency_t {
 	}
 }
 
+header_type switchload_t {
+	fields {
+		spineload: 32;
+		leafload: 32;
+	}
+}
+
 header_type metadata_t {
 	fields {
 #ifndef RANGE_SUPPORT
@@ -216,6 +223,7 @@ header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
 header clone_t clone_hdr;
 header frequency_t frequency_hdr;
+header switchload_t switchload_hdr;
 metadata metadata_t meta;
 
 //header debug_t debug_hdr;

@@ -378,9 +378,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.set_hot_threshold_tbl_set_default_action_set_hot_threshold(\
                     self.sess_hdl, self.dev_tgt, actnspec0)
 
-            # Table: hash_for_spineselect_tbl (default: nop; size: 6)
+            # Table: hash_for_spineselect_tbl (default: nop; size: 7)
             print "Configuring hash_for_spineselect_tbl"
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ]:
+            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_SERVER]:
                 matchspec0 = distcacheleaf_hash_for_spineselect_tbl_match_spec_t(\
                         op_hdr_optype = convert_u16_to_i16(tmpoptype))
                 self.client.hash_for_spineselect_tbl_table_add_with_hash_for_spineselect(\
@@ -397,10 +397,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: spineselect_tbl (default: nop; size <= 6 * spineswitch_total_logical_num)
+            # Table: spineselect_tbl (default: nop; size <= 7 * spineswitch_total_logical_num)
             print "Configuring spineselect_tbl"
             key_range_per_spineswitch = switch_partition_count / spineswitch_total_logical_num
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ]:
+            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_SERVER]:
                 key_start = 0 # [0, 2^16-1]
                 for i in range(spineswitch_total_logical_num):
                     global_spineswitch_logical_idx = spineswitch_logical_idxes[i]
@@ -413,11 +413,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             op_hdr_optype = tmpoptype,
                             meta_hashval_for_spineselect_start = convert_u16_to_i16(key_start),
                             meta_hashval_for_spineselect_end = convert_u16_to_i16(key_end))
-                    # Forward to the egress pipeline of spine switch (NOT touch any MAT in egress pipelines)
-                    eport = self.spineswitch_devport
-                    actnspec0 = distcacheleaf_spineselect_action_spec_t(eport, global_spineswitch_logical_idx)
-                    self.client.spineselect_tbl_table_add_with_spineselect(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    if tmpoptype == GETRES_SERVER:
+                        # server-leaf sets spineswitchidx to read spineload_reg (NOTE: pkt will be forwarded to spine switch based on dstip in ipv4_forward_tbl later)
+                        actnspec0 = distcacheleaf_spineselect_for_getres_server_action_spec_t(global_spineswitch_logical_idx)
+                        self.client.spineselect_tbl_table_add_with_spineselect_for_getres_server(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    else:
+                        # client-leaf forwards to the egress pipeline of spine switch by independent hashing (NOT touch any MAT in egress pipelines)
+                        eport = self.spineswitch_devport
+                        actnspec0 = distcacheleaf_spineselect_action_spec_t(eport, global_spineswitch_logical_idx)
+                        self.client.spineselect_tbl_table_add_with_spineselect(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                     key_start = key_end + 1
 
             # Stage 2
@@ -614,13 +620,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: ipv4_forward_tbl (default: nop; size: 12*client_physical_num=24 < 12*8=96)
+            # Table: ipv4_forward_tbl (default: nop; size: 13*client_physical_num=26 < 13*8=104)
             print "Configuring ipv4_forward_tbl"
             for tmp_client_physical_idx in range(client_physical_num):
                 ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
                 eport = self.client_devports[tmp_client_physical_idx]
                 tmpsid = self.client_sids[tmp_client_physical_idx]
-                for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
+                for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
                     matchspec0 = distcacheleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
@@ -650,7 +656,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
 
-            # Table: ig_port_forward_tbl (default: nop; size: 8)
+            # Table: ig_port_forward_tbl (default: nop; size: 9)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ_SPINE)
@@ -699,6 +705,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = LOADACK_SERVER)
             self.client.ig_port_forward_tbl_table_add_with_update_loadack_server_to_loadack(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = DISTCACHE_GETRES_SPINE)
+            self.client.ig_port_forward_tbl_table_add_with_update_distcache_getres_spine_to_getres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline
@@ -1173,7 +1183,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             else:
                 self.configure_eg_port_forward_tbl_with_range()
 
-            # Table: update_pktlen_tbl (default: nop; 3*17+10 = 61)
+            # Table: update_pktlen_tbl (default: nop; 4*17+10 = 78)
             print "Configuring update_pktlen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1184,17 +1194,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_start = (i-1)*8+1 # 1, 9, ..., 121
                     vallen_end = (i-1)*8+8 # 8, 16, ..., 128
                     aligned_vallen = vallen_end # 8, 16, ..., 128
-                val_stat_udplen = aligned_vallen + 38
-                val_stat_iplen = aligned_vallen + 58
+                val_stat_udplen = aligned_vallen + 46
+                val_stat_iplen = aligned_vallen + 66
                 val_seq_udplen = aligned_vallen + 38
                 val_seq_iplen = aligned_vallen + 58
-                matchspec0 = distcacheleaf_update_pktlen_tbl_match_spec_t(\
-                        op_hdr_optype=GETRES,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
-                actnspec0 = distcacheleaf_update_pktlen_action_spec_t(val_stat_udplen, val_stat_iplen)
-                self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE]:
+                    matchspec0 = distcacheleaf_update_pktlen_tbl_match_spec_t(\
+                            op_hdr_optype=tmpoptype,
+                            vallen_hdr_vallen_start=vallen_start,
+                            vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
+                    actnspec0 = distcacheleaf_update_pktlen_action_spec_t(val_stat_udplen, val_stat_iplen)
+                    self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                 for tmpoptype in [PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED]:
                     matchspec0 = distcacheleaf_update_pktlen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,

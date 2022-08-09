@@ -38,7 +38,7 @@ enum class PacketType {
 	//CACHE_POP_INSWITCH=0x0007,
 	GETRES_LATEST_SEQ_INSWITCH=0x000f, GETRES_DELETED_SEQ_INSWITCH=0x001f, GETRES_LATEST_SEQ_INSWITCH_CASE1=0x002f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x003f, PUTREQ_SEQ_INSWITCH_CASE1=0x004f, DELREQ_SEQ_INSWITCH_CASE1=0x005f, LOADSNAPSHOTDATA_INSWITCH_ACK=0x006f, CACHE_POP_INSWITCH=0x007f, NETCACHE_VALUEUPDATE_INSWITCH=0x008f, GETRES_LATEST_SEQ_SERVER_INSWITCH=0x009f, GETRES_DELETED_SEQ_SERVER_INSWITCH=0x010f,
 	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b, NETCACHE_VALUEUPDATE=0x003b, GETRES_LATEST_SEQ_SERVER=0x004b, GETRES_DELETED_SEQ_SERVER=0x005b,
-	GETRES=0x0009, GETRES_SERVER=0x0019,
+	GETRES=0x0009, GETRES_SERVER=0x0019, DISTCACHE_GETRES_SPINE=0x0029,
 	PUTREQ_INSWITCH=0x0005,
 	DELREQ_SEQ_INSWITCH=0x0006,
 	PUTREQ_SEQ_INSWITCH=0x0007,
@@ -155,7 +155,7 @@ class ScanRequest : public Packet<key_t> { // ophdr + scanhdr
 };
 
 template<class key_t, class val_t>
-class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat_hdr
+class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat_hdr + switchload_hdr
 	public:
 		GetResponse();
 		GetResponse(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
@@ -164,6 +164,8 @@ class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat_hd
 		val_t val() const;
 		bool stat() const;
 		uint16_t nodeidx_foreval() const;
+		uint32_t spineload() const;
+		uint32_t leafload() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -173,10 +175,12 @@ class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat_hd
 		val_t _val;
 		bool _stat;
 		uint16_t _nodeidx_foreval;
+		uint32_t _spineload;
+		uint32_t _leafload;
 };
 
 template<class key_t, class val_t>
-class GetResponseServer : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + stat_hdr
+class GetResponseServer : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + stat_hdr + switchload_hdr
 	public:
 		GetResponseServer(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
 };

@@ -307,13 +307,13 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse()
-	: Packet<key_t>(), _val(), _stat(false), _nodeidx_foreval(0)
+	: Packet<key_t>(), _val(), _stat(false), _nodeidx_foreval(0), _spineload(0), _leafload(0)
 {
 }
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
-	: Packet<key_t>(PacketType::GETRES, 0, 0, key), _val(val), _stat(stat), _nodeidx_foreval(nodeidx_foreval)
+	: Packet<key_t>(PacketType::GETRES, 0, 0, key), _val(val), _stat(stat), _nodeidx_foreval(nodeidx_foreval), _spineload(0), _leafload(0)
 {	
 }
 
@@ -339,8 +339,18 @@ uint16_t GetResponse<key_t, val_t>::nodeidx_foreval() const {
 }
 
 template<class key_t, class val_t>
+uint32_t GetResponse<key_t, val_t>::spineload() const {
+	return _spineload;
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponse<key_t, val_t>::leafload() const {
+	return _leafload;
+}
+
+template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() { // unused
-	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return this->get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES + sizeof(uint32_t) + sizeof(uint32_t);
 }
 
 template<class key_t, class val_t>
@@ -360,7 +370,13 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	begin += STAT_PADDING_BYTES;
-	return tmp_ophdrsize + tmp_valsize + tmp_shadowtypesize + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	uint32_t bigendian_spineload = htonl(this->_spineload);
+	memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	uint32_t bigendian_leafload = htonl(this->_leafload);
+	memcpy(begin, (void *)&bigendian_leafload, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	return tmp_ophdrsize + tmp_valsize + tmp_shadowtypesize + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES + sizeof(uint32_t) + sizeof(uint32_t);
 }
 
 template<class key_t, class val_t>
@@ -379,6 +395,12 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
 	begin += sizeof(uint16_t);
 	begin += STAT_PADDING_BYTES;
+	memcpy(&this->_spineload, begin, sizeof(uint32_t));
+	this->_spineload = ntohl(this->_spineload);
+	begin += sizeof(uint32_t);
+	memcpy(&this->_leafload, begin, sizeof(uint32_t));
+	this->_leafload = ntohl(this->_leafload);
+	begin += sizeof(uint32_t);
 }
 
 // GetResponseServer (value must <= 128B)

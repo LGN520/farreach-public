@@ -50,6 +50,7 @@
 // 0b1001
 #define GETRES 0x09
 #define GETRES_SERVER 0x0019
+#define DISTCACHE_GETRES_SPINE 0x0029
 // 0b0101
 #define PUTREQ_INSWITCH 0x0005
 // 0b0100
@@ -142,7 +143,7 @@
 
 // MAX_SERVER_NUM <= 128
 #define MAX_SERVER_NUM 128
-// SPINESELECT_ENTRY_NUM = 6 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
+// SPINESELECT_ENTRY_NUM = 7 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
 #define SPINESELECT_ENTRY_NUM 1024
 // RANGE_PARTITION_ENTRY_NUM = 11 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
 #define RANGE_PARTITION_ENTRY_NUM 2048
@@ -210,12 +211,7 @@ control ingress {
 	// Stage 5
 	apply(hash_for_bf2_tbl);
 
-	// Stage 6
-	apply(hash_for_bf3_tbl);
-	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
-	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
-
-	// Stage 7~8 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
+	// Stage 6~7 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 	// NOTE: we reserve two stages for partition_tbl now as range matching needs sufficient TCAM
 #ifdef RANGE_SUPPORT
 	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
@@ -223,10 +219,15 @@ control ingress {
 	apply(hash_partition_tbl);
 #endif
 
-	// Stage 9
+	// Stage 8
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
+
+	// Stage 9
+	apply(hash_for_bf3_tbl);
+	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
+	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
 	// Stage 10
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)

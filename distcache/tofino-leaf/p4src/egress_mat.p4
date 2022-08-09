@@ -542,11 +542,11 @@ action update_onlyop_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 50);
 }
 
-// GETRES
+// GETRES, DISTCACHE_GETRES_SPINE
 action update_val_stat_pktlen(aligned_vallen) {
-	// 20[iphdr] + 8(udphdr) + 22(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(stat)
-	add(udp_hdr.hdrlen, aligned_vallen, 38);
-	add(ipv4_hdr.totalLen, aligned_vallen, 58);
+	// 20[iphdr] + 8(udphdr) + 22(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(stat) + 8(switchload)
+	add(udp_hdr.hdrlen, aligned_vallen, 46);
+	add(ipv4_hdr.totalLen, aligned_vallen, 66);
 }
 
 // PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED

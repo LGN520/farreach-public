@@ -50,6 +50,7 @@
 // 0b1001
 #define GETRES 0x09
 #define GETRES_SERVER 0x0019
+#define DISTCACHE_GETRES_SPINE 0x0029
 // 0b0101
 #define PUTREQ_INSWITCH 0x0005
 // 0b0100
@@ -149,6 +150,9 @@
 // HASH_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
 #define HASH_PARTITION_ENTRY_NUM 1024
 
+// max number of logical spine switches; used for spineload_reg
+#define MAX_SPINESWITCH_NUM 128
+
 // hash partition range
 #define PARTITION_COUNT 32768
 
@@ -163,6 +167,7 @@
 #include "p4src/parser.p4"
 
 // registers and MATs
+#include "p4src/regs/spineload.p4"
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/latest.p4"
 #include "p4src/regs/deleted.p4"
@@ -181,6 +186,7 @@ control ingress {
 		apply(l2l3_forward_tbl); // forward traditional packet
 	}
 	apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
+	apply(access_spineload_tbl); // access spineload_reg for power-of-two-choices
 
 	// Stage 1~2
 #ifndef RANGE_SUPPORT
@@ -194,11 +200,7 @@ control ingress {
 	// Stage 3
 	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
-	// Stage 4
-	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
-	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
-
-	// Stage 5~6 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
+	// Stage 4~5 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 	// NOTE: we reserve two stages for partition_tbl now as range matching needs sufficient TCAM
 	// NOTE: change op_hdr.leafswitchidx as leafswitchidx
 #ifdef RANGE_SUPPORT
@@ -207,10 +209,14 @@ control ingress {
 	apply(hash_partition_tbl);
 #endif
 
-	// Stage 7
+	// Stage 6
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
+
+	// Stage 7
+	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
+	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
 	// Stage 8
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)

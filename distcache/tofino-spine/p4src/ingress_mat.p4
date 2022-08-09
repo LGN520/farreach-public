@@ -151,7 +151,74 @@ table hash_for_seq_tbl {
 	size: 2;
 }
 
-// Stage 4
+// Stage 4~5
+
+#ifdef RANGE_SUPPORT
+action range_partition(eport, leafswitchidx) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(op_hdr.leafswitchidx, leafswitchidx);
+}
+@pragma stage 4 2048
+@pragma stage 5
+table range_partition_tbl {
+	reads {
+		op_hdr.optype: exact;
+		op_hdr.keyhihihi: range;
+	}
+	actions {
+		range_partition;
+		nop;
+	}
+	default_action: nop();
+	size: RANGE_PARTITION_ENTRY_NUM;
+}
+#else
+action hash_partition(eport, leafswitchidx) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(op_hdr.leafswitchidx, leafswitchidx);
+}
+@pragma stage 4 2048
+@pragma stage 5
+table hash_partition_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.hashval_for_partition: range;
+	}
+	actions {
+		hash_partition;
+		nop;
+	}
+	default_action: nop();
+	size: HASH_PARTITION_ENTRY_NUM;
+}
+#endif
+
+// Stage 6
+
+#ifdef RANGE_SUPPORT
+action range_partition_for_scan_endkey(end_globalswitchidx_plus_one) {
+	modify_field(split_hdr.is_clone, 0);
+	modify_field(split_hdr.cur_scanswitchidx, 0);
+	subtract(split_hdr.max_scanswitchnum, end_globalswitchidx_plus_one, op_hdr.leafswitchidx);
+}
+
+@pragma stage 6
+table range_partition_for_scan_endkey_tbl {
+	reads {
+		op_hdr.optype: exact;
+		//scan_hdr.keyhihi: range;
+		scan_hdr.keyhihihi: range;
+	}
+	actions {
+		range_partition_for_scan_endkey;
+		nop;
+	}
+	default_action: nop();
+	size: RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM;
+}
+#endif
+
+// Stage 7
 
 /*action set_client_sid(client_sid, eport) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
@@ -166,7 +233,7 @@ action set_client_sid(client_sid) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
 }
 
-@pragma stage 4
+@pragma stage 7
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -193,7 +260,7 @@ counter ipv4_forward_counter {
 }
 #endif
 
-@pragma stage 4
+@pragma stage 7
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -206,73 +273,6 @@ table ipv4_forward_tbl {
 	default_action: nop();
 	size: 64;
 }
-
-// Stage 5~6
-
-#ifdef RANGE_SUPPORT
-action range_partition(eport, leafswitchidx) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(op_hdr.leafswitchidx, leafswitchidx);
-}
-@pragma stage 5 2048
-@pragma stage 6
-table range_partition_tbl {
-	reads {
-		op_hdr.optype: exact;
-		op_hdr.keyhihihi: range;
-	}
-	actions {
-		range_partition;
-		nop;
-	}
-	default_action: nop();
-	size: RANGE_PARTITION_ENTRY_NUM;
-}
-#else
-action hash_partition(eport, leafswitchidx) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(op_hdr.leafswitchidx, leafswitchidx);
-}
-@pragma stage 5 2048
-@pragma stage 6
-table hash_partition_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.hashval_for_partition: range;
-	}
-	actions {
-		hash_partition;
-		nop;
-	}
-	default_action: nop();
-	size: HASH_PARTITION_ENTRY_NUM;
-}
-#endif
-
-// Stage 7
-
-#ifdef RANGE_SUPPORT
-action range_partition_for_scan_endkey(end_globalswitchidx_plus_one) {
-	modify_field(split_hdr.is_clone, 0);
-	modify_field(split_hdr.cur_scanswitchidx, 0);
-	subtract(split_hdr.max_scanswitchnum, end_globalswitchidx_plus_one, op_hdr.leafswitchidx);
-}
-
-@pragma stage 7
-table range_partition_for_scan_endkey_tbl {
-	reads {
-		op_hdr.optype: exact;
-		//scan_hdr.keyhihi: range;
-		scan_hdr.keyhihihi: range;
-	}
-	actions {
-		range_partition_for_scan_endkey;
-		nop;
-	}
-	default_action: nop();
-	size: RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM;
-}
-#endif
 
 // Stage 8
 
@@ -297,8 +297,10 @@ table sample_tbl {
 action update_getreq_to_getreq_inswitch() {
 	modify_field(op_hdr.optype, GETREQ_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, GETREQ_INSWITCH);
+
 	add_header(shadowtype_hdr);
 	add_header(inswitch_hdr);
+	add_header(switchload_hdr);
 }
 
 action update_putreq_to_putreq_inswitch() {

@@ -16,9 +16,9 @@
 // op_hdr + vallen&value + shadowtype + seq + inswitch_hdr (0b0111): PUTREQ_SEQ_INSWITCH
 // op_hdr + vallen&value + shadowtype + seq + inswitch_hdr + stat (0b1111) (XXX_CASE1 w/ clone_hdr): GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, LOADSNAPSHOTDATA_INSWITCH_ACK, CACHE_POP_INSWITCH, NETCACHE_VALUEUPDATE_INSWITCH, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH
 // op_hdr + vallen&value + shadowtype + seq + stat (0b1011): GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, NETCACHE_VALUEUPDATE, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER
-// op_hdr + vallen&value + shadowtype + stat (0b1001): GETRES, GETRES_SERVER
+// op_hdr + vallen&value + shadowtype + stat (0b1001): GETRES and GETRES_SERVER and DISTCACHE_GETRES_SPINE (w/ switchload_hdr)
 // op_hdr + vallen&value + shadowtype + inswitch (0b0101): PUTREQ_INSWITCH
-// op_hdr + shadowtype + inswitch_hdr (0b0100): GETREQ_INSWITCH, DELREQ_INSWITCH, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, SETVALID_INSWITCH (w/ validvalue_hdr), NETCACHE_WARMUPREQ_INSWITCH, NETCACHE_WARMUPREQ_INSWITCH_POP (w/ clone_hdr)
+// op_hdr + shadowtype + inswitch_hdr (0b0100): GETREQ_INSWITCH (w/ switchload_hdr), DELREQ_INSWITCH, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, SETVALID_INSWITCH (w/ validvalue_hdr), NETCACHE_WARMUPREQ_INSWITCH, NETCACHE_WARMUPREQ_INSWITCH_POP (w/ clone_hdr)
 // op_hdr + shadowtype + seq (0b0010): DELREQ_SEQ, DELREQ_SEQ_CASE3, NETCACHE_DELREQ_SEQ_CACHED
 // op_hdr + shadowtype + stat (0b1000): PUTRES, DELRES, PUTRES_SERVER, DELRES_SERVER
 // NOTE: followings are ended with 0b0000
@@ -66,7 +66,8 @@ parser parse_udp_srcport {
 	}
 }
 
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr
+// op_hdr -> scan_hdr -> split_hdr; op_hdr -> frequency_hdr
+// op_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/validvalue_hdr/switchload_hdr
 
 parser parse_op {
 	extract(op_hdr);
@@ -323,6 +324,7 @@ parser parse_inswitch {
 	//return select(op_hdr.optype) {
 	return select(shadowtype_hdr.shadowtype) {
 		NETCACHE_WARMUPREQ_INSWITCH_POP: parse_clone;
+		GETREQ_INSWITCH: parse_switchload;
 		8 mask 0x08: parse_stat;
 		default: ingress;
 		//default: parse_debug;
@@ -343,6 +345,9 @@ parser parse_stat {
 		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_clone;
 		PUTREQ_SEQ_INSWITCH_CASE1: parse_clone;
 		DELREQ_SEQ_INSWITCH_CASE1: parse_clone;
+		GETRES: parse_switchload;
+		GETRES_SERVER: parse_switchload;
+		DISTCACHE_GETRES_SPINE: parse_switchload;
 		default: ingress; // CACHE_POP_INSWITCH
 		//default: parse_debug;
 	}
@@ -360,6 +365,11 @@ parser parse_clone {
 parser parse_frequency {
 	extract(frequency_hdr);
 	return ingress; // CACHE_EVICT_LOADFREQ_INSWITCH_ACK
+}
+
+parser parse_switchload {
+	extract(switchload_hdr);
+	return ingress; // GETREQ_INSWITCH/GETRES/GETRES_SERVER
 }
 
 /*parser parse_debug {
