@@ -408,7 +408,9 @@ void *run_server_worker(void * param) {
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				get_response_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+				uint16_t tmp_spineswitchidx = uint16_t(req.key().get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+				uint16_t tmp_leafswitchidx = uint16_t(req.key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+				get_response_server_t rsp(tmp_spineswitchidx, tmp_leafswitchidx, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif

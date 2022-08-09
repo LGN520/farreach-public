@@ -182,7 +182,7 @@ class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat_hd
 template<class key_t, class val_t>
 class GetResponseServer : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + stat_hdr + switchload_hdr
 	public:
-		GetResponseServer(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
+		GetResponseServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
 };
 
 template<class key_t>

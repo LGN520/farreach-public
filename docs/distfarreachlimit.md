@@ -1,4 +1,4 @@
-# Distributed FarReach w/ counter-based rate limit
+# Distributed FarReach w/ counter-based rate limit (DEPRECATED due to NO sufficient power budget)
 
 - Copy from distfarreach
 - See [important notes](./netreach-v4-lsm.md) in netreach-v4-lsm.md

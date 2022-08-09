@@ -406,10 +406,12 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 // GetResponseServer (value must <= 128B)
 
 template<class key_t, class val_t>
-GetResponseServer<key_t, val_t>::GetResponseServer(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
+GetResponseServer<key_t, val_t>::GetResponseServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
 	: GetResponse<key_t, val_t>(key, val, stat, nodeidx_foreval)
 {	
 	this->_type = optype_t(packet_type_t::GETRES_SERVER);
+	this->_spineswitchidx = spineswitchidx;
+	this->_leafswitchidx = leafswitchidx;
 }
 
 // PutResponse (value must be any size)

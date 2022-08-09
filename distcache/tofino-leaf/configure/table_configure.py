@@ -386,6 +386,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.hash_for_spineselect_tbl_table_add_with_hash_for_spineselect(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
+            # Table: access_leafload_tbl (default: nop; size: 2)
+            print "Configuring access_leafload_tbl"
+            matchspec0 = distcacheleaf_access_leafload_tbl_match_spec_t(\
+                    op_hdr_optype = GETREQ_SPINE) # GETREQ_SPINE from spine switch
+            self.client.access_leafload_tbl_table_add_with_set_and_get_leafload(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distcacheleaf_access_leafload_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_SERVER) # GETRES_SERVER from storage server
+            self.client.access_leafload_tbl_table_add_with_get_leafload(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
             # Stage 1
 
             if RANGE_SUPPORT == False:

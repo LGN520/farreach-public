@@ -434,8 +434,10 @@ table sample_tbl {
 action update_getreq_spine_to_getreq_inswitch() {
 	modify_field(op_hdr.optype, GETREQ_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, GETREQ_INSWITCH);
+	
 	add_header(shadowtype_hdr);
 	add_header(inswitch_hdr);
+	add_header(switchload_hdr);
 }
 
 action update_putreq_seq_to_putreq_seq_inswitch() {

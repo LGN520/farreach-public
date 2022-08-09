@@ -217,6 +217,7 @@ action update_getreq_inswitch_to_getreq() {
 
 	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
+	remove_header(switchload_hdr);
 
 	//modify_field(eg_intr_md.egress_port, eport);
 }
@@ -228,6 +229,7 @@ action update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getre
 
 	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
+	remove_header(switchload_hdr);
 	add_header(clone_hdr); // NOTE: clone_hdr.server_sid has been set in prepare_for_cachepop_tbl
 
 	//modify_field(eg_intr_md.egress_port, port); // set eport to switchos
@@ -266,6 +268,7 @@ action update_getreq_inswitch_to_getres_by_mirroring(client_sid, stat) {
 
 	remove_header(inswitch_hdr);
 	add_header(stat_hdr);
+	// NOTE: hold switchload_hdr from GETREQ_INSWITCH for GETRES
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
