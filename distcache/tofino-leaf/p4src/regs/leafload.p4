@@ -13,6 +13,7 @@ blackbox stateful_alu set_and_get_leafload_alu {
 }
 
 // for GETREQ_SPINE from spine switch
+// NOTE: set AND GET for cache hit
 action set_and_get_leafload() {
 	set_and_get_leafload_alu.execute_stateful_alu(op_hdr.leafswitchidx);
 }

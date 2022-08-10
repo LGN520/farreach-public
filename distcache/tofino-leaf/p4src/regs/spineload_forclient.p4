@@ -3,18 +3,15 @@ register spineload_forclient_reg {
 	instance_count: MAX_SPINESWITCH_NUM;
 }
 
-blackbox stateful_alu set_and_get_spineload_forclient_alu {
+blackbox stateful_alu set_spineload_forclient_alu {
 	reg: spineload_forclient_reg;
 
 	update_lo_1_value: switchload_hdr.spineload;
-
-	output_value: alu_lo;
-	output_dst: meta.spineload_forclient;
 }
 
 // for DISTCACHE_GETRES_SPINE/GETRES from spine switch 
-action set_and_get_spineload_forclient() {
-	set_and_get_spineload_forclient_alu.execute_stateful_alu(op_hdr.spineswitchidx);
+action set_spineload_forclient() {
+	set_spineload_forclient_alu.execute_stateful_alu(op_hdr.spineswitchidx);
 }
 
 blackbox stateful_alu get_spineload_forclient_alu {
@@ -37,7 +34,7 @@ table access_spineload_forclient_tbl {
 		op_hdr.optype: exact;
 	}
 	actions {
-		set_and_get_spineload_forclient;
+		set_spineload_forclient;
 		get_spineload_forclient;
 		nop;
 	}

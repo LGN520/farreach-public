@@ -13,6 +13,7 @@ blackbox stateful_alu set_and_get_spineload_alu {
 }
 
 // for GETREQ from client-leaf
+// NOTE: set AND GET for cache hit
 action set_and_get_spineload() {
 	set_and_get_spineload_alu.execute_stateful_alu(op_hdr.spineswitchidx);
 }

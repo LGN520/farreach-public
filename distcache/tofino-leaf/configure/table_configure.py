@@ -402,25 +402,21 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE]:
                 matchspec0 = distcacheleaf_access_spineload_forclient_match_spec_t(\
                         op_hdr_optype = tmpoptype)
-                self.client.access_spineload_forclient_tbl_table_add_with_set_and_get_spineload_forclient(\
+                self.client.access_spineload_forclient_tbl_table_add_with_set_spineload_forclient(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_access_spineload_forclient_match_spec_t(\
                     op_hdr_optype = GETREQ)
             self.client.access_spineload_forclient_tbl_table_add_with_get_spineload_forclient(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_leafload_forclient_tbl (default: nop; size: 2)
-            print "Configuring access_leafload_forclient_tbl"
-            matchspec0 = distcacheleaf_access_leafload_forclient_match_spec_t(\
-                    op_hdr_optype = GETRES)
-            self.client.access_leafload_forclient_tbl_table_add_with_set_and_get_leafload_forclient(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distcacheleaf_access_leafload_forclient_match_spec_t(\
-                    op_hdr_optype = GETREQ)
-            self.client.access_leafload_forclient_tbl_table_add_with_get_leafload_forclient(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-
             # Stage 1
+
+            # Table: hash_for_ecmp_tbl (default: nop; size: 1)
+            print "Configuring hash_for_ecmp_tbl"
+            matchspec0 = distcacheleaf_hash_for_ecmp_tbl_match_spec_t(\
+                    op_hdr_optype = GETREQ)
+            self.client.hash_for_ecmp_tbl_table_add_with_hash_for_ecmp(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT == False:
                 # Table: hash_for_partition_tbl (default: nop; size: 10)
@@ -431,10 +427,48 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: spineselect_tbl (default: nop; size <= 7 * spineswitch_total_logical_num)
+            # Stage 2
+
+            # Table: access_leafload_forclient_tbl (default: reset_meta_toleaf_predicate(); size: 2)
+            print "Configuring access_leafload_forclient_tbl"
+            matchspec0 = distcacheleaf_access_leafload_forclient_match_spec_t(\
+                    op_hdr_optype = GETRES)
+            self.client.access_leafload_forclient_tbl_table_add_with_set_leafload_forclient(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distcacheleaf_access_leafload_forclient_match_spec_t(\
+                    op_hdr_optype = GETREQ)
+            self.client.access_leafload_forclient_tbl_table_add_with_get_leafload_forclient(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: ecmp_for_getreq_tbl (default: nop; size: spineswitch_total_logical_num - 1)
+            print "Configuring ecmp_for_getreq_tbl"
+            if spineswitch_total_logical_num <= 1:
+                print "spineswitch_total_logical_num = {}, which must >= 2 for power-of-two-choices".format(spineswitch_total_logical_num)
+                exit(-1)
+            offsetnum = spineswitch_total_logical_num - 1 # [1, spineswitch_total_logical_num - 1]
+            key_range_per_offset = switch_partition_count / offsetnum
+            key_start = 0 # [0, 2^16-1]
+            for i in range(offsetnum): # [0, offsetnum-1] = [0, spineswitch_total_logicalnum-2]
+                if i == offsetnum - 1:
+                    key_end = switch_partition_count - 1
+                else:
+                    key_end = key_start + key_range_per_offset - 1
+                # NOTE: both start and end are included
+                matchspec0 = distcacheleaf_ecmp_for_getreq_tbl_match_spec_t(\
+                        op_hdr_optype = GETREQ,
+                        meta_hashval_for_ecmp_start = convert_u16_to_i16(key_start),
+                        meta_hashval_for_ecmp_end = convert_u16_to_i16(key_end))
+                actnspec0 = distcacheleaf_set_toleaf_offset_action_spec_t(i + 1) # [1, offsetnum] = [1, spineswitch_total_logicalnum-1]
+                self.client.ecmp_for_getreq_tbl_table_add_with_set_toleaf_offset(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                key_start = key_end + 1
+
+            # Stage 3
+
+            # Table: spineselect_tbl (default: nop; size <= 8 * spineswitch_total_logical_num)
             print "Configuring spineselect_tbl"
             key_range_per_spineswitch = switch_partition_count / spineswitch_total_logical_num
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_SERVER]:
+            for tmpoptype in [PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_SERVER]:
                 key_start = 0 # [0, 2^16-1]
                 for i in range(spineswitch_total_logical_num):
                     global_spineswitch_logical_idx = spineswitch_logical_idxes[i]
@@ -445,6 +479,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     # NOTE: both start and end are included
                     matchspec0 = distcacheleaf_spineselect_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
+                            meta_toleaf_predicate = 1,
                             meta_hashval_for_spineselect_start = convert_u16_to_i16(key_start),
                             meta_hashval_for_spineselect_end = convert_u16_to_i16(key_end))
                     if tmpoptype == GETRES_SERVER:
@@ -456,6 +491,36 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         # client-leaf forwards to the egress pipeline of spine switch by independent hashing (NOT touch any MAT in egress pipelines)
                         eport = self.spineswitch_devport
                         actnspec0 = distcacheleaf_spineselect_action_spec_t(eport, global_spineswitch_logical_idx)
+                        self.client.spineselect_tbl_table_add_with_spineselect(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    key_start = key_end + 1
+            for tmp_toleaf_predicate in toleaf_predicate_list:
+                key_start = 0 # [0, 2^16-1]
+                for i in range(spineswitch_total_logical_num):
+                    global_spineswitch_logical_idx = spineswitch_logical_idxes[i]
+                    if i == spineswitch_total_logical_num - 1:
+                        key_end = switch_partition_count - 1
+                    else:
+                        key_end = key_start + key_range_per_spineswitch - 1
+                    # NOTE: both start and end are included
+                    matchspec0 = distcacheleaf_spineselect_tbl_match_spec_t(\
+                            op_hdr_optype = GETREQ,
+                            meta_toleaf_predicate = tmp_toleaf_predicate,
+                            meta_hashval_for_spineselect_start = convert_u16_to_i16(key_start),
+                            meta_hashval_for_spineselect_end = convert_u16_to_i16(key_end))
+                    if tmp_toleaf_predicate == 1:
+                        # client-leaf forwards to the egress pipeline of spine switch by independent hashing (NOT touch any MAT in egress pipelines) w/ correct spineswitchidx
+                        eport = self.spineswitch_devport
+                        actnspec0 = distcacheleaf_spineselect_action_spec_t(eport, global_spineswitch_logical_idx)
+                        self.client.spineselect_tbl_table_add_with_spineselect(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    elif tmp_toleaf_predicate == 2:
+                        # client-leaf forwards to the egress pipeline of spine switch by independent hashing (NOT touch any MAT in egress pipelines) w/ incorrect spineswitchidx to avoid spine-switch cache hit
+                        eport = self.spineswitch_devport
+                        incorrect_global_spineswitch_logical_idx = global_spineswitch_logical_idx + 1 # [0, spineswitch_total_logical_num - 1] -> [1, spineswitch_total_logical_num]
+                        if incorrect_global_spineswitch_logical_idx == spineswitch_total_logical_num:
+                            incorrect_global_spineswitch_logical_idx = 0
+                        actnspec0 = distcacheleaf_spineselect_action_spec_t(eport, incorrect_global_spineswitch_logical_idx)
                         self.client.spineselect_tbl_table_add_with_spineselect(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                     key_start = key_end + 1
@@ -624,8 +689,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 print "Configuring hash_for_cm{}_tbl".format(funcname)
                 for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, PUTREQ_SEQ_INSWITCH]:
                     matchspec0 = eval("distcacheleaf_hash_for_cm{}_tbl_match_spec_t".format(funcname))(\
-                            op_hdr_optype = tmpoptype,
-                            meta_need_recirculate = 0)
+                            op_hdr_optype = tmpoptype)
                     eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(funcname, funcname))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 

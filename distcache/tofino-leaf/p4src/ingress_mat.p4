@@ -45,6 +45,15 @@ field_list_calculation hash_calc4 {
 	output_width: 32;
 }
 
+field_list_calculation random_hash_calc {
+	input {
+		hash_fields;
+	}
+	algorithm: random;
+	//output_width: 16;
+	output_width: 32;
+}
+
 action nop() {}
 
 // Stage 0
@@ -137,10 +146,64 @@ table hash_for_cm12_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 4;
+}
+
+action hash_for_ecmp() {
+	modify_field_with_hash_based_offset(meta.hashval_for_ecmp, 0, random_hash_calc, PARTITION_COUNT);
+}
+
+@pragma stage 1
+table hash_for_ecmp_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_ecmp;
+		nop;
+	}
+	default_action: nop();
+	size: 1;
 }
 
 // Stage 2
+
+action hash_for_bf2() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf2, 0, hash_calc2, BF_BUCKET_COUNT);
+}
+
+@pragma stage 2
+table hash_for_bf2_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_bf2;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
+
+action set_toleaf_offset(toleaf_offset) {
+	modify_field(meta.toleaf_offset, toleaf_offset);
+}
+
+@pragma stage 2
+table ecmp_for_getreq_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.hashval_for_ecmp: range;
+	}
+	actions {
+		set_toleaf_offset;
+		nop;
+	}
+	default_action: nop();
+	size: MAX_SPINESWITCH_NUM;
+}
+
+// Stage 3
 
 action spineselect(eport, spineswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
@@ -152,10 +215,11 @@ action spineselect_for_getres_server(spineswitchidx) {
 	modify_field(op_hdr.spineswitchidx, spineswitchidx);
 }
 
-@pragma stage 2
+@pragma stage 3
 table spineselect_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.toleaf_predicate: exact;
 		meta.hashval_for_spineselect: range;
 	}
 	actions {
@@ -172,7 +236,7 @@ action hash_for_cm34() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
 }
 
-@pragma stage 2
+@pragma stage 3
 table hash_for_cm34_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -182,16 +246,16 @@ table hash_for_cm34_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 4;
 }
 
-// Stage 3~4
+// Stage 4~5
 
 action hash_for_bf1() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
 }
 
-@pragma stage 3
+@pragma stage 4
 table hash_for_bf1_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -213,8 +277,8 @@ action uncached_action() {
 	modify_field(inswitch_hdr.is_cached, 0);
 }
 
-@pragma stage 3 16384
-@pragma stage 4
+@pragma stage 4 16384
+@pragma stage 5
 table cache_lookup_tbl {
 	reads {
 		op_hdr.keylolo: exact;
@@ -231,25 +295,6 @@ table cache_lookup_tbl {
 	}
 	default_action: uncached_action();
 	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
-}
-
-// Stage 5
-
-action hash_for_bf2() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf2, 0, hash_calc2, BF_BUCKET_COUNT);
-}
-
-@pragma stage 5
-table hash_for_bf2_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf2;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
 }
 
 // Stage 6~7

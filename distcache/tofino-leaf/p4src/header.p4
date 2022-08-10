@@ -167,7 +167,9 @@ header_type metadata_t {
 		hashval_for_partition: 16; // at most 32K
 #endif
 		spineload_forclient: 32;
-		leafload_forclient: 32;
+		toleaf_predicate: 4;
+		hashval_for_ecmp: 16;
+		toleaf_offset: 16;
 		cm1_predicate: 4;
 		cm2_predicate: 4;
 		cm3_predicate: 4;

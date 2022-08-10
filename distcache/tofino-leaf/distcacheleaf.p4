@@ -143,7 +143,7 @@
 
 // MAX_SERVER_NUM <= 128
 #define MAX_SERVER_NUM 128
-// SPINESELECT_ENTRY_NUM = 7 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
+// SPINESELECT_ENTRY_NUM = 8 * MAX_SERVER_NUM <= 8 * MAX_SERVER_NUM
 #define SPINESELECT_ENTRY_NUM 1024
 // RANGE_PARTITION_ENTRY_NUM = 11 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
 #define RANGE_PARTITION_ENTRY_NUM 2048
@@ -199,29 +199,32 @@ control ingress {
 	apply(hash_for_spineselect_tbl); // set meta.hashval_for_spineselect
 	apply(access_leafload_tbl); // access leafload_reg for power-of-two-choices by server-leaf
 	// TODO: we can merge spine/leafload_forclient into one 64-bit register array if w/ stateful ALU limitation
-	apply(access_spineload_forclient_tbl);
-	apply(access_leafload_forclient_tbl);
+	apply(access_spineload_forclient_tbl); // set meta.spineload_forclient
 
 	// Stage 1
 #ifndef RANGE_SUPPORT
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
 	apply(hash_for_cm12_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
+	apply(hash_for_ecmp_tbl); // method B for incorrect spineswitchidx to set meta.hashval_for_ecmp
 
 	// Stage 2
-	// NOTE: change op_hdr.spineswitchidx as spineswitchidx
-	apply(spineselect_tbl); // forward requests from client to spine switch
-	apply(hash_for_cm34_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
+	apply(hash_for_bf2_tbl);
+	// TODO: if merge spine/leafload_forclient into one 64-bit register array, we can directly compare register_lo and register_hi to set meta.toleaf_predicate
+	apply(access_leafload_forclient_tbl); // set meta.toleaf_predicate
+	apply(ecmp_for_getreq_tbl); // method B for incorrect spineswitchidx to set meta.toleaf_offset
 
-	// Stage 3~4
+	// Stage 3
+	apply(hash_for_cm34_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
+	// NOTE: we cannot compare meta.spine/leafload_forclient by gateway table due to Tofino limitation (>/< can only be performed between one PHV and one constant, whose total bits <= 12 bits)
+	apply(spineselect_tbl); // change spineswitchidx and eport to forward requests from client to spine switch
+
+	// Stage 4~5
 	apply(hash_for_bf1_tbl);
 	// IMPORTANT: to save TCAM, we do not match op_hdr.optype in cache_lookup_tbl 
 	// -> so as long as op_hdr.key matches an entry in cache_lookup_tbl, inswitch_hdr.is_cached must be 1 (e.g., CACHE_EVICT_LOADXXX)
 	// -> but note that if the optype does not have inswitch_hdr, is_cached of 1 will be dropped after entering egress pipeline, and is_cached is still 0 (e.g., SCANREQ_SPLIT)
 	apply(cache_lookup_tbl); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
-
-	// Stage 5
-	apply(hash_for_bf2_tbl);
 
 	// Stage 6~7 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 	// NOTE: we reserve two stages for partition_tbl now as range matching needs sufficient TCAM
