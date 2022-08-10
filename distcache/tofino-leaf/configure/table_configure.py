@@ -517,15 +517,39 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     elif tmp_toleaf_predicate == 2:
                         # client-leaf forwards to the egress pipeline of spine switch by independent hashing (NOT touch any MAT in egress pipelines) w/ incorrect spineswitchidx to avoid spine-switch cache hit
                         eport = self.spineswitch_devport
-                        incorrect_global_spineswitch_logical_idx = global_spineswitch_logical_idx + 1 # [0, spineswitch_total_logical_num - 1] -> [1, spineswitch_total_logical_num]
-                        if incorrect_global_spineswitch_logical_idx == spineswitch_total_logical_num:
-                            incorrect_global_spineswitch_logical_idx = 0
-                        actnspec0 = distcacheleaf_spineselect_action_spec_t(eport, incorrect_global_spineswitch_logical_idx)
-                        self.client.spineselect_tbl_table_add_with_spineselect(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+
+                        # Method A: incorrect = correct + 1
+                        #incorrect_global_spineswitch_logical_idx = global_spineswitch_logical_idx + 1 # [0, spineswitch_total_logical_num - 1] -> [1, spineswitch_total_logical_num]
+                        #if incorrect_global_spineswitch_logical_idx == spineswitch_total_logical_num:
+                        #    incorrect_global_spineswitch_logical_idx = 0
+                        #actnspec0 = distcacheleaf_spineselect_action_spec_t(eport, incorrect_global_spineswitch_logical_idx)
+                        #self.client.spineselect_tbl_table_add_with_spineselect(\
+                        #        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+
+                        # Method B: incorrect = correct + toleaf_offset
+                        actnspec0 = distcacheleaf_spineselect_for_getreq_toleaf_action_spec_t(eport, global_spineswitch_logical_idx)
+                        self.client.spineselect_tbl_table_add_with_spineselect_for_getreq_toleaf(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                     key_start = key_end + 1
 
-            # Stage 2
+            # Stage 4
+
+            # Table: cutoff_spineswitchidx_for_ecmp_tbl (default: nop; size: spineswitch_total_logical_num - 1)
+            print "Configuring cutoff_spineswitchidx_for_ecmp_tbl"
+            for tmp_spineswitchidx in [spineswitch_total_logical_num, 2 * spineswitch_total_logical_num - 2]:
+                matchspec0 = distcacheleaf_cutoff_spineswitchidx_for_ecmp_tbl_match_spec_t(\
+                        op_hdr_optype = GETREQ,
+                        op_hdr_spineswitchidx = tmp_spineswitchidx)
+                actnspec0 = distcacheleaf_cutoff_spineswitchidx_for_ecmp_action_spec_t(spineswitch_total_logical_num)
+                self.client.cutoff_spineswitchidx_for_ecmp_tbl_table_add_with_cutoff_spineswitch_for_ecmp(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+            # Stage 4~5
+
+            # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
+            print "Leave cache_lookup_tbl managed by controller in runtime"
+
+            # Stage 6~7
 
             if RANGE_SUPPORT == True:
                 # Table: range_partition_tbl (default: nop; size <= 11 * 128)
@@ -629,7 +653,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         hash_start = hash_end + 1
 
-            # Stage 3
+            # Stage 8
 
             if RANGE_SUPPORT == True:
                 # Table: range_partition_for_scan_endkey_tbl (default: nop; size <= 1 * 128)
@@ -679,9 +703,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                     valid_serveridx_start = valid_serveridx_end + 1
                     valid_key_start = valid_key_end + 1
-
-            # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
-            print "Leave cache_lookup_tbl managed by controller in runtime"
 
             # Table: hash_for_cm1/2/3/4_tbl (default: nop; size: 1)
             # Table: hash_for_cm12/34_tbl (default: nop; size: 4)

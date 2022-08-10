@@ -215,6 +215,11 @@ action spineselect_for_getres_server(spineswitchidx) {
 	modify_field(op_hdr.spineswitchidx, spineswitchidx);
 }
 
+action spineselect_for_getreq_toleaf(eport, spineswitchidx) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	add(op_hdr.spineswitchidx, spineswitchidx, meta.toleaf_offset); // [1, 2*spineswitchnum-2] <- [0, spineswitchnum-1] + [1, spineswitchnum-1]
+}
+
 @pragma stage 3
 table spineselect_tbl {
 	reads {
@@ -266,6 +271,24 @@ table hash_for_bf1_tbl {
 	}
 	default_action: nop();
 	size: 2;
+}
+
+action cutoff_spineswitchidx_for_ecmp(spineswitchnum) {
+	subtract_from_field(op_hdr.spineswitchidx, spineswitchnum); [1, 2*spineswitchnum-2] -> [1, spineswitchnum-1] & [0, spineswitchnum-2]
+}
+
+@pragma stage 4
+table cutoff_spineswitchidx_for_ecmp_tbl {
+	reads {
+		op_hdr.optype: exact;
+		op_hdr.spineswitchidx: exact;
+	}
+	actions {
+		cutoff_spineswitchidx_for_ecmp;
+		nop;
+	}
+	default_action: nop();
+	size: MAX_SPINESWITCH_NUM;
 }
 
 action cached_action(idx) {
