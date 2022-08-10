@@ -166,6 +166,8 @@ header_type metadata_t {
 #ifndef RANGE_SUPPORT
 		hashval_for_partition: 16; // at most 32K
 #endif
+		spineload_forclient: 32;
+		leafload_forclient: 32;
 		cm1_predicate: 4;
 		cm2_predicate: 4;
 		cm3_predicate: 4;

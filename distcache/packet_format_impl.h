@@ -100,8 +100,8 @@ GetRequest<key_t>::GetRequest()
 }
 
 template<class key_t>
-GetRequest<key_t>::GetRequest(key_t key)
-	: Packet<key_t>(packet_type_t::GETREQ, 0, 0, key)
+GetRequest<key_t>::GetRequest(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key)
+	: Packet<key_t>(packet_type_t::GETREQ, spineswitchidx, leafswitchidx, key)
 {
 }
 

@@ -998,7 +998,9 @@ void *run_client_worker(void *param) {
 
 			if (tmptype == optype_t(packet_type_t::GETREQ)) { // get
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
-				get_request_t req(tmpkey);
+				uint16_t tmp_spineswitchidx = uint16_t(tmpkey.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+				uint16_t tmp_leafswitchidx = uint16_t(tmpkey.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+				get_request_t req(tmp_spineswitchidx, tmp_leafswitchidx, tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF

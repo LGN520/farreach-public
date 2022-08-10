@@ -96,7 +96,7 @@ template<class key_t>
 class GetRequest : public Packet<key_t> { // ophdr
 	public: 
 		GetRequest();
-		GetRequest(key_t key);
+		GetRequest(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key);
 		GetRequest(const char * data, uint32_t recv_size);
 		virtual ~GetRequest(){}
 

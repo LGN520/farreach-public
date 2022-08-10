@@ -154,8 +154,10 @@
 // HASH_PARTITION_ENTRY_NUM = 10 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
 #define HASH_PARTITION_ENTRY_NUM 2048
 
-// max number of logical leaf switches; used for leafload_reg
+// max number of logical leaf switches; used for leafload_reg and leafload_forclient_reg
 #define MAX_LEAFSWITCH_NUM 128
+// max number of logical spine switches; used for spineload_forclient_reg
+#define MAX_SPINESWITCH_NUM 128
 
 // hash partition range
 #define PARTITION_COUNT 32768
@@ -172,6 +174,8 @@
 
 // registers and MATs
 #include "p4src/regs/leafload.p4"
+#include "p4src/regs/spineload_forclient.p4"
+#include "p4src/regs/leafload_forclient.p4"
 #include "p4src/regs/cm.p4"
 #include "p4src/regs/seq.p4"
 #include "p4src/regs/bf.p4"
@@ -194,6 +198,9 @@ control ingress {
 	apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
 	apply(hash_for_spineselect_tbl); // set meta.hashval_for_spineselect
 	apply(access_leafload_tbl); // access leafload_reg for power-of-two-choices by server-leaf
+	// TODO: we can merge spine/leafload_forclient into one 64-bit register array if w/ stateful ALU limitation
+	apply(access_spineload_forclient_tbl);
+	apply(access_leafload_forclient_tbl);
 
 	// Stage 1
 #ifndef RANGE_SUPPORT
