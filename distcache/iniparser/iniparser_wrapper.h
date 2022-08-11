@@ -51,6 +51,7 @@ class IniparserWrapper {
 		short get_server_evictserver_port_start();
 		short get_server_popserver_port_start();
 		short get_server_valueupdateserver_port_start();
+		short get_server_invalidateserver_port_start();
 		short get_transaction_loadfinishserver_port();
 		
 		// each physical server

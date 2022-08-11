@@ -35,6 +35,7 @@ typedef ServerWorkerParam server_worker_param_t;
 
 RocksdbWrapper *db_wrappers = NULL;
 int * server_worker_udpsock_list = NULL;
+int * server_worker_invalidateserver_udpsock_list = NULL;
 int * server_worker_lwpid_list = NULL;
 
 // Per-server popserver <-> controller.popserver.popclient
@@ -73,6 +74,7 @@ void prepare_server() {
 	INVARIANT(db_wrappers != NULL);
 
 	server_worker_udpsock_list = new int[current_server_logical_num];
+	server_worker_invalidateserver_udpsock_list = new int[current_server_logical_num];
 	for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
 		uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[server_physical_idx][tmp_local_server_logical_idx];
 		//short tmp_server_worker_port = server_worker_port_start + tmp_global_server_logical_idx;
@@ -93,6 +95,8 @@ void prepare_server() {
 #endif
 		prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, tmp_server_worker_port, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 		printf("prepare udp socket for server.worker %d-%d on port %d\n", tmp_local_server_logical_idx, tmp_global_server_logical_idx, server_worker_port_start + tmp_local_server_logical_idx);
+
+		prepare_udpserver(server_worker_invalidateserver_udpsock_list[tmp_local_server_logical_idx], true, server_invalidateserver_port_start + tmp_global_server_logical_idx, "server.worker.invalidateserver");
 	}
 	server_worker_lwpid_list = new int[current_server_logical_num];
 	memset(server_worker_lwpid_list, 0, current_server_logical_num);
@@ -452,6 +456,27 @@ void *run_server_worker(void * param) {
 				}
 
 				//COUT_THIS("[server] key = " << tmp_key.to_string())
+
+				// Phase 1 of cache coherence: invalidate in-switch value
+				uint16_t tmp_spineswitchidx = uint16_t(tmp_key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+				uint16_t tmp_leafswitchidx = uint16_t(tmp_key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+				distcache_invalidate_t tmp_distcache_invalidate(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
+				while (true) {
+					int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
+					udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
+
+					int tmp_distcache_invalidate_ack_size = 0;
+					bool is_timeout = udprecvfrom(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, tmp_distcache_invalidate_ack_size, "server.worker.invalidateserver");
+					if (unlikely(is_timeout)) {
+						continue;
+					}
+					else {
+						distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
+						INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
+						break;
+					}
+				}
+
 				
 #ifdef DEBUG_SERVER
 				beingcached_time = 0.0;
@@ -592,6 +617,26 @@ void *run_server_worker(void * param) {
 				}
 
 				//COUT_THIS("[server] key = " << tmp_key.to_string() << " val = " << req.val().to_string())
+
+				// Phase 1 of cache coherence: invalidate in-switch value
+				uint16_t tmp_spineswitchidx = uint16_t(tmp_key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+				uint16_t tmp_leafswitchidx = uint16_t(tmp_key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+				distcache_invalidate_t tmp_distcache_invalidate(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
+				while (true) {
+					int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
+					udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
+
+					int tmp_distcache_invalidate_ack_size = 0;
+					bool is_timeout = udprecvfrom(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, tmp_distcache_invalidate_ack_size, "server.worker.invalidateserver");
+					if (unlikely(is_timeout)) {
+						continue;
+					}
+					else {
+						distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
+						INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
+						break;
+					}
+				}
 				
 #ifdef DEBUG_SERVER
 				beingcached_time = 0.0;

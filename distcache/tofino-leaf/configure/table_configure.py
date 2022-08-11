@@ -843,14 +843,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 if is_cached == 1:
                     self.client.access_latest_tbl_table_add_with_get_latest(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
-                # NOTE: write queries of NetCache "invalidates" in-switch value by setting latest=0
-                for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
-                    matchspec0 = distcacheleaf_access_latest_tbl_match_spec_t(\
-                            op_hdr_optype = tmpoptype,
-                            inswitch_hdr_is_cached = is_cached)
-                    if is_cached == 1:
-                        self.client.access_latest_tbl_table_add_with_reset_and_get_latest(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+                ## NOTE: write queries of NetCache "invalidates" in-switch value by setting latest=0
+                # NOTE: in DistCache, write queries do NOT invalidate in-switch value on path, which is covered by server-issued DISTCACHE_INVALIDATE
+                #for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
+                #    matchspec0 = distcacheleaf_access_latest_tbl_match_spec_t(\
+                #            op_hdr_optype = tmpoptype,
+                #            inswitch_hdr_is_cached = is_cached)
+                #    if is_cached == 1:
+                #        self.client.access_latest_tbl_table_add_with_reset_and_get_latest(\
+                #                self.sess_hdl, self.dev_tgt, matchspec0)
                 # NOTE: cache population of NetCache directly sets latest=1 due to blocking-based cache update
                 matchspec0 = distcacheleaf_access_latest_tbl_match_spec_t(\
                         op_hdr_optype = CACHE_POP_INSWITCH,

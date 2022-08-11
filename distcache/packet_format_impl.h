@@ -2329,6 +2329,53 @@ void DistcacheCacheEvictVictim<key_t>::deserialize(const char * data, uint32_t r
 	begin += sizeof(uint16_t);
 }
 
+// DistcacheCacheEvictVictimAck
+
+template<class key_t>
+DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(key_t key) 
+	: GetRequest<key_t>(key)
+{
+	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_CACHE_EVICT_VICTIM_ACK);
+}
+
+template<class key_t>
+DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_CACHE_EVICT_VICTIM_ACK);
+}
+
+// DistcacheInvalidate
+
+template<class key_t>
+DistcacheInvalidate<key_t>::DistcacheInvalidate(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key) 
+	: GetRequest<key_t>(key)
+{
+	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE);
+	this->_spineswitchidx = spineswitchidx;
+	this->_leafswitchidx = leafswitchidx;
+}
+
+template<class key_t>
+DistcacheInvalidate<key_t>::DistcacheInvalidate(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_INVALIDATE);
+}
+
+// DistcacheInvalidateAck
+
+template<class key_t>
+DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(key_t key) 
+	: GetRequest<key_t>(key)
+{
+	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE_ACK);
+}
+
+template<class key_t>
+DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_INVALIDATE_ACK);
+}
+
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
 	INVARIANT(maxsize >= sizeof(optype_t));

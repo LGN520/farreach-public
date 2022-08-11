@@ -85,6 +85,8 @@ typedef WarmupAckServer<netreach_key_t> warmup_ack_server_t;
 typedef LoadAckServer<netreach_key_t> load_ack_server_t;
 typedef DistcacheCacheEvictVictim<netreach_key_t> distcache_cache_evict_victim_t;
 typedef DistcacheCacheEvictVictimAck<netreach_key_t> distcache_cache_evict_victim_ack_t;
+typedef DistcacheInvalidate<netreach_key_t> distcache_invalidate_t;
+typedef DistcacheInvalidateAck<netreach_key_t> distcache_invalidate_ack_t;
 
 /*
  * Constants
@@ -134,6 +136,7 @@ short server_worker_port_start = -1;
 short server_evictserver_port_start = -1;
 short server_popserver_port_start = -1;
 short server_valueupdateserver_port_start = -1;
+short server_invalidateserver_port_start = -1;
 short transaction_loadfinishserver_port = -1;
 
 // each physical server
@@ -352,13 +355,14 @@ inline void parse_ini(const char* config_file) {
 	server_evictserver_port_start = ini.get_server_evictserver_port_start();
 	server_popserver_port_start = ini.get_server_popserver_port_start();
 	server_valueupdateserver_port_start = ini.get_server_valueupdateserver_port_start();
+	server_invalidateserver_port_start = ini.get_server_invalidateserver_port_start();
 	transaction_loadfinishserver_port = ini.get_transaction_loadfinishserver_port();
 
 	COUT_VAR(server_load_factor);
 	COUT_VAR(server_worker_port_start);
 	COUT_VAR(server_evictserver_port_start);
 	COUT_VAR(server_popserver_port_start);
-	COUT_VAR(server_valueupdateserver_port_start);
+	COUT_VAR(server_invalidateserver_port_start);
 	COUT_VAR(transaction_loadfinishserver_port);
 	printf("\n");
 	

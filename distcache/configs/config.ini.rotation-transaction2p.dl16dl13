@@ -73,6 +73,9 @@ server_popserver_port_start=3333
 ; [server_valueupdateserver_port_start, server_valueupdateserver_port_start + max global server logical idx]
 ; reserve 4224 (0x1080) ~ 4351 (0x10FF), which & 0xFF80 = 0x1080, for server simulation of netcache
 server_valueupdateserver_port_start=4224
+; [server_invalidateserver_port_start, server_invalidateserver_port_start + max global server logical idx]
+; reserve 4480 (0x1180) ~ 4607 (0x11FF), which & 0xFF80 = 0x1180, for server simulation of distcache
+server_invalidateserver_port_start=4480
 ; a single port
 transaction_loadfinishserver_port=8000
 

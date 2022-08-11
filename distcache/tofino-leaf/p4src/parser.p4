@@ -24,7 +24,7 @@
 // NOTE: followings are ended with 0b0000
 // op_hdr + scan_hdr (specific value): SCANREQ
 // op_hdr + scan_hdr + split_hdr (specific value): SCANREQ_SPLIT
-// only op_hdr (default): WARMUPREQ, GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK (deprecated: w/ clone_hdr), WARMUPACK, LOADACK, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK (w/ frequency_hdr), NETCACHE_GETREQ_POP, NETCACHE_VALUEUPATE_ACK, GETREQ_SPINE, SCANRES_SPLIT/_SERVER (w/ split_hdr + scan data), WARMUPREQ_SPINE, WARMUPACK_SERVER, LOADACK_SERVER, DISTNOCACHE_DELREQ_SPINE
+// only op_hdr (default): WARMUPREQ, GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK (deprecated: w/ clone_hdr), WARMUPACK, LOADACK, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK (w/ frequency_hdr), NETCACHE_GETREQ_POP, NETCACHE_VALUEUPATE_ACK, GETREQ_SPINE, SCANRES_SPLIT/_SERVER (w/ split_hdr + scan data), WARMUPREQ_SPINE, WARMUPACK_SERVER, LOADACK_SERVER, DISTNOCACHE_DELREQ_SPINE, DISTCACHE_INVALIDATE/_ACK
 // not parsed in switch: CACHE_POP, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK, SETVALID_INSWITCH_ACK, NETCACHE_CACHE_POP/_ACK, NETCACHE_CACHE_POP_FINISH/_ACK, NETCACHE_CACHE_EVICT/_ACK, DISTCACHE_CACHE_EVICT_VICTIM/_ACK
 
 parser start {
@@ -52,6 +52,7 @@ parser parse_udp_dstport {
 	return select(udp_hdr.dstPort) {
 		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
 		0x1080 mask 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
+		0x1180 mask 0xFF80: parse_op; // reserve for server.invalidateserver in DistCache
 		5008: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
 		default: parse_udp_srcport;
 	}
@@ -61,6 +62,7 @@ parser parse_udp_srcport {
 	return select(udp_hdr.srcPort) {
 		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
 		0x1080 mask 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
+		0x1180 mask 0xFF80: parse_op; // reserve for server.invalidateserver in DistCache
 		5009: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
 		default: ingress; // traditional packet
 	}
