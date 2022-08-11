@@ -62,6 +62,7 @@
 #define SETVALID_INSWITCH 0x0054
 #define NETCACHE_WARMUPREQ_INSWITCH 0x0064
 #define NETCACHE_WARMUPREQ_INSWITCH_POP 0x0074
+#define DISTCACHE_INVALIDATE_INSWITCH 0x0084
 // 0b0010
 #define DELREQ_SEQ 0x0002
 #define DELREQ_SEQ_CASE3 0x0012
@@ -145,8 +146,8 @@
 
 // MAX_SERVER_NUM <= 128
 #define MAX_SERVER_NUM 128
-// SPINESELECT_ENTRY_NUM = 8 * MAX_SERVER_NUM <= 8 * MAX_SERVER_NUM
-#define SPINESELECT_ENTRY_NUM 1024
+// SPINESELECT_ENTRY_NUM = 9 * MAX_SERVER_NUM <= 16 * MAX_SERVER_NUM
+#define SPINESELECT_ENTRY_NUM 2048
 // RANGE_PARTITION_ENTRY_NUM = 11 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
 #define RANGE_PARTITION_ENTRY_NUM 2048
 // RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM
@@ -343,6 +344,7 @@ control egress {
 	// Stage 11
 	apply(update_pktlen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
 	apply(add_and_remove_value_header_tbl); // Add or remove vallen and val according to optype and vallen
+	apply(drop_tbl); // drop DISTCACHE_INVALIDATE_INSWITCH
 	apply(update_vallo15_tbl);
 	apply(update_valhi15_tbl);
 	apply(update_vallo16_tbl);

@@ -158,6 +158,9 @@ action range_partition(eport, leafswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.leafswitchidx, leafswitchidx);
 }
+action range_partition_for_distcache_invalidate(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 4 2048
 @pragma stage 5
 table range_partition_tbl {
@@ -167,6 +170,7 @@ table range_partition_tbl {
 	}
 	actions {
 		range_partition;
+		range_partition_for_distcache_invalidate;
 		nop;
 	}
 	default_action: nop();
@@ -177,6 +181,9 @@ action hash_partition(eport, leafswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.leafswitchidx, leafswitchidx);
 }
+action hash_partition_for_distcache_invalidate(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 4 2048
 @pragma stage 5
 table hash_partition_tbl {
@@ -186,6 +193,7 @@ table hash_partition_tbl {
 	}
 	actions {
 		hash_partition;
+		hash_partition_for_distcache_invalidate;
 		nop;
 	}
 	default_action: nop();
@@ -349,6 +357,17 @@ action update_loadreq_to_loadreq_spine() {
 	modify_field(shadowtype_hdr.shadowtype, LOADREQ_SPINE);
 }
 
+action update_distcache_invalidate_to_distcache_invalidate_inswitch() {
+	modify_field(op_hdr.optype, DISTCACHE_INVALIDATE_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, DISTCACHE_INVALIDATE_INSWITCH);
+
+	add_header(shodowntype_hdr);
+	add_header(inswitch_hdr);
+
+	// swap to set dstport as corresponding server.invalidateserver port
+	swap(udp_hdr.srcPort, udp_hdr.dstPort);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ig_port_forward_counter {
@@ -372,8 +391,9 @@ table ig_port_forward_tbl {
 		update_warmupreq_to_netcache_warmupreq_inswitch;
 		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		update_loadreq_to_loadreq_spine;
+		update_distcache_invalidate_to_distcache_invalidate_inswitch;
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 16;
 }

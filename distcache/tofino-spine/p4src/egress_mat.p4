@@ -407,6 +407,15 @@ action update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack() {
 	// NOTE: egress_port has already been set in ig_port_forward_tbl at ingress pipeline
 }
 
+action update_distcache_invalidate_inswitch_to_distcache_invalidate_ack() {
+	modify_field(op_hdr.optype, DISTCACHE_INVALIDATE_ACK);
+
+	remove_header(shadowtype_hdr);
+	remove_header(inswitch_hdr);
+
+	// NOTE: egress_port/udp_dstport has already been set in partition_tbl/ig_port_forward_tbl at ingress pipeline
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -453,6 +462,7 @@ table eg_port_forward_tbl {
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loadfreq_inswitch_ack;
 		update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack;
+		update_distcache_invalidate_inswitch_to_distcache_invalidate_ack;
 		nop;
 	}
 	default_action: nop();

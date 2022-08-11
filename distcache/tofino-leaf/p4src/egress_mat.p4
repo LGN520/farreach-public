@@ -1016,3 +1016,20 @@ table add_and_remove_value_header_tbl {
 	default_action: remove_all();
 	size: 256;
 }
+
+action drop_distcache_invalidate_inswitch() {
+	drop();
+}
+
+@pragma stage 11
+table drop_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		drop_distcache_invalidate_inswitch;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}

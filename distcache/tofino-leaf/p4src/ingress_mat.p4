@@ -215,6 +215,11 @@ action spineselect_for_getres_server(spineswitchidx) {
 	modify_field(op_hdr.spineswitchidx, spineswitchidx);
 }
 
+action spineselect_for_distcache_invalidate(spineswitchidx) {
+	// NOTE: eport will be set by range/hash_partition_tbl for DISTCACHE_INVALIDATE
+	modify_field(op_hdr.spineswitchidx, spineswitchidx);
+}
+
 action spineselect_for_getreq_toleaf(eport, spineswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	add(op_hdr.spineswitchidx, spineswitchidx, meta.toleaf_offset); // [1, 2*spineswitchnum-2] <- [0, spineswitchnum-1] + [1, spineswitchnum-1]
@@ -230,6 +235,8 @@ table spineselect_tbl {
 	actions {
 		spineselect;
 		spineselect_for_getres_server;
+		spineselect_for_distcache_invalidate;
+		spineselect_for_getreq_toleaf;
 		nop;
 	}
 	default_action: nop();
@@ -332,6 +339,12 @@ action range_partition_for_scan(udpport, eport, start_globalserveridx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(split_hdr.globalserveridx, start_globalserveridx);
 }
+action range_partition_for_distcache_invalidate(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+action range_partition_for_distcache_invalidate_ack(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 6 2048
 @pragma stage 7
 table range_partition_tbl {
@@ -344,6 +357,8 @@ table range_partition_tbl {
 		range_partition;
 		//reset_is_wrong_pipeline;
 		range_partition_for_scan;
+		range_partition_for_distcache_invalidate;
+		range_partition_for_distcache_invalidate_ack;
 		nop;
 	}
 	//default_action: reset_is_wrong_pipeline();
@@ -360,6 +375,12 @@ action hash_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
+action hash_partition_for_distcache_invalidate(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+action hash_partition_for_distcache_invalidate_ack(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 6 2048
 @pragma stage 7
 table hash_partition_tbl {
@@ -371,6 +392,8 @@ table hash_partition_tbl {
 	actions {
 		hash_partition;
 		//reset_is_wrong_pipeline;
+		hash_partition_for_distcache_invalidate;
+		hash_partition_for_distcache_invalidate_ack;
 		nop;
 	}
 	//default_action: reset_is_wrong_pipeline();
@@ -457,6 +480,12 @@ action forward_normal_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
+action forward_distcache_invalidate_to_server_and_clone_to_spine(client_sid) {
+	// NOTE: eport to server has already been set by partition_tbl for DISTCACHE_INVALIDATE
+	//modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
+	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding spine switch
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ipv4_forward_counter {
@@ -473,6 +502,7 @@ table ipv4_forward_tbl {
 	}
 	actions {
 		forward_normal_response;
+		forward_distcache_invalidate_to_server_and_clone_to_spine;
 		nop;
 	}
 	default_action: nop();
@@ -578,6 +608,14 @@ action update_distcache_getres_spine_to_getres() {
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 }
 
+action update_distcache_invalidate_to_distcache_invalidate_inswitch() {
+	modify_field(op_hdr.optype, DISTCACHE_INVALIDATE_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, DISTCACHE_INVALIDATE_INSWITCH);
+	
+	add_header(shadowtype_hdr);
+	add_header(inswitch_hdr);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ig_port_forward_counter {
@@ -605,6 +643,7 @@ table ig_port_forward_tbl {
 		update_loadreq_spine_to_loadreq;
 		update_loadack_server_to_loadack;
 		update_distcache_getres_spine_to_getres;
+		update_distcache_invalidate_to_distcache_invalidate_inswitch;
 		nop;
 	}
 	default_action: nop();
