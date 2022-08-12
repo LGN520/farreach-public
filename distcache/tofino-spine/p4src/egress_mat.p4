@@ -404,7 +404,7 @@ action update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack() {
 	remove_header(inswitch_hdr);
 	remove_header(stat_hdr);
 
-	// NOTE: egress_port has already been set in ig_port_forward_tbl at ingress pipeline
+	// NOTE: egress_port has already been set in hash/range_partition_tbl at ingress pipeline
 }
 
 action update_distcache_invalidate_inswitch_to_distcache_invalidate_ack() {

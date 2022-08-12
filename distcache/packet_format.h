@@ -781,7 +781,7 @@ class NetcacheDelRequestSeqCached : public DelRequestSeq<key_t> { // ophdr + sha
 template<class key_t, class val_t>
 class NetcacheValueupdate : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr
 	public: 
-		NetcacheValueupdate(key_t key, val_t val, uint32_t seq, bool stat);
+		NetcacheValueupdate(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat);
 };
 
 template<class key_t>

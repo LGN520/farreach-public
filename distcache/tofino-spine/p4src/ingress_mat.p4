@@ -161,6 +161,9 @@ action range_partition(eport, leafswitchidx) {
 action range_partition_for_distcache_invalidate(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
+action range_partition_for_netcache_valueupdate(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 4 2048
 @pragma stage 5
 table range_partition_tbl {
@@ -171,6 +174,7 @@ table range_partition_tbl {
 	actions {
 		range_partition;
 		range_partition_for_distcache_invalidate;
+		range_partition_for_netcache_valueupdate;
 		nop;
 	}
 	default_action: nop();
@@ -184,6 +188,9 @@ action hash_partition(eport, leafswitchidx) {
 action hash_partition_for_distcache_invalidate(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
+action hash_partition_for_netcache_valueupdate(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 4 2048
 @pragma stage 5
 table hash_partition_tbl {
@@ -194,6 +201,7 @@ table hash_partition_tbl {
 	actions {
 		hash_partition;
 		hash_partition_for_distcache_invalidate;
+		hash_partition_for_netcache_valueupdate;
 		nop;
 	}
 	default_action: nop();
@@ -339,19 +347,6 @@ action update_warmupreq_to_netcache_warmupreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
-action update_netcache_valueupdate_to_netcache_valueupdate_inswitch() {
-	modify_field(op_hdr.optype, NETCACHE_VALUEUPDATE_INSWITCH);
-	modify_field(shadowtype_hdr.shadowtype, NETCACHE_VALUEUPDATE_INSWITCH);
-
-	add_header(inswitch_hdr);
-
-	// NOTE: NETCACHE_VALUEUPDATE does not need partition_tbl, as in-switch record must in the same pipeline of the ingress port, which can also send NETCACHE_VALUEUPDATE_ACK back to corresponding server
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
-
-	// swap to set dstport as corresponding server.valueupdateserver port
-	swap(udp_hdr.srcPort, udp_hdr.dstPort);
-}
-
 action update_loadreq_to_loadreq_spine() {
 	modify_field(op_hdr.optype, LOADREQ_SPINE);
 	modify_field(shadowtype_hdr.shadowtype, LOADREQ_SPINE);
@@ -365,6 +360,20 @@ action update_distcache_invalidate_to_distcache_invalidate_inswitch() {
 	add_header(inswitch_hdr);
 
 	// swap to set dstport as corresponding server.invalidateserver port
+	swap(udp_hdr.srcPort, udp_hdr.dstPort);
+}
+
+action update_netcache_valueupdate_to_netcache_valueupdate_inswitch() {
+	modify_field(op_hdr.optype, NETCACHE_VALUEUPDATE_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, NETCACHE_VALUEUPDATE_INSWITCH);
+
+	add_header(inswitch_hdr);
+
+	//// NOTE: NETCACHE_VALUEUPDATE does not need partition_tbl, as in-switch record must in the same pipeline of the ingress port, which can also send NETCACHE_VALUEUPDATE_ACK back to corresponding server
+	// NOTE: range/hash_partition_tbl sets eport for NETCACHE_VALUEUPDATE to forward it to egress pipeline of server-leaf
+	//modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	// swap to set dstport as corresponding server.valueupdateserver port to convert NETCACHE_VALUEUPDATE as NETCACHE_VALUEUPDATE_ACK
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }
 
@@ -389,9 +398,9 @@ table ig_port_forward_tbl {
 		update_scanreq_to_scanreq_split;
 #endif
 		update_warmupreq_to_netcache_warmupreq_inswitch;
-		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		update_loadreq_to_loadreq_spine;
 		update_distcache_invalidate_to_distcache_invalidate_inswitch;
+		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		nop;
 	}
 	default_action: nop();

@@ -324,9 +324,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             if RANGE_SUPPORT == False:
-                # Table: hash_for_partition_tbl (default: nop; size: 9)
+                # Table: hash_for_partition_tbl (default: nop; size: 10)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE, NETCACHE_VALUEUPDATE]:
                     matchspec0 = distcachespine_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype))
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
@@ -335,10 +335,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 2
 
             if RANGE_SUPPORT == True:
-                # Table: range_partition_tbl (default: nop; size <= 10 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 11 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE, NETCACHE_VALUEUPDATE]:
                     key_start = 0 # [0, 2^16-1]
                     for i in range(leafswitch_total_logical_num):
                         global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
@@ -357,16 +357,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             actnspec0 = distcachespine_range_partition_for_distcache_invalidate_action_spec_t(eport)
                             self.client.range_partition_tbl_table_add_with_range_partition_for_distcache_invalidate(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        elif tmpoptype == NETCACHE_VALUEUPDATE:
+                            actnspec0 = distcachespine_range_partition_for_netcache_valueupdate_action_spec_t(eport)
+                            self.client.range_partition_tbl_table_add_with_range_partition_for_netcache_valueupdate(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         else:
                             actnspec0 = distcachespine_range_partition_action_spec_t(eport, global_leafswitch_logical_idx)
                             self.client.range_partition_tbl_table_add_with_range_partition(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
-                # Table: hash_partition_tbl (default: nop; size <= 9 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 10 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_leafswitch = switch_partition_count / leafswitch_total_logical_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE, NETCACHE_VALUEUPDATE]:
                     hash_start = 0 # [0, partition_count-1]
                     for i in range(leafswitch_total_logical_num):
                         global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
@@ -384,6 +388,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         if tmpoptype == DISTCACHE_INVALIDATE:
                             actnspec0 = distcachespine_hash_partition_for_distcache_invalidate_action_spec_t(eport)
                             self.client.hash_partition_tbl_table_add_with_hash_partition_for_distcache_invalidate(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        elif tmpoptype == NETCACHE_VALUEUPDATE:
+                            actnspec0 = distcachespine_hash_partition_for_netcache_valueupdate_action_spec_t(eport)
+                            self.client.hash_partition_tbl_table_add_with_hash_partition_for_netcache_valueupdate(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         else:
                             actnspec0 = distcachespine_hash_partition_action_spec_t(eport, global_leafswitch_logical_idx)

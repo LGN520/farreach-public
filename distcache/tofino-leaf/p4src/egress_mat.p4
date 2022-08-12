@@ -402,17 +402,6 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 //action forward_cache_evict_loadfreq_inswitch_ack() {
 //}
 
-action update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack() {
-	modify_field(op_hdr.optype, NETCACHE_VALUEUPDATE_ACK);
-
-	remove_header(shadowtype_hdr);
-	remove_header(seq_hdr);
-	remove_header(inswitch_hdr);
-	remove_header(stat_hdr);
-
-	// NOTE: egress_port has already been set in ig_port_forward_tbl at ingress pipeline
-}
-
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -460,7 +449,6 @@ table eg_port_forward_tbl {
 #endif
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loadfreq_inswitch_ack;
-		update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack;
 		nop;
 	}
 	default_action: nop();
@@ -1021,6 +1009,10 @@ action drop_distcache_invalidate_inswitch() {
 	drop();
 }
 
+action drop_netcache_valueupdate_inswitch() {
+	drop();
+}
+
 @pragma stage 11
 table drop_tbl {
 	reads {
@@ -1028,6 +1020,7 @@ table drop_tbl {
 	}
 	actions {
 		drop_distcache_invalidate_inswitch;
+		drop_netcache_valueupdate_inswitch;
 		nop;
 	}
 	default_action: nop();

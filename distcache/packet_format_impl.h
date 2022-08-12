@@ -2234,11 +2234,13 @@ NetcacheDelRequestSeqCached<key_t>::NetcacheDelRequestSeqCached(const char * dat
 // NetcacheValueupdate
 
 template<class key_t, class val_t>
-NetcacheValueupdate<key_t, val_t>::NetcacheValueupdate(key_t key, val_t val, uint32_t seq, bool stat)
+NetcacheValueupdate<key_t, val_t>::NetcacheValueupdate(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat)
 	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, 0)
 {
 	this->_stat = stat;
 	this->_type = optype_t(packet_type_t::NETCACHE_VALUEUPDATE);
+	this->_spineswitchidx = spineswitchidx;
+	this->_leafswitchidx = leafswitchidx;
 }
 
 // NetcacheValueupdateAck

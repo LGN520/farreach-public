@@ -545,10 +545,10 @@ void *run_server_worker(void * param) {
 						// notify server.valueupdateserver to update inswitch value in background
 						netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
 						if (pkt_type == packet_type_t::PUTREQ_SEQ) {
-							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, true);
+							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true);
 						}
 						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
-							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, false);
+							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false);
 						}
 						bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
 						if (!res) {
@@ -695,10 +695,10 @@ void *run_server_worker(void * param) {
 						// notify server.valueupdateserver to update inswitch value in background
 						netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
 						if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
-							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, true);
+							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true);
 						}
 						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
-							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, false);
+							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false);
 						}
 						bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
 						if (!res) {
