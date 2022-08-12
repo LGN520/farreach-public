@@ -571,6 +571,12 @@
 		- Test dynamic workload -> from 1.1 to 1.2 MOPS MOPS for 1024/2 clients + 8/2 servers
 		- Update distfarreach visualization under hash partition
 
+## Implementation log after coding DistCache
+
++ NOTE: ipv4_forward_tbl must follow range/hash_partition_tbl as it needs to reset eport for special get responses (GETRES_LATEST/DELETED_SEQ_SERVER/\_INSWITCH) if cache miss in server-leaf -> ONLY for distfarreach (files: tofino-\*/p4src/ingress_mat.p4, tofino-\*/main.p4)
+	+ Re-compile and re-test GETRES_LATEST/DELETED_SEQ_SERVER w/ cache hit in spine or server-leaf switch
+	+ Update visualization under range and hash partition
+
 ## Run
 
 - Hardware configure
