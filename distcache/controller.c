@@ -236,69 +236,69 @@ void *run_controller_popserver(void *param) {
 		}
 		INVARIANT(tmp_serveridx >= 0 && tmp_serveridx < max_server_total_logical_num);
 
-		// find corresponding server X
-		int tmp_server_physical_idx = -1;
-		for (int i = 0; i < server_physical_num; i++) {
-			for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
-				if (tmp_serveridx == server_logical_idxes_list[i][j]) {
-					tmp_server_physical_idx = i;
-					break;
+		if (tmpoptype == packet_type_t::NETCACHE_CACHE_POP) {
+			// validate spine/leaf switchidx
+			validate_switchidx(tmp_key);
+
+			// send two CACHE_POPs w/ default value to spine/leaf switchos.cppopserver
+			cache_pop_t tmp_cache_pop(tmp_key, val_t(), 0, false, tmp_serveridx);
+			int pktsize = tmp_cache_pop.serialize(buf, MAX_BUFSIZE);
+			udpsendto(controller_popserver_popclient_for_spine, buf, pktsize, 0, &spineswitchos_cppopserver_addr, spineswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_spine");
+			udpsendto(controller_popserver_popclient_for_leaf, buf, pktsize, 0, &leafswitchos_cppopserver_addr, leafswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_leaf");
+
+			// wait for two CACHE_POP_ACKs
+			is_timeout = udprecvfrom(controller_popserver_popclient_for_spine, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_spine");
+			if (!is_timeout) {
+				cache_pop_ack_t tmp_cache_pop_ack_from_spine(buf, recvsize);
+				INVARIANT(tmp_cache_pop_ack_from_spine.key() == tmp_cache_pop.key());
+				is_timeout = udprecvfrom(controller_popserver_popclient_for_leaf, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_leaf");
+				if (!is_timeout) {
+					cache_pop_ack_t tmp_cache_pop_ack_from_leaf(buf, recvsize);
+					INVARIANT(tmp_cache_pop_ack_from_leaf.key() == tmp_cache_pop.key());
+
+					// send NETCACHE_CACHE_POP_ACK w/ default value to original switchos.dppopserver
+					netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_key, val_t(), 0, false, tmp_serveridx);
+					pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
+					udpsendto(controller_popserver_udpsock, buf, pktsize, 0, &switchos_dppopserver_popworker_addr, switchos_dppopserver_popworker_addrlen, "controller.popserver");
 				}
 			}
 		}
-		INVARIANT(tmp_server_physical_idx != -1);
-
-		// controller.popserver.popclient <-> server.popserver X
-		struct sockaddr_in tmp_server_popserver_addr;
-		set_sockaddr(tmp_server_popserver_addr, inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_popserver_port_start + tmp_serveridx);
-		socklen_t tmp_server_popserver_addrlen = sizeof(struct sockaddr);
-
-		// send NETCACHE_CACHE_POP/_FINISH to corresponding server
-		udpsendto(controller_popserver_popclient_for_server_udpsock, buf, recvsize, 0, &tmp_server_popserver_addr, tmp_server_popserver_addrlen, "controller.popserver.popclient_for_server");
-		
-		// receive NETCACHE_CACHE_POP_ACK/_FINISH_ACK from corresponding server
-		bool is_timeout = udprecvfrom(controller_popserver_popclient_for_server_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_server");
-		if (!is_timeout) { // NOTE: if timeout, it will be covered by switcho.popworker
-			// send NETCACHE_CACHE_POP_ACK/_FINISH_ACK to switchos.popworker immediately to avoid timeout
-			packet_type_t tmp_acktype = get_packet_type(buf, recvsize);
-			if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_ACK) {
-				netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(buf, recvsize);
-				INVARIANT(tmp_netcache_cache_pop_ack.key() == tmp_key);
-
-				// validate spine/leaf switchidx
-				validate_switchidx(tmp_netcache_cache_pop_ack.key());
-
-				// send two CACHE_POPs to spine/leaf switchos.cppopserver
-				cache_pop_t tmp_cache_pop(tmp_netcache_cache_pop_ack.key(), tmp_netcache_cache_pop_ack.val(), tmp_netcache_cache_pop_ack.seq(), tmp_netcache_cache_pop_ack.stat(), tmp_netcache_cache_pop_ack.serveridx());
-				int pktsize = tmp_cache_pop.serialize(buf, MAX_BUFSIZE);
-				udpsendto(controller_popserver_popclient_for_spine, buf, pktsize, 0, &spineswitchos_cppopserver_addr, spineswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_spine");
-				udpsendto(controller_popserver_popclient_for_leaf, buf, pktsize, 0, &leafswitchos_cppopserver_addr, leafswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_leaf");
-
-				// wait for two CACHE_POP_ACKs
-				is_timeout = udprecvfrom(controller_popserver_popclient_for_spine, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_spine");
-				if (!is_timeout) {
-					cache_pop_ack_t tmp_cache_pop_ack_from_spine(buf, recvsize);
-					INVARIANT(tmp_cache_pop_ack_from_spine.key() == tmp_cache_pop.key());
-					is_timeout = udprecvfrom(controller_popserver_popclient_for_leaf, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_leaf");
-					if (!is_timeout) {
-						cache_pop_ack_t tmp_cache_pop_ack_from_leaf(buf, recvsize);
-						INVARIANT(tmp_cache_pop_ack_from_leaf.key() == tmp_cache_pop.key());
-
-						// send NETCACHE_CACHE_POP_ACK to original switchos.dppopserver
-						pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
-						udpsendto(controller_popserver_udpsock, buf, pktsize, 0, &switchos_dppopserver_popworker_addr, switchos_dppopserver_popworker_addrlen, "controller.popserver");
+		else if (tmpoptype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
+			// find corresponding server X
+			int tmp_server_physical_idx = -1;
+			for (int i = 0; i < server_physical_num; i++) {
+				for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
+					if (tmp_serveridx == server_logical_idxes_list[i][j]) {
+						tmp_server_physical_idx = i;
+						break;
 					}
 				}
 			}
-			else if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_FINISH_ACK) {
-				netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(buf, recvsize);
-				INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_key);
-				// send NETCACHE_CACHE_POP_FINISH_ACK to original switchos.popworker
-				udpsendto(controller_popserver_udpsock, buf, recvsize, 0, &switchos_dppopserver_popworker_addr, switchos_dppopserver_popworker_addrlen, "controller.popserver");
-			}
-			else {
-				printf("[controller.popserver] invalid acktype: %x\n", optype_t(tmp_acktype));
-				exit(-1);
+			INVARIANT(tmp_server_physical_idx != -1);
+
+			// controller.popserver.popclient <-> server.popserver X
+			struct sockaddr_in tmp_server_popserver_addr;
+			set_sockaddr(tmp_server_popserver_addr, inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_popserver_port_start + tmp_serveridx);
+			socklen_t tmp_server_popserver_addrlen = sizeof(struct sockaddr);
+
+			// send NETCACHE_CACHE_POP_FINISH to corresponding server
+			udpsendto(controller_popserver_popclient_for_server_udpsock, buf, recvsize, 0, &tmp_server_popserver_addr, tmp_server_popserver_addrlen, "controller.popserver.popclient_for_server");
+		
+			// receive NETCACHE_CACHE_POP_FINISH_ACK from corresponding server
+			bool is_timeout = udprecvfrom(controller_popserver_popclient_for_server_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_server");
+			if (!is_timeout) { // NOTE: if timeout, it will be covered by switcho.popworker
+				// send NETCACHE_CACHE_POP_ACK/_FINISH_ACK to switchos.popworker immediately to avoid timeout
+				packet_type_t tmp_acktype = get_packet_type(buf, recvsize);
+				if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_FINISH_ACK) {
+					netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(buf, recvsize);
+					INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_key);
+					// send NETCACHE_CACHE_POP_FINISH_ACK to original switchos.popworker
+					udpsendto(controller_popserver_udpsock, buf, recvsize, 0, &switchos_dppopserver_popworker_addr, switchos_dppopserver_popworker_addrlen, "controller.popserver");
+				}
+				else {
+					printf("[controller.popserver] invalid acktype: %x\n", optype_t(tmp_acktype));
+					exit(-1);
+				}
 			}
 		}
 	}

@@ -42,7 +42,6 @@ int * server_worker_lwpid_list = NULL;
 int * server_popserver_udpsock_list = NULL;
 // access all of beingcached/cached/beingupdated keysets should be atomic
 std::mutex *server_mutex_for_keyset_list = NULL;
-std::set<netreach_key_t> *server_beingcached_keyset_list = NULL;
 std::set<netreach_key_t> *server_cached_keyset_list = NULL;
 std::set<netreach_key_t> *server_beingupdated_keyset_list = NULL;
 
@@ -104,12 +103,10 @@ void prepare_server() {
 	// Prepare for cache population
 	server_popserver_udpsock_list = new int[current_server_logical_num];
 	server_mutex_for_keyset_list = new std::mutex[current_server_logical_num];
-	server_beingcached_keyset_list = new std::set<netreach_key_t>[current_server_logical_num];
 	server_cached_keyset_list = new std::set<netreach_key_t>[current_server_logical_num];
 	server_beingupdated_keyset_list = new std::set<netreach_key_t>[current_server_logical_num];
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		prepare_udpserver(server_popserver_udpsock_list[i], true, server_popserver_port_start + server_logical_idxes_list[server_physical_idx][i], "server.popserver");
-		server_beingcached_keyset_list[i].clear();
 		server_cached_keyset_list[i].clear();
 		server_beingupdated_keyset_list[i].clear();
 	}
@@ -162,10 +159,6 @@ void close_server() {
 	if (server_mutex_for_keyset_list != NULL) {
 		delete [] server_mutex_for_keyset_list;
 		server_mutex_for_keyset_list = NULL;
-	}
-	if (server_beingcached_keyset_list != NULL) {
-		delete [] server_beingcached_keyset_list;
-		server_beingcached_keyset_list = NULL;
 	}
 	if (server_cached_keyset_list != NULL) {
 		delete [] server_cached_keyset_list;
@@ -220,65 +213,50 @@ void *run_server_popserver(void *param) {
 
 	packet_type_t tmp_optype = get_packet_type(recvbuf, recvsize);
 
-	if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP) {
-		// receive NETCACHE_CACHE_POP from controller
-		netcache_cache_pop_t tmp_netcache_cache_pop(recvbuf, recvsize);
-		INVARIANT(tmp_netcache_cache_pop.serveridx() == global_server_logical_idx);
-
-		// keep atomicity
-		server_mutex_for_keyset_list[local_server_logical_idx].lock();
-		// NETCACHE_CACHE_POP's key must NOT in beingcached/cached/beingupdated keyset
-		// consider duplicate NETCACHE_CACHE_POP -> key may already in beingcached keyset
-		bool is_beingcached = server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) != server_beingcached_keyset_list[local_server_logical_idx].end();
-		bool is_cached = server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) != server_cached_keyset_list[local_server_logical_idx].end();
-		bool is_beingupdated = server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) != server_beingupdated_keyset_list[local_server_logical_idx].end();
-		//INVARIANT(!is_beingcached && !is_cached && !is_beingupdated);
-		INVARIANT(!is_cached && !is_beingupdated);
-		// add key into beingcached keyset
-		server_beingcached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop.key());
-		// get latest value
-		val_t tmp_val;
-		uint32_t tmp_seq = 0;
-		bool tmp_stat = db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq);
-		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
-
-		// send NETCACHE_CACHE_POP_ACK to controller
-		netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-		uint32_t pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
-		udpsendto(server_popserver_udpsock_list[local_server_logical_idx], buf, pktsize, 0, &controller_popserver_popclient_addr, controller_popserver_popclient_addrlen, "server.popserver");
-	}
-	else if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
+	if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
 		// receive NETCACHE_CACHE_POP_FINISH from controller
 		netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(recvbuf, recvsize);
 		INVARIANT(tmp_netcache_cache_pop_finish.serveridx() == global_server_logical_idx);
 
-		// keep atomicity
-		server_mutex_for_keyset_list[local_server_logical_idx].lock();
-		// NETCACHE_CACHE_POP_FINISH's key must in beingcached or cached keyset (consider duplicate NETCACHE_CACHE_POP_FINISHs)
-		if (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) { // in beingcached keyset
-			INVARIANT(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) == server_cached_keyset_list[local_server_logical_idx].end()); // must no in cached keyset
-			// move key from beingcached keyset into cached keyset
-			server_beingcached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_pop_finish.key());
-			server_cached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key());
-		}
-		else { // not in beingcached keyset
-			INVARIANT(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_cached_keyset_list[local_server_logical_idx].end()); // must in cached keyset
-		}
-		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
-
-		// send NETCACHE_CACHE_POP_FINISH_ACK to controller
+		// send NETCACHE_CACHE_POP_FINISH_ACK to controller immediately to avoid timeout and retry
 		netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(tmp_netcache_cache_pop_finish.key(), global_server_logical_idx);
 		uint32_t pktsize = tmp_netcache_cache_pop_finish_ack.serialize(buf, MAX_BUFSIZE);
 		udpsendto(server_popserver_udpsock_list[local_server_logical_idx], buf, pktsize, 0, &controller_popserver_popclient_addr, controller_popserver_popclient_addrlen, "server.popserver");
+
+		// keep atomicity
+		server_mutex_for_keyset_list[local_server_logical_idx].lock();
+		// NETCACHE_CACHE_POP_FINISH's key must NOT in beingupdated keyset if NOT in cached keyset (consider duplicate NETCACHE_CACHE_POP_FINISHs)
+		bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_cached_keyset_list[local_server_logical_idx].end());
+		bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_beingupdated_keyset_list[local_server_logical_idx].end());
+		if (!is_cached) { // not in cached keyset
+			// add key into cached keyset
+			server_cached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key());
+
+			// must NOT in beingupdated keyset
+			INVARIANT(!is_being_udpated);
+			server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key()); // mark it as being updated
+
+			// get value from storage server KVS
+			val_t tmp_val;
+			uint32_t tmp_seq = 0;
+			bool tmp_stat = db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq);
+			uint16_t tmp_spineswitchidx = uint16_t(tmp_netcache_cache_pop_finish.key().get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+			uint16_t tmp_leafswitchidx = uint16_t(tmp_netcache_cache_pop_finish.key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+
+			// Phase 2 of cache coherence: notify server.valueupdateserver to update inswitch value in background
+			netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
+			tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat);
+			bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
+			if (!res) {
+				printf("[server.popserver %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
+			}
+		}
+		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 	}
 	else {
 		printf("[server.popserver] invalid optype: %x\n", optype_t(tmp_optype));
 		exit(-1);
 	}
-
-	/*if (server_beingcached_keyset_list[local_server_logical_idx].size() % 100 == 0 || server_cached_keyset_list[local_server_logical_idx].size() % 100 == 0) {
-		printf("server %d-%d beingcache sized %d cached size %d\n", local_server_logical_idx, global_server_logical_idx, server_beingcached_keyset_list[local_server_logical_idx].size(), server_cached_keyset_list[local_server_logical_idx].size());
-	}*/
   }
 
   close(server_popserver_udpsock_list[local_server_logical_idx]);
@@ -366,7 +344,7 @@ void *run_server_worker(void * param) {
   struct timespec statistic_t1, statistic_t2, statistic_t3;
   struct timespec beingcached_t1, beingcached_t2, beingcached_t3;
   struct timespec beingupdated_t1, beingupdated_t2, beingupdated_t3;
-  double beingcached_time = 0.0, beingupdated_time = 0.0;
+  double beingupdated_time = 0.0;
 #endif
   bool is_first_pkt = true;
   while (transaction_running) {
@@ -456,39 +434,16 @@ void *run_server_worker(void * param) {
 				}
 
 				//COUT_THIS("[server] key = " << tmp_key.to_string())
-
-				// Phase 1 of cache coherence: invalidate in-switch value
-				uint16_t tmp_spineswitchidx = uint16_t(tmp_key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
-				uint16_t tmp_leafswitchidx = uint16_t(tmp_key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
-				distcache_invalidate_t tmp_distcache_invalidate(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
-				while (true) {
-					int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
-					udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
-
-					int tmp_distcache_invalidate_ack_size = 0;
-					bool is_timeout = udprecvfrom(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, tmp_distcache_invalidate_ack_size, "server.worker.invalidateserver");
-					if (unlikely(is_timeout)) {
-						continue;
-					}
-					else {
-						distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
-						INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
-						break;
-					}
-				}
-
 				
 #ifdef DEBUG_SERVER
-				beingcached_time = 0.0;
 				beingupdated_time = 0.0;
 #endif
 				
 				bool tmp_stat = false;
 				server_mutex_for_keyset_list[local_server_logical_idx].lock();
-				bool is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
 				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
 				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
-				if (likely(!is_being_cached && !is_cached)) { // uncached
+				if (likely(!is_cached)) { // uncached
 					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
 						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
@@ -496,28 +451,29 @@ void *run_server_worker(void * param) {
 						tmp_stat = db_wrappers[local_server_logical_idx].remove(tmp_key, tmp_seq); // perform DEL operation
 					}
 				}
-				else if (unlikely(is_being_cached)) { // being cached
-					INVARIANT(!is_cached);
-#ifdef DEBUG_SERVER
-					CUR_TIME(beingcached_t1);
-#endif
-					while (is_being_cached) {
-						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
-						//usleep(1); // wait for cache population finish
-						nanosleep(&polling_interrupt_for_blocking, NULL); // wait for cache population finish
-						server_mutex_for_keyset_list[local_server_logical_idx].lock();
-						is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
-					}
-#ifdef DEBUG_SERVER
-					CUR_TIME(beingcached_t2);
-					DELTA_TIME(beingcached_t2, beingcached_t1, beingcached_t3);
-					beingcached_time = GET_MICROSECOND(beingcached_t3);
-#endif
 
-					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
-					INVARIANT(is_cached);
-				}
 				if (unlikely(is_cached)) { // already cached
+					// Phase 1 of cache coherence: invalidate in-switch value
+					uint16_t tmp_spineswitchidx = uint16_t(tmp_key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+					uint16_t tmp_leafswitchidx = uint16_t(tmp_key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+					distcache_invalidate_t tmp_distcache_invalidate(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
+					while (true) {
+						int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
+						udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
+
+						int tmp_distcache_invalidate_ack_size = 0;
+						bool is_timeout = udprecvfrom(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, tmp_distcache_invalidate_ack_size, "server.worker.invalidateserver");
+						if (unlikely(is_timeout)) {
+							continue;
+						}
+						else {
+							distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
+							INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
+							break;
+						}
+					}
+
+					// Phase 2 of cache coherence: update in-switch value in background
 #ifdef DEBUG_SERVER
 					CUR_TIME(beingupdated_t1);
 #endif
@@ -536,8 +492,6 @@ void *run_server_worker(void * param) {
 #endif
 
 					// Double-check due to potential cache eviction
-					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
-					INVARIANT(!is_being_cached); // key must NOT in beingcached keyset
 					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
 					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateserver
 						server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_key); // mark it as being updated
@@ -617,38 +571,16 @@ void *run_server_worker(void * param) {
 				}
 
 				//COUT_THIS("[server] key = " << tmp_key.to_string() << " val = " << req.val().to_string())
-
-				// Phase 1 of cache coherence: invalidate in-switch value
-				uint16_t tmp_spineswitchidx = uint16_t(tmp_key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
-				uint16_t tmp_leafswitchidx = uint16_t(tmp_key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
-				distcache_invalidate_t tmp_distcache_invalidate(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
-				while (true) {
-					int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
-					udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
-
-					int tmp_distcache_invalidate_ack_size = 0;
-					bool is_timeout = udprecvfrom(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, tmp_distcache_invalidate_ack_size, "server.worker.invalidateserver");
-					if (unlikely(is_timeout)) {
-						continue;
-					}
-					else {
-						distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
-						INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
-						break;
-					}
-				}
 				
 #ifdef DEBUG_SERVER
-				beingcached_time = 0.0;
 				beingupdated_time = 0.0;
 #endif
 
 				bool tmp_stat = false;
 				server_mutex_for_keyset_list[local_server_logical_idx].lock();
-				bool is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
 				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
 				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
-				if (unlikely(!is_being_cached && !is_cached)) { // uncached
+				if (unlikely(!is_cached)) { // uncached
 					if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
 						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
@@ -656,18 +588,29 @@ void *run_server_worker(void * param) {
 						tmp_stat = db_wrappers[local_server_logical_idx].remove(tmp_key, tmp_seq); // perform DEL operation
 					}
 				}
-				else if (unlikely(is_being_cached)) { // being cached
-					INVARIANT(!is_cached);
-					// NOTE: NETCACHE_XXXREQ_SEQ_CACHED does not need to wait for cache population finish; instead, it directly moves key from beingcached keyset into cached keyset
-					server_beingcached_keyset_list[local_server_logical_idx].erase(tmp_key);
-					server_cached_keyset_list[local_server_logical_idx].insert(tmp_key);
-					
-					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
-					INVARIANT(!is_being_cached);
-					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
-					INVARIANT(is_cached);
-				}
+
 				if (likely(is_cached)) { // already cached
+					// Phase 1 of cache coherence: invalidate in-switch value
+					uint16_t tmp_spineswitchidx = uint16_t(tmp_key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+					uint16_t tmp_leafswitchidx = uint16_t(tmp_key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+					distcache_invalidate_t tmp_distcache_invalidate(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
+					while (true) {
+						int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
+						udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
+
+						int tmp_distcache_invalidate_ack_size = 0;
+						bool is_timeout = udprecvfrom(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, tmp_distcache_invalidate_ack_size, "server.worker.invalidateserver");
+						if (unlikely(is_timeout)) {
+							continue;
+						}
+						else {
+							distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
+							INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
+							break;
+						}
+					}
+
+					// Phase 2 of cache coherence: update in-switch value in background
 #ifdef DEBUG_SERVER
 					CUR_TIME(beingupdated_t1);
 #endif
@@ -686,8 +629,6 @@ void *run_server_worker(void * param) {
 #endif
 
 					// Double-check due to potential cache eviction
-					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
-					INVARIANT(!is_being_cached); // key must NOT in beingcached keyset
 					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
 					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateserver
 						server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_key); // mark it as being updated
@@ -809,7 +750,6 @@ void *run_server_worker(void * param) {
 		DELTA_TIME(rocksdb_t2, rocksdb_t1, rocksdb_t3);
 		thread_param.rocksdb_latency_list.push_back(GET_MICROSECOND(rocksdb_t3));
 
-		thread_param.beingcached_latency_list.push_back(beingcached_time);
 		thread_param.beingupdated_latency_list.push_back(beingupdated_time);
 
 		CUR_TIME(wait_t1);
@@ -860,18 +800,12 @@ void *run_server_evictserver(void *param) {
 
 		// keep atomicity
 		server_mutex_for_keyset_list[local_server_logical_idx].lock();
-		// NETCACHE_CACHE_EVICT's key must in beingcached keyset or cached keyset
-		// consider duplicate NETCACHE_CACHE_EVICTs -> key may already be removed from beingcached/cached/beingudpated keyset
-		//INVARIANT((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) || \
-		//		(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end()));
-		if (!((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) || \
-					(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end()))) {
-			//printf("[server.evictserver %d-%d ERROR] evicted key %x is not in beingcached keyset (size: %d) or cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_beingcached_keyset_list[local_server_logical_idx].size(), server_cached_keyset_list[local_server_logical_idx].size());
-			//exit(-1);
-			printf("[server.evictserver %d-%d WARNING] evicted key %x is not in beingcached keyset (size: %d) or cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_beingcached_keyset_list[local_server_logical_idx].size(), server_cached_keyset_list[local_server_logical_idx].size());
+		// NETCACHE_CACHE_EVICT's key must in cached keyset
+		// consider duplicate NETCACHE_CACHE_EVICTs -> key may already be removed from cached/beingudpated keyset
+		if (!(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end())) {
+			printf("[server.evictserver %d-%d WARNING] evicted key %x is not in cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_cached_keyset_list[local_server_logical_idx].size());
 		}
-		// remove key from beingcached/cached/beingupdated keyset
-		server_beingcached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
+		// remove key from cached/beingupdated keyset
 		server_cached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
 		server_beingupdated_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
 		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
@@ -936,9 +870,8 @@ void *run_server_valueupdateserver(void *param) {
 				server_beingupdated_keyset_list[local_server_logical_idx].erase(tmp_netcache_valueupdate_ptr->key());
 			}
 			else { // due to cache eviciton
-				bool is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_valueupdate_ptr->key()) != server_beingcached_keyset_list[local_server_logical_idx].end());
 				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_valueupdate_ptr->key()) != server_cached_keyset_list[local_server_logical_idx].end());
-				INVARIANT(!is_being_cached && !is_cached); // key must NOT in beingcached/cached keyset
+				INVARIANT(!is_cached); // key must NOT in beingcached/cached keyset
 			}
 			server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 

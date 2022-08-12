@@ -86,7 +86,8 @@ void prepare_switchos();
 void *run_switchos_dppopserver(void *param);
 void *run_switchos_cppopserver(void *param);
 void *run_switchos_popworker(void *param);
-uint16_t calculate_switchidx(netreach_key_t key);
+void calculate_switchidx(netreach_key_t key, uint16_t &spineswitchidx, uint16_t &leafswitchidx);
+uint16_t calculate_switchidx_by_role(netreach_key_t key);
 void close_switchos();
 
 // switchos <-> ptf.popserver
@@ -293,7 +294,8 @@ void *run_switchos_dppopserver(void *param) {
 			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_rangepartition_idx(max_server_total_logical_num);
 #endif
 
-			// send NETCACHE_CACHE_POP to fetch value from correpsonding server by controller.popserver
+			//// DEPRECATED: send NETCACHE_CACHE_POP to fetch value from correpsonding server by controller.popserver
+			// send NETCACHE_CACHE_POP to controller.popserver to populate new key in both spine and server-leaf switch for power-of-two-choices-based query routing
 			netcache_cache_pop_t tmp_netcache_cache_pop(tmp_netcache_getreq_pop_ptr->key(), uint16_t(tmp_global_server_logical_idx));
 			while (true) {
 				int pktsize = tmp_netcache_cache_pop.serialize(buf, MAX_BUFSIZE);
@@ -310,6 +312,7 @@ void *run_switchos_dppopserver(void *param) {
 						continue;
 					}
 					else {
+						INVARIANT(tmp_netcache_cache_pop_ack.val() == val_t()); // NETCACHE_CACHE_POP_ACK must w/ default value in DistCache
 						break;
 					}
 				}
@@ -510,8 +513,9 @@ void *run_switchos_popworker(void *param) {
 					while (true) {
 						//printf("send %d CACHE_EVICT_LOADFREQ_INSWITCHs to reflector\n", switchos_sample_cnt);
 						for (size_t i = 0; i < switchos_sample_cnt; i++) {
-							uint16_t switchidx_for_sampled_key = calculate_switchidx(static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]));
-							cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(switchidx_for_sampled_key, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
+							uint16_t spineswitchidx_for_sampled_key = 0, leafswitchidx_for_sampled_key = 0;
+							calculate_switchidx(static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]), spineswitchidx_for_sampled_key, leafswitchidx_for_sampled_key);
+							cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(spineswitchidx_for_sampled_key, leafswitchidx_for_sampled_key, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
 							pktsize = tmp_cache_evict_loadfreq_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 							udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 						}
@@ -611,7 +615,7 @@ void *run_switchos_popworker(void *param) {
 				//CUR_TIME(evict_load_t2); // TMPDEBUG
 
 				// calculate correpsonding switchidx
-				uint16_t switchidx_for_cur_evictkey = calculate_switchidx(cur_evictkey);
+				uint16_t switchidx_for_cur_evictkey = calculate_switchidx_by_role(cur_evictkey);
 
 				//CUR_TIME(evict_remove_t1); // TMPDEBUG
 				// remove evicted data from cache_lookup_tbl
@@ -689,16 +693,16 @@ void *run_switchos_popworker(void *param) {
 
 			/* cache population for new record */
 
-			// calculate corresponding switchidx based on role
-			uint16_t switchidx_for_tmp_cache_pop_key = calculate_switchidx(tmp_cache_pop_ptr->key());
-
 			INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < switch_kv_bucket_num);
 			//printf("[switchos.popworker] switchos_perpipeline_cached_empty_index[%d]: %d, switchos_freeidx: %d\n", tmp_pipeidx, int(switchos_perpipeline_cached_empty_index[tmp_pipeidx]), int(switchos_freeidx)); // TMPDEBUG
 			
 			//CUR_TIME(pop_cachepop_t1); // TMPDEBUG
 
+			uint16_t spineswitchidx_for_tmp_cache_pop_key = 0, leafswitchidx_for_tmp_cache_pop_key = 0;
+			calculate_switchidx(tmp_cache_pop_ptr->key(), spineswitchidx_for_tmp_cache_pop_key, leafswitchidx_for_tmp_cache_pop_key);
+
 			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-			cache_pop_inswitch_t tmp_cache_pop_inswitch(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
+			cache_pop_inswitch_t tmp_cache_pop_inswitch(spineswitchidx_for_tmp_cache_pop_key, leafswitchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
 			pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 
 			while (true) {
@@ -730,6 +734,9 @@ void *run_switchos_popworker(void *param) {
 
 			//CUR_TIME(pop_cachepop_t2); // TMPDEBUG
 			//CUR_TIME(pop_addkey_t1); // TMPDEBUG
+
+			// calculate corresponding switchidx based on role
+			uint16_t switchidx_for_tmp_cache_pop_key = calculate_switchidx_by_role(tmp_cache_pop_ptr->key());
 
 			// (1) add new <key, value> pair into cache_lookup_tbl; DEPRECATED: (2) and set valid=1 to enable the entry
 			////system("bash tofino/add_cache_lookup_setvalid1.sh");
@@ -822,7 +829,13 @@ void *run_switchos_popworker(void *param) {
 	pthread_exit(nullptr);
 }
 
-uint16_t calculate_switchidx(netreach_key_t key) {
+void calculate_switchidx(netreach_key_t key, uint16_t &spineswitchidx, uint16_t &leafswitchidx) {
+	spineswitchidx = uint16_t(key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+	leafswitchidx = uint16_t(key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+	return;
+}
+
+uint16_t calculate_switchidx_by_role(netreach_key_t key) {
 	uint16_t tmp_switchidx = 0;
 	if (strcmp(switchos_role, "spine") == 0) {
 		tmp_switchidx = uint16_t(key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));

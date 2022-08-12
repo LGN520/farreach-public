@@ -919,7 +919,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 matchspec0 = distcacheleaf_access_latest_tbl_match_spec_t(\
                         op_hdr_optype = CACHE_POP_INSWITCH,
                         inswitch_hdr_is_cached = is_cached)
-                self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
+                self.client.access_latest_tbl_table_add_with_reset_and_get_latest(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distcacheleaf_access_latest_tbl_match_spec_t(\
                         op_hdr_optype = NETCACHE_VALUEUPDATE_INSWITCH,
