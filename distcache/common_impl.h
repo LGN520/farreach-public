@@ -457,7 +457,8 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(switch_kv_bucket_num);
 	COUT_VAR(switch_pipeline_num);
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
-	COUT_VAR(switchos_popserver_port);
+	COUT_VAR(switchos_dppopserver_port);
+	COUT_VAR(switchos_cppopserver_port);
 	COUT_VAR(switchos_sample_cnt);
 	COUT_VAR(switchos_snapshotserver_port);
 	COUT_VAR(switchos_specialcaseserver_port);

@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 	}
 
 	pthread_t cppopserver_thread;
-	int ret = pthread_create(&cppopserver_thread, nullptr, run_switchos_cppopserver, nullptr);
+	ret = pthread_create(&cppopserver_thread, nullptr, run_switchos_cppopserver, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
 	}
@@ -200,7 +200,7 @@ void prepare_switchos() {
 
 	if (strcmp(switchos_role, "spine") == 0) {
 		// spineswitchos.popworker <-> controller.victimserver
-		create_udpsock(spineswitchos_popworker_victimclient_for_controller_udpsock, truem "spineswitchos.popworker.victimclient_for_controller");
+		create_udpsock(spineswitchos_popworker_victimclient_for_controller_udpsock, true, "spineswitchos.popworker.victimclient_for_controller");
 	}
 	else if (strcmp(switchos_role, "leaf") == 0) {
 		// leafswitchos.popworker <-> controller.victimserver.victimclient_for_leaf
@@ -373,7 +373,7 @@ void *run_switchos_popworker(void *param) {
 
 	// used by spine switchos for DISTCACHE_CACHE_EVICT_VICTIM/_ACK
 	struct sockaddr_in controller_victimserver_addr;
-	set_sockaddr(controlelr_victimserver_addr, inet_addr(controller_ip_for_switchos), controller_victimserver_port);
+	set_sockaddr(controller_victimserver_addr, inet_addr(controller_ip_for_switchos), controller_victimserver_port);
 	socklen_t controller_victimserver_addrlen = sizeof(struct sockaddr_in);
 
 	// used for NETCACHE_CACHE_POP_FINISH
@@ -414,7 +414,7 @@ void *run_switchos_popworker(void *param) {
 	// send CACHE_POP_INSWITCH and CACHE_EVICT to controller
 	// send/receive DISTCACHE_CACHE_EVICT_VICTIM/_ACK
 	char pktbuf[MAX_BUFSIZE];
-	uint32_t pktsize = 0;
+	int pktsize = 0;
 	// recv CACHE_POP_INSWITCH_ACK and CACHE_EVICT_ACK from controller
 	char ackbuf[MAX_BUFSIZE];
 	int ack_recvsize = 0;
@@ -436,7 +436,7 @@ void *run_switchos_popworker(void *param) {
 	//struct timespec evict_load_t1, evict_load_t2, evict_load_t3, evict_sendrecv_t1, evict_sendrecv_t2, evict_sendrecv_t3, evict_remove_t1, evict_remove_t2, evict_remove_t3, evict_total_t1, evict_total_t2, evict_total_t3;
 
 	while (switchos_running) {
-		cache_pop_t tmp_cache_pop_ptr = switchos_cache_pop_ptr_queue.read();
+		cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptr_queue.read();
 		if (tmp_cache_pop_ptr != NULL) {
 				
 			//CUR_TIME(pop_total_t1); // TMPDEBUG
@@ -463,7 +463,7 @@ void *run_switchos_popworker(void *param) {
 			if (strcmp(switchos_role, "spine") == 0) {
 				tmp_pipeidx = leafswitch_pipeidx;
 			}
-			elif (strcmp(switchos_role, "leaf") == 0) {
+			else if (strcmp(switchos_role, "leaf") == 0) {
 				int tmp_server_physical_idx = -1;
 				for (int i = 0; i < server_physical_num; i++) {
 					for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
@@ -570,7 +570,7 @@ void *run_switchos_popworker(void *param) {
 					distcache_cache_evict_victim_t tmp_distcache_cache_evict_victim(tmp_cache_pop_ptr->key(), tmp_evictkey, switchos_evictidx);
 					while (true) {
 						pktsize = tmp_distcache_cache_evict_victim.serialize(pktbuf, MAX_BUFSIZE);
-						udpsendto(spineswitchos_popworker_victimclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_victimserver_addr, &controller_victimserver_addrlen, "spineswitchos.popworker.victimclient_for_controller");
+						udpsendto(spineswitchos_popworker_victimclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_victimserver_addr, controller_victimserver_addrlen, "spineswitchos.popworker.victimclient_for_controller");
 
 						bool is_timeout = udprecvfrom(spineswitchos_popworker_victimclient_for_controller_udpsock, pktbuf, MAX_BUFSIZE, 0, NULL, NULL, pktsize, "spineswitchos.popworker.victimclient_for_controller");
 						if (unlikely(is_timeout)) {
@@ -591,13 +591,13 @@ void *run_switchos_popworker(void *param) {
 
 					// validate victim key and idx
 					// TODO: launch leafswitchos.popworker.victimserver as an individual thread -> for duplicate DISTCACHE_CACHE_EVICT_VICTIM caused by timeout-and-retry in spineswitchos, individual victimserver can ignore it for robustness
-					INVARIANT(tmp_distcache_cache_evict_victim.victimkey() == switchos_perpipeline_cached_keyarray[tmp_pipeidx][tmp_distcache_cache_evict_victim.victimidx()]);
+					INVARIANT(tmp_distcache_cache_evict_victim.victimkey() == static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][tmp_distcache_cache_evict_victim.victimidx()]));
 					switchos_evictidx = tmp_distcache_cache_evict_victim.victimidx();
 
 					// send DISTCACHE_CACHE_EVICT_VICTIM_ACK to controller.vicitmserver.victimclient_for_leaf
 					distcache_cache_evict_victim_ack_t tmp_distcache_cache_evict_victim_ack(tmp_distcache_cache_evict_victim.key());
 					pktsize = tmp_distcache_cache_evict_victim_ack.serialize(pktbuf, MAX_BUFSIZE);
-					udpsendto(leafswitchos_popworker_victimserver_udpsock, pktbuf, pktsize, 0, &controller_victimserver_victimclient_for_leaf_addr, controlelr_victimserver_victimclient_for_leaf_addrlen, "leafswitchos.popworker.victimserver");
+					udpsendto(leafswitchos_popworker_victimserver_udpsock, pktbuf, pktsize, 0, &controller_victimserver_victimclient_for_leaf_addr, controller_victimserver_victimclient_for_leaf_addrlen, "leafswitchos.popworker.victimserver");
 				}
 				else {
 					printf("[switchos.popworker] invalid switchos role: %s\n", switchos_role);
@@ -816,7 +816,7 @@ void *run_switchos_popworker(void *param) {
 		close(spineswitchos_popworker_victimclient_for_controller_udpsock);
 	}
 	else if (strcmp(switchos_role, "leaf") == 0) {
-		cloes(leafswitchos_popworker_victimserver_udpsock);
+		close(leafswitchos_popworker_victimserver_udpsock);
 	}
 	else {
 		printf("[switchos.popworker] invalid switchos role %s\n", switchos_role);

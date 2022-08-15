@@ -18,7 +18,7 @@ action set_leafload_forclient() {
 blackbox stateful_alu get_leafload_forclient_alu {
 	reg: leafload_forclient_reg;
 
-	condition_lo: meta.spineload_forclient >= register_lo
+	condition_lo: meta.spineload_forclient >= register_lo;
 
 	update_lo_1_value: register_lo;
 

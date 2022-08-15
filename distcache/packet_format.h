@@ -89,7 +89,7 @@ class Packet {
 		uint32_t serialize_ophdr(char * const data, uint32_t max_size);
 		uint32_t dynamic_serialize_ophdr(dynamic_array_t &dynamic_data);
 		uint32_t deserialize_ophdr(const char * data, uint32_t recv_size);
-		uint32_t get_ophdrsize();
+		static uint32_t get_ophdrsize();
 };
 
 template<class key_t>

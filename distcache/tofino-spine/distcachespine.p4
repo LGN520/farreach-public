@@ -5,11 +5,11 @@
 
 // Uncomment it if support range query, or comment it otherwise
 // Change distcachespine.p4, common.py, and helper.h accordingly
-//#define RANGE_SUPPORT
+#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
-//#define DEBUG
+#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // 0b0001
@@ -37,7 +37,7 @@
 #define DELREQ_SEQ_INSWITCH_CASE1 0x005f
 #define LOADSNAPSHOTDATA_INSWITCH_ACK 0x006f
 #define CACHE_POP_INSWITCH 0x007f
-#fdefine NETCACHE_VALUEUPDATE_INSWITCH 0x008f
+#define NETCACHE_VALUEUPDATE_INSWITCH 0x008f
 #define GETRES_LATEST_SEQ_SERVER_INSWITCH 0x009f
 #define GETRES_DELETED_SEQ_SERVER_INSWITCH 0x010f
 // 0b1011
@@ -151,7 +151,7 @@
 // PROCESS_SCANREQ_SPLIT_ENTRY_NUM = 2 * MAX_SERVER_NUM
 #define PROCESS_SCANREQ_SPLIT_ENTRY_NUM 256
 // HASH_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
-#define HASH_PARTITION_ENTRY_NUM 1024
+#define HASH_PARTITION_ENTRY_NUM 2048
 
 // max number of logical spine switches; used for spineload_reg
 #define MAX_SPINESWITCH_NUM 128
@@ -248,7 +248,6 @@ control egress {
 	apply(prepare_for_cachepop_tbl); // reset clone_hdr.server_sid by default here
 
 	// Stage 2
-	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);
 	apply(access_deleted_tbl);
 	apply(access_savedseq_tbl);

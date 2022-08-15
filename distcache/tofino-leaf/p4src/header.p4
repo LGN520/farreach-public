@@ -166,10 +166,13 @@ header_type metadata_t {
 #ifndef RANGE_SUPPORT
 		hashval_for_partition: 16; // at most 32K
 #endif
+		/*** for power-of-two-choices ***/
 		spineload_forclient: 32;
 		toleaf_predicate: 4;
 		hashval_for_ecmp: 16;
 		toleaf_offset: 16;
+		spineswitchnum: 16;
+		/*** end here ***/
 		cm1_predicate: 4;
 		cm2_predicate: 4;
 		cm3_predicate: 4;

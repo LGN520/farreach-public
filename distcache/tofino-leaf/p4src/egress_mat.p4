@@ -21,6 +21,36 @@ table save_client_info_tbl {
 	size: 4;
 }
 
+// Stage 2
+
+action set_is_hot() {
+	modify_field(meta.is_hot, 1);
+	//modify_field(debug_hdr.is_hot, 1);
+}
+
+action reset_is_hot() {
+	modify_field(meta.is_hot, 0);
+	//modify_field(debug_hdr.is_hot, 0);
+}
+
+@pragma stage 2
+table is_hot_tbl {
+	reads {
+		meta.cm1_predicate: exact;
+		meta.cm2_predicate: exact;
+		meta.cm3_predicate: exact;
+		meta.cm4_predicate: exact;
+	}
+	actions {
+		set_is_hot;
+		reset_is_hot;
+	}
+	default_action: reset_is_hot();
+	size: 1;
+}
+
+// Stage 3
+
 #ifdef RANGE_SUPPORT
 action process_scanreq_split(server_sid) {
 	modify_field(clone_hdr.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
@@ -48,7 +78,7 @@ counter process_scanreq_split_counter {
 	direct: process_scanreq_split_tbl;
 }
 #endif
-@pragma stage 0
+@pragma stage 3
 table process_scanreq_split_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -70,7 +100,7 @@ table process_scanreq_split_tbl {
 }
 #endif
 
-// Stage 1
+// Stage 4
 
 action set_server_sid_and_port(server_sid) {
 	modify_field(clone_hdr.server_sid, server_sid);
@@ -89,7 +119,7 @@ counter prepare_for_cachepop_counter {
 }
 #endif
 
-@pragma stage 1
+@pragma stage 4
 table prepare_for_cachepop_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -102,34 +132,6 @@ table prepare_for_cachepop_tbl {
 	}
 	default_action: reset_server_sid();
 	size: 32;
-}
-
-// Stage 2
-
-action set_is_hot() {
-	modify_field(meta.is_hot, 1);
-	//modify_field(debug_hdr.is_hot, 1);
-}
-
-action reset_is_hot() {
-	modify_field(meta.is_hot, 0);
-	//modify_field(debug_hdr.is_hot, 0);
-}
-
-@pragma stage 2
-table is_hot_tbl {
-	reads {
-		meta.cm1_predicate: exact;
-		meta.cm2_predicate: exact;
-		meta.cm3_predicate: exact;
-		meta.cm4_predicate: exact;
-	}
-	actions {
-		set_is_hot;
-		reset_is_hot;
-	}
-	default_action: reset_is_hot();
-	size: 1;
 }
 
 // Stage 7
@@ -254,7 +256,7 @@ action update_netcache_getreq_pop_to_getreq_by_mirroring(server_sid) {
 	clone_egress_pkt_to_egress(server_sid); // clone to client (inswitch_hdr.client_sid)
 }
 
-action update_getreq_inswitch_to_getres_by_mirroring(client_sid, stat) {
+action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, stat);

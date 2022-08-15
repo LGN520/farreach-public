@@ -29,7 +29,7 @@ action process_scanreq_split(server_sid) {
 }
 action process_cloned_scanreq_split(server_sid) {
 	add_to_field(op_hdr.leafswitchidx, 1); // CANNOT be placed in eg_port_forward_tbl as server-leaf needs leafswitchidx for cache lookup and scanreq split
-	modify_field(meta.server_sid, server_sid); // clone to server-leaf for next SCANREQ_SPLIT
+	modify_field(clone_hdr.server_sid, server_sid); // clone to server-leaf for next SCANREQ_SPLIT
 	subtract(meta.remain_scannum, split_hdr.max_scanswitchnum, split_hdr.cur_scanswitchidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
@@ -94,34 +94,6 @@ table prepare_for_cachepop_tbl {
 	}
 	default_action: reset_server_sid();
 	size: 32;
-}
-
-// Stage 2
-
-action set_is_hot() {
-	modify_field(meta.is_hot, 1);
-	//modify_field(debug_hdr.is_hot, 1);
-}
-
-action reset_is_hot() {
-	modify_field(meta.is_hot, 0);
-	//modify_field(debug_hdr.is_hot, 0);
-}
-
-@pragma stage 2
-table is_hot_tbl {
-	reads {
-		meta.cm1_predicate: exact;
-		meta.cm2_predicate: exact;
-		meta.cm3_predicate: exact;
-		meta.cm4_predicate: exact;
-	}
-	actions {
-		set_is_hot;
-		reset_is_hot;
-	}
-	default_action: reset_is_hot();
-	size: 1;
 }
 
 // Stage 7

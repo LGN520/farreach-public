@@ -76,7 +76,7 @@ table l2l3_forward_tbl {
 	size: 16;
 }
 
-action set_hot_threshold(hot_threshold) {
+/*action set_hot_threshold(hot_threshold) {
 	modify_field(inswitch_hdr.hot_threshold, hot_threshold);
 }
 
@@ -87,7 +87,22 @@ table set_hot_threshold_tbl {
 	}
 	default_action: set_hot_threshold(DEFAULT_HH_THRESHOLD);
 	size: 1;
+}*/
+
+action set_hot_threshold_and_spineswitchnum(hot_threshold, spineswitchnum) {
+	modify_field(inswitch_hdr.hot_threshold, hot_threshold);
+	modify_field(meta.spineswitchnum, spineswitchnum);
 }
+
+@pragma stage 0
+table set_hot_threshold_and_spineswitchnum_tbl {
+	actions {
+		set_hot_threshold_and_spineswitchnum;
+	}
+	default_action: set_hot_threshold_and_spineswitchnum(DEFAULT_HH_THRESHOLD, DEFAULT_SPINESWITCHNUM);
+	size: 1;
+}
+
 
 action hash_for_spineselect() {
 	//modify_field_with_hash_based_offset(meta.hashval_for_spineselect, 0, hash_calc, PARTITION_COUNT);
@@ -108,7 +123,41 @@ table hash_for_spineselect_tbl {
 	size: 8;
 }
 
+action hash_for_ecmp() {
+	modify_field_with_hash_based_offset(meta.hashval_for_ecmp, 0, random_hash_calc, PARTITION_COUNT);
+}
+
+@pragma stage 0
+table hash_for_ecmp_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_ecmp;
+		nop;
+	}
+	default_action: nop();
+	size: 1;
+}
+
 // Stage 1
+
+/*action set_spineswitchnum(spineswitchnum) {
+	modify_field(meta.spineswitchnum, spineswitchnum);
+}
+
+@pragma stage 1
+table set_spineswitchnum_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		set_spineswitchnum;
+		nop;
+	}
+	default_action: nop();
+	size: 1;
+}*/
 
 /*action reset_is_wrong_pipeline() {
 	modify_field(inswitch_hdr.is_wrong_pipeline, 0);
@@ -147,23 +196,6 @@ table hash_for_cm12_tbl {
 	}
 	default_action: nop();
 	size: 4;
-}
-
-action hash_for_ecmp() {
-	modify_field_with_hash_based_offset(meta.hashval_for_ecmp, 0, random_hash_calc, PARTITION_COUNT);
-}
-
-@pragma stage 1
-table hash_for_ecmp_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_ecmp;
-		nop;
-	}
-	default_action: nop();
-	size: 1;
 }
 
 // Stage 2
@@ -250,45 +282,13 @@ table spineselect_tbl {
 	size: SPINESELECT_ENTRY_NUM;
 }
 
-action hash_for_cm34() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc3, CM_BUCKET_COUNT);
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
-}
-
-@pragma stage 3
-table hash_for_cm34_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_cm34;
-		nop;
-	}
-	default_action: nop();
-	size: 4;
-}
-
 // Stage 4~5
 
-action hash_for_bf1() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
-}
-
-@pragma stage 4
-table hash_for_bf1_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf1;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
-action cutoff_spineswitchidx_for_ecmp(spineswitchnum) {
-	subtract_from_field(op_hdr.spineswitchidx, spineswitchnum); [1, 2*spineswitchnum-2] -> [1, spineswitchnum-1] & [0, spineswitchnum-2]
+//action cutoff_spineswitchidx_for_ecmp(spineswitchnum) {
+action cutoff_spineswitchidx_for_ecmp() {
+	// NOTE: due to Tofino limitation, the 2nd parameter of subtract_from_field must be a PHV field instead of action parameter
+	//subtract_from_field(op_hdr.spineswitchidx, spineswitchnum); // [1, 2*spineswitchnum-2] -> [1, spineswitchnum-1] & [0, spineswitchnum-2]
+	subtract_from_field(op_hdr.spineswitchidx, meta.spineswitchnum); // [1, 2*spineswitchnum-2] -> [1, spineswitchnum-1] & [0, spineswitchnum-2]
 }
 
 @pragma stage 4
@@ -335,6 +335,24 @@ table cache_lookup_tbl {
 }
 
 // Stage 6~7
+
+action hash_for_cm34() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc3, CM_BUCKET_COUNT);
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
+}
+
+@pragma stage 6
+table hash_for_cm34_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_cm34;
+		nop;
+	}
+	default_action: nop();
+	size: 4;
+}
 
 #ifdef RANGE_SUPPORT
 action range_partition(udpport, eport) {
@@ -426,6 +444,23 @@ table hash_partition_tbl {
 #endif
 
 // Stage 8
+
+action hash_for_bf1() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
+}
+
+@pragma stage 8
+table hash_for_bf1_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_bf1;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
 
 #ifdef RANGE_SUPPORT
 //action range_partition_for_scan_endkey(last_udpport_plus_one) {

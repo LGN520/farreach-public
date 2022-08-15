@@ -265,6 +265,33 @@
 
 ## Simple test
 
+- Normal requests
+	+ 3 GETREQs -> 3 GETRESs by server (power-of-two-choices under cache miss)
+		* spineload_forclient of correct spineswitchidx = leafload_forclient = 0, toleaf_predicate = 2 -> spineload of incorrect spineswitchidx = 1, leafload = 1
+		* spineload_forclient of correct spine switchidx=0 < leafload_forclient = 1, toleaf_predicate = 1 -> spineload of correct spineswitchidx = 1, leafload = 2
+		* spineload_forclient of correct spine switchidx=1 < leafload_forclient = 2, toleaf_predicate = 1 -> spineload of correct spineswitchidx = 2, leafload = 3
+	+ PUTREQ -> PUTRES by server
+	+ DELREQ -> DELRES by server
+	+ SCANREQ -> SCANRES by server
+	+ LOADREQ -> LOADACK by server
+- Cache population (cache coherence phase 2)
+	+ WARMUPREQ -> NETCACHE_WARMUP_INSWITCH_POP and WARMUPACK by spine switch
+		* Perform population: NETCACHE_CACHE_POP -> CACHE_POP_INSIWTCH (latest=1) -> NETCACHE_CACHE_FINISH/_ACK -> NETCACHE_VALUEUPDATE/_ACK
+	+ Sufficient GETREQs under sampling -> GETREQ w/ is_hot=1 and is_report=0 -> NETCACHE_GETREQ_POP by server-leaf and GETRES by server -> perform population (latest=0 -> NETCACHE_VALUEUPDATE/_ACK -> latest=1)
+		* Note latest=1 -> GETREQ w/ is_hot=0 and is_report=1 -> GETRES by switch (latest=1)
+		* Set latest=0 manually -> GETREQ w/ is_hot=1 and is_report=1 -> GETRES by server w/o population (latest=0)
+		* Set bf1=0 manullay -> GETREQ w/ is_hot=1 and is_report=0 -> NETCACHE_GETREQ_POP by server-leaf and GETRES by server -> no population (latest=0, bf1=1)
+			- NOTE: due to sampling, not every GETREQ can trigger NETCACHE_GETREQ_POP and filtered by switchos
+- Cache hit (cache coherence phase 1&2)
+	+ GETREQ -> GETRES by switch (latest=1)
+	+ PUT/DELREQ -> NETCACHE_PUT/DELREQ_CACHED -> DISTCACHE_INVALIDATE/_ACK by server to set latest=0 -> PUT/DELRES by server -> NETCACHE_VALUEUPDATE/_ACK (latest=1, deleted=0/1)
+- Cache eviction
+	+ WARMUPREQ of another key -> NETCACHE_WARMUPREQ_INSWITCH_POP and WARMUPACK by spine switch
+		* Perform eviction: CACHE_EVICT_LOADFREQ_INSWITCH/_ACK by spine -> DISTCACHE_CACHE_EVICT_VICTIM/_ACK between spine and server-leaf -> both remove victim.key from cache_lookup_tbl -> both send/recv NETCACHE_CACHE_EVICT/_ACK -> server remove key from cached/beingupdated keyset
+		* Perform population: NETCACHE_CACHE_POP -> CACHE_POP_INSIWTCH (latest=0) -> NETCACHE_CACHE_FINISH/_ACK
+	+ Sufficient GETREQs of another key -> NETCACHE_GETREQ_POP by server-leaf and GETRES by server
+		* Perform eviction and population as mentioned above
+
 ## Deprecated staff
 
 + DEPRECATED design for cache population/eviction in DistFarReach

@@ -233,7 +233,7 @@ void *run_server_popserver(void *param) {
 			server_cached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key());
 
 			// must NOT in beingupdated keyset
-			INVARIANT(!is_being_udpated);
+			INVARIANT(!is_being_updated);
 			server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key()); // mark it as being updated
 
 			// get value from storage server KVS
@@ -328,7 +328,7 @@ void *run_server_worker(void * param) {
 
   struct timespec polling_interrupt_for_blocking;
   polling_interrupt_for_blocking.tv_sec = 0;
-  polling_interrupt_for_blocking.tc_nsec = 1000; // 1ms = 1000ns
+  polling_interrupt_for_blocking.tv_nsec = 1000; // 1ms = 1000ns
 
   printf("[server.worker %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
   transaction_ready_threads++;

@@ -5,7 +5,7 @@
 
 // Uncomment it if support range query, or comment it otherwise
 // Change distcacheleaf.p4, common.py, and helper.h accordingly
-//#define RANGE_SUPPORT
+#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
@@ -139,6 +139,8 @@
 // hot_threshold=10 + sampling_ratio=0.5 -> hot_pktcnt=20 during each clean period (NOTE: cached key will not update CM)
 // NOTE: it can be reconfigured by MAT
 #define DEFAULT_HH_THRESHOLD 10
+// NOTE: it can be reconfigured by MAT
+#define DEFAULT_SPINESWITCHNUM 2
 
 // egress_pipeline_num * kv_bucket_count
 //#define LOOKUP_ENTRY_COUNT 65536
@@ -198,18 +200,20 @@ control ingress {
 	if (not valid(op_hdr)) {
 		apply(l2l3_forward_tbl); // forward traditional packet
 	}
-	apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
+	////apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
+	apply(set_hot_threshold_and_spineswitchnum_tbl); // set inswitch_hdr.hot_threshold and meta.spineswitchnum
 	apply(hash_for_spineselect_tbl); // set meta.hashval_for_spineselect
 	apply(access_leafload_tbl); // access leafload_reg for power-of-two-choices by server-leaf
 	// TODO: we can merge spine/leafload_forclient into one 64-bit register array if w/ stateful ALU limitation
 	apply(access_spineload_forclient_tbl); // set meta.spineload_forclient
+	apply(hash_for_ecmp_tbl); // method B for incorrect spineswitchidx to set meta.hashval_for_ecmp
 
 	// Stage 1
+	////apply(set_spineswitchnum_tbl); // set meta.spineswitchnum for cutoff_spineswitchidx_for_ecmp_tbl (NOTE: merged into set_hot_threshold_tbl to save power budget)
 #ifndef RANGE_SUPPORT
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
 	apply(hash_for_cm12_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
-	apply(hash_for_ecmp_tbl); // method B for incorrect spineswitchidx to set meta.hashval_for_ecmp
 
 	// Stage 2
 	apply(hash_for_bf2_tbl);
@@ -218,12 +222,10 @@ control ingress {
 	apply(ecmp_for_getreq_tbl); // method B for incorrect spineswitchidx to set meta.toleaf_offset
 
 	// Stage 3
-	apply(hash_for_cm34_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 	// NOTE: we cannot compare meta.spine/leafload_forclient by gateway table due to Tofino limitation (>/< can only be performed between one PHV and one constant, whose total bits <= 12 bits)
 	apply(spineselect_tbl); // change spineswitchidx and eport to forward requests from client to spine switch
 
 	// Stage 4~5
-	apply(hash_for_bf1_tbl);
 	apply(cutoff_spineswitchidx_for_ecmp_tbl); // cutoff spineswitchidx from [1, 2*spineswitchnum-2] -> [1, spineswitchnum-1] & [0, spineswitchnum-2]
 	// IMPORTANT: to save TCAM, we do not match op_hdr.optype in cache_lookup_tbl 
 	// -> so as long as op_hdr.key matches an entry in cache_lookup_tbl, inswitch_hdr.is_cached must be 1 (e.g., CACHE_EVICT_LOADXXX)
@@ -231,6 +233,7 @@ control ingress {
 	apply(cache_lookup_tbl); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
 
 	// Stage 6~7 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
+	apply(hash_for_cm34_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 	// NOTE: we reserve two stages for partition_tbl now as range matching needs sufficient TCAM
 #ifdef RANGE_SUPPORT
 	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
@@ -239,6 +242,7 @@ control ingress {
 #endif
 
 	// Stage 8
+	apply(hash_for_bf1_tbl);
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
@@ -265,13 +269,9 @@ control egress {
 
 	// Stage 0
 	apply(access_latest_tbl); // NOTE: latest_reg corresponds to stats.validity in netcache paper, which will be used to *invalidate* the value by PUT/DELREQ
-	apply(save_client_info_tbl); // save srcip/srcmac/udp.dstport (client ip/mac/udpport) for cache hit response of GET/PUT/DELREQ_INSWITCH
-#ifdef RANGE_SUPPORT
-	apply(process_scanreq_split_tbl); // NOT reset clone_hdr.server_sid by default here
-#endif
+	apply(save_client_info_tbl); // save srcip/srcmac/udp.srcport (client ip/mac/udpport) for cache hit response of GET/PUT/DELREQ_INSWITCH
 
 	// Stage 1
-	apply(prepare_for_cachepop_tbl); // reset clone_hdr.server_sid by default here
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
@@ -284,12 +284,16 @@ control egress {
 	apply(access_savedseq_tbl);
 
 	// Stage 3
+#ifdef RANGE_SUPPORT
+	apply(process_scanreq_split_tbl); // NOT reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/clonenum_for_pktloss and udp_hdr.dstport
+#endif
 	apply(update_vallen_tbl);
 	apply(access_bf1_tbl);
 	apply(access_bf2_tbl);
 	apply(access_bf3_tbl);
 
 	// Stage 4
+	apply(prepare_for_cachepop_tbl); // reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/udpport
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);

@@ -2,7 +2,8 @@
 #DIRNAME="nocache"
 #DIRNAME="netcache"
 #DIRNAME="distnocache"
-DIRNAME="distfarreach"
+#DIRNAME="distfarreach"
+DIRNAME="distcache"
 ##DIRNAME="distfarreachlimit"
 
 ssh ssy@bf1 "rm -rf NetBuffer/$DIRNAME"

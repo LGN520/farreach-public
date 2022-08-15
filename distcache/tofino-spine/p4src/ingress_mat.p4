@@ -356,7 +356,7 @@ action update_distcache_invalidate_to_distcache_invalidate_inswitch() {
 	modify_field(op_hdr.optype, DISTCACHE_INVALIDATE_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, DISTCACHE_INVALIDATE_INSWITCH);
 
-	add_header(shodowntype_hdr);
+	add_header(shadowtype_hdr);
 	add_header(inswitch_hdr);
 
 	// swap to set dstport as corresponding server.invalidateserver port

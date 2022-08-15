@@ -373,9 +373,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
             # Table: set_hot_threshold_tbl (default: set_hot_threshold; size: 1)
-            print "Configuring set_hot_threshold_tbl"
-            actnspec0 = distcacheleaf_set_hot_threshold_action_spec_t(hot_threshold)
-            self.client.set_hot_threshold_tbl_set_default_action_set_hot_threshold(\
+            #print "Configuring set_hot_threshold_tbl"
+            #actnspec0 = distcacheleaf_set_hot_threshold_action_spec_t(hot_threshold)
+            #self.client.set_hot_threshold_tbl_set_default_action_set_hot_threshold(\
+            #        self.sess_hdl, self.dev_tgt, actnspec0)
+
+            # Table: set_hot_threshold_and_spineswitchnum_tbl (default: set_hot_threshold_and_spineswitchnum; size: 1)
+            print "Configuring set_hot_threshold_and_spineswitchnum_tbl"
+            actnspec0 = distcacheleaf_set_hot_threshold_and_spineswitchnum_action_spec_t(hot_threshold, spineswitch_total_logical_num)
+            self.client.set_hot_threshold_and_spineswitchnum_tbl_set_default_action_set_hot_threshold_and_spineswitchnum(\
                     self.sess_hdl, self.dev_tgt, actnspec0)
 
             # Table: hash_for_spineselect_tbl (default: nop; size: 9)
@@ -408,6 +414,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = GETREQ)
             self.client.access_spineload_forclient_tbl_table_add_with_get_spineload_forclient(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: set_spineswitchnum_tbl (default: nop; size: 1)
+            #matchspec0 = distcacheleaf_set_spineswitchnum_match_spec_t(\
+            #        op_hdr_optype = GETREQ)
+            #actnspec0 = distcacheleaf_set_spineswitchnum(spineswitch_total_logical_num)
+            #self.client.set_spineswitchnum_tbl_table_add_with_set_spineswitchnum(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Stage 1
 
@@ -552,9 +565,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 matchspec0 = distcacheleaf_cutoff_spineswitchidx_for_ecmp_tbl_match_spec_t(\
                         op_hdr_optype = GETREQ,
                         op_hdr_spineswitchidx = tmp_spineswitchidx)
-                actnspec0 = distcacheleaf_cutoff_spineswitchidx_for_ecmp_action_spec_t(spineswitch_total_logical_num)
+                #actnspec0 = distcacheleaf_cutoff_spineswitchidx_for_ecmp_action_spec_t(spineswitch_total_logical_num)
                 self.client.cutoff_spineswitchidx_for_ecmp_tbl_table_add_with_cutoff_spineswitch_for_ecmp(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                        #self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 4~5
 
