@@ -972,7 +972,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             frequency_udplen = 34
             frequency_iplen = 54
             op_switchload_clone_udplen = 58
-            op_switchlaod_clone_iplen = 78
+            op_switchload_clone_iplen = 78
             op_inswitch_clone_udplen = 78
             op_inswitch_clone_iplen = 98
             for tmpoptype in [CACHE_POP_INSWITCH_ACK, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
@@ -1235,7 +1235,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 ## Update GETREQ_INSWITCH as DISTCACHE_GETRES_SPINE to client by mirroring
                                                 #actnspec0 = distcachespine_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
                                                 #self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 # Update GETREQ_INSWITCH as GETRES to client by mirroring
                                                 actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
                                                 self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
@@ -1493,7 +1493,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     ## Update GETREQ_INSWITCH as DISTCACHE_GETRES_SPINE to client by mirroring
                                                     #actnspec0 = distcachespine_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
                                                     #self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                    #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring
                                                     actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\

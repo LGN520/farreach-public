@@ -450,7 +450,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #for tmpoptype in [GETRES]:
             for tmpoptype in [DISTCACHE_UPDATE_TRAFFICLOAD]:
                 matchspec0 = distcacheleaf_access_leafload_forclient_tbl_match_spec_t(\
-                        op_hdr_optype = GETRES)
+                        op_hdr_optype = tmpoptype)
                 self.client.access_leafload_forclient_tbl_table_add_with_set_leafload_forclient(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_access_leafload_forclient_tbl_match_spec_t(\
@@ -483,10 +483,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: spineselect_tbl (default: nop; size <= 10 * spineswitch_total_logical_num)
+            # Table: spineselect_tbl (default: nop; size <= 9 * spineswitch_total_logical_num)
             print "Configuring spineselect_tbl"
             key_range_per_spineswitch = switch_partition_count / spineswitch_total_logical_num
-            for tmpoptype in [PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_SERVER, DISTCACHE_INVALIDATE, NETCACHE_VALUEUPDATE]:
+            # Deprecated: GETRES_SERVER (inherit original spineswitchidx from GETREQ set by client-leaf to update corresponding register slot in spineload_reg of spine switch)
+            for tmpoptype in [PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, DISTCACHE_INVALIDATE, NETCACHE_VALUEUPDATE]:
                 key_start = 0 # [0, 2^16-1]
                 for i in range(spineswitch_total_logical_num):
                     global_spineswitch_logical_idx = spineswitch_logical_idxes[i]
@@ -1435,7 +1436,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             frequency_udplen = 34
             frequency_iplen = 54
             op_switchload_clone_udplen = 58
-            op_switchlaod_clone_iplen = 78
+            op_switchload_clone_iplen = 78
             # NETCACHE_WARMUPREQ_INSWITCH_POP is processed by spine switch
             #op_inswitch_clone_udplen = 74
             #op_inswitch_clone_iplen = 94
@@ -1447,11 +1448,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = distcacheleaf_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-            matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
+            matchspec0 = distcacheleaf_update_pktlen_tbl_match_spec_t(\
                     op_hdr_optype=GETREQ,
                     vallen_hdr_vallen_start=0,
                     vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-            actnspec0 = distcachespine_update_pktlen_action_spec_t(op_switchload_udplen, op_switchload_iplen)
+            actnspec0 = distcacheleaf_update_pktlen_action_spec_t(op_switchload_udplen, op_switchload_iplen)
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             for tmpoptype in [DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED]:

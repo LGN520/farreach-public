@@ -2447,7 +2447,7 @@ template<class key_t>
 DistcacheUpdateTrafficload<key_t>::DistcacheUpdateTrafficload(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint32_t spineload, uint32_t leafload) 
 	: GetRequest<key_t>(spineswitchidx, leafswitchidx, key)
 {
-	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_UPDATE_TRAFFICLOAD);
+	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_UPDATE_TRAFFICLOAD);
 	this->_spineload = spineload;
 	this->_leafload = leafload;
 }

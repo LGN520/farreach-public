@@ -233,10 +233,10 @@ action spineselect(eport, spineswitchidx) {
 	modify_field(op_hdr.spineswitchidx, spineswitchidx);
 }
 
-action spineselect_for_getres_server(spineswitchidx) {
+/*action spineselect_for_getres_server(spineswitchidx) {
 	// NOTE: eport will be set by ipv4_forward_tbl for GETRES_SERVER
 	modify_field(op_hdr.spineswitchidx, spineswitchidx);
-}
+}*/
 
 action spineselect_for_distcache_invalidate(spineswitchidx) {
 	// NOTE: eport will be set by range/hash_partition_tbl for DISTCACHE_INVALIDATE
@@ -270,7 +270,7 @@ table spineselect_tbl {
 	}
 	actions {
 		spineselect;
-		spineselect_for_getres_server; // not necessary for server-leaf
+		//spineselect_for_getres_server; // not necessary for server-leaf (we need to hold GETRES_SERVER.spineswitchidx set by server inherited from GETREQ to update corresponding slot in spineload_forclient_reg in client-leaf)
 		spineselect_for_distcache_invalidate; // not necessary for server-leaf
 		spineselect_for_netcache_valueupdate; // not necessary for server-leaf
 		spineselect_for_getreq_toleaf;
