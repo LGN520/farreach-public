@@ -310,16 +310,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.set_hot_threshold_tbl_set_default_action_set_hot_threshold(\
                     self.sess_hdl, self.dev_tgt, actnspec0)
 
-            # Table: access_spineload_tbl (default: nop; size: 2)
+            # Table: access_spineload_tbl (default: nop; size: 1)
             print "Configuring access_spineload_tbl"
             matchspec0 = distcachespine_access_spineload_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ) # GETREQ from client-leaf
             self.client.access_spineload_tbl_table_add_with_set_and_get_spineload(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distcachespine_access_spineload_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES) # GETRES from server-leaf
-            self.client.access_spineload_tbl_table_add_with_get_spineload(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec0 = distcachespine_access_spineload_tbl_match_spec_t(\
+            #        op_hdr_optype = GETRES) # Deprecated: GETRES from server-leaf
+            #self.client.access_spineload_tbl_table_add_with_get_spineload(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 1
 
@@ -807,12 +807,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("lo10")
 
             # Table: update_vallo11_tbl (default: nop; 14)
-            print "Configuring update_vallo11_tbl"
-            self.configure_update_val_tbl("lo11")
+            #print "Configuring update_vallo11_tbl"
+            #self.configure_update_val_tbl("lo11")
 
             # Table: update_vallo12_tbl (default: nop; 14)
-            print "Configuring update_vallo12_tbl"
-            self.configure_update_val_tbl("lo12")
+            #print "Configuring update_vallo12_tbl"
+            #self.configure_update_val_tbl("lo12")
 
             # Table: update_vallo13_tbl (default: nop; 14)
             print "Configuring update_vallo13_tbl"
@@ -871,12 +871,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("hi10")
 
             # Table: update_valhi11_tbl (default: nop; 14)
-            print "Configuring update_valhi11_tbl"
-            self.configure_update_val_tbl("hi11")
+            #print "Configuring update_valhi11_tbl"
+            #self.configure_update_val_tbl("hi11")
 
             # Table: update_valhi12_tbl (default: nop; 14)
-            print "Configuring update_valhi12_tbl"
-            self.configure_update_val_tbl("hi12")
+            #print "Configuring update_valhi12_tbl"
+            #self.configure_update_val_tbl("hi12")
 
             # Table: update_valhi13_tbl (default: nop; 14)
             print "Configuring update_valhi13_tbl"
@@ -944,7 +944,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 val_stat_iplen = aligned_vallen + 66
                 val_seq_udplen = aligned_vallen + 38
                 val_seq_iplen = aligned_vallen + 58
-                for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE]:
+                #for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE]:
+                for tmpoptype in [GETRES]:
                     matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
@@ -962,17 +963,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             onlyop_udplen = 30
             onlyop_iplen = 50
+            op_switchload_udplen = 38
+            op_switchload_iplen = 58
             seq_udplen = 36
             seq_iplen = 56
             scanreqsplit_udplen = 58
             scanreqsplit_iplen = 78
             frequency_udplen = 34
             frequency_iplen = 54
-            op_clone_udplen = 48
-            op_clone_iplen = 68
+            op_switchload_clone_udplen = 56
+            op_switchlaod_clone_iplen = 76
             op_inswitch_clone_udplen = 78
             op_inswitch_clone_iplen = 98
-            for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETREQ, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
+            for tmpoptype in [CACHE_POP_INSWITCH_ACK, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
                 matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
                         vallen_hdr_vallen_start=0,
@@ -980,6 +983,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = distcachespine_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
+                    op_hdr_optype=GETREQ,
+                    vallen_hdr_vallen_start=0,
+                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+            actnspec0 = distcachespine_update_pktlen_action_spec_t(op_switchload_udplen, op_switchload_iplen)
+            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             for tmpoptype in [DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED]:
                 matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
@@ -1006,7 +1016,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype=NETCACHE_GETREQ_POP,
                     vallen_hdr_vallen_start=0,
                     vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-            actnspec0 = distcachespine_update_pktlen_action_spec_t(op_clone_udplen, op_clone_iplen)
+            actnspec0 = distcachespine_update_pktlen_action_spec_t(op_switchload_clone_udplen, op_switchload_clone_iplen)
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
@@ -1030,7 +1040,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     macAddr_to_string(tmp_server_mac), \
                     ipv4Addr_to_i32(tmp_server_ip), \
                     server_worker_port_start)
-            for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]:
+            #for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]:
+            for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]:
                 matchspec0 = distcachespine_update_ipmac_srcport_tbl_match_spec_t(\
                         op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                         eg_intr_md_egress_port = tmp_devport)
@@ -1221,9 +1232,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                             else: # is_cached == 1 and is_latest == 1
-                                                # Update GETREQ_INSWITCH as DISTCACHE_GETRES_SPINE to client by mirroring
-                                                actnspec0 = distcachespine_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
-                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(\
+                                                ## Update GETREQ_INSWITCH as DISTCACHE_GETRES_SPINE to client by mirroring
+                                                #actnspec0 = distcachespine_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                #self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                     # is_cached=0 (memset inswitch_hdr by end-host, and key must not be cached in cache_lookup_tbl for CACHE_POP_INSWITCH), is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss should be 0 for CACHE_POP_INSWITCH
                                     # size: 4
@@ -1475,9 +1490,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                 else: # is_cached == 1 and is_latest == 1
-                                                    # Update GETREQ_INSWITCH as DISTCACHE_GETRES_SPINE to client by mirroring
-                                                    actnspec0 = distcachespine_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(\
+                                                    ## Update GETREQ_INSWITCH as DISTCACHE_GETRES_SPINE to client by mirroring
+                                                    #actnspec0 = distcachespine_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                    #self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                    # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                    actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         # is_cached=0 (memset inswitch_hdr by end-host, and key must not be cached in cache_lookup_tbl for CACHE_POP_INSWITCH), is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss should be 0 for CACHE_POP_INSWITCH
                                         # is_last_scansplit and tmp_server_sid must be 0

@@ -236,22 +236,22 @@ void *run_controller_popserver(void *param) {
 		}
 		INVARIANT(tmp_serveridx >= 0 && tmp_serveridx < max_server_total_logical_num);
 
-		if (tmpoptype == packet_type_t::NETCACHE_CACHE_POP) {
+		if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP) {
 			// validate spine/leaf switchidx
 			validate_switchidx(tmp_key);
 
 			// send two CACHE_POPs w/ default value to spine/leaf switchos.cppopserver
 			cache_pop_t tmp_cache_pop(tmp_key, val_t(), 0, false, tmp_serveridx);
 			int pktsize = tmp_cache_pop.serialize(buf, MAX_BUFSIZE);
-			udpsendto(controller_popserver_popclient_for_spine, buf, pktsize, 0, &spineswitchos_cppopserver_addr, spineswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_spine");
-			udpsendto(controller_popserver_popclient_for_leaf, buf, pktsize, 0, &leafswitchos_cppopserver_addr, leafswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_leaf");
+			udpsendto(controller_popserver_popclient_for_spine_udpsock, buf, pktsize, 0, &spineswitchos_cppopserver_addr, spineswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_spine");
+			udpsendto(controller_popserver_popclient_for_leaf_udpsock, buf, pktsize, 0, &leafswitchos_cppopserver_addr, leafswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_leaf");
 
 			// wait for two CACHE_POP_ACKs
-			is_timeout = udprecvfrom(controller_popserver_popclient_for_spine, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_spine");
+			is_timeout = udprecvfrom(controller_popserver_popclient_for_spine_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_spine");
 			if (!is_timeout) {
 				cache_pop_ack_t tmp_cache_pop_ack_from_spine(buf, recvsize);
 				INVARIANT(tmp_cache_pop_ack_from_spine.key() == tmp_cache_pop.key());
-				is_timeout = udprecvfrom(controller_popserver_popclient_for_leaf, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_leaf");
+				is_timeout = udprecvfrom(controller_popserver_popclient_for_leaf_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_leaf");
 				if (!is_timeout) {
 					cache_pop_ack_t tmp_cache_pop_ack_from_leaf(buf, recvsize);
 					INVARIANT(tmp_cache_pop_ack_from_leaf.key() == tmp_cache_pop.key());
@@ -263,7 +263,7 @@ void *run_controller_popserver(void *param) {
 				}
 			}
 		}
-		else if (tmpoptype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
+		else if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
 			// find corresponding server X
 			int tmp_server_physical_idx = -1;
 			for (int i = 0; i < server_physical_num; i++) {
@@ -313,10 +313,10 @@ void *run_controller_popserver(void *param) {
 
 void *run_controller_victimserver(void *param) {
 	struct sockaddr_in spineswitchos_victimclient_addr;
-	socklen_t soineswitchos_victimclient_addrlen = sizeof(struct sockaddr_in);
+	socklen_t spineswitchos_victimclient_addrlen = sizeof(struct sockaddr_in);
 
 	struct sockaddr_in leafswitchos_victimserver_addr;
-	set_sockaddr(leafswitchos_victimserver_addr, inet_addr(leafswitchos_ip_for_controller), leafswitchos_victimserver_port);
+	set_sockaddr(leafswitchos_victimserver_addr, inet_addr(leafswitchos_ip), leafswitchos_victimserver_port);
 	socklen_t leafswitchos_victimserver_addrlen = sizeof(struct sockaddr_in);
 
 	printf("[controller.victimserver] ready\n");
@@ -353,7 +353,7 @@ void *run_controller_victimserver(void *param) {
 	}
 
 	close(controller_victimserver_udpsock);
-	close(controlelr_victimserver_victimclient_for_leaf_udpsock);
+	close(controller_victimserver_victimclient_for_leaf_udpsock);
 	pthread_exit(nullptr);
 }
 

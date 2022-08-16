@@ -219,12 +219,15 @@ action update_getreq_inswitch_to_getreq_spine() {
 
 	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
-	remove_header(switchload_hdr);
+	//remove_header(switchload_hdr);
 }
 
-action update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(client_sid, server_port, stat) {
-	modify_field(op_hdr.optype, DISTCACHE_GETRES_SPINE);
-	modify_field(shadowtype_hdr.shadowtype, DISTCACHE_GETRES_SPINE);
+//action update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(client_sid, server_port, stat) {
+action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
+	//modify_field(op_hdr.optype, DISTCACHE_GETRES_SPINE);
+	//modify_field(shadowtype_hdr.shadowtype, DISTCACHE_GETRES_SPINE);
+	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, stat);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
@@ -236,7 +239,8 @@ action update_getreq_inswitch_to_distcache_getres_spine_by_mirroring(client_sid,
 
 	remove_header(inswitch_hdr);
 	add_header(stat_hdr);
-	// NOTE: hold switchload_hdr from GETREQ_INSWITCH in DISTCACHE_GETRES_SPINE
+	//// NOTE: hold switchload_hdr from GETREQ_INSWITCH in DISTCACHE_GETRES_SPINE
+	// NOTE: hold switchload_hdr from GETREQ_INSWITCH in GETRES
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
@@ -418,7 +422,8 @@ table eg_port_forward_tbl {
 		forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack;
 		update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring;
 		update_getreq_inswitch_to_getreq_spine;
-		update_getreq_inswitch_to_distcache_getres_spine_by_mirroring;
+		//update_getreq_inswitch_to_distcache_getres_spine_by_mirroring;
+		update_getreq_inswitch_to_getres_by_mirroring;
 		//update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // clone for first CACHE_POP_INSWITCH_ACK
 		//forward_cache_pop_inswitch_ack_clone_for_pktloss; // not last clone of CACHE_POP_INSWITCH_ACK
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
@@ -495,7 +500,7 @@ table update_ipmac_srcport_tbl {
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
 /*
-// CACHE_POP_INSWITCH_ACK, GETREQ (cloned by NETCACHE_GETREQ_POP), WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP), NETCACHE_VALUEUPDATE_ACK
+// CACHE_POP_INSWITCH_ACK, WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP), NETCACHE_VALUEUPDATE_ACK
 action update_onlyop_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 22(ophdr)
 	modify_field(udp_hdr.hdrlen, 30);
@@ -544,11 +549,18 @@ action update_frequency_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 54);
 }
 
+// GETREQ (cloned by NETCACHE_GETREQ_POP)
+action update_ophdr_switchloadhdr_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 8(switchloadhdr) 
+	modify_field(udp_hdr.hdrlen, 38);
+	modify_field(ipv4_hdr.totalLen, 58);
+}
+
 // NETCACHE_GETREQ_POP
-action update_ophdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 18(clonehdr)
-	modify_field(udp_hdr.hdrlen, 48);
-	modify_field(ipv4_hdr.totalLen, 68);
+action update_ophdr_switchloadhdr_clonehdr_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 8(switchloadhdr) + 18(clonehdr)
+	modify_field(udp_hdr.hdrlen, 56);
+	modify_field(ipv4_hdr.totalLen, 76);
 }
 
 // NETCACHE_WARMUPREQ_INSWITCH_POP

@@ -28,6 +28,14 @@ action get_spineload_forclient() {
 	get_spineload_forclient_alu.execute_stateful_alu(op_hdr.spineswitchidx);
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter access_spineload_forclient_counter {
+	type : packets_and_bytes;
+	direct: access_spineload_forclient_tbl;
+}
+#endif
+
 @pragma stage 0
 table access_spineload_forclient_tbl {
 	reads {

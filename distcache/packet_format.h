@@ -63,6 +63,7 @@ typedef uint16_t switchidx_t;
 
 template<class key_t> class ScanRequestSplit;
 template<class key_t, class val_t> class PutRequestSeq;
+template<class key_t> class WarmupRequest;
 
 template<class key_t>
 class Packet {
@@ -93,17 +94,23 @@ class Packet {
 };
 
 template<class key_t>
-class GetRequest : public Packet<key_t> { // ophdr
+class GetRequest : public Packet<key_t> { // ophdr + switchload_hdr
 	public: 
 		GetRequest();
 		GetRequest(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key);
 		GetRequest(const char * data, uint32_t recv_size);
 		virtual ~GetRequest(){}
 
+		uint32_t spineload() const;
+		uint32_t leafload() const;
+
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+
+		uint32_t _spineload;
+		uint32_t _leafload;
 };
 
 template<class key_t, class val_t>
@@ -182,7 +189,7 @@ class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat_hd
 template<class key_t, class val_t>
 class GetResponseServer : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + stat_hdr + switchload_hdr
 	public:
-		GetResponseServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
+		GetResponseServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload);
 };
 
 template<class key_t>
@@ -280,16 +287,18 @@ class ScanResponseSplitServer : public ScanResponseSplit<key_t, val_t> { // ophd
 		ScanResponseSplitServer(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t cur_scanswitchidx, uint16_t max_scanswitchnum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<key_t, snapshot_record_t>> pairs);
 };
 
+// NOT used in distcache
 template<class key_t>
-class GetRequestPOP : public GetRequest<key_t> { // ophdr
+class GetRequestPOP : public WarmupRequest<key_t> { // ophdr
 	public: 
 		GetRequestPOP(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
+// NOT used in distcache
 template<class key_t>
-class GetRequestNLatest : public GetRequest<key_t> { // ophdr
+class GetRequestNLatest : public WarmupRequest<key_t> { // ophdr
 	public: 
 		GetRequestNLatest(const char * data, uint32_t recv_size);
 
@@ -504,7 +513,7 @@ class CachePopInswitch : public PutRequestSeq<key_t, val_t> { // ophdr + val + s
 };
 
 template<class key_t>
-class CachePopInswitchAck : public GetRequest<key_t> { // ophdr
+class CachePopInswitchAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		CachePopInswitchAck(const char * data, uint32_t recv_size);
 
@@ -531,7 +540,7 @@ class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + 
 
 // NOTE: only used in end-hosts
 template<class key_t>
-class CacheEvictAck : public GetRequest<key_t> { // ophdr
+class CacheEvictAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		CacheEvictAck(key_t key);
 		CacheEvictAck(const char * data, uint32_t recv_size);
@@ -554,14 +563,21 @@ class WarmupRequest : public PutRequest<key_t, val_t> { // ophdr + val + shadowt
 };*/
 
 template<class key_t>
-class WarmupRequest : public GetRequest<key_t> { // ophdr
+class WarmupRequest : public Packet<key_t> { // ophdr
 	public: 
+		WarmupRequest();
 		WarmupRequest(key_t key);
 		WarmupRequest(const char * data, uint32_t recv_size);
+		virtual ~WarmupRequest(){}
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
-class WarmupAck : public GetRequest<key_t> { // ophdr
+class WarmupAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		WarmupAck(key_t key);
 		WarmupAck(const char * data, uint32_t recv_size);
@@ -575,7 +591,7 @@ class LoadRequest : public PutRequest<key_t, val_t> { // ophdr + val + shadowtyp
 };
 
 template<class key_t>
-class LoadAck : public GetRequest<key_t> { // ophdr
+class LoadAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		LoadAck(key_t key);
 		LoadAck(const char * data, uint32_t recv_size);
@@ -583,7 +599,7 @@ class LoadAck : public GetRequest<key_t> { // ophdr
 
 // NOTE: only used in end-hosts
 template<class key_t>
-class CachePopAck : public GetRequest<key_t> { // ophdr
+class CachePopAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		CachePopAck(key_t key);
 		CachePopAck(const char * data, uint32_t recv_size);
@@ -677,7 +693,7 @@ class SetvalidInswitch : public Packet<key_t> { // ophdr + shadowtype + inswitch
 };
 
 template<class key_t>
-class SetvalidInswitchAck : public GetRequest<key_t> { // ophdr
+class SetvalidInswitchAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		SetvalidInswitchAck(const char * data, uint32_t recv_size);
 
@@ -685,7 +701,7 @@ class SetvalidInswitchAck : public GetRequest<key_t> { // ophdr
 };
 
 template<class key_t>
-class NetcacheGetRequestPop : public GetRequest<key_t> { // ophdr + clonehdr
+class NetcacheGetRequestPop : public GetRequest<key_t> { // ophdr + switchload_hdr + clonehdr
 	public:
 		NetcacheGetRequestPop(key_t key);
 		NetcacheGetRequestPop(const char * data, uint32_t recvsize);
@@ -698,7 +714,7 @@ class NetcacheGetRequestPop : public GetRequest<key_t> { // ophdr + clonehdr
 
 // NOTE: only used in end-hosts
 template<class key_t>
-class NetcacheCachePop : public GetRequest<key_t> { // ophdr + serveridx
+class NetcacheCachePop : public WarmupRequest<key_t> { // ophdr + serveridx
 	public: 
 		NetcacheCachePop();
 		NetcacheCachePop(key_t key, uint16_t serveridx);
@@ -785,7 +801,7 @@ class NetcacheValueupdate : public GetResponseLatestSeq<key_t, val_t> { // ophdr
 };
 
 template<class key_t>
-class NetcacheValueupdateAck : public GetRequest<key_t> { // ophdr
+class NetcacheValueupdateAck : public WarmuptRequest<key_t> { // ophdr
 	public: 
 		NetcacheValueupdateAck(const char * data, uint32_t recv_size);
 };
@@ -823,21 +839,21 @@ class DistcacheCacheEvictVictim : public Packet<key_t> { // ophdr + victimkey + 
 };
 
 template<class key_t>
-class DistcacheCacheEvictVictimAck : public GetRequest<key_t> { // ophdr
+class DistcacheCacheEvictVictimAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		DistcacheCacheEvictVictimAck(key_t key);
 		DistcacheCacheEvictVictimAck(const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
-class DistcacheInvalidate : public GetRequest<key_t> { // ophdr
+class DistcacheInvalidate : public WarmupRequest<key_t> { // ophdr
 	public: 
 		DistcacheInvalidate(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key);
 		DistcacheInvalidate(const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
-class DistcacheInvalidateAck : public GetRequest<key_t> { // ophdr
+class DistcacheInvalidateAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		DistcacheInvalidateAck(key_t key);
 		DistcacheInvalidateAck(const char * data, uint32_t recv_size);

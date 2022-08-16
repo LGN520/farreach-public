@@ -221,7 +221,7 @@ action update_getreq_inswitch_to_getreq() {
 
 	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
-	remove_header(switchload_hdr);
+	//remove_header(switchload_hdr);
 
 	//modify_field(eg_intr_md.egress_port, eport);
 }
@@ -233,7 +233,7 @@ action update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getre
 
 	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
-	remove_header(switchload_hdr);
+	//remove_header(switchload_hdr);
 	add_header(clone_hdr); // NOTE: clone_hdr.server_sid has been set in prepare_for_cachepop_tbl
 
 	//modify_field(eg_intr_md.egress_port, port); // set eport to switchos
@@ -253,6 +253,7 @@ action update_netcache_getreq_pop_to_getreq_by_mirroring(server_sid) {
 	modify_field(udp_hdr.dstPort, clone_hdr.server_udpport);
 
 	remove_header(clone_hdr);
+	// NOTE: hold switchload_hdr from NETCACHE_GETREQ_POP for GETREQ
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(server_sid); // clone to client (inswitch_hdr.client_sid)
@@ -579,11 +580,18 @@ action update_frequency_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 54);
 }
 
+// GETREQ (cloned by NETCACHE_GETREQ_POP)
+action update_ophdr_switchloadhdr_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 8(switchloadhdr) 
+	modify_field(udp_hdr.hdrlen, 38);
+	modify_field(ipv4_hdr.totalLen, 58);
+}
+
 // NETCACHE_GETREQ_POP
-action update_ophdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 18(clonehdr)
-	modify_field(udp_hdr.hdrlen, 48);
-	modify_field(ipv4_hdr.totalLen, 68);
+action update_ophdr_switchloadhdr_clonehdr_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 8(switchloadhdr) + 18(clonehdr)
+	modify_field(udp_hdr.hdrlen, 56);
+	modify_field(ipv4_hdr.totalLen, 76);
 }
 
 // NETCACHE_WARMUPREQ_INSWITCH_POP

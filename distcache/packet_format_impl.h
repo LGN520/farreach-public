@@ -95,13 +95,13 @@ uint32_t Packet<key_t>::get_ophdrsize() {
 
 template<class key_t>
 GetRequest<key_t>::GetRequest()
-	: Packet<key_t>()
+	: Packet<key_t>(), _spineload(0), _leafload(0)
 {
 }
 
 template<class key_t>
 GetRequest<key_t>::GetRequest(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key)
-	: Packet<key_t>(packet_type_t::GETREQ, spineswitchidx, leafswitchidx, key)
+	: Packet<key_t>(packet_type_t::GETREQ, spineswitchidx, leafswitchidx, key), _spineload(0), _leafload(0)
 {
 }
 
@@ -111,9 +111,19 @@ GetRequest<key_t>::GetRequest(const char * data, uint32_t recv_size) {
 	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::GETREQ);
 }
 
+template<class key_t, class val_t>
+uint32_t GetRequest<key_t, val_t>::spineload() const {
+	return _spineload;
+}
+
+template<class key_t, class val_t>
+uint32_t GetRequest<key_t, val_t>::leafload() const {
+	return _leafload;
+}
+
 template<class key_t>
 uint32_t GetRequest<key_t>::size() {
-	return Packet<key_t>::get_ophdrsize();
+	return Packet<key_t>::get_ophdrsize() + sizeof(uint32_t) + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -123,7 +133,13 @@ uint32_t GetRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	return tmp_ophdrsize;
+	uint32_t bigendian_spineload = htonl(this->_spineload);
+	memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	uint32_t bigendian_leafload = htonl(this->_leafload);
+	memcpy(begin, (void *)&bigendian_leafload, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	return tmp_ophdrsize + sizeof(uint32_t) + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -133,6 +149,12 @@ void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
+	memcpy(&this->_spineload, begin, sizeof(uint32_t));
+	this->_spineload = ntohl(this->_spineload);
+	begin += sizeof(uint32_t);
+	memcpy(&this->_leafload, begin, sizeof(uint32_t));
+	this->_leafload = ntohl(this->_leafload);
+	begin += sizeof(uint32_t);
 }
 
 // PutRequest (value must <= 128B)
@@ -406,12 +428,14 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 // GetResponseServer (value must <= 128B)
 
 template<class key_t, class val_t>
-GetResponseServer<key_t, val_t>::GetResponseServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
+GetResponseServer<key_t, val_t>::GetResponseServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload) 
 	: GetResponse<key_t, val_t>(key, val, stat, nodeidx_foreval)
 {	
 	this->_type = optype_t(packet_type_t::GETRES_SERVER);
 	this->_spineswitchidx = spineswitchidx;
 	this->_leafswitchidx = leafswitchidx;
+	this->_spineload = spineload;
+	this->_leafload = leafload;
 }
 
 // PutResponse (value must be any size)
@@ -1598,7 +1622,7 @@ void CacheEvict<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 
 template<class key_t>
 CacheEvictAck<key_t>::CacheEvictAck(key_t key) 
-	: GetRequest<key_t>(0, 0, key) // CACHE_EVICT_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+	: WarmupRequest<key_t>(key) // CACHE_EVICT_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type = static_cast<optype_t>(PacketType::CACHE_EVICT_ACK);
 }
@@ -1645,10 +1669,15 @@ WarmupRequest<key_t, val_t>::WarmupRequest(const char * data, uint32_t recv_size
 }*/
 
 template<class key_t>
-WarmupRequest<key_t>::WarmupRequest(key_t key) 
-	: GetRequest<key_t>(0, 0, key) // WARMUPREQ does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+WarmupRequest<key_t>::WarmupRequest()
+	: Packet<key_t>()
 {
-	this->_type = static_cast<optype_t>(PacketType::WARMUPREQ);
+}
+
+template<class key_t>
+WarmupRequest<key_t>::WarmupRequest(key_t key)
+	: Packet<key_t>(packet_type_t::WARMUPREQ, 0, 0, key) // WARMUPREQ does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+{
 }
 
 template<class key_t>
@@ -1657,11 +1686,35 @@ WarmupRequest<key_t>::WarmupRequest(const char * data, uint32_t recv_size) {
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::WARMUPREQ);
 }
 
+template<class key_t>
+uint32_t WarmupRequest<key_t>::size() {
+	return Packet<key_t>::get_ophdrsize();
+}
+
+template<class key_t>
+uint32_t WarmupRequest<key_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+	begin += tmp_ophdrsize;
+	return tmp_ophdrsize;
+}
+
+template<class key_t>
+void WarmupRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
+	const char *begin = data;
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+	begin += tmp_ophdrsize;
+}
+
 // WarmupAck
 
 template<class key_t>
 WarmupAck<key_t>::WarmupAck(key_t key) 
-	: GetRequest<key_t>(0, 0, key) // WARMUPACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+	: WarmupRequest<key_t>(key) // WARMUPACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type = static_cast<optype_t>(PacketType::WARMUPACK);
 }
@@ -1691,7 +1744,7 @@ LoadRequest<key_t, val_t>::LoadRequest(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 LoadAck<key_t>::LoadAck(key_t key) 
-	: GetRequest<key_t>(0, 0, key) // LOADACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+	: WarmupRequest<key_t>(key) // LOADACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type = static_cast<optype_t>(PacketType::LOADACK);
 }
@@ -1706,7 +1759,7 @@ LoadAck<key_t>::LoadAck(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 CachePopAck<key_t>::CachePopAck(key_t key) 
-	: GetRequest<key_t>(0, 0, key) // CACHE_POP_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+	: WarmupRequest<key_t>(key) // CACHE_POP_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type = static_cast<optype_t>(PacketType::CACHE_POP_ACK);
 }
@@ -1998,7 +2051,7 @@ NetcacheGetRequestPop<key_t>::NetcacheGetRequestPop(const char * data, uint32_t 
 
 template<class key_t>
 uint32_t NetcacheGetRequestPop<key_t>::size() {
-	return Packet<key_t>::get_ophdrsize() + CLONE_BYTES;
+	return Packet<key_t>::get_ophdrsize() + sizeof(uint32_t) + sizeof(uint32_t) + CLONE_BYTES;
 }
 
 template<class key_t>
@@ -2013,14 +2066,20 @@ void NetcacheGetRequestPop<key_t>::deserialize(const char * data, uint32_t recv_
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	//begin += CLONE_BYTES;
+	uint32_t bigendian_spineload = htonl(this->_spineload);
+	memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	uint32_t bigendian_leafload = htonl(this->_leafload);
+	memcpy(begin, (void *)&bigendian_leafload, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	begin += CLONE_BYTES;
 }
 
 // NetcacheCachePop (only used in end-hosts)
 
 template<class key_t>
 NetcacheCachePop<key_t>::NetcacheCachePop()
-	: GetRequest<key_t>(), _serveridx(0)
+	: WarmupRequest<key_t>(), _serveridx(0)
 {
 	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP);
 	INVARIANT(_serveridx >= 0);
@@ -2028,7 +2087,7 @@ NetcacheCachePop<key_t>::NetcacheCachePop()
 
 template<class key_t>
 NetcacheCachePop<key_t>::NetcacheCachePop(key_t key, uint16_t serveridx)
-	: GetRequest<key_t>(0, 0, key), _serveridx(serveridx) // NETCACHE_CACHE_POP does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+	: WarmupRequest<key_t>(key), _serveridx(serveridx) // NETCACHE_CACHE_POP does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP);
 	INVARIANT(serveridx >= 0);
@@ -2335,7 +2394,7 @@ void DistcacheCacheEvictVictim<key_t>::deserialize(const char * data, uint32_t r
 
 template<class key_t>
 DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(key_t key) 
-	: GetRequest<key_t>(0, 0, key) // DISTCACHE_CACHE_EVICT_VICTIM_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+	: WarmupRequest<key_t>(key) // DISTCACHE_CACHE_EVICT_VICTIM_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_CACHE_EVICT_VICTIM_ACK);
 }
@@ -2350,7 +2409,7 @@ DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(const char * d
 
 template<class key_t>
 DistcacheInvalidate<key_t>::DistcacheInvalidate(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key) 
-	: GetRequest<key_t>(0, 0, key) // DISTCACHE_INVALIDATE does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+	: WarmupRequest<key_t>(key) // DISTCACHE_INVALIDATE does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE);
 	this->_spineswitchidx = spineswitchidx;
@@ -2367,7 +2426,7 @@ DistcacheInvalidate<key_t>::DistcacheInvalidate(const char * data, uint32_t recv
 
 template<class key_t>
 DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(key_t key) 
-	: GetRequest<key_t>(0, 0, key) // DISTCACHE_INVALIDATE_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+	: WarmupRequest<key_t>(key) // DISTCACHE_INVALIDATE_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE_ACK);
 }

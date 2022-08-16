@@ -16,6 +16,7 @@ blackbox stateful_alu set_and_get_spineload_alu {
 // NOTE: set AND GET for cache hit
 action set_and_get_spineload() {
 	set_and_get_spineload_alu.execute_stateful_alu(op_hdr.spineswitchidx);
+	modify_field(switchload_hdr.leafload, 0);
 }
 
 blackbox stateful_alu get_spineload_alu {
@@ -27,10 +28,19 @@ blackbox stateful_alu get_spineload_alu {
 	output_dst: switchload_hdr.spineload;
 }
 
-// for GETRES from server-leaf
+// Deprecated: for GETRES from server-leaf
+// NOT used now
 action get_spineload() {
 	get_spineload_alu.execute_stateful_alu(op_hdr.spineswitchidx);
 }
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter access_spineload_counter {
+	type : packets_and_bytes;
+	direct: access_spineload_tbl;
+}
+#endif
 
 @pragma stage 0
 table access_spineload_tbl {

@@ -45,6 +45,7 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 from common import *
 
+toleaf_predicate_list = [1, 2]
 cached_list = [0, 1]
 hot_list = [0, 1]
 report_list = [0, 1]
@@ -384,33 +385,34 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.set_hot_threshold_and_spineswitchnum_tbl_set_default_action_set_hot_threshold_and_spineswitchnum(\
                     self.sess_hdl, self.dev_tgt, actnspec0)
 
-            # Table: hash_for_spineselect_tbl (default: nop; size: 9)
+            # Table: hash_for_spineselect_tbl (default: nop; size: 8)
             print "Configuring hash_for_spineselect_tbl"
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_SERVER, DISTCACHE_INVALIDATE, NETCACHE_VALUEUPDATE]:
+            # Deprecated: GETRES_SERVER (inherit original spineswitchidx from GETREQ set by client-leaf to update corresponding register slot in spineload_reg of spine switch)
+            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, DISTCACHE_INVALIDATE, NETCACHE_VALUEUPDATE]:
                 matchspec0 = distcacheleaf_hash_for_spineselect_tbl_match_spec_t(\
                         op_hdr_optype = convert_u16_to_i16(tmpoptype))
                 self.client.hash_for_spineselect_tbl_table_add_with_hash_for_spineselect(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_leafload_tbl (default: nop; size: 2)
+            # Table: access_leafload_tbl (default: nop; size: 1)
             print "Configuring access_leafload_tbl"
             matchspec0 = distcacheleaf_access_leafload_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ_SPINE) # GETREQ_SPINE from spine switch
             self.client.access_leafload_tbl_table_add_with_set_and_get_leafload_and_hash_for_bf2(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distcacheleaf_access_leafload_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_SERVER) # GETRES_SERVER from storage server
-            self.client.access_leafload_tbl_table_add_with_get_leafload(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec0 = distcacheleaf_access_leafload_tbl_match_spec_t(\
+            #        op_hdr_optype = GETRES_SERVER) # Deprecated: GETRES_SERVER from storage server
+            #self.client.access_leafload_tbl_table_add_with_get_leafload(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_spineload_forclient_tbl (default: nop; size: 3)
             print "Configuring access_spineload_forclient_tbl"
-            for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE]:
-                matchspec0 = distcacheleaf_access_spineload_forclient_match_spec_t(\
-                        op_hdr_optype = tmpoptype)
-                self.client.access_spineload_forclient_tbl_table_add_with_set_spineload_forclient(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distcacheleaf_access_spineload_forclient_match_spec_t(\
+            #for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE]:
+            #    matchspec0 = distcacheleaf_access_spineload_forclient_tbl_match_spec_t(\
+            #            op_hdr_optype = tmpoptype)
+            #    self.client.access_spineload_forclient_tbl_table_add_with_set_spineload_forclient(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distcacheleaf_access_spineload_forclient_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ)
             self.client.access_spineload_forclient_tbl_table_add_with_get_spineload_forclient(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -444,11 +446,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_leafload_forclient_tbl (default: reset_meta_toleaf_predicate(); size: 2)
             print "Configuring access_leafload_forclient_tbl"
-            matchspec0 = distcacheleaf_access_leafload_forclient_match_spec_t(\
-                    op_hdr_optype = GETRES)
-            self.client.access_leafload_forclient_tbl_table_add_with_set_leafload_forclient(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distcacheleaf_access_leafload_forclient_match_spec_t(\
+            #matchspec0 = distcacheleaf_access_leafload_forclient_tbl_match_spec_t(\
+            #        op_hdr_optype = GETRES)
+            #self.client.access_leafload_forclient_tbl_table_add_with_set_leafload_forclient(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distcacheleaf_access_leafload_forclient_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ)
             self.client.access_leafload_forclient_tbl_table_add_with_get_leafload_forclient(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -561,7 +563,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: cutoff_spineswitchidx_for_ecmp_tbl (default: nop; size: spineswitch_total_logical_num - 1)
             print "Configuring cutoff_spineswitchidx_for_ecmp_tbl"
-            for tmp_spineswitchidx in [spineswitch_total_logical_num, 2 * spineswitch_total_logical_num - 2]:
+            for tmp_spineswitchidx in range(spineswitch_total_logical_num, 2 * spineswitch_total_logical_num - 2 + 1):
                 matchspec0 = distcacheleaf_cutoff_spineswitchidx_for_ecmp_tbl_match_spec_t(\
                         op_hdr_optype = GETREQ,
                         op_hdr_spineswitchidx = tmp_spineswitchidx)
@@ -804,7 +806,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
                 eport = self.client_devports[tmp_client_physical_idx]
                 tmpsid = self.client_sids[tmp_client_physical_idx]
-                for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
+                #for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
+                for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
                     matchspec0 = distcacheleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
@@ -898,10 +901,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = LOADACK_SERVER)
             self.client.ig_port_forward_tbl_table_add_with_update_loadack_server_to_loadack(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = DISTCACHE_GETRES_SPINE)
-            self.client.ig_port_forward_tbl_table_add_with_update_distcache_getres_spine_to_getres(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
+            #        op_hdr_optype = DISTCACHE_GETRES_SPINE)
+            #self.client.ig_port_forward_tbl_table_add_with_update_distcache_getres_spine_to_getres(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = DISTCACHE_INVALIDATE)
             self.client.ig_port_forward_tbl_table_add_with_update_distcache_invalidate_to_distcache_invalidate_inswitch(\
@@ -1037,26 +1040,26 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: prepare_for_cachepop_tbl (default: reset_server_sid(); size: 2*server_physical_num+1=5 < 17)
+            # Table: prepare_for_cachepop_and_save_client_info_tbl (default: reset_server_sid(); size: 2*server_physical_num+1=5 < 17)
             for tmpoptype in [GETREQ_INSWITCH, SCANREQ_SPLIT]:
                 for tmp_server_physical_idx in range(server_physical_num):
                     tmp_devport = self.server_devports[tmp_server_physical_idx]
                     tmp_server_sid = self.server_sids[tmp_server_physical_idx]
-                    matchspec0 = distcacheleaf_prepare_for_cachepop_tbl_match_spec_t(\
+                    matchspec0 = distcacheleaf_prepare_for_cachepop_and_save_client_info_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             eg_intr_md_egress_port = tmp_devport)
                     if tmpoptype == GETREQ_INSWITCH:
-                        actnspec0 = distcacheleaf_set_server_sid_and_port_action_spec_t(tmp_server_sid)
-                        self.client.prepare_for_cachepop_tbl_table_add_with_set_server_sid_udpport_and_save_client_info(\
+                        actnspec0 = distcacheleaf_set_server_sid_udpport_and_save_client_info_action_spec_t(tmp_server_sid)
+                        self.client.prepare_for_cachepop_and_save_client_info_tbl_table_add_with_set_server_sid_udpport_and_save_client_info(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                         # NOTE: we explictly invoke nop() for SCANREQ_SPLIT and NETCACHE_GETREQ_POP to avoid reset their clone_hdr.server_sid: SCANREQ_SPLIT.server_sid is set by process_scanreq_split to clone next SCANREQ_SPLIT to next server; NETCACHE_GETREQ_POP.server_sid is inherited from original GETREQ_INSWITCH to clone alst NETCACHE_GETREQ_POP as GETREQ to corresponding server
                     elif tmpoptype == SCANREQ_SPLIT and RANGE_SUPPORT == True:
-                        self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
+                        self.client.prepare_for_cachepop_and_save_client_info_tbl_table_add_with_nop(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distcacheleaf_prepare_for_cachepop_tbl_match_spec_t(\
+            matchspec0 = distcacheleaf_prepare_for_cachepop_and_save_client_info_tbl_match_spec_t(\
                     op_hdr_optype = NETCACHE_GETREQ_POP,
                     eg_intr_md_egress_port = self.reflector_devport)
-            self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
+            self.client.prepare_for_cachepop_and_save_client_info_tbl_table_add_with_nop(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_cmi_tbl (default: initialize_cmi_predicate; size: 3)
@@ -1264,20 +1267,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("lo10")
 
             # Table: update_vallo11_tbl (default: nop; 14)
-            print "Configuring update_vallo11_tbl"
-            self.configure_update_val_tbl("lo11")
+            #print "Configuring update_vallo11_tbl"
+            #self.configure_update_val_tbl("lo11")
 
             # Table: update_vallo12_tbl (default: nop; 14)
-            print "Configuring update_vallo12_tbl"
-            self.configure_update_val_tbl("lo12")
+            #print "Configuring update_vallo12_tbl"
+            #self.configure_update_val_tbl("lo12")
 
             # Table: update_vallo13_tbl (default: nop; 14)
-            print "Configuring update_vallo13_tbl"
-            self.configure_update_val_tbl("lo13")
+            #print "Configuring update_vallo13_tbl"
+            #self.configure_update_val_tbl("lo13")
 
             # Table: update_vallo14_tbl (default: nop; 14)
-            print "Configuring update_vallo14_tbl"
-            self.configure_update_val_tbl("lo14")
+            #print "Configuring update_vallo14_tbl"
+            #self.configure_update_val_tbl("lo14")
 
             # Table: update_vallo15_tbl (default: nop; 14)
             print "Configuring update_vallo15_tbl"
@@ -1328,20 +1331,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("hi10")
 
             # Table: update_valhi11_tbl (default: nop; 14)
-            print "Configuring update_valhi11_tbl"
-            self.configure_update_val_tbl("hi11")
+            #print "Configuring update_valhi11_tbl"
+            #self.configure_update_val_tbl("hi11")
 
             # Table: update_valhi12_tbl (default: nop; 14)
-            print "Configuring update_valhi12_tbl"
-            self.configure_update_val_tbl("hi12")
+            #print "Configuring update_valhi12_tbl"
+            #self.configure_update_val_tbl("hi12")
 
             # Table: update_valhi13_tbl (default: nop; 14)
-            print "Configuring update_valhi13_tbl"
-            self.configure_update_val_tbl("hi13")
+            #print "Configuring update_valhi13_tbl"
+            #self.configure_update_val_tbl("hi13")
 
             # Table: update_valhi14_tbl (default: nop; 14)
-            print "Configuring update_valhi14_tbl"
-            self.configure_update_val_tbl("hi14")
+            #print "Configuring update_valhi14_tbl"
+            #self.configure_update_val_tbl("hi14")
 
             # Table: update_valhi15_tbl (default: nop; 14)
             print "Configuring update_valhi15_tbl"
@@ -1401,7 +1404,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 val_stat_iplen = aligned_vallen + 66
                 val_seq_udplen = aligned_vallen + 38
                 val_seq_iplen = aligned_vallen + 58
-                for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE]:
+                #for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE]:
+                for tmpoptype in [GETRES]:
                     matchspec0 = distcacheleaf_update_pktlen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
@@ -1419,18 +1423,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             onlyop_udplen = 30
             onlyop_iplen = 50
+            op_switchload_udplen = 38
+            op_switchload_iplen = 58
             seq_udplen = 36
             seq_iplen = 56
             scanreqsplit_udplen = 58
             scanreqsplit_iplen = 78
             frequency_udplen = 34
             frequency_iplen = 54
-            op_clone_udplen = 48
-            op_clone_iplen = 68
+            op_switchload_clone_udplen = 56
+            op_switchlaod_clone_iplen = 76
             # NETCACHE_WARMUPREQ_INSWITCH_POP is processed by spine switch
             #op_inswitch_clone_udplen = 74
             #op_inswitch_clone_iplen = 94
-            for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETREQ, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
+            for tmpoptype in [CACHE_POP_INSWITCH_ACK, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
                 matchspec0 = distcacheleaf_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
                         vallen_hdr_vallen_start=0,
@@ -1438,6 +1444,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = distcacheleaf_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
+                    op_hdr_optype=GETREQ,
+                    vallen_hdr_vallen_start=0,
+                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+            actnspec0 = distcachespine_update_pktlen_action_spec_t(op_switchload_udplen, op_switchload_iplen)
+            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             for tmpoptype in [DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED]:
                 matchspec0 = distcacheleaf_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
@@ -1464,7 +1477,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype=NETCACHE_GETREQ_POP,
                     vallen_hdr_vallen_start=0,
                     vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-            actnspec0 = distcacheleaf_update_pktlen_action_spec_t(op_clone_udplen, op_clone_iplen)
+            actnspec0 = distcacheleaf_update_pktlen_action_spec_t(op_switchload_clone_udplen, op_switchload_clone_iplen)
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
@@ -1482,6 +1495,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip), \
                         server_worker_port_start)
+                #for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]:
                 for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]:
                     matchspec0 = distcacheleaf_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 

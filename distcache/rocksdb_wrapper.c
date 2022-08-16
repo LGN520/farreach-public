@@ -82,7 +82,10 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 	is_runtime_existing = isexist(db_path);
 	//rocksdb::Status s = rocksdb::TransactionDB::Open(rocksdb_options, rocksdb::TransactionDBOptions(), db_path, &db_ptr);
 	rocksdb::Status s = rocksdb::DB::Open(rocksdb_options, db_path, &db_ptr);
-	INVARIANT(s.ok());
+	if (!s.ok()) {
+		printf("Please create directory for %s\n", db_path.c_str());
+		exit(-1);
+	}
 	INVARIANT(db_ptr != NULL);
 
 	return is_runtime_existing;

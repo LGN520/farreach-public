@@ -120,7 +120,7 @@ table hash_for_spineselect_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 16;
 }
 
 action hash_for_ecmp() {
@@ -204,6 +204,14 @@ action set_toleaf_offset(toleaf_offset) {
 	modify_field(meta.toleaf_offset, toleaf_offset);
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter ecmp_for_getreq_counter {
+	type : packets_and_bytes;
+	direct: ecmp_for_getreq_tbl;
+}
+#endif
+
 @pragma stage 2
 table ecmp_for_getreq_tbl {
 	reads {
@@ -245,6 +253,14 @@ action spineselect_for_getreq_toleaf(eport, spineswitchidx) {
 	add(op_hdr.spineswitchidx, spineswitchidx, meta.toleaf_offset); // [1, 2*spineswitchnum-2] <- [0, spineswitchnum-1] + [1, spineswitchnum-1]
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter spineselect_counter {
+	type : packets_and_bytes;
+	direct: spineselect_tbl;
+}
+#endif
+
 @pragma stage 3
 table spineselect_tbl {
 	reads {
@@ -273,6 +289,14 @@ action cutoff_spineswitchidx_for_ecmp() {
 	//subtract_from_field(op_hdr.spineswitchidx, spineswitchnum); // [1, 2*spineswitchnum-2] -> [1, spineswitchnum-1] & [0, spineswitchnum-2]
 	subtract_from_field(op_hdr.spineswitchidx, meta.spineswitchnum); // [1, 2*spineswitchnum-2] -> [1, spineswitchnum-1] & [0, spineswitchnum-2]
 }
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter cutoff_spineswitchidx_for_ecmp_counter {
+	type : packets_and_bytes;
+	direct: cutoff_spineswitchidx_for_ecmp_tbl;
+}
+#endif
 
 @pragma stage 4
 table cutoff_spineswitchidx_for_ecmp_tbl {
@@ -562,7 +586,7 @@ action update_getreq_spine_to_getreq_inswitch_and_hash_for_bf3() {
 	
 	add_header(shadowtype_hdr);
 	add_header(inswitch_hdr);
-	add_header(switchload_hdr);
+	//add_header(switchload_hdr);
 }
 
 action update_putreq_seq_to_putreq_seq_inswitch() {
@@ -617,10 +641,10 @@ action update_loadack_server_to_loadack() {
 	modify_field(op_hdr.optype, LOADACK);
 }
 
-action update_distcache_getres_spine_to_getres() {
+/*action update_distcache_getres_spine_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
-}
+}*/
 
 action update_distcache_invalidate_to_distcache_invalidate_inswitch() {
 	modify_field(op_hdr.optype, DISTCACHE_INVALIDATE_INSWITCH);
@@ -670,7 +694,7 @@ table ig_port_forward_tbl {
 		update_delres_server_to_delres;
 		update_loadreq_spine_to_loadreq;
 		update_loadack_server_to_loadack;
-		update_distcache_getres_spine_to_getres;
+		//update_distcache_getres_spine_to_getres;
 		update_distcache_invalidate_to_distcache_invalidate_inswitch;
 		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		nop;

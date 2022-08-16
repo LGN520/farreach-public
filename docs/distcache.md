@@ -292,7 +292,7 @@
 	+ Sufficient GETREQs of another key -> NETCACHE_GETREQ_POP by server-leaf and GETRES by server
 		* Perform eviction and population as mentioned above
 
-## Deprecated staff
+## Deprecated stuff
 
 + DEPRECATED design for cache population/eviction in DistFarReach
 	* NOTE: DistFarReach triggers cache population by servers -> key of CACHE_POP must NOT be cached -> key MUST be cached at most ONCE and hence in at most ONE switch

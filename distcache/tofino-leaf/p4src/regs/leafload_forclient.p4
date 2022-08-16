@@ -9,7 +9,7 @@ blackbox stateful_alu set_leafload_forclient_alu {
 	update_lo_1_value: switchload_hdr.leafload;
 }
 
-// for DISTCACHE_GETRES_SPINE/GETRES from spine switch 
+// for GETRES from spine switch 
 action set_leafload_forclient() {
 	set_leafload_forclient_alu.execute_stateful_alu(op_hdr.leafswitchidx);
 	modify_field(meta.toleaf_predicate, 1);
@@ -35,6 +35,14 @@ action get_leafload_forclient() {
 action reset_meta_toleaf_predicate() {
 	modify_field(meta.toleaf_predicate, 1);
 }
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter access_leafload_forclient_counter {
+	type : packets_and_bytes;
+	direct: access_leafload_forclient_tbl;
+}
+#endif
 
 @pragma stage 2
 table access_leafload_forclient_tbl {

@@ -9,7 +9,7 @@
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
-//#define DEBUG
+#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // 0b0001
@@ -352,10 +352,12 @@ control egress {
 	// NOTE: resource in stage 11 is not enough for update_ipmac_src_port_tbl, so we place it into stage 10
 	// NOTE: for GET/PUT/DEL/SCAN/WARMUP/LOADREQ from client, they do NOT perform client2server in update_ipmac_srcport_tbl as their eport must be the devport of spine switch instead of a server
 	apply(update_ipmac_srcport_tbl); // Update ip, mac, and srcport for RES to client and notification to switchos
+#ifndef DEBUG
 	apply(update_vallo13_tbl);
 	apply(update_valhi13_tbl);
 	apply(update_vallo14_tbl);
 	apply(update_valhi14_tbl);
+#endif
 
 	// Stage 11
 	apply(update_pktlen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value

@@ -30,10 +30,19 @@ blackbox stateful_alu get_leafload_alu {
 	output_dst: switchload_hdr.leafload;
 }
 
-// for GETRES_SERVER from storage server
+// Deprecated: for GETRES_SERVER from storage server
+// NOT used now
 action get_leafload() {
 	get_leafload_alu.execute_stateful_alu(op_hdr.leafswitchidx);
 }
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter access_leafload_counter {
+	type : packets_and_bytes;
+	direct: access_leafload_tbl;
+}
+#endif
 
 @pragma stage 0
 table access_leafload_tbl {

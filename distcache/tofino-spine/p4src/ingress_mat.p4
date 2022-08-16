@@ -316,7 +316,7 @@ action update_getreq_to_getreq_inswitch() {
 
 	add_header(shadowtype_hdr);
 	add_header(inswitch_hdr);
-	add_header(switchload_hdr);
+	//add_header(switchload_hdr);
 }
 
 action update_putreq_to_putreq_inswitch() {

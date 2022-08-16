@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <atomic>
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <string.h>
