@@ -87,6 +87,7 @@ typedef DistcacheCacheEvictVictim<netreach_key_t> distcache_cache_evict_victim_t
 typedef DistcacheCacheEvictVictimAck<netreach_key_t> distcache_cache_evict_victim_ack_t;
 typedef DistcacheInvalidate<netreach_key_t> distcache_invalidate_t;
 typedef DistcacheInvalidateAck<netreach_key_t> distcache_invalidate_ack_t;
+typedef DistcacheUpdateTrafficload<netreach_key_t> distcache_update_trafficload_t;
 
 /*
  * Constants

@@ -6,10 +6,16 @@ register leafload_forclient_reg {
 blackbox stateful_alu set_leafload_forclient_alu {
 	reg: leafload_forclient_reg;
 
+	condition_lo: switchload_hdr.leafload != 0;
+
+	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: switchload_hdr.leafload;
+	update_lo_2_predicate: not condition_lo;
+	update_lo_2_value: register_lo;
 }
 
-// for GETRES from spine switch 
+// Deprecated: for GETRES from spine switch 
+// for DISTCACHE_UPDATE_TRAFFICLOAD from client
 action set_leafload_forclient() {
 	set_leafload_forclient_alu.execute_stateful_alu(op_hdr.leafswitchidx);
 	modify_field(meta.toleaf_predicate, 1);

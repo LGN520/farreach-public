@@ -6,10 +6,16 @@ register spineload_forclient_reg {
 blackbox stateful_alu set_spineload_forclient_alu {
 	reg: spineload_forclient_reg;
 
+	condition_lo: switchload_hdr.spineload != 0;
+
+	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: switchload_hdr.spineload;
+	update_lo_2_predicate: not condition_lo;
+	update_lo_2_value: register_lo;
 }
 
-// for DISTCACHE_GETRES_SPINE/GETRES from spine switch 
+// Deprecated: for DISTCACHE_GETRES_SPINE/GETRES from spine switch 
+// for DISTCACHE_UPDATE_TRAFFICLOAD from client
 action set_spineload_forclient() {
 	set_spineload_forclient_alu.execute_stateful_alu(op_hdr.spineswitchidx);
 }

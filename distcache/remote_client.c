@@ -983,6 +983,9 @@ void *run_client_worker(void *param) {
 		struct timespec process_t1, process_t2, process_t3, send_t1, send_t2, send_t3, wait_t1, wait_t2, wait_t3;
 		uint16_t tmp_nodeidx_foreval = 0;
 		double wait_time = 0.0;
+		uint32_t getres_cnt = 0; // to update client-leaf.spine/leafload_forclient_reg for power-of-two-choices
+		//const uint32_t update_trafficload_threshold = 1000 * 1000; // send DISTCACHE_TRAFFICLOAD_UPDATE every X GETRESs
+		const uint32_t update_trafficload_threshold = 1; // for DEBUG
 		while (true) { // timeout-and-retry mechanism
 			CUR_TIME(process_t1);
 
@@ -1016,6 +1019,8 @@ void *run_client_worker(void *param) {
 				CUR_TIME(send_t2);
 
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
+				uint16_t tmp_rsp_spineswitchidx = 0, tmp_rsp_leafswitchidx = 0;
+				uint32_t tmp_rsp_spineload = 0, tmp_rsp_leafload = 0;
 				while (true) {
 					is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 					CUR_TIME(wait_t1);
@@ -1037,6 +1042,11 @@ void *run_client_worker(void *param) {
 							else {
 								tmp_nodeidx_foreval = rsp.nodeidx_foreval();
 								FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+
+								tmp_rsp_spineswitchidx = rsp.spineswitchidx();
+								tmp_rsp_leafswitchidx = rsp.leafswitchidx();
+								tmp_rsp_spineload = rsp.spineload();
+								tmp_rsp_leafload = rsp.leadload();
 								break; // break to update statistics and send next packet
 							}
 						}
@@ -1048,6 +1058,17 @@ void *run_client_worker(void *param) {
 				if (is_timeout) {
 					thread_param.timeout_cnt += 1;
 					continue; // continue to resend
+				}
+
+				getres_cnt += 1;
+				if ((getres_cnt % update_trafficload_threshold) == 0) {
+					// send DISTCACHE_UPDATE_TRAFFICLOAD to client-leaf
+					distcache_update_trafficload_t tmp_distcache_update_trafficload(tmp_rsp_spineswitchidx, tmp_rsp_leafswitchidx, tmpkey. tmp_rsp_spineload, tmp_rsp_leafload);
+					int tmp_distcache_update_trafficload_size = tmp_distcache_update_trafficload.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+					dump_buf(buf, tmp_distcache_update_trafficload_size);
+#endif
+					udpsendto(client_udpsock_list[local_client_logical_idx], buf, tmp_distcache_update_trafficload_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				}
 			}
 			else if (tmptype == optype_t(packet_type_t::PUTREQ)) { // update or insert

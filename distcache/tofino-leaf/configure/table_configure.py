@@ -405,13 +405,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.access_leafload_tbl_table_add_with_get_leafload(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_spineload_forclient_tbl (default: nop; size: 3)
+            # Table: access_spineload_forclient_tbl (default: nop; size: 2)
             print "Configuring access_spineload_forclient_tbl"
             #for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE]:
-            #    matchspec0 = distcacheleaf_access_spineload_forclient_tbl_match_spec_t(\
-            #            op_hdr_optype = tmpoptype)
-            #    self.client.access_spineload_forclient_tbl_table_add_with_set_spineload_forclient(\
-            #            self.sess_hdl, self.dev_tgt, matchspec0)
+            for tmpoptype in [DISTCACHE_UPDATE_TRAFFICLOAD]:
+                matchspec0 = distcacheleaf_access_spineload_forclient_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype)
+                self.client.access_spineload_forclient_tbl_table_add_with_set_spineload_forclient(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_access_spineload_forclient_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ)
             self.client.access_spineload_forclient_tbl_table_add_with_get_spineload_forclient(\
@@ -446,10 +447,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_leafload_forclient_tbl (default: reset_meta_toleaf_predicate(); size: 2)
             print "Configuring access_leafload_forclient_tbl"
-            #matchspec0 = distcacheleaf_access_leafload_forclient_tbl_match_spec_t(\
-            #        op_hdr_optype = GETRES)
-            #self.client.access_leafload_forclient_tbl_table_add_with_set_leafload_forclient(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #for tmpoptype in [GETRES]:
+            for tmpoptype in [DISTCACHE_UPDATE_TRAFFICLOAD]:
+                matchspec0 = distcacheleaf_access_leafload_forclient_tbl_match_spec_t(\
+                        op_hdr_optype = GETRES)
+                self.client.access_leafload_forclient_tbl_table_add_with_set_leafload_forclient(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_access_leafload_forclient_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ)
             self.client.access_leafload_forclient_tbl_table_add_with_get_leafload_forclient(\

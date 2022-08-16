@@ -2437,6 +2437,17 @@ DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(const char * data, uint32_
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_INVALIDATE_ACK);
 }
 
+// DistcacheUpdateTrafficload
+
+template<class key_t>
+DistcacheUpdateTrafficload<key_t>::DistcacheUpdateTrafficload(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint32_t spineload, uint32_t leafload) 
+	: GetRequest<key_t>(spineswitchidx, leafswitchidx, key)
+{
+	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_UPDATE_TRAFFICLOAD);
+	this->_spineload = spineload;
+	this->_leafload = leafload;
+}
+
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
 	INVARIANT(maxsize >= sizeof(optype_t));
