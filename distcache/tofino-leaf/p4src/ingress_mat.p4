@@ -200,23 +200,6 @@ table hash_for_cm12_tbl {
 
 // Stage 2
 
-action hash_for_bf2() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf2, 0, hash_calc2, BF_BUCKET_COUNT);
-}
-
-@pragma stage 2
-table hash_for_bf2_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf2;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
 action set_toleaf_offset(toleaf_offset) {
 	modify_field(meta.toleaf_offset, toleaf_offset);
 }
@@ -445,23 +428,6 @@ table hash_partition_tbl {
 
 // Stage 8
 
-action hash_for_bf1() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
-}
-
-@pragma stage 8
-table hash_for_bf1_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf1;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
 #ifdef RANGE_SUPPORT
 //action range_partition_for_scan_endkey(last_udpport_plus_one) {
 action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
@@ -489,23 +455,6 @@ table range_partition_for_scan_endkey_tbl {
 
 // Stage 9
 
-action hash_for_bf3() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
-}
-
-@pragma stage 9
-table hash_for_bf3_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf3;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
 /*action set_client_sid(client_sid, eport) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
 	// NOTE: eport_for_res and client_sid must be in the same group for ALU access; as compiler aims to place them into the same container, they must come from the same source (action parameter or PHV)
@@ -515,22 +464,29 @@ table hash_for_bf3_tbl {
 
 // NOTE: eg_intr_md.egress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
 // NOTE: using inswitch_hdr.client_sid for clone_e2e in ALU needs to maintain inswitch_hdr.client_sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
-action set_client_sid(client_sid) {
+action set_client_sid_and_hash_for_bf1(client_sid) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
+	// NOTE: sum of hash results' bits CANNOT > 32-bits in one ALU due to Tofino limitation (18-bit hashval_for_bf = 32-bit cost)
+	// NOTE: cannot pass action parameter into modify_field_with_hash_based_offset, which only accepts constant
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
+}
+
+action reset_client_sid() {
+	modify_field(inswitch_hdr.client_sid, 0);
 }
 
 @pragma stage 9
-table prepare_for_cachehit_tbl {
+table prepare_for_cachehit_and_hash_for_bf1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		//ig_intr_md.ingress_port: exact;
 		ipv4_hdr.srcAddr: lpm;
 	}
 	actions {
-		set_client_sid;
-		nop;
+		set_client_sid_and_hash_for_bf1;
+		reset_client_sid;
 	}
-	default_action: set_client_sid(0); // deprecated: configured as set_client_sid(sids[0]) in ptf
+	default_action: reset_client_sid(); // deprecated: configured as set_client_sid(sids[0]) in ptf
 	size: 32;
 }
 
@@ -594,9 +550,15 @@ table sample_tbl {
 	size: 2;
 }
 
-action update_getreq_spine_to_getreq_inswitch() {
+// Stage 11
+
+action update_getreq_spine_to_getreq_inswitch_and_hash_for_bf3() {
 	modify_field(op_hdr.optype, GETREQ_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, GETREQ_INSWITCH);
+
+	// NOTE: sum of hash results' bits CANNOT > 32-bits in one ALU due to Tofino limitation (18-bit hashval_for_bf = 32-bit cost)
+	// NOTE: cannot pass action parameter into modify_field_with_hash_based_offset, which only accepts constant
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
 	
 	add_header(shadowtype_hdr);
 	add_header(inswitch_hdr);
@@ -691,13 +653,13 @@ counter ig_port_forward_counter {
 }
 #endif
 
-@pragma stage 10
+@pragma stage 11
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		update_getreq_spine_to_getreq_inswitch;
+		update_getreq_spine_to_getreq_inswitch_and_hash_for_bf3;
 		update_putreq_seq_to_putreq_seq_inswitch;
 		update_netcache_putreq_seq_cached_to_putreq_seq_inswitch;
 		update_delreq_seq_to_delreq_seq_inswitch;

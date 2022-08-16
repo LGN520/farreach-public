@@ -124,7 +124,7 @@
 #define CM_BUCKET_COUNT 65536
 // 32K * 4B counter
 #define SEQ_BUCKET_COUNT 4096
-// 256K * 1b counter
+// 256K * 1b counter (update common.py accordingly)
 #define BF_BUCKET_COUNT 262144
 
 #else
@@ -132,6 +132,7 @@
 #define KV_BUCKET_COUNT 1
 #define CM_BUCKET_COUNT 1
 #define SEQ_BUCKET_COUNT 1
+// 1 * 1b counter (update common.py accordingly)
 #define BF_BUCKET_COUNT 1
 
 #endif
@@ -200,24 +201,28 @@ control ingress {
 	if (not valid(op_hdr)) {
 		apply(l2l3_forward_tbl); // forward traditional packet
 	}
-	////apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
-	apply(set_hot_threshold_and_spineswitchnum_tbl); // set inswitch_hdr.hot_threshold and meta.spineswitchnum
 	apply(hash_for_spineselect_tbl); // set meta.hashval_for_spineselect
-	apply(access_leafload_tbl); // access leafload_reg for power-of-two-choices by server-leaf
-	// TODO: we can merge spine/leafload_forclient into one 64-bit register array if w/ stateful ALU limitation
+	////apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
+	// For power-of-two-choices in client-leaf for GETREQ from client
+	apply(set_hot_threshold_and_spineswitchnum_tbl); // set inswitch_hdr.hot_threshold and meta.spineswitchnum
+	// (1) access leafload_reg for power-of-two-choices by server-leaf
+	// (2) for GETREQ_SPINE to increase leafload_reg, set inswitch_hdr.hashval_for_bf2
+	apply(access_leafload_tbl); 
+	// NOTE: we CANNOT merge spine/leafload_forclient into one 64-bit register array, as we use different indexes (spine/leafswitchidx)
 	apply(access_spineload_forclient_tbl); // set meta.spineload_forclient
 	apply(hash_for_ecmp_tbl); // method B for incorrect spineswitchidx to set meta.hashval_for_ecmp
 
 	// Stage 1
-	////apply(set_spineswitchnum_tbl); // set meta.spineswitchnum for cutoff_spineswitchidx_for_ecmp_tbl (NOTE: merged into set_hot_threshold_tbl to save power budget)
 #ifndef RANGE_SUPPORT
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
 	apply(hash_for_cm12_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
+	// For power-of-two-choices in client-leaf for GETREQ from client
+	////apply(set_spineswitchnum_tbl); // set meta.spineswitchnum for cutoff_spineswitchidx_for_ecmp_tbl (NOTE: merged into set_hot_threshold_tbl to save power budget)
 
 	// Stage 2
-	apply(hash_for_bf2_tbl);
-	// TODO: if merge spine/leafload_forclient into one 64-bit register array, we can directly compare register_lo and register_hi to set meta.toleaf_predicate
+	// For power-of-two-choices in client-leaf for GETREQ from client
+	// NOTE: we CANNOT merge spine/leafload_forclient into one 64-bit register array, as we use different indexes (spine/leafswitchidx)
 	apply(access_leafload_forclient_tbl); // set meta.toleaf_predicate
 	apply(ecmp_for_getreq_tbl); // method B for incorrect spineswitchidx to set meta.toleaf_offset
 
@@ -226,6 +231,7 @@ control ingress {
 	apply(spineselect_tbl); // change spineswitchidx and eport to forward requests from client to spine switch
 
 	// Stage 4~5
+	// For power-of-two-choices in client-leaf for GETREQ from client
 	apply(cutoff_spineswitchidx_for_ecmp_tbl); // cutoff spineswitchidx from [1, 2*spineswitchnum-2] -> [1, spineswitchnum-1] & [0, spineswitchnum-2]
 	// IMPORTANT: to save TCAM, we do not match op_hdr.optype in cache_lookup_tbl 
 	// -> so as long as op_hdr.key matches an entry in cache_lookup_tbl, inswitch_hdr.is_cached must be 1 (e.g., CACHE_EVICT_LOADXXX)
@@ -242,19 +248,23 @@ control ingress {
 #endif
 
 	// Stage 8
-	apply(hash_for_bf1_tbl);
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
 
 	// Stage 9
-	apply(hash_for_bf3_tbl);
-	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
+	// (1) for response of cache hit (access inswitch_hdr.client_sid)
+	// (2) set inswitch_hdr.hashval_for_bf1
+	apply(prepare_for_cachehit_and_hash_for_bf1_tbl); 
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
 	// Stage 10
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
-	apply(ig_port_forward_tbl); // update op_hdr.optype (update egress_port for NETCACHE_VALUEUPDATE)
+
+	// Stage 11
+	// (1) update op_hdr.optype (update egress_port for NETCACHE_VALUEUPDATE)
+	// (2) for GETREQ_SPINE -> GETRES_INSWITCH, set inswitch_hdr.hashval_for_bf3
+	apply(ig_port_forward_tbl); 
 }
 
 /* Egress Processing */

@@ -396,7 +396,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring access_leafload_tbl"
             matchspec0 = distcacheleaf_access_leafload_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ_SPINE) # GETREQ_SPINE from spine switch
-            self.client.access_leafload_tbl_table_add_with_set_and_get_leafload(\
+            self.client.access_leafload_tbl_table_add_with_set_and_get_leafload_and_hash_for_bf2(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_access_leafload_tbl_match_spec_t(\
                     op_hdr_optype = GETRES_SERVER) # GETRES_SERVER from storage server
@@ -566,7 +566,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype = GETREQ,
                         op_hdr_spineswitchidx = tmp_spineswitchidx)
                 #actnspec0 = distcacheleaf_cutoff_spineswitchidx_for_ecmp_action_spec_t(spineswitch_total_logical_num)
-                self.client.cutoff_spineswitchidx_for_ecmp_tbl_table_add_with_cutoff_spineswitch_for_ecmp(\
+                self.client.cutoff_spineswitchidx_for_ecmp_tbl_table_add_with_cutoff_spineswitchidx_for_ecmp(\
                         #self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -773,29 +773,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(funcname, funcname))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: hash_for_bf1/2/3_tbl (default: nop; size: 1)
-            for i in range(1, 4):
-                print "Configuring hash_for_bf{}_tbl".format(i)
+            # Table: hash_for_bfX_tbl (default: nop; size: 1)
+            for funcname in [3]:
+                print "Configuring hash_for_bf{}_tbl".format(funcname)
                 for tmpoptype in [GETREQ_SPINE]:
-                    matchspec0 = eval("distcacheleaf_hash_for_bf{}_tbl_match_spec_t".format(i))(\
+                    matchspec0 = eval("distcacheleaf_hash_for_bf{}_tbl_match_spec_t".format(funcname))(\
                             op_hdr_optype = tmpoptype)
-                    eval("self.client.hash_for_bf{}_tbl_table_add_with_hash_for_bf{}".format(i, i))(\
+                    eval("self.client.hash_for_bf{}_tbl_table_add_with_hash_for_bf{}".format(funcname, funcname))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 9
 
-            # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 2*client_physical_num=4 < 2*8=16 < 32)
+            # Table: prepare_for_cachehit_and_hash_for_bf1_tbl (default: reset_client_sid(); size: 2*client_physical_num=4 < 2*8=16 < 32)
             print "Configuring prepare_for_cachehit_tbl"
             for client_physical_idx in range(client_physical_num):
                 tmp_clientip = client_ips[client_physical_idx]
                 for tmpoptype in [GETREQ_SPINE]:
-                    matchspec0 = distcacheleaf_prepare_for_cachehit_tbl_match_spec_t(\
+                    matchspec0 = distcacheleaf_prepare_for_cachehit_and_hash_for_bf1_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             ipv4_hdr_srcAddr = ipv4Addr_to_i32(tmp_clientip),
                             ipv4_hdr_srcAddr_prefix_length = 32)
                             #ig_intr_md_ingress_port = self.spineswitch_devport)
-                    actnspec0 = distcacheleaf_set_client_sid_action_spec_t(self.spineswitch_sid)
-                    self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
+                    actnspec0 = distcacheleaf_set_client_sid_and_hash_for_bf1_action_spec_t(self.spineswitch_sid)
+                    self.client.prepare_for_cachehit_and_hash_for_bf1_tbl_table_add_with_set_client_sid_and_hash_for_bf1(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: ipv4_forward_tbl (default: nop; size: 14*client_physical_num=28 < 14*8=112)
@@ -852,7 +852,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring ig_port_forward_tbl"
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ_SPINE)
-            self.client.ig_port_forward_tbl_table_add_with_update_getreq_spine_to_getreq_inswitch(\
+            self.client.ig_port_forward_tbl_table_add_with_update_getreq_spine_to_getreq_inswitch_and_hash_for_bf3(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_SEQ)
