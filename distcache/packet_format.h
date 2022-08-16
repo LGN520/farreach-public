@@ -178,7 +178,7 @@ class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat_hd
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-	private:
+
 		val_t _val;
 		bool _stat;
 		uint16_t _nodeidx_foreval;
@@ -801,7 +801,7 @@ class NetcacheValueupdate : public GetResponseLatestSeq<key_t, val_t> { // ophdr
 };
 
 template<class key_t>
-class NetcacheValueupdateAck : public WarmuptRequest<key_t> { // ophdr
+class NetcacheValueupdateAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		NetcacheValueupdateAck(const char * data, uint32_t recv_size);
 };

@@ -111,13 +111,13 @@ GetRequest<key_t>::GetRequest(const char * data, uint32_t recv_size) {
 	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::GETREQ);
 }
 
-template<class key_t, class val_t>
-uint32_t GetRequest<key_t, val_t>::spineload() const {
+template<class key_t>
+uint32_t GetRequest<key_t>::spineload() const {
 	return _spineload;
 }
 
-template<class key_t, class val_t>
-uint32_t GetRequest<key_t, val_t>::leafload() const {
+template<class key_t>
+uint32_t GetRequest<key_t>::leafload() const {
 	return _leafload;
 }
 
@@ -141,7 +141,7 @@ uint32_t GetRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t bigendian_leafload = htonl(this->_leafload);
 	memcpy(begin, (void *)&bigendian_leafload, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
-	return tmp_ophdrsize + tmp_shadowtype + sizeof(uint32_t) + sizeof(uint32_t);
+	return tmp_ophdrsize + tmp_shadowtypesize + sizeof(uint32_t) + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -2070,11 +2070,11 @@ void NetcacheGetRequestPop<key_t>::deserialize(const char * data, uint32_t recv_
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	begin += sizeof(optype_t); // shadowtype
-	uint32_t bigendian_spineload = htonl(this->_spineload);
-	memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
+	memcpy(&this->_spineload, begin, sizeof(uint32_t));
+	this->_spineload = ntohl(this->_spineload);
 	begin += sizeof(uint32_t);
-	uint32_t bigendian_leafload = htonl(this->_leafload);
-	memcpy(begin, (void *)&bigendian_leafload, sizeof(uint32_t));
+	memcpy(&this->_leafload, begin, sizeof(uint32_t));
+	this->_leafload = ntohl(this->_leafload);
 	begin += sizeof(uint32_t);
 	begin += CLONE_BYTES;
 }

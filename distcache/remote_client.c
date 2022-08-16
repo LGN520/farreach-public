@@ -1046,7 +1046,7 @@ void *run_client_worker(void *param) {
 								tmp_rsp_spineswitchidx = rsp.spineswitchidx();
 								tmp_rsp_leafswitchidx = rsp.leafswitchidx();
 								tmp_rsp_spineload = rsp.spineload();
-								tmp_rsp_leafload = rsp.leadload();
+								tmp_rsp_leafload = rsp.leafload();
 								break; // break to update statistics and send next packet
 							}
 						}
@@ -1063,7 +1063,7 @@ void *run_client_worker(void *param) {
 				getres_cnt += 1;
 				if ((getres_cnt % update_trafficload_threshold) == 0) {
 					// send DISTCACHE_UPDATE_TRAFFICLOAD to client-leaf
-					distcache_update_trafficload_t tmp_distcache_update_trafficload(tmp_rsp_spineswitchidx, tmp_rsp_leafswitchidx, tmpkey. tmp_rsp_spineload, tmp_rsp_leafload);
+					distcache_update_trafficload_t tmp_distcache_update_trafficload(tmp_rsp_spineswitchidx, tmp_rsp_leafswitchidx, tmpkey, tmp_rsp_spineload, tmp_rsp_leafload);
 					int tmp_distcache_update_trafficload_size = tmp_distcache_update_trafficload.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 					dump_buf(buf, tmp_distcache_update_trafficload_size);
