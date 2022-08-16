@@ -279,9 +279,15 @@ control egress {
 
 	// Stage 0
 	apply(access_latest_tbl); // NOTE: latest_reg corresponds to stats.validity in netcache paper, which will be used to *invalidate* the value by PUT/DELREQ
-	apply(save_client_info_tbl); // save srcip/srcmac/udp.srcport (client ip/mac/udpport) for cache hit response of GET/PUT/DELREQ_INSWITCH
+	//apply(save_client_info_tbl); // save srcip/srcmac/udp.srcport (client ip/mac/udpport) for cache hit response of GETREQ_INSWITCH
+#ifdef RANGE_SUPPORT
+	apply(process_scanreq_split_tbl); // NOT reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/clonenum_for_pktloss and udp_hdr.dstport
+#endif
 
 	// Stage 1
+	// (1) reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/udpport for GETREQ_INSWITCH
+	// (2) save srcip/srcmac/udp.srcport (client ip/mac/udpport) for cache hit response of GETREQ_INSWITCH
+	apply(prepare_for_cachepop_and_save_client_info_tbl); 
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
@@ -294,16 +300,12 @@ control egress {
 	apply(access_savedseq_tbl);
 
 	// Stage 3
-#ifdef RANGE_SUPPORT
-	apply(process_scanreq_split_tbl); // NOT reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/clonenum_for_pktloss and udp_hdr.dstport
-#endif
 	apply(update_vallen_tbl);
 	apply(access_bf1_tbl);
 	apply(access_bf2_tbl);
 	apply(access_bf3_tbl);
 
 	// Stage 4
-	apply(prepare_for_cachepop_tbl); // reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/udpport
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);

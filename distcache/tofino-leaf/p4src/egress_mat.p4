@@ -2,7 +2,7 @@
 
 // Stage 0
 
-action save_client_info() {
+/*action save_client_info() {
 	modify_field(clone_hdr.client_ip, ipv4_hdr.srcAddr);
 	modify_field(clone_hdr.client_mac, ethernet_hdr.srcAddr);
 	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
@@ -19,37 +19,7 @@ table save_client_info_tbl {
 	}
 	default_action: nop();
 	size: 4;
-}
-
-// Stage 2
-
-action set_is_hot() {
-	modify_field(meta.is_hot, 1);
-	//modify_field(debug_hdr.is_hot, 1);
-}
-
-action reset_is_hot() {
-	modify_field(meta.is_hot, 0);
-	//modify_field(debug_hdr.is_hot, 0);
-}
-
-@pragma stage 2
-table is_hot_tbl {
-	reads {
-		meta.cm1_predicate: exact;
-		meta.cm2_predicate: exact;
-		meta.cm3_predicate: exact;
-		meta.cm4_predicate: exact;
-	}
-	actions {
-		set_is_hot;
-		reset_is_hot;
-	}
-	default_action: reset_is_hot();
-	size: 1;
-}
-
-// Stage 3
+}*/
 
 #ifdef RANGE_SUPPORT
 action process_scanreq_split(server_sid) {
@@ -78,7 +48,7 @@ counter process_scanreq_split_counter {
 	direct: process_scanreq_split_tbl;
 }
 #endif
-@pragma stage 3
+@pragma stage 0
 table process_scanreq_split_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -100,11 +70,15 @@ table process_scanreq_split_tbl {
 }
 #endif
 
-// Stage 4
+// Stage 1
 
-action set_server_sid_and_port(server_sid) {
+action set_server_sid_udpport_and_save_client_info(server_sid) {
 	modify_field(clone_hdr.server_sid, server_sid);
 	modify_field(clone_hdr.server_udpport, udp_hdr.dstPort); // dstport is serverport for GETREQ_INSWITCH
+
+	modify_field(clone_hdr.client_ip, ipv4_hdr.srcAddr);
+	modify_field(clone_hdr.client_mac, ethernet_hdr.srcAddr);
+	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
 }
 
 action reset_server_sid() {
@@ -113,25 +87,53 @@ action reset_server_sid() {
 
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
-counter prepare_for_cachepop_counter {
+counter prepare_for_cachepop_and_save_client_info_counter {
 	type : packets_and_bytes;
-	direct: prepare_for_cachepop_tbl;
+	direct: prepare_for_cachepop_and_save_client_info_tbl;
 }
 #endif
 
-@pragma stage 4
-table prepare_for_cachepop_tbl {
+@pragma stage 1
+table prepare_for_cachepop_and_save_client_info_tbl {
 	reads {
 		op_hdr.optype: exact;
 		eg_intr_md.egress_port: exact;
 	}
 	actions {
-		set_server_sid_and_port;
+		set_server_sid_udpport_and_save_client_info;
 		reset_server_sid;
 		nop;
 	}
 	default_action: reset_server_sid();
 	size: 32;
+}
+
+// Stage 2
+
+action set_is_hot() {
+	modify_field(meta.is_hot, 1);
+	//modify_field(debug_hdr.is_hot, 1);
+}
+
+action reset_is_hot() {
+	modify_field(meta.is_hot, 0);
+	//modify_field(debug_hdr.is_hot, 0);
+}
+
+@pragma stage 2
+table is_hot_tbl {
+	reads {
+		meta.cm1_predicate: exact;
+		meta.cm2_predicate: exact;
+		meta.cm3_predicate: exact;
+		meta.cm4_predicate: exact;
+	}
+	actions {
+		set_is_hot;
+		reset_is_hot;
+	}
+	default_action: reset_is_hot();
+	size: 1;
 }
 
 // Stage 7

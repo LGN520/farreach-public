@@ -774,13 +774,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: hash_for_bfX_tbl (default: nop; size: 1)
-            for funcname in [3]:
-                print "Configuring hash_for_bf{}_tbl".format(funcname)
-                for tmpoptype in [GETREQ_SPINE]:
-                    matchspec0 = eval("distcacheleaf_hash_for_bf{}_tbl_match_spec_t".format(funcname))(\
-                            op_hdr_optype = tmpoptype)
-                    eval("self.client.hash_for_bf{}_tbl_table_add_with_hash_for_bf{}".format(funcname, funcname))(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+            #for funcname in [1, 2, 3]:
+            #    print "Configuring hash_for_bf{}_tbl".format(funcname)
+            #    for tmpoptype in [GETREQ_SPINE]:
+            #        matchspec0 = eval("distcacheleaf_hash_for_bf{}_tbl_match_spec_t".format(funcname))(\
+            #                op_hdr_optype = tmpoptype)
+            #        eval("self.client.hash_for_bf{}_tbl_table_add_with_hash_for_bf{}".format(funcname, funcname))(\
+            #                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 9
 
@@ -949,12 +949,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: save_client_info_tbl (default: nop; size: 4)
-            print "Configuring save_client_info_tbl"
-            for tmpoptype in [GETREQ_INSWITCH]:
-                matchspec0 = distcacheleaf_save_client_info_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype)
-                self.client.save_client_info_tbl_table_add_with_save_client_info(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+            #print "Configuring save_client_info_tbl"
+            #for tmpoptype in [GETREQ_INSWITCH]:
+            #    matchspec0 = distcacheleaf_save_client_info_tbl_match_spec_t(\
+            #            op_hdr_optype = tmpoptype)
+            #    self.client.save_client_info_tbl_table_add_with_save_client_info(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT:
                 # Table: process_scanreq_split_tbl (default: reset_meta_remainscannum; size <= 2 * 128)
@@ -1047,7 +1047,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             eg_intr_md_egress_port = tmp_devport)
                     if tmpoptype == GETREQ_INSWITCH:
                         actnspec0 = distcacheleaf_set_server_sid_and_port_action_spec_t(tmp_server_sid)
-                        self.client.prepare_for_cachepop_tbl_table_add_with_set_server_sid_and_port(\
+                        self.client.prepare_for_cachepop_tbl_table_add_with_set_server_sid_udpport_and_save_client_info(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                         # NOTE: we explictly invoke nop() for SCANREQ_SPLIT and NETCACHE_GETREQ_POP to avoid reset their clone_hdr.server_sid: SCANREQ_SPLIT.server_sid is set by process_scanreq_split to clone next SCANREQ_SPLIT to next server; NETCACHE_GETREQ_POP.server_sid is inherited from original GETREQ_INSWITCH to clone alst NETCACHE_GETREQ_POP as GETREQ to corresponding server
                     elif tmpoptype == SCANREQ_SPLIT and RANGE_SUPPORT == True:
