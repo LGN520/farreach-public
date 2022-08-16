@@ -75,10 +75,10 @@ parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
 		//CACHE_POP_INSWITCH_ACK: parse_clone;
-		GETREQ: parse_switchload;
-		GETREQ_SPINE: parse_switchload;
-		NETCACHE_GETREQ_POP: parse_switchload;
-		DISTCACHE_UPDATE_TRAFFICLOAD: parse_switchload;
+		GETREQ: parse_shadowtype;
+		GETREQ_SPINE: parse_shadowtype;
+		NETCACHE_GETREQ_POP: parse_shadowtype;
+		DISTCACHE_UPDATE_TRAFFICLOAD: parse_shadowtype;
 		CACHE_EVICT_LOADFREQ_INSWITCH_ACK: parse_frequency;
 		1 mask 0x01: parse_vallen;
 		/*2 mask 0x02: parse_seq;
@@ -295,6 +295,10 @@ parser parse_val_len16 {
 parser parse_shadowtype {
 	extract(shadowtype_hdr);
 	return select(shadowtype_hdr.shadowtype) {
+		GETREQ: parse_switchload;
+		GETREQ_SPINE: parse_switchload;
+		NETCACHE_GETREQ_POP: parse_switchload;
+		DISTCACHE_UPDATE_TRAFFICLOAD: parse_switchload;
 		2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
@@ -358,9 +362,17 @@ parser parse_stat {
 	//return ingress;
 }
 
+parser parse_switchload {
+	extract(switchload_hdr);
+	return select(shadowtype_hdr.shadowtype) {
+		NETCACHE_GETREQ_POP: parse_clone;
+		default: ingress; // GETREQ/GETREQ_INSWITCH/GETRES/GETRES_SPINE/DISTCACHE_GETRES_SPINE/DISTCACHE_UPDATE_TRAFFICLOAD
+	}
+}
+
 parser parse_clone {
 	extract(clone_hdr);
-	return ingress;
+	return ingress; // NETCACHE_GETREQ_POP
 	//return parse_debug; // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 	// CACHE_POP_INSWITCH_ACK does not need clond_hdr now
 }
@@ -368,14 +380,6 @@ parser parse_clone {
 parser parse_frequency {
 	extract(frequency_hdr);
 	return ingress; // CACHE_EVICT_LOADFREQ_INSWITCH_ACK
-}
-
-parser parse_switchload {
-	extract(switchload_hdr);
-	return select(op_hdr.optype) {
-		NETCACHE_GETREQ_POP: parse_clone;
-		default: ingress; // GETREQ/GETREQ_INSWITCH/GETRES/GETRES_SPINE/DISTCACHE_GETRES_SPINE/DISTCACHE_UPDATE_TRAFFICLOAD
-	}
 }
 
 /*parser parse_debug {

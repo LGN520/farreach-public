@@ -217,7 +217,9 @@ action update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(client_s
 action update_getreq_inswitch_to_getreq_spine() {
 	modify_field(op_hdr.optype, GETREQ_SPINE);
 
-	remove_header(shadowtype_hdr);
+	modify_field(shadowtype_hdr.shadowtype, GETREQ_SPINE);
+	//remove_header(shadowtype_hdr);
+
 	remove_header(inswitch_hdr);
 	//remove_header(switchload_hdr);
 }
@@ -551,16 +553,16 @@ action update_frequency_pktlen() {
 
 // GETREQ (cloned by NETCACHE_GETREQ_POP)
 action update_ophdr_switchloadhdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 8(switchloadhdr) 
-	modify_field(udp_hdr.hdrlen, 38);
-	modify_field(ipv4_hdr.totalLen, 58);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 2(shadowtypehdr) + 8(switchloadhdr) 
+	modify_field(udp_hdr.hdrlen, 40);
+	modify_field(ipv4_hdr.totalLen, 60);
 }
 
 // NETCACHE_GETREQ_POP
 action update_ophdr_switchloadhdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 8(switchloadhdr) + 18(clonehdr)
-	modify_field(udp_hdr.hdrlen, 56);
-	modify_field(ipv4_hdr.totalLen, 76);
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 2(shadowtypehdr) + 8(switchloadhdr) + 18(clonehdr)
+	modify_field(udp_hdr.hdrlen, 58);
+	modify_field(ipv4_hdr.totalLen, 78);
 }
 
 // NETCACHE_WARMUPREQ_INSWITCH_POP

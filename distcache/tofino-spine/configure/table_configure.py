@@ -963,16 +963,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             onlyop_udplen = 30
             onlyop_iplen = 50
-            op_switchload_udplen = 38
-            op_switchload_iplen = 58
+            op_switchload_udplen = 40
+            op_switchload_iplen = 60
             seq_udplen = 36
             seq_iplen = 56
             scanreqsplit_udplen = 58
             scanreqsplit_iplen = 78
             frequency_udplen = 34
             frequency_iplen = 54
-            op_switchload_clone_udplen = 56
-            op_switchlaod_clone_iplen = 76
+            op_switchload_clone_udplen = 58
+            op_switchlaod_clone_iplen = 78
             op_inswitch_clone_udplen = 78
             op_inswitch_clone_iplen = 98
             for tmpoptype in [CACHE_POP_INSWITCH_ACK, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:

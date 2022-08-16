@@ -47,10 +47,10 @@
 	+ The above contraints are only for ALU instead of MAU -> MAU can match containers in different groups, each can be matched with multiple times
 	+ Unextracted fields (e.g., metadata) do not need 8-bit alignment in PHV
 - NOTE for parser
-	+ The total select length of each packet header (not each single field) for select/switch expression after being extracted is limited (<=4)
-		* select length: # of selects between the first select of the packet header and the last one; for example:
-		* select(optype) -> extract(vallen) -> extract(value) -> select(optype) -> select(optype) -> select(optype): select length = 4 -> OK
-		* select(optype) -> select(vallen) -> extract(value) -> select(optype) -> select(optype) -> select(optype): select length = 5 -> OK
+	+ The max select length of each packet header (not each single field) for select/switch expression is limited (<=4), i.e., can ONLY be selected within 5 continuous selects (NOT include direct extract/return)
+		* max select length: # of selects between the first select of the packet header and the last one - 1; for example:
+		* select(optype) -> extract(vallen) -> extract(value) -> select(optype) -> select(optype) -> select(optype): select length = 3 -> OK
+		* select(optype) -> select(vallen) -> extract(value) -> select(optype) -> select(optype) -> select(optype): select length = 4 -> OK
 	+ No limitation on # of selects and branches
 - NOTE for signedness
 	+ Tofino uses unsigned and non-saturating (wrap for overflow/underflow) for PHV and stateful regs

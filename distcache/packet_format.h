@@ -94,7 +94,7 @@ class Packet {
 };
 
 template<class key_t>
-class GetRequest : public Packet<key_t> { // ophdr + switchload_hdr
+class GetRequest : public Packet<key_t> { // ophdr + shadowtypehdr + switchload_hdr
 	public: 
 		GetRequest();
 		GetRequest(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key);
@@ -701,7 +701,7 @@ class SetvalidInswitchAck : public WarmupRequest<key_t> { // ophdr
 };
 
 template<class key_t>
-class NetcacheGetRequestPop : public GetRequest<key_t> { // ophdr + switchload_hdr + clonehdr
+class NetcacheGetRequestPop : public GetRequest<key_t> { // ophdr + shadowtypehdr + switchload_hdr + clonehdr
 	public:
 		NetcacheGetRequestPop(key_t key);
 		NetcacheGetRequestPop(const char * data, uint32_t recvsize);
@@ -860,7 +860,7 @@ class DistcacheInvalidateAck : public WarmupRequest<key_t> { // ophdr
 };
 
 template<class key_t>
-class DistcacheUpdateTrafficload : public GetRequest<key_t> { // ophdr + switchloadhdr
+class DistcacheUpdateTrafficload : public GetRequest<key_t> { // ophdr + shadowtypehdr + switchloadhdr
 	public: 
 		DistcacheUpdateTrafficload(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint32_t spineload, uint32_t leafload);
 };

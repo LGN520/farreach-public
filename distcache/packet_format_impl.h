@@ -123,7 +123,7 @@ uint32_t GetRequest<key_t, val_t>::leafload() const {
 
 template<class key_t>
 uint32_t GetRequest<key_t>::size() {
-	return Packet<key_t>::get_ophdrsize() + sizeof(uint32_t) + sizeof(uint32_t);
+	return Packet<key_t>::get_ophdrsize() + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -133,13 +133,15 @@ uint32_t GetRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize); // shadowtype
+	begin += tmp_shadowtypesize;
 	uint32_t bigendian_spineload = htonl(this->_spineload);
 	memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
 	uint32_t bigendian_leafload = htonl(this->_leafload);
 	memcpy(begin, (void *)&bigendian_leafload, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
-	return tmp_ophdrsize + sizeof(uint32_t) + sizeof(uint32_t);
+	return tmp_ophdrsize + tmp_shadowtype + sizeof(uint32_t) + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -149,6 +151,7 @@ void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
+	begin += sizeof(optype_t); // shadowtype
 	memcpy(&this->_spineload, begin, sizeof(uint32_t));
 	this->_spineload = ntohl(this->_spineload);
 	begin += sizeof(uint32_t);
@@ -2051,7 +2054,7 @@ NetcacheGetRequestPop<key_t>::NetcacheGetRequestPop(const char * data, uint32_t 
 
 template<class key_t>
 uint32_t NetcacheGetRequestPop<key_t>::size() {
-	return Packet<key_t>::get_ophdrsize() + sizeof(uint32_t) + sizeof(uint32_t) + CLONE_BYTES;
+	return Packet<key_t>::get_ophdrsize() + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint32_t) + CLONE_BYTES;
 }
 
 template<class key_t>
@@ -2066,6 +2069,7 @@ void NetcacheGetRequestPop<key_t>::deserialize(const char * data, uint32_t recv_
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
+	begin += sizeof(optype_t); // shadowtype
 	uint32_t bigendian_spineload = htonl(this->_spineload);
 	memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
 	begin += sizeof(uint32_t);

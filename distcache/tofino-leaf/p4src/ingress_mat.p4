@@ -584,7 +584,7 @@ action update_getreq_spine_to_getreq_inswitch_and_hash_for_bf3() {
 	// NOTE: cannot pass action parameter into modify_field_with_hash_based_offset, which only accepts constant
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
 	
-	add_header(shadowtype_hdr);
+	//add_header(shadowtype_hdr);
 	add_header(inswitch_hdr);
 	//add_header(switchload_hdr);
 }

@@ -75,10 +75,10 @@ parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
 		//CACHE_POP_INSWITCH_ACK: parse_clone;
-		GETREQ: parse_switchload;
-		GETREQ_SPINE: parse_switchload;
-		NETCACHE_GETREQ_POP: parse_switchload;
-		DISTCACHE_UPDATE_TRAFFICLOAD: parse_switchload;
+		GETREQ: parse_shadowtype;
+		GETREQ_SPINE: parse_shadowtype;
+		NETCACHE_GETREQ_POP: parse_shadowtype;
+		DISTCACHE_UPDATE_TRAFFICLOAD: parse_shadowtype;
 		CACHE_EVICT_LOADFREQ_INSWITCH_ACK: parse_frequency;
 		1 mask 0x01: parse_vallen;
 		/*2 mask 0x02: parse_seq;
@@ -295,6 +295,10 @@ parser parse_val_len16 {
 parser parse_shadowtype {
 	extract(shadowtype_hdr);
 	return select(shadowtype_hdr.shadowtype) {
+		GETREQ: parse_switchload;
+		GETREQ_SPINE: parse_switchload;
+		NETCACHE_GETREQ_POP: parse_switchload;
+		DISTCACHE_UPDATE_TRAFFICLOAD: parse_switchload;
 		2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
@@ -354,15 +358,13 @@ parser parse_stat {
 		GETRES_SERVER: parse_switchload;
 		DISTCACHE_GETRES_SPINE: parse_switchload;
 		default: ingress; // CACHE_POP_INSWITCH
-		//default: parse_debug;
 	}
 	//return ingress;
-	////return parse_debug; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 }
 
 parser parse_switchload {
 	extract(switchload_hdr);
-	return select(op_hdr.optype) {
+	return select(shadowtype_hdr.shadowtype) {
 		NETCACHE_GETREQ_POP: parse_clone;
 		default: ingress; // GETREQ/GETREQ_INSWITCH/GETRES/GETRES_SPINE/DISTCACHE_GETRES_SPINE/DISTCACHE_UPDATE_TRAFFICLOAD
 	}
