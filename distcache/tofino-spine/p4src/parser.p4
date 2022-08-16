@@ -78,7 +78,7 @@ parser parse_op {
 		GETREQ: parse_switchload;
 		GETREQ_SPINE: parse_switchload;
 		NETCACHE_GETREQ_POP: parse_switchload;
-		NETCACHE_UPDATE_TRAFFICLOAD: parse_switchload;
+		DISTCACHE_UPDATE_TRAFFICLOAD: parse_switchload;
 		CACHE_EVICT_LOADFREQ_INSWITCH_ACK: parse_frequency;
 		1 mask 0x01: parse_vallen;
 		/*2 mask 0x02: parse_seq;
