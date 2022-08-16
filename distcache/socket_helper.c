@@ -614,7 +614,7 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 			if (optype_t(get_packet_type(fragbuf, frag_recvsize)) != optype) {
 				continue; // filter the unmatched packet
 			}
-			tmpkey.deserialize(fragbuf + sizeof(optype_t) + sizeof(switchidx_t), frag_recvsize - sizeof(optype_t) - sizeof(switchidx_t));
+			tmpkey.deserialize(fragbuf + sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t), frag_recvsize - sizeof(optype_t) - sizeof(switchidx_t));
 			//printf("received key: %x, expected key: %x\n", tmpkey.keyhihi, targetkey.keyhihi);
 			if (tmpkey != targetkey) {
 				continue;
@@ -706,7 +706,7 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 
 		tmpbuf.dynamic_memcpy(frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
 
-		//printf("cur_fragidx; %d\n");
+		//printf("cur_fragidx: %d\n", cur_fragidx);
 
 		perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] += 1;
 		INVARIANT(perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] <= perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]);
