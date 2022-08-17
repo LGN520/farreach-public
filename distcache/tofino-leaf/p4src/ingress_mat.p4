@@ -123,23 +123,6 @@ table hash_for_spineselect_tbl {
 	size: 16;
 }
 
-action hash_for_ecmp() {
-	modify_field_with_hash_based_offset(meta.hashval_for_ecmp, 0, random_hash_calc, PARTITION_COUNT);
-}
-
-@pragma stage 0
-table hash_for_ecmp_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_ecmp;
-		nop;
-	}
-	default_action: nop();
-	size: 1;
-}
-
 // Stage 1
 
 /*action set_spineswitchnum(spineswitchnum) {
@@ -180,12 +163,31 @@ table hash_for_partition_tbl {
 }
 #endif
 
+action hash_for_ecmp() {
+	modify_field_with_hash_based_offset(meta.hashval_for_ecmp, 0, random_hash_calc, PARTITION_COUNT);
+}
+
+@pragma stage 1
+table hash_for_ecmp_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_ecmp;
+		nop;
+	}
+	default_action: nop();
+	size: 1;
+}
+
+// Stage 2
+
 action hash_for_cm12() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm1, 0, hash_calc, CM_BUCKET_COUNT);
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);
 }
 
-@pragma stage 1
+@pragma stage 2
 table hash_for_cm12_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -197,8 +199,6 @@ table hash_for_cm12_tbl {
 	default_action: nop();
 	size: 4;
 }
-
-// Stage 2
 
 action set_toleaf_offset(toleaf_offset) {
 	modify_field(meta.toleaf_offset, toleaf_offset);

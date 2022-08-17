@@ -211,17 +211,17 @@ control ingress {
 	apply(access_leafload_tbl); 
 	// NOTE: we CANNOT merge spine/leafload_forclient into one 64-bit register array, as we use different indexes (spine/leafswitchidx)
 	apply(access_spineload_forclient_tbl); // set meta.spineload_forclient
-	apply(hash_for_ecmp_tbl); // method B for incorrect spineswitchidx to set meta.hashval_for_ecmp
 
 	// Stage 1
 #ifndef RANGE_SUPPORT
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
-	apply(hash_for_cm12_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
+	apply(hash_for_ecmp_tbl); // method B for incorrect spineswitchidx to set meta.hashval_for_ecmp
 	// For power-of-two-choices in client-leaf for GETREQ from client
 	////apply(set_spineswitchnum_tbl); // set meta.spineswitchnum for cutoff_spineswitchidx_for_ecmp_tbl (NOTE: merged into set_hot_threshold_tbl to save power budget)
 
 	// Stage 2
+	apply(hash_for_cm12_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
 	// For power-of-two-choices in client-leaf for GETREQ from client
 	// NOTE: we CANNOT merge spine/leafload_forclient into one 64-bit register array, as we use different indexes (spine/leafswitchidx)
 	apply(access_leafload_forclient_tbl); // set meta.toleaf_predicate
