@@ -323,7 +323,7 @@
 			+ 1024/2 clients + 8/2 servers: 1.1 MOPS
 		- Write-only workload:
 			+ 512/1 clients + 4/1 servers: 0.07 MOPS (close to NoCache ~0.1 MOPS)
-			+ 1024/2 clients + 8/2 servers: 0.07 MOPS -> due to blocking on beingupdated keyset???
+			+ 1024/2 clients + 8/2 servers: 0.07 MOPS -> due to blocking on beingupdated keyset??? (due to range partition)
 	* Test dynamic workload of hash partition
 		- Simply test correctness
 		- Read-only workload:

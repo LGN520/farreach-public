@@ -295,7 +295,7 @@ void prepare_switchos() {
 	create_udpsock(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, false, "switchos.snapshotserver.snapshotclient_for_ptf", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 	
 	// snapshotserver <-> reflector.cp2dpserver
-	create_udpsock(switchos_snapshotserver_snapshotclient_for_reflector_udpsock, true, "switchos.snapshotserver.snapshotclient_for_reflector", 0, SWITCHOS_SNAPSHOTCLIENT_FOR_REFLECTOR_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE); // 0.5s for low snapshot latency
+	create_udpsock(switchos_snapshotserver_snapshotclient_for_reflector_udpsock, true, "switchos.snapshotserver.snapshotclient_for_reflector", 0, SWITCHOS_SNAPSHOTCLIENT_FOR_REFLECTOR_TIMEOUT_USECS, 2 * UDP_LARGE_RCVBUFSIZE); // 0.5s for low snapshot latency
 
 	// prepare specialcaseserver socket
 	prepare_udpserver(switchos_specialcaseserver_udpsock, true, switchos_specialcaseserver_port, "switchos.specialcaseserver", 0, SWITCHOS_SPECIALCASESERVER_TIMEOUT_USECS, 2*UDP_LARGE_RCVBUFSIZE); // timeout interval: 1000us to avoid long wait time when making snapshot
