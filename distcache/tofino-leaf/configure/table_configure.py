@@ -949,7 +949,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distcacheleaf_access_latest_tbl_match_spec_t(\
-                        op_hdr_optype = DISTCACHE_INVALIDATE,
+                        op_hdr_optype = DISTCACHE_INVALIDATE_INSWITCH,
                         inswitch_hdr_is_cached = is_cached)
                 if is_cached == 1:
                     self.client.access_latest_tbl_table_add_with_reset_and_get_latest(\
@@ -1271,20 +1271,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("lo10")
 
             # Table: update_vallo11_tbl (default: nop; 14)
-            #print "Configuring update_vallo11_tbl"
-            #self.configure_update_val_tbl("lo11")
+            print "Configuring update_vallo11_tbl"
+            self.configure_update_val_tbl("lo11")
 
             # Table: update_vallo12_tbl (default: nop; 14)
-            #print "Configuring update_vallo12_tbl"
-            #self.configure_update_val_tbl("lo12")
+            print "Configuring update_vallo12_tbl"
+            self.configure_update_val_tbl("lo12")
 
             # Table: update_vallo13_tbl (default: nop; 14)
-            #print "Configuring update_vallo13_tbl"
-            #self.configure_update_val_tbl("lo13")
+            print "Configuring update_vallo13_tbl"
+            self.configure_update_val_tbl("lo13")
 
             # Table: update_vallo14_tbl (default: nop; 14)
-            #print "Configuring update_vallo14_tbl"
-            #self.configure_update_val_tbl("lo14")
+            print "Configuring update_vallo14_tbl"
+            self.configure_update_val_tbl("lo14")
 
             # Table: update_vallo15_tbl (default: nop; 14)
             print "Configuring update_vallo15_tbl"
@@ -1335,20 +1335,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("hi10")
 
             # Table: update_valhi11_tbl (default: nop; 14)
-            #print "Configuring update_valhi11_tbl"
-            #self.configure_update_val_tbl("hi11")
+            print "Configuring update_valhi11_tbl"
+            self.configure_update_val_tbl("hi11")
 
             # Table: update_valhi12_tbl (default: nop; 14)
-            #print "Configuring update_valhi12_tbl"
-            #self.configure_update_val_tbl("hi12")
+            print "Configuring update_valhi12_tbl"
+            self.configure_update_val_tbl("hi12")
 
             # Table: update_valhi13_tbl (default: nop; 14)
-            #print "Configuring update_valhi13_tbl"
-            #self.configure_update_val_tbl("hi13")
+            print "Configuring update_valhi13_tbl"
+            self.configure_update_val_tbl("hi13")
 
             # Table: update_valhi14_tbl (default: nop; 14)
-            #print "Configuring update_valhi14_tbl"
-            #self.configure_update_val_tbl("hi14")
+            print "Configuring update_valhi14_tbl"
+            self.configure_update_val_tbl("hi14")
 
             # Table: update_valhi15_tbl (default: nop; 14)
             print "Configuring update_valhi15_tbl"

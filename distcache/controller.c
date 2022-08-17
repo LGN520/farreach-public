@@ -88,6 +88,7 @@ int main(int argc, char **argv) {
 	ret = pthread_setaffinity_np(main_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 	if (ret) {
 		printf("[Error] fail to set affinity of controller.main; errno: %d\n", errno);
+		fflush(stdout);
 		exit(-1);
 	}
 
@@ -101,6 +102,7 @@ int main(int argc, char **argv) {
 	ret = pthread_setaffinity_np(popserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 	if (ret) {
 		printf("Error of setaffinity for controller.popserver; errno: %d\n", errno);
+		fflush(stdout);
 		exit(-1);
 	}
 
@@ -112,6 +114,7 @@ int main(int argc, char **argv) {
 	ret = pthread_setaffinity_np(victimserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 	if (ret) {
 		printf("Error of setaffinity for controller.victimserver; errno: %d\n", errno);
+		fflush(stdout);
 		exit(-1);
 	}
 
@@ -123,6 +126,7 @@ int main(int argc, char **argv) {
 	ret = pthread_setaffinity_np(evictserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 	if (ret) {
 		printf("Error of setaffinity for controller.evictserver; errno: %d\n", errno);
+		fflush(stdout);
 		exit(-1);
 	}
 
@@ -232,6 +236,7 @@ void *run_controller_popserver(void *param) {
 		}
 		else {
 			printf("[controller.popserver] invalid packet type: %x\n", optype_t(tmp_optype));
+			fflush(stdout);
 			exit(-1);
 		}
 		INVARIANT(tmp_serveridx >= 0 && tmp_serveridx < max_server_total_logical_num);
@@ -291,12 +296,17 @@ void *run_controller_popserver(void *param) {
 				packet_type_t tmp_acktype = get_packet_type(buf, recvsize);
 				if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_FINISH_ACK) {
 					netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(buf, recvsize);
-					INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_key);
-					// send NETCACHE_CACHE_POP_FINISH_ACK to original switchos.popworker
-					udpsendto(controller_popserver_udpsock, buf, recvsize, 0, &switchos_dppopserver_popworker_addr, switchos_dppopserver_popworker_addrlen, "controller.popserver");
+					if (likely(tmp_netcache_cache_pop_finish_ack.key() == tmp_key)) {
+						// send NETCACHE_CACHE_POP_FINISH_ACK to original switchos.popworker
+						udpsendto(controller_popserver_udpsock, buf, recvsize, 0, &switchos_dppopserver_popworker_addr, switchos_dppopserver_popworker_addrlen, "controller.popserver");
+					}
+					else {
+						printf("[controller.popserver] WARNING: unmatched key of NETCACHE_CACHE_POP_FINISH_ACK\n");
+					}
 				}
 				else {
 					printf("[controller.popserver] invalid acktype: %x\n", optype_t(tmp_acktype));
+					fflush(stdout);
 					exit(-1);
 				}
 			}
@@ -368,6 +378,7 @@ void validate_switchidx(netreach_key_t key) {
 	}
 	if (tmp_valid == false) {
 		printf("Invalid spintswitchidx %d for key %x\n", tmp_spineswitchidx, key.keyhihi);
+		fflush(stdout);
 		exit(-1);
 	}
 	uint32_t tmp_leafswitchidx = key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
@@ -380,6 +391,7 @@ void validate_switchidx(netreach_key_t key) {
 	}
 	if (tmp_valid == false) {
 		printf("Invalid leafswitchidx %d for key %x\n", tmp_leafswitchidx, key.keyhihi);
+		fflush(stdout);
 		exit(-1);
 	}
 }

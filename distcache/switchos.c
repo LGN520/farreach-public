@@ -103,6 +103,7 @@ inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key, uin
 int main(int argc, char **argv) {
 	if (argc < 2) {
 		printf("Usage: ./switchos spine/leaf\n");
+		fflush(stdout);
 		exit(-1);
 	}
 
@@ -123,6 +124,7 @@ int main(int argc, char **argv) {
 	}
 	else {
 		printf("Invalid switchos role: %s which should be spine/leaf\n", switchos_role);
+		fflush(stdout);
 		exit(-1);
 	}
 
@@ -208,6 +210,7 @@ void prepare_switchos() {
 	}
 	else {
 		printf("[prepare switchos] invalid switchos role: %s\n", switchos_role);
+		fflush(stdout);
 		exit(-1);
 	}
 	
@@ -271,6 +274,7 @@ void *run_switchos_dppopserver(void *param) {
 		}
 		else {
 			printf("[switchos.dppopserver] invalid pkttype: %x\n", optype_t(tmp_optype));
+			fflush(stdout);
 			exit(-1);
 		}
 		INVARIANT(tmp_netcache_getreq_pop_ptr != NULL);
@@ -280,6 +284,10 @@ void *run_switchos_dppopserver(void *param) {
 		mutex_for_cached_keyset.lock();
 		if (switchos_dppopserver_cached_keyset.find(tmp_netcache_getreq_pop_ptr->key()) == switchos_dppopserver_cached_keyset.end()) {
 			switchos_dppopserver_cached_keyset.insert(tmp_netcache_getreq_pop_ptr->key());
+
+			//bool tmpbool = switchos_dppopserver_cached_keyset.find(tmp_netcache_getreq_pop_ptr->key()) == switchos_dppopserver_cached_keyset.end();
+			//COUT_VAR(tmpbool);
+			//fflush(stdout);
 		}
 		else {
 			is_cached = true;
@@ -454,8 +462,14 @@ void *run_switchos_popworker(void *param) {
 			INVARIANT(is_valid == true);
 			
 			if (switchos_cached_keyidx_map.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyidx_map.end()) {
-				printf("Error: populating a key %x cached at kvidx %u from switch\n", tmp_cache_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_cache_pop_ptr->key()]);
-				exit(-1);
+				// NOTE: given the switch A reporting current hot key, if the key was not reported by switch A before, dppopserver of switch A cannot filter cout current hot key, which incurs duplicate CACHE_POP requests
+				//printf("[switchos.popworker] Message: key %x already cached at kvidx %d\n", tmp_cache_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_cache_pop_ptr->key()]);
+				//fflush(stdout);
+				continue; // skip the key already cached in switch
+				
+				//printf("Error: populating a key %x cached at kvidx %u from switch\n", tmp_cache_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_cache_pop_ptr->key()]);
+				//fflush(stdout);
+				//exit(-1);
 			}
 
 			// find corresponding pipeline idx
@@ -478,6 +492,7 @@ void *run_switchos_popworker(void *param) {
 			}
 			else {
 				printf("[switchos.popworker] invalid switchos role: %s\n", switchos_role);
+				fflush(stdout);
 				exit(-1);
 			}
 
@@ -538,6 +553,7 @@ void *run_switchos_popworker(void *param) {
 								}
 								else if (i == switchos_sample_cnt - 1) {
 									printf("Receive CACHE_EVICT_LOADFREQ_ACK of key %x, not match any sampled key from %d CACHE_EVICT_LOADFREQ_INSWITCH_ACKs!\n", tmp_cache_evict_loadfreq_inswitch_ack.key().keyhihi, switchos_sample_cnt);
+									fflush(stdout);
 									exit(-1);
 								}
 							}
@@ -589,6 +605,10 @@ void *run_switchos_popworker(void *param) {
 
 					distcache_cache_evict_victim_t tmp_distcache_cache_evict_victim(pktbuf, pktsize);
 
+					//printf("receive DISTCACHE_CACHE_EVICT_VICTIM from controller\n");
+					//dump_buf(pktbuf, pktsize);
+					//fflush(stdout);
+
 					// validate victim key and idx
 					// TODO: launch leafswitchos.popworker.victimserver as an individual thread -> for duplicate DISTCACHE_CACHE_EVICT_VICTIM caused by timeout-and-retry in spineswitchos, individual victimserver can ignore it for robustness
 					INVARIANT(tmp_distcache_cache_evict_victim.victimkey() == static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][tmp_distcache_cache_evict_victim.victimidx()]));
@@ -597,10 +617,16 @@ void *run_switchos_popworker(void *param) {
 					// send DISTCACHE_CACHE_EVICT_VICTIM_ACK to controller.vicitmserver.victimclient_for_leaf
 					distcache_cache_evict_victim_ack_t tmp_distcache_cache_evict_victim_ack(tmp_distcache_cache_evict_victim.key());
 					pktsize = tmp_distcache_cache_evict_victim_ack.serialize(pktbuf, MAX_BUFSIZE);
+
+					//printf("send DISTCACHE_CACHE_EVICT_VICTIM_ACK to controller\n");
+					//dump_buf(pktbuf, pktsize);
+					//fflush(stdout);
+
 					udpsendto(leafswitchos_popworker_victimserver_udpsock, pktbuf, pktsize, 0, &controller_victimserver_victimclient_for_leaf_addr, controller_victimserver_victimclient_for_leaf_addrlen, "leafswitchos.popworker.victimserver");
 				}
 				else {
 					printf("[switchos.popworker] invalid switchos role: %s\n", switchos_role);
+					fflush(stdout);
 					exit(-1);
 				}
 
@@ -609,6 +635,7 @@ void *run_switchos_popworker(void *param) {
 				netreach_key_t cur_evictkey = switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx];
 				if (switchos_cached_keyidx_map.find(cur_evictkey) == switchos_cached_keyidx_map.end()) {
 					printf("Evicted key %x at kvidx %d is not cached\n", switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx].keyhihi, switchos_evictidx);
+					fflush(stdout);
 					exit(-1);
 				}
 
@@ -662,8 +689,13 @@ void *run_switchos_popworker(void *param) {
 
 				// update popserver.cachedkeyset atomically
 				mutex_for_cached_keyset.lock();
-				INVARIANT(switchos_dppopserver_cached_keyset.find(cur_evictkey) != switchos_dppopserver_cached_keyset.end());
-				switchos_dppopserver_cached_keyset.erase(cur_evictkey);
+			//bool tmpbool2 = switchos_dppopserver_cached_keyset.find(cur_evictkey) == switchos_dppopserver_cached_keyset.end();
+			//COUT_VAR(tmpbool2)
+			//fflush(stdout);
+				if (switchos_dppopserver_cached_keyset.find(cur_evictkey) != switchos_dppopserver_cached_keyset.end()) {
+					// NOTE: the evicted key may NOT be reported by dppopserver of current switchos -> NOT exist in switchos_dppopserver_cached_keyset
+					switchos_dppopserver_cached_keyset.erase(cur_evictkey);
+				}
 				mutex_for_cached_keyset.unlock();
 
 				//CUR_TIME(evict_total_t2); // TMPDEBUG
@@ -820,6 +852,7 @@ void *run_switchos_popworker(void *param) {
 	}
 	else {
 		printf("[switchos.popworker] invalid switchos role %s\n", switchos_role);
+		fflush(stdout);
 		exit(-1);
 	}
 	close(switchos_popworker_popclient_for_controller_udpsock);
@@ -845,6 +878,7 @@ uint16_t calculate_switchidx_by_role(netreach_key_t key) {
 	}
 	else {
 		printf("[switchos.popworker] invalid switchos role: %s\n", switchos_role);
+		fflush(stdout);
 		exit(-1);
 	}
 	return tmp_switchidx;

@@ -91,6 +91,7 @@ void *run_reflector_cp2dpserver(void *param) {
 			default:
 				{
 					printf("[reflector.cp2dpserver] invalid optype %d\n", int(tmp_optype));
+					fflush(stdout);
 					exit(-1);
 				}
 		}

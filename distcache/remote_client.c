@@ -35,7 +35,7 @@
 
 #include "common_impl.h"
 
-#define DUMP_BUF
+//#define DUMP_BUF
 
 struct alignas(CACHELINE_SIZE) ClientWorkerParam {
 	uint16_t local_client_logical_idx;

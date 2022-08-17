@@ -249,12 +249,14 @@ void *run_server_popserver(void *param) {
 			bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
 			if (!res) {
 				printf("[server.popserver %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
+				fflush(stdout);
 			}
 		}
 		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 	}
 	else {
 		printf("[server.popserver] invalid optype: %x\n", optype_t(tmp_optype));
+		fflush(stdout);
 		exit(-1);
 	}
   }
@@ -281,6 +283,7 @@ void *run_server_worker(void * param) {
   bool is_existing = db_wrappers[local_server_logical_idx].open(global_server_logical_idx);
   if (!is_existing) {
 	  printf("[server.worker %d-%d] you need to run loader before server\n", local_server_logical_idx, global_server_logical_idx);
+	  fflush(stdout);
 	  //exit(-1);
   }
 
@@ -432,6 +435,7 @@ void *run_server_worker(void * param) {
 				}
 				else {
 					printf("[server.worker] invalid pkttype: %x which should be PUTREQ_SEQ/DELREQ_SEQ\n", optype_t(pkt_type));
+					fflush(stdout);
 					exit(-1);
 				}
 
@@ -569,6 +573,7 @@ void *run_server_worker(void * param) {
 				}
 				else {
 					printf("[server.worker] invalid pkttype: %x which should be NETCACHED_PUTREQ_SEQ_CACHED/NETCACHE_DELREQ_SEQ_CACHED\n", optype_t(pkt_type));
+					fflush(stdout);
 					exit(-1);
 				}
 

@@ -229,6 +229,7 @@ void create_rawsock(int &sockfd, bool need_timeout, const char* role, int timeou
 #endif
 	if (sockfd == -1) {
 		printf("[%s] fail to create raw socket, errno: %d!\n", role, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 	// Set timeout for recvfrom/accept of udp/tcp
@@ -238,6 +239,7 @@ void create_rawsock(int &sockfd, bool need_timeout, const char* role, int timeou
 	// set rawsock receive buffer size
 	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &raw_rcvbufsize, sizeof(int)) == -1) {
 		printf("[%s] fail to set rawsock receive bufsize as %d, errno: %d\n", role, raw_rcvbufsize, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 }
@@ -258,6 +260,7 @@ void rawsendto(int sockfd, const void *buf, size_t len, int flags, const char *s
 	int res = sendto(sockfd, finalbuf, finallen, flags, (struct sockaddr *)dest_addr, addrlen);
 	if (res < 0) {
 		printf("[%s] sendto of udp socket fails, errno: %d!\n", role, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 }
@@ -290,6 +293,7 @@ bool rawrecvfrom(int sockfd, void *buf, size_t len, int flags, char **src_ip, co
 			}
 			else {
 				printf("[%s] error of recvfrom, errno: %d!\n", role, errno);
+				fflush(stdout);
 				exit(-1);
 			}
 		}
@@ -340,6 +344,7 @@ void prepare_rawserver(int &sockfd, bool need_timeout, const char * ifname, cons
 	// Set listen interface
 	if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname)) != 0) {
 		printf("[%s] fail to bind raw socket on interface %s, errno: %d!\n", role, ifname, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 	// filter for specific udp port
@@ -352,6 +357,7 @@ void prepare_rawserver(int &sockfd, bool need_timeout, const char * ifname, cons
 	bpf_filter.filter = tmp_bpf_code;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_ATTACH_FILTER, &bpf_filter, sizeof(bpf_filter)) < 0) {
 		printf("[%s] fail to attach bpf filter for udp port %d, errno: %d\n", role, udpport, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 }
@@ -379,12 +385,14 @@ void create_udpsock(int &sockfd, bool need_timeout, const char* role, int timeou
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
 		printf("[%s] fail to create udp socket, errno: %d!\n", role, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 	// Disable udp/tcp check
 	int disable = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
 		printf("[%s] disable checksum failed, errno: %d!\n", role, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 	// Set timeout for recvfrom/accept of udp/tcp
@@ -394,6 +402,7 @@ void create_udpsock(int &sockfd, bool need_timeout, const char* role, int timeou
 	// set udp receive buffer size
 	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &udp_rcvbufsize, sizeof(int)) == -1) {
 		printf("[%s] fail to set udp receive bufsize as %d, errno: %d\n", role, udp_rcvbufsize, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 }
@@ -402,6 +411,7 @@ void udpsendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	int res = sendto(sockfd, buf, len, flags, (struct sockaddr *)dest_addr, addrlen);
 	if (res < 0) {
 		printf("[%s] sendto of udp socket fails, errno: %d!\n", role, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 }
@@ -427,6 +437,7 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr_i
 		}
 		else {
 			printf("[%s] error of recvfrom, errno: %d!\n", role, errno);
+			fflush(stdout);
 			exit(-1);
 		}
 	}
@@ -442,6 +453,7 @@ void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const 
 	const int trueFlag = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
 		printf("[%s] fail to setsockopt, errno: %d!\n", role, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 	// Set listen address
@@ -449,6 +461,7 @@ void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const 
 	set_sockaddr(listen_addr, htonl(INADDR_ANY), server_port);
 	if ((bind(sockfd, (struct sockaddr*)&listen_addr, sizeof(listen_addr))) != 0) {
 		printf("[%s] fail to bind socket on port %hu, errno: %d!\n", role, server_port, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 }
@@ -736,12 +749,14 @@ void create_tcpsock(int &sockfd, bool need_timeout, const char* role, int timeou
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd == -1) {
 		printf("[%s] fail to create tcp socket, errno: %d!\n", role, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 	// Disable udp/tcp check
 	int disable = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
 		printf("[%s] disable tcp checksum failed, errno: %d!\n", role, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 	// Send immediately
@@ -760,6 +775,7 @@ void tcpconnect(int sockfd, const char* ip, short port, const char *srcrole, con
 	if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		// TODO broken
 		printf("[%s] fail to connect %s at %s:%hu, errno: %d!\n", srcrole, dstrole, ip, port, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 
@@ -775,6 +791,7 @@ void tcpsend(int sockfd, char *buf, int size, const char *role) {
 		if (tmpsize < 0) {
 			// TODO: Errno 32 means broken pipe, i.e., remote TCP connection is closed
 			printf("[%s] TCP send returns %d, errno: %d\n", role, tmpsize, errno);
+			fflush(stdout);
 			exit(-1);
 		}
 		ptr += tmpsize;
@@ -791,6 +808,7 @@ void prepare_tcpserver(int &sockfd, bool need_timeout, short server_port, int ma
 	const int trueFlag = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
 		printf("[%s] fail to setsockopt, errno: %d!\n", role, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 	// Set listen address
@@ -798,10 +816,12 @@ void prepare_tcpserver(int &sockfd, bool need_timeout, short server_port, int ma
 	set_sockaddr(listen_addr, htonl(INADDR_ANY), server_port);
 	if ((bind(sockfd, (struct sockaddr*)&listen_addr, sizeof(listen_addr))) != 0) {
 		printf("[%s] fail to bind socket on port %hu, errno: %d!\n", role, server_port, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 	if ((listen(sockfd, max_pending_num)) != 0) {
 		printf("[%s] fail to listen on port %hu, errno: %d!\n", role, server_port, errno);
+		fflush(stdout);
 		exit(-1);
 	}
 }
@@ -827,6 +847,7 @@ bool tcpaccept(int sockfd, struct sockaddr_in *addr, socklen_t *addrlen, int &co
 		}
 		else {
 			printf("[%s] error of accept, errno: %d!\n", role, errno);
+			fflush(stdout);
 			exit(-1);
 		}
 	}
@@ -860,6 +881,7 @@ bool tcprecv(int sockfd, void *buf, size_t len, int flags, int &recvsize, const 
 		}
 		else {
 			printf("[%s] recv fails: %d, errno: %d!\n", role, recvsize, errno);
+			fflush(stdout);
 			exit(-1);
 		}
 	}

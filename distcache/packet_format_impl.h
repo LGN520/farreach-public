@@ -2400,7 +2400,7 @@ template<class key_t>
 DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(key_t key) 
 	: WarmupRequest<key_t>(key) // DISTCACHE_CACHE_EVICT_VICTIM_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
-	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_CACHE_EVICT_VICTIM_ACK);
+	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_CACHE_EVICT_VICTIM_ACK);
 }
 
 template<class key_t>
@@ -2415,7 +2415,7 @@ template<class key_t>
 DistcacheInvalidate<key_t>::DistcacheInvalidate(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key) 
 	: WarmupRequest<key_t>(key) // DISTCACHE_INVALIDATE does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
-	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE);
+	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE);
 	this->_spineswitchidx = spineswitchidx;
 	this->_leafswitchidx = leafswitchidx;
 }
@@ -2432,7 +2432,7 @@ template<class key_t>
 DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(key_t key) 
 	: WarmupRequest<key_t>(key) // DISTCACHE_INVALIDATE_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
-	this->_type == static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE_ACK);
+	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE_ACK);
 }
 
 template<class key_t>
