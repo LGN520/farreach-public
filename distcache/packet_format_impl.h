@@ -2162,8 +2162,8 @@ NetcacheCachePopAck<key_t, val_t>::NetcacheCachePopAck(const char * data, uint32
 // NetcacheCachePopFinish (only used in end-hosts)
 
 template<class key_t>
-NetcacheCachePopFinish<key_t>::NetcacheCachePopFinish(key_t key, uint16_t serveridx)
-	: NetcacheCachePop<key_t>(key, serveridx)
+NetcacheCachePopFinish<key_t>::NetcacheCachePopFinish(key_t key, uint16_t serveridx, uint16_t kvidx)
+	: NetcacheCachePop<key_t>(key, serveridx), _kvidx(kvidx)
 {
 	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_FINISH);
 	INVARIANT(serveridx >= 0);
@@ -2174,6 +2174,48 @@ NetcacheCachePopFinish<key_t>::NetcacheCachePopFinish(const char * data, uint32_
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP_FINISH);
 	INVARIANT(this->_serveridx >= 0);
+}
+
+template<class key_t>
+uint32_t NetcacheCachePopFinish<key_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+	begin += tmp_ophdrsize;
+	uint16_t bigendian_serveridx = htons(uint16_t(this->_serveridx));
+	memcpy(begin, (void *)&bigendian_serveridx, sizeof(uint16_t)); // little-endian to big-endian
+	being += sizeof(uint16_t);
+	uint16_t bigendian_kvidx = htons(uint16_t(this->_kvidx));
+	memcpy(begin, (void *)&bigendian_kvidx, sizeof(uint16_t)); // little-endian to big-endian
+	being += sizeof(uint16_t);
+	return tmp_ophdrsize + sizeof(uint16_t) + sizeof(uint16_t);
+}
+
+template<class key_t>
+uint16_t NetcacheCachePopFinish<key_t>::kvidx() const {
+	return _kvidx;
+}
+
+template<class key_t>
+uint32_t NetcacheCachePopFinish<key_t>::size() { // unused
+	return Packet<key_t>::get_ophdrsize() + sizeof(uint16_t) + sizeof(uint16_t);
+}
+
+template<class key_t>
+void NetcacheCachePopFinish<key_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	uint32_t my_size = this->size();
+	INVARIANT(my_size == recv_size);
+	const char *begin = data;
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+	begin += tmp_ophdrsize;
+	memcpy((void *)&this->_serveridx, begin, sizeof(uint16_t));
+	this->_serveridx = ntohs(this->_serveridx); // Big-endian to little-endian
+	begin += sizeof(uint16_t);
+	memcpy((void *)&this->_kvidx, begin, sizeof(uint16_t));
+	this->_kvidx = ntohs(this->_kvidx); // Big-endian to little-endian
+	begin += sizeof(uint16_t);
 }
 
 // NetcacheCachePopFinishAck (only used in end-hosts)
@@ -2450,6 +2492,98 @@ DistcacheUpdateTrafficload<key_t>::DistcacheUpdateTrafficload(switchidx_t spines
 	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_UPDATE_TRAFFICLOAD);
 	this->_spineload = spineload;
 	this->_leafload = leafload;
+}
+
+// DistcacheSpineValueupdateInswitch (value must <= 128B)
+
+template<class key_t, class val_t>
+DistcacheSpineValueupdateInswitch<key_t, val_t>::DistcacheSpineValueupdateInswitch()
+	: GetResponseLatsetSeq<key_t, val_t>(), _kvidx(0)
+{}
+
+template<class key_t, class val_t>
+DistcacheSpineValueupdateInswitch<key_t, val_t>::DistcacheSpineValueupdateInswitch(key_t key, val_t val, uint32_t seq, uint16_t kvidx)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, 0), _kvidx(kvidx)
+{
+	this->_type = optype_t(packet_type_t::DISTCACHE_SPINE_VALUEUPDATE_INSWITCH);
+	INVARIANT(kvidx >= 0);
+}
+
+template<class key_t, class val_t>
+uint32_t DistcacheSpineValueupdateInswitch<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	//uint32_t my_size = this->size();
+	//INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+	begin += tmp_ophdrsize;
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_ophdrsize);
+	begin += tmp_valsize;
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
+	begin += tmp_shadowtypesize;
+	uint32_t bigendian_seq = htonl(this->_seq);
+	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
+	begin += sizeof(uint32_t);
+	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
+	begin += INSWITCH_PREV_BYTES;
+	uint16_t bigendian_kvidx = htons(this->_kvidx);
+	memcpy(begin, &bigendian_kvidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
+	memcpy(begin, (void *)&this->_stat, sizeof(bool));
+	begin += sizeof(bool);
+	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
+	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
+	return tmp_ophdrsize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+}
+
+template<class key_t, class val_t>
+uint16_t DistcacheSpineValueupdateInswitch<key_t, val_t>::kvidx() const {
+	return this->_kvidx;
+}
+
+template<class key_t, class val_t>
+uint32_t DistcacheSpineValueupdateInswitch<key_t, val_t>::size() { // unused
+	return Packet<key_t>::get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+}
+
+// DistcacheLeafValueupdateInswitch (value must <= 128B)
+
+template<class key_t, class val_t>
+DistcacheLeafValueupdateInswitch<key_t, val_t>::DistcacheLeafValueupdateInswitch(key_t key, val_t val, uint32_t seq, uint16_t kvidx)
+	: DistcacheSpineValueupdateInswitch<key_t, val_t>(key, val, seq, kvidx)
+{
+	this->_type = optype_t(packet_type_t::DISTCACHE_LEAF_VALUEUPDATE_INSWITCH);
+}
+
+// DistcacheSpineValueupdateInswitchAck
+
+template<class key_t>
+DistcacheSpineValueupdateInswitchAck<key_t>::DistcacheSpineValueupdateInswitchAck(key_t key) 
+	: WarmupRequest<key_t>(key) // DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+{
+	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK);
+}
+
+template<class key_t>
+DistcacheSpineValueupdateInswitchAck<key_t>::DistcacheSpineValueupdateInswitchAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK);
+}
+
+// DistcacheLeafValueupdateInswitchAck
+
+template<class key_t>
+DistcacheLeafValueupdateInswitchAck<key_t>::DistcacheLeafValueupdateInswitchAck(key_t key) 
+	: WarmupRequest<key_t>(key) // DISTCACHE_Leaf_VALUEUPDATE_INSWITCH_ACK does NOT need Leaf/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+{
+	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK);
+}
+
+template<class key_t>
+DistcacheLeafValueupdateInswitchAck<key_t>::DistcacheLeafValueupdateInswitchAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK);
 }
 
 // APIs

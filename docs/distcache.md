@@ -399,26 +399,41 @@
 		- Warmup phase: `./warmup_client`
 		- Transaction phase: `./remote_client client_physical_idx`
 - Server rotation for static workload
+	- NOTEs
+		+ Enable SERVER_ROTATION in helper.h
+		+ Update bottleneck partition in configs/config.ini.rotation.* and remotescripts/test_server_rotation.sh
+			* global::bottleneck_serveridx_for_rotation
+			* server0::server_logical_idxes
+			* server1::server_logical_idxes
+			* bottleneck_serveridx in shell
 	- Use config.ini.rotation-switch-switchos-loading-warmupclient
-		+ Start switch and configure data plane
-		+ Start switchos and ptf.popserver
-		+ Start clients and servers for loading phase
-		+ Start clients and servers for warmup phase
+		+ Start switch by `bash start_switch.sh`
+		+ Start switchos and ptf.servers, and configure data plane by `bash localscripts/launchswitchostestbed`
+		+ Start servers in client 0 (dl11) by `bash remotescripts/launchservertestbed`
+		+ Start clients to perform loading phase and warmup phase
+		+ Deprecated manual way
+			+ Start switch and configure data plane
+			+ Start switchos and ptf.popserver
+			+ Start clients and servers for loading phase
+			+ Start clients and servers for warmup phase
 	- Use config.ini.rotation-transaction
-		+ Start clients and servers for transaction phase (repeat 127 times)
-		+ Example of 128 server threads
-			* 1 server physical num + 1 server total logical num
-				- (1) set server0.server_logical_idxes as bottleneck server logical index in config,ini
-				- (2) launch bottleneck server thread in server0
-				- (3) Run `./remote_client 1` in client 1
-				- (4) Run `./remote_client 0` in client 0
-				- (5) Record client0's server rotation data of all physical clients into result.out
-			* 2 server physical num + 2 server total logical num
-				- (1) set server0.server_logical_idxes as bottleneck server logical index in config.ini
-				- (2) Change server1.server_logical_idxes (not equal to server0.server_logical_idxes), e.g., from 0 to 1, in config.ini
-				- (3) Run `bash test_server_rotation.sh` in client0
-				- (4) Record client0's server rotation data of all physical clients into result.out
-				- (5) Go back to step (1) until repeating 127 times
+		+ Run `bash test_server_rotation.sh` directly, which will stop-and-start clients and servers repeatedly with different config files
+			+ NOTE: switch, switchos, ptf.servers, controller, and reflectors are still running
+		+ Deprecated manual way
+			+ Start clients and servers for transaction phase (repeat 127 times)
+			+ Example of 128 server threads
+				* 1 server physical num + 1 server total logical num
+					- (1) set server0.server_logical_idxes as bottleneck server logical index in config,ini
+					- (2) launch bottleneck server thread in server0
+					- (3) Run `./remote_client 1` in client 1
+					- (4) Run `./remote_client 0` in client 0
+					- (5) Record client0's server rotation data of all physical clients into result.out
+				* 2 server physical num + 2 server total logical num
+					- (1) set server0.server_logical_idxes as bottleneck server logical index in config.ini
+					- (2) Change server1.server_logical_idxes (not equal to server0.server_logical_idxes), e.g., from 0 to 1, in config.ini
+					- (3) Run `bash test_server_rotation.sh` in client0
+					- (4) Record client0's server rotation data of all physical clients into result.out
+					- (5) Go back to step (1) until repeating 127 times
 	- IMPORTANT: try different # of client threads to sature servers
 		+ NOTE: more client threads does not mean better throughput, as client threads have CPU contention overhead
 		+ We MUST try different # of client threads to get the best runtime thpt improvement

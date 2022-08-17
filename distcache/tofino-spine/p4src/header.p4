@@ -219,6 +219,8 @@ header val_t val15_hdr;
 header val_t val16_hdr;
 header shadowtype_t shadowtype_hdr;
 header seq_t seq_hdr;
+@pragma pa_no_overlay ingress inswitch_hdr.is_cached
+@pragma pa_no_overlay egress inswitch_hdr.is_cached
 header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
 header clone_t clone_hdr;

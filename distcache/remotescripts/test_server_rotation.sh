@@ -9,7 +9,7 @@ DIRNAME="distcache"
 #fi
 
 #bottleneck_serveridx=$1
-bottleneck_serveridx=123
+bottleneck_serveridx=0
 server_total_logical_num_for_rotation=128
 
 echo "clear tmp files in remote clients/servers"

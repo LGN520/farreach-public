@@ -83,7 +83,7 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 	//rocksdb::Status s = rocksdb::TransactionDB::Open(rocksdb_options, rocksdb::TransactionDBOptions(), db_path, &db_ptr);
 	rocksdb::Status s = rocksdb::DB::Open(rocksdb_options, db_path, &db_ptr);
 	if (!s.ok()) {
-		printf("Please create directory for %s\n", db_path.c_str());
+		printf("Please create directory for %s, %s\n", db_path.c_str(), s.ToString().c_str());
 		exit(-1);
 	}
 	INVARIANT(db_ptr != NULL);

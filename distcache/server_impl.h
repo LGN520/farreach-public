@@ -3,6 +3,7 @@
 
 // Transaction phase for ycsb_server
 
+#include <map>
 #include <vector>
 #include "helper.h"
 #include "key.h"
@@ -16,6 +17,8 @@
 #include "dynamic_array.h"
 
 //#define DUMP_BUF
+
+//volatile bool first_cachepop = true;
 
 typedef ConcurrentSet<netreach_key_t> concurrent_set_t;
 
@@ -42,7 +45,7 @@ int * server_worker_lwpid_list = NULL;
 int * server_popserver_udpsock_list = NULL;
 // access all of beingcached/cached/beingupdated keysets should be atomic
 std::mutex *server_mutex_for_keyset_list = NULL;
-std::set<netreach_key_t> *server_cached_keyset_list = NULL;
+std::map<netreach_key_t, uint16_t> *server_cached_keyidxmap_list = NULL;
 std::set<netreach_key_t> *server_beingupdated_keyset_list = NULL;
 
 // server.evictservers <-> controller.evictserver.evictclients
@@ -51,7 +54,8 @@ std::set<netreach_key_t> *server_beingupdated_keyset_list = NULL;
 int *server_evictserver_udpsock_list = NULL;
 
 // data plane <-> per-server.valueupdateserver
-MessagePtrQueue<netcache_valueupdate_t> *server_netcache_valueupdate_ptr_queue_list = NULL;
+//MessagePtrQueue<netcache_valueupdate_t> *server_netcache_valueupdate_ptr_queue_list = NULL;
+MessagePtrQueue<distcache_spine_valueupdate_inswitch_t> *server_distcache_spine_valueupdate_inswitch_ptr_queue_list = NULL;
 int *server_valueupdateserver_udpsock_list = NULL;
 
 void prepare_server();
@@ -103,11 +107,11 @@ void prepare_server() {
 	// Prepare for cache population
 	server_popserver_udpsock_list = new int[current_server_logical_num];
 	server_mutex_for_keyset_list = new std::mutex[current_server_logical_num];
-	server_cached_keyset_list = new std::set<netreach_key_t>[current_server_logical_num];
+	server_cached_keyidxmap_list = new std::map<netreach_key_t, uint16_t>[current_server_logical_num];
 	server_beingupdated_keyset_list = new std::set<netreach_key_t>[current_server_logical_num];
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		prepare_udpserver(server_popserver_udpsock_list[i], true, server_popserver_port_start + server_logical_idxes_list[server_physical_idx][i], "server.popserver");
-		server_cached_keyset_list[i].clear();
+		server_cached_keyidxmap_list[i].clear();
 		server_beingupdated_keyset_list[i].clear();
 	}
 
@@ -123,10 +127,12 @@ void prepare_server() {
 	}
 
 	// prepare for inswitch value update
-	server_netcache_valueupdate_ptr_queue_list = new MessagePtrQueue<netcache_valueupdate_t>[current_server_logical_num];
+	//server_netcache_valueupdate_ptr_queue_list = new MessagePtrQueue<netcache_valueupdate_t>[current_server_logical_num];
+	server_distcache_spine_valueupdate_inswitch_ptr_queue_list = new MessagePtrQueue<distcache_spine_valueupdate_inswitch_t>[current_server_logical_num];
 	server_valueupdateserver_udpsock_list = new int[current_server_logical_num];
 	for (size_t i = 0; i < current_server_logical_num; i++) {
-		server_netcache_valueupdate_ptr_queue_list[i].init(MQ_SIZE);
+		//server_netcache_valueupdate_ptr_queue_list[i].init(MQ_SIZE);
+		server_distcache_spine_valueupdate_inswitch_ptr_queue_list[i].init(MQ_SIZE);
 		uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[server_physical_idx][i];
 		prepare_udpserver(server_valueupdateserver_udpsock_list[i], true, server_valueupdateserver_port_start + tmp_global_server_logical_idx, "server.valueupdateserver");
 	}
@@ -160,9 +166,9 @@ void close_server() {
 		delete [] server_mutex_for_keyset_list;
 		server_mutex_for_keyset_list = NULL;
 	}
-	if (server_cached_keyset_list != NULL) {
-		delete [] server_cached_keyset_list;
-		server_cached_keyset_list = NULL;
+	if (server_cached_keyidxmap_list != NULL) {
+		delete [] server_cached_keyidxmap_list;
+		server_cached_keyidxmap_list = NULL;
 	}
 	if (server_beingupdated_keyset_list != NULL) {
 		delete [] server_beingupdated_keyset_list;
@@ -176,9 +182,13 @@ void close_server() {
 		delete [] server_evictserver_tcpsock_list;
 		server_evictserver_tcpsock_list = NULL;
 	}*/
-	if (server_netcache_valueupdate_ptr_queue_list != NULL) {
+	/*if (server_netcache_valueupdate_ptr_queue_list != NULL) {
 		delete [] server_netcache_valueupdate_ptr_queue_list;
 		server_netcache_valueupdate_ptr_queue_list = NULL;
+	}*/
+	if (server_distcache_spine_valueupdate_inswitch_ptr_queue_list != NULL) {
+		delete [] server_distcache_spine_valueupdate_inswitch_ptr_queue_list;
+		server_distcache_spine_valueupdate_inswitch_ptr_queue_list = NULL;
 	}
 	if (server_valueupdateserver_udpsock_list != NULL) {
 		delete [] server_valueupdateserver_udpsock_list;
@@ -226,11 +236,11 @@ void *run_server_popserver(void *param) {
 		// keep atomicity
 		server_mutex_for_keyset_list[local_server_logical_idx].lock();
 		// NETCACHE_CACHE_POP_FINISH's key must NOT in beingupdated keyset if NOT in cached keyset (consider duplicate NETCACHE_CACHE_POP_FINISHs)
-		bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_cached_keyset_list[local_server_logical_idx].end());
+		bool is_cached = (server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_cached_keymap_list[local_server_logical_idx].end());
 		bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 		if (!is_cached) { // not in cached keyset
 			// add key into cached keyset
-			server_cached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key());
+			server_cached_keymap_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key(), tmp_netcache_cache_pop_finish.kvidx());
 
 			// must NOT in beingupdated keyset
 			INVARIANT(!is_being_updated);
@@ -244,9 +254,12 @@ void *run_server_popserver(void *param) {
 			uint16_t tmp_leafswitchidx = uint16_t(tmp_netcache_cache_pop_finish.key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
 
 			// Phase 2 of cache coherence: notify server.valueupdateserver to update inswitch value in background
-			netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
-			tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat);
-			bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
+			//netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
+			//tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat);
+			//bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
+			distcache_spine_valueupdate_inswitch_t *tmp_distcache_spine_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
+			tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat, tmp_netcache_cache_pop_finish.kvidx());
+			bool res = server_distcache_spine_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_spine_valueupdate_inswitch_ptr);
 			if (!res) {
 				printf("[server.popserver %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
 				fflush(stdout);
@@ -447,7 +460,7 @@ void *run_server_worker(void * param) {
 				
 				bool tmp_stat = false;
 				server_mutex_for_keyset_list[local_server_logical_idx].lock();
-				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
+				bool is_cached = (server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_key) != server_cached_keyidxmap_list[local_server_logical_idx].end());
 				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 				if (likely(!is_cached)) { // uncached
 					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
@@ -498,19 +511,27 @@ void *run_server_worker(void * param) {
 #endif
 
 					// Double-check due to potential cache eviction
-					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
+					is_cached = (server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_key) != server_cached_keyidxmap_list[local_server_logical_idx].end());
 					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateserver
 						server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_key); // mark it as being updated
 
 						// notify server.valueupdateserver to update inswitch value in background
-						netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
+						/*netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
 						if (pkt_type == packet_type_t::PUTREQ_SEQ) {
 							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true);
 						}
 						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
 							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false);
 						}
-						bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
+						bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);*/
+						distcache_spine_valueupdate_inswitch_t *tmp_distcache_spine_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
+						if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+							tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
+						}
+						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
+							tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_key, tmp_val, tmp_seq, false, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
+						}
+						bool res = server_distcache_spine_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_spine_valueupdate_inswitch_ptr);
 						if (!res) {
 							printf("[server.worker %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
 						}
@@ -585,7 +606,7 @@ void *run_server_worker(void * param) {
 
 				bool tmp_stat = false;
 				server_mutex_for_keyset_list[local_server_logical_idx].lock();
-				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
+				bool is_cached = (server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_key) != server_cached_keyidxmap_list[local_server_logical_idx].end());
 				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 				if (unlikely(!is_cached)) { // uncached
 					if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
@@ -636,19 +657,27 @@ void *run_server_worker(void * param) {
 #endif
 
 					// Double-check due to potential cache eviction
-					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
+					is_cached = (server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_key) != server_cached_keyidxmap_list[local_server_logical_idx].end());
 					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateserver
 						server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_key); // mark it as being updated
 
 						// notify server.valueupdateserver to update inswitch value in background
-						netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
+						/*netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
 						if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
 							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true);
 						}
 						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
 							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false);
 						}
-						bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
+						bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);*/
+						distcache_spine_valueupdate_inswitch_t *tmp_distcache_spine_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
+						if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
+							tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
+						}
+						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
+							tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_key, tmp_val, tmp_seq, false, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
+						}
+						bool res = server_distcache_spine_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_spine_valueupdate_inswitch_ptr);
 						if (!res) {
 							printf("[server.worker %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
 						}
@@ -744,7 +773,7 @@ void *run_server_worker(void * param) {
 			{
 				COUT_THIS("[server.worker] Invalid packet type: " << int(pkt_type))
 				std::cout << std::flush;
-				exit(-1);
+				//exit(-1);
 			}
 	}
 
@@ -809,11 +838,11 @@ void *run_server_evictserver(void *param) {
 		server_mutex_for_keyset_list[local_server_logical_idx].lock();
 		// NETCACHE_CACHE_EVICT's key must in cached keyset
 		// consider duplicate NETCACHE_CACHE_EVICTs -> key may already be removed from cached/beingudpated keyset
-		if (!(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end())) {
-			printf("[server.evictserver %d-%d WARNING] evicted key %x is not in cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_cached_keyset_list[local_server_logical_idx].size());
+		if (!(server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyidxmap_list[local_server_logical_idx].end())) {
+			printf("[server.evictserver %d-%d WARNING] evicted key %x is not in cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_cached_keyidxmap_list[local_server_logical_idx].size());
 		}
 		// remove key from cached/beingupdated keyset
-		server_cached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
+		server_cached_keyidxmap_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
 		server_beingupdated_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
 		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 
@@ -843,16 +872,33 @@ void *run_server_valueupdateserver(void *param) {
 
 	while (!transaction_running) {}
 
-	char sendbuf[MAX_BUFSIZE];
+	//char sendbuf[MAX_BUFSIZE];
+	char sendbuf_forspine[MAX_BUFSIZE];
+	char sendbuf_forleaf[MAX_BUFSIZE];
 	char recvbuf[MAX_BUFSIZE];
-	int sendsize = 0;
+	//int sendsize = 0;
+	int sendsize_forspine = 0;
+	int sendsize_forleaf = 0 ;
 	int recvsize = 0;
 	while (transaction_running) {
-		netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].read();
-		if (tmp_netcache_valueupdate_ptr != NULL) {
-			sendsize = tmp_netcache_valueupdate_ptr->serialize(sendbuf, MAX_BUFSIZE);
+		//netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].read();
+		distcache_spine_valueupdate_inswitch_t *tmp_distcache_spine_valueupdate_inswitch_ptr = server_distcache_spine_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].read();
+		//if (tmp_netcache_valueupdate_ptr != NULL) {
+		if (tmp_distcache_spine_valueupdate_inswitch_ptr != NULL) {
+			/*if (first_cachepop) {
+				first_cachepop = false;
+				// sleep 0.5s for warmup phase to avoid not-yet-effective newly-populated keys in cache_lookup_tbl
+				// NOTE: it does NOT affect server-rotation/normal transaction phase
+				usleep(500 * 1000); 
+			}*/
 
-			while (true) {
+			//sendsize = tmp_netcache_valueupdate_ptr->serialize(sendbuf, MAX_BUFSIZE);
+
+			distcache_leaf_valueupdate_inswitch_t tmp_distcache_leaf_valueupdate_inswitch(tmp_distcache_spine_valueupdate_inswitch_ptr->key(), tmp_distcache_spine_valueupdate_inswitch_ptr->val(), tmp_distcache_spine_valueupdate_inswitch_ptr->seq(), tmp_distcache_spine_valueupdate_inswitch_ptr->stat(), tmp_distcache_spine_valueupdate_inswitch_ptr->kvidx());
+			sendsize_forspine = tmp_distcache_spine_valueupdate_inswitch_ptr->serialize(sendbuf_forspine, MAX_BUFSIZE);
+			sendsize_forleaf = tmp_distcache_leaf_valueupdate_inswitch.serialize(sendbuf_forleaf, MAX_BUFSIZE);
+			
+			/*while (true) {
 				udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &client_addr, client_addrlen, "server.valueupdateserver");
 
 				bool is_timeout = udprecvfrom(server_valueupdateserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.valueupdateserver");
@@ -868,6 +914,44 @@ void *run_server_valueupdateserver(void *param) {
 						break;
 					}
 				}
+			}*/
+
+			// send to spine/server-leaf simultaneously to reduce waiting time
+			udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf_forspine, sendsize_forspine, 0, &client_addr, client_addrlen, "server.valueupdateserver");
+			udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf_forleaf, sendsize_forleaf, 0, &client_addr, client_addrlen, "server.valueupdateserver");
+
+			bool with_spineack = false;
+			bool with_leafack = false;
+			while (true) {
+				bool is_timeout = udprecvfrom(server_valueupdateserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.valueupdateserver");
+				if (is_timeout) {
+					if (!with_spineack) {
+						udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf_forspine, sendsize_forspine, 0, &client_addr, client_addrlen, "server.valueupdateserver");
+					}
+					if (!with_leafack) {
+						udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf_forleaf, sendsize_forleaf, 0, &client_addr, client_addrlen, "server.valueupdateserver");
+					}
+					continue;
+				}
+				else {
+					packet_type_t tmp_optype = get_packet_type(recvbuf, recvsize);
+					if (tmp_optype == packet_type_t::DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK) {
+						distcache_spine_valueupdate_inswitch_ack_t tmp_distcache_spine_valueupdate_inswitch_ack(recvbuf, recvsize);
+						if (tmp_distcache_spine_valueupdate_inswitch_ack.key() == tmp_distcache_spine_valueupdate_inswitch_ptr->key()) {
+							with_spineack = true;
+						}
+					}
+					else if (tmp_optype == packet_type_t::DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK) {
+						distcache_leaf_valueupdate_inswitch_ack_t tmp_distcache_leaf_valueupdate_inswitch_ack(recvbuf, recvsize);
+						if (tmp_distcache_leaf_valueupdate_inswitch_ack.key() == tmp_distcache_leaf_valueupdate_inswitch.key()) {
+							with_leafack = true;
+						}
+					}
+
+					if (with_spineack && with_leafack) {
+						break;
+					}
+				}
 			}
 
 			// remove key from beingupdated keyset atomically
@@ -877,7 +961,7 @@ void *run_server_valueupdateserver(void *param) {
 				server_beingupdated_keyset_list[local_server_logical_idx].erase(tmp_netcache_valueupdate_ptr->key());
 			}
 			else { // due to cache eviciton
-				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_valueupdate_ptr->key()) != server_cached_keyset_list[local_server_logical_idx].end());
+				bool is_cached = (server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_netcache_valueupdate_ptr->key()) != server_cached_keyidxmap_list[local_server_logical_idx].end());
 				INVARIANT(!is_cached); // key must NOT in beingcached/cached keyset
 			}
 			server_mutex_for_keyset_list[local_server_logical_idx].unlock();

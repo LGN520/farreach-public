@@ -798,7 +798,7 @@ void *run_switchos_popworker(void *param) {
 			switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_freeidx] = tmp_global_server_logical_idx;
 
 			// send NETCACHE_CACHE_POP_FINISH to server and wait for ACK
-			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(tmp_cache_pop_ptr->key(), tmp_global_server_logical_idx);
+			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(tmp_cache_pop_ptr->key(), tmp_global_server_logical_idx, switchos_freeidx);
 			pktsize = tmp_netcache_cache_pop_finish.serialize(pktbuf, MAX_BUFSIZE);
 			while (true) {
 				udpsendto(switchos_popworker_popclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "switchos.popworker.popclient_for_controller");

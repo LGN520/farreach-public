@@ -88,6 +88,10 @@ typedef DistcacheCacheEvictVictimAck<netreach_key_t> distcache_cache_evict_victi
 typedef DistcacheInvalidate<netreach_key_t> distcache_invalidate_t;
 typedef DistcacheInvalidateAck<netreach_key_t> distcache_invalidate_ack_t;
 typedef DistcacheUpdateTrafficload<netreach_key_t> distcache_update_trafficload_t;
+typedef DistcacheSpineValueUpdateInswitch<netreach_key_t, val_t> distcache_spine_valueupdate_inswitch_t;
+typedef DistcacheLeafValueUpdateInswitch<netreach_key_t, val_t> distcache_leaf_valueupdate_inswitch_t;
+typedef DistcacheSpineValueUpdateInswitchAck<netreach_key_t, val_t> distcache_spine_valueupdate_inswitch_ack_t;
+typedef DistcacheLeafValueUpdateInswitchAck<netreach_key_t, val_t> distcache_leaf_valueupdate_inswitch_ack_t;
 
 /*
  * Constants
