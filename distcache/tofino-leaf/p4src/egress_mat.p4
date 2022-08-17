@@ -418,7 +418,7 @@ action update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_
 
 	remove_header(shadowtype_hdr);
 	remove_header(seq_hdr);
-	remove_header(inswitchehdr);
+	remove_header(inswitch_hdr);
 	remove_header(stat_hdr);
 
 	// NOTE: egress_port has already been set in hash/range_partition_tbl at ingress pipeline

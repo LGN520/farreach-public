@@ -386,7 +386,7 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 }*/
 
 action update_distcache_spine_valueupdate_inswitch_to_distcache_spie_valueupdate_inswitch_ack() {
-	modify_field(op_hdr.optype, DISTCAHCE_SPINE_VALUEUPDATE_ACK);
+	modify_field(op_hdr.optype, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK);
 
 	remove_header(shadowtype_hdr);
 	remove_header(seq_hdr);
