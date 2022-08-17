@@ -413,6 +413,17 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 //action forward_cache_evict_loadfreq_inswitch_ack() {
 //}
 
+action update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_inswitch_ack() {
+	modify_field(op_hdr.optype, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK);
+
+	remove_header(shadowtype_hdr);
+	remove_header(seq_hdr);
+	remove_header(inswitchehdr);
+	remove_header(stat_hdr);
+
+	// NOTE: egress_port has already been set in hash/range_partition_tbl at ingress pipeline
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -460,6 +471,7 @@ table eg_port_forward_tbl {
 #endif
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loadfreq_inswitch_ack;
+		update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_inswitch_ack;
 		nop;
 	}
 	default_action: nop();
@@ -537,7 +549,7 @@ table update_ipmac_srcport_tbl {
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
 /*
-// CACHE_POP_INSWITCH_ACK, WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP), NETCACHE_VALUEUPDATE_ACK
+// CACHE_POP_INSWITCH_ACK, WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP), NETCACHE_VALUEUPDATE_ACK, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK
 action update_onlyop_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 22(ophdr)
 	modify_field(udp_hdr.hdrlen, 30);
@@ -1027,9 +1039,9 @@ action drop_distcache_invalidate_inswitch() {
 	drop();
 }
 
-action drop_netcache_valueupdate_inswitch() {
+/*action drop_netcache_valueupdate_inswitch() {
 	drop();
-}
+}*/
 
 @pragma stage 11
 table drop_tbl {
@@ -1038,7 +1050,7 @@ table drop_tbl {
 	}
 	actions {
 		drop_distcache_invalidate_inswitch;
-		drop_netcache_valueupdate_inswitch;
+		//drop_netcache_valueupdate_inswitch;
 		nop;
 	}
 	default_action: nop();
