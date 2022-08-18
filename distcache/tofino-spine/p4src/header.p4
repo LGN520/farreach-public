@@ -185,6 +185,8 @@ header_type metadata_t {
 header ethernet_t ethernet_hdr;
 header ipv4_t ipv4_hdr;
 header udp_t udp_hdr;
+@pragma pa_no_overlay ingress op_hdr.optype
+@pragma pa_no_overlay egress op_hdr.optype
 header op_t op_hdr;
 #ifdef RANGE_SUPPORT
 header scan_t scan_hdr;
@@ -221,6 +223,8 @@ header shadowtype_t shadowtype_hdr;
 header seq_t seq_hdr;
 @pragma pa_no_overlay ingress inswitch_hdr.is_cached
 @pragma pa_no_overlay egress inswitch_hdr.is_cached
+@pragma pa_no_overlay ingress inswitch_hdr.idx
+@pragma pa_no_overlay egress inswitch_hdr.idx
 header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
 header clone_t clone_hdr;

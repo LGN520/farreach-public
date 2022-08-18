@@ -745,16 +745,16 @@ void run_benchmark() {
 				fprintf(fd, "%d\n", max_server_total_logical_num);
 			}
 			if (valid_global_server_logical_idxes.size() == 2) {
-				printf("result for server rotation of all clients: %d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
-						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
+				printf("result for server rotation of all clients: %d %d %d %f %f %d %d\n", agg_bottleneckserver_pktcnt, \
+						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0], server_logical_idxes_list[1][0]);
 				fprintf(fd, "%d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
-						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
+						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0], server_logical_idxes_list[1][0]);
 			}
 			else if (valid_global_server_logical_idxes.size() == 1) {
-				printf("result for server rotation of all clients: %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
-						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
-				fprintf(fd, "%d %d %f %f\n", agg_bottleneckserver_pktcnt, \
-						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
+				printf("result for server rotation of all clients: %d %d %f %f %d\n", agg_bottleneckserver_pktcnt, \
+						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0]);
+				fprintf(fd, "%d %d %f %f %d\n", agg_bottleneckserver_pktcnt, \
+						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0]);
 			}
 			fflush(fd);
 			fclose(fd);
@@ -985,8 +985,8 @@ void *run_client_worker(void *param) {
 		uint16_t tmp_nodeidx_foreval = 0;
 		double wait_time = 0.0;
 		uint32_t getres_cnt = 0; // to update client-leaf.spine/leafload_forclient_reg for power-of-two-choices
-		//const uint32_t update_trafficload_threshold = 1000 * 1000; // send DISTCACHE_TRAFFICLOAD_UPDATE every X GETRESs
-		const uint32_t update_trafficload_threshold = 1; // for DEBUG
+		const uint32_t update_trafficload_threshold = 1000 * 1000; // send DISTCACHE_TRAFFICLOAD_UPDATE every X GETRESs
+		//const uint32_t update_trafficload_threshold = 1; // for DEBUG
 		while (true) { // timeout-and-retry mechanism
 			CUR_TIME(process_t1);
 
