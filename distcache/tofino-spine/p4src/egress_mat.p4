@@ -385,7 +385,7 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 	// NOTE: egress_port has already been set in hash/range_partition_tbl at ingress pipeline
 }*/
 
-action update_distcache_spine_valueupdate_inswitch_to_distcache_spie_valueupdate_inswitch_ack() {
+action update_distcache_spine_valueupdate_inswitch_to_distcache_spine_valueupdate_inswitch_ack() {
 	modify_field(op_hdr.optype, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK);
 
 	remove_header(shadowtype_hdr);
@@ -453,7 +453,7 @@ table eg_port_forward_tbl {
 		//forward_cache_evict_loadfreq_inswitch_ack;
 		//update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack;
 		update_distcache_invalidate_inswitch_to_distcache_invalidate_ack;
-		 update_distcache_spine_valueupdate_inswitch_to_distcache_spie_valueupdate_inswitch_ack;
+		 update_distcache_spine_valueupdate_inswitch_to_distcache_spine_valueupdate_inswitch_ack;
 		nop;
 	}
 	default_action: nop();

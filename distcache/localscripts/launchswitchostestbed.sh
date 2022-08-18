@@ -1,5 +1,7 @@
 DIRNAME="distcache"
 
+set -e
+
 if [[ $# -ne 1 ]]
 then
 	echo "Usage: bash launchswitchostestbed.sh spine/leaf"

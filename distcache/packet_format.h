@@ -744,6 +744,8 @@ class NetcacheCachePopFinish : public NetcacheCachePop<key_t> { // ophdr + serve
 	public: 
 		NetcacheCachePopFinish(key_t key, uint16_t serveridx, uint16_t kvidx);
 		NetcacheCachePopFinish(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	
 		uint16_t kvidx() const;
 	protected:
@@ -875,7 +877,9 @@ template<class key_t, class val_t>
 class DistcacheSpineValueupdateInswitch : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr.idx + stat_hdr
 	public: 
 		DistcacheSpineValueupdateInswitch();
-		DistcacheSpineValueupdateInswitch(key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
+		DistcacheSpineValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
 		uint16_t kvidx() const;
 	protected:
@@ -886,7 +890,7 @@ class DistcacheSpineValueupdateInswitch : public GetResponseLatestSeq<key_t, val
 template<class key_t, class val_t>
 class DistcacheLeafValueupdateInswitch : public DistcacheSpineValueupdateInswitch<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr.idx + stat_hdr
 	public: 
-		DistcacheLeafValueupdateInswitch(key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
+		DistcacheLeafValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
 };
 
 template<class key_t>
@@ -898,7 +902,7 @@ class DistcacheSpineValueupdateInswitchAck : public WarmupRequest<key_t> { // op
 template<class key_t>
 class DistcacheLeafValueupdateInswitchAck : public WarmupRequest<key_t> { // ophdr
 	public: 
-		DistcacheSpineValueupdateInswitchAck(const char * data, uint32_t recv_size);
+		DistcacheLeafValueupdateInswitchAck(const char * data, uint32_t recv_size);
 };
 
 // APIs

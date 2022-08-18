@@ -1,5 +1,7 @@
 DIRNAME="netcache"
 
+set -e
+
 # NOTE: you need to launch spine/leaf switch data plane before running this script under su account
 
 echo "clear tmp files"

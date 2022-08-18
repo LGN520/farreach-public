@@ -98,6 +98,8 @@ void run_warmuper() {
 
 			warmup_ack_t rsp(buf, recv_size);
 			UNUSED(rsp);
+
+			usleep(50); // avoid switch misbehavior under a burst of server-issued valueupdate due to Tofino bug?
 		}
 		else {
 			printf("Invalid request type: %u\n", uint32_t(iter->type()));

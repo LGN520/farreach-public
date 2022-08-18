@@ -677,7 +677,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.client.range_partition_tbl_table_add_with_range_partition_for_distcache_spine_valueupdate_inswitch_ack(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                                 else:
-                                else:
                                     actnspec0 = distcacheleaf_range_partition_action_spec_t(udp_dstport, eport)
                                     self.client.range_partition_tbl_table_add_with_range_partition(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
@@ -949,7 +948,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 0
 
-            # Table: access_latest_tbl (default: reset_is_latest; size: 5)
+            # Table: access_latest_tbl (default: reset_is_latest; size: 6)
             print "Configuring access_latest_tbl"
             for is_cached in cached_list:
                 matchspec0 = distcacheleaf_access_latest_tbl_match_spec_t(\
@@ -1234,7 +1233,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: update_vallen_tbl (default: reset_access_val_mode; 8)
+            # Table: update_vallen_tbl (default: reset_access_val_mode; 10)
             print "Configuring update_vallen_tbl"
             for is_cached in cached_list:
                 for is_latest in latest_list:
@@ -1635,8 +1634,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_SEQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
             #, NETCACHE_VALUEUPDATE
-            # NOTE: we do NOT access add_and_remove_value_header_tbl for DISTCACHE_LEAF_VALUEUPDATE_INSWITCH, as we bypass_egress in spineselect_tbl in ingress pipeline
-            for tmpoptype in [PUTREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, GETRES, LOADREQ]:
+            # NOTE: we do NOT access add_and_remove_value_header_tbl for DISTCACHE_SPINE_VALUEUPDATE_INSWITCH, as we bypass_egress in spineselect_tbl in ingress pipeline
+            for tmpoptype in [PUTREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, GETRES, LOADREQ, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                     if i == 0:
                         vallen_start = 0

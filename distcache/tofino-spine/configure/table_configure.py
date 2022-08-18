@@ -535,7 +535,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 0
 
-            # Table: access_latest_tbl (default: reset_is_latest; size: 5)
+            # Table: access_latest_tbl (default: reset_is_latest; size: 6)
             print "Configuring access_latest_tbl"
             for is_cached in cached_list:
                 matchspec0 = distcachespine_access_latest_tbl_match_spec_t(\
@@ -765,7 +765,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: update_vallen_tbl (default: reset_access_val_mode; 8)
+            # Table: update_vallen_tbl (default: reset_access_val_mode; 10)
             print "Configuring update_vallen_tbl"
             for is_cached in cached_list:
                 for is_latest in latest_list:

@@ -2185,10 +2185,10 @@ uint32_t NetcacheCachePopFinish<key_t>::serialize(char * const data, uint32_t ma
 	begin += tmp_ophdrsize;
 	uint16_t bigendian_serveridx = htons(uint16_t(this->_serveridx));
 	memcpy(begin, (void *)&bigendian_serveridx, sizeof(uint16_t)); // little-endian to big-endian
-	being += sizeof(uint16_t);
+	begin += sizeof(uint16_t);
 	uint16_t bigendian_kvidx = htons(uint16_t(this->_kvidx));
 	memcpy(begin, (void *)&bigendian_kvidx, sizeof(uint16_t)); // little-endian to big-endian
-	being += sizeof(uint16_t);
+	begin += sizeof(uint16_t);
 	return tmp_ophdrsize + sizeof(uint16_t) + sizeof(uint16_t);
 }
 
@@ -2498,14 +2498,17 @@ DistcacheUpdateTrafficload<key_t>::DistcacheUpdateTrafficload(switchidx_t spines
 
 template<class key_t, class val_t>
 DistcacheSpineValueupdateInswitch<key_t, val_t>::DistcacheSpineValueupdateInswitch()
-	: GetResponseLatsetSeq<key_t, val_t>(), _kvidx(0)
+	: GetResponseLatestSeq<key_t, val_t>(), _kvidx(0)
 {}
 
 template<class key_t, class val_t>
-DistcacheSpineValueupdateInswitch<key_t, val_t>::DistcacheSpineValueupdateInswitch(key_t key, val_t val, uint32_t seq, uint16_t kvidx)
+DistcacheSpineValueupdateInswitch<key_t, val_t>::DistcacheSpineValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx)
 	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, 0), _kvidx(kvidx)
 {
 	this->_type = optype_t(packet_type_t::DISTCACHE_SPINE_VALUEUPDATE_INSWITCH);
+	this->_spineswitchidx = spineswitchidx;
+	this->_leafswitchidx = leafswitchidx;
+	this->_stat = stat;
 	INVARIANT(kvidx >= 0);
 }
 
@@ -2550,20 +2553,20 @@ uint32_t DistcacheSpineValueupdateInswitch<key_t, val_t>::size() { // unused
 // DistcacheLeafValueupdateInswitch (value must <= 128B)
 
 template<class key_t, class val_t>
-DistcacheLeafValueupdateInswitch<key_t, val_t>::DistcacheLeafValueupdateInswitch(key_t key, val_t val, uint32_t seq, uint16_t kvidx)
-	: DistcacheSpineValueupdateInswitch<key_t, val_t>(key, val, seq, kvidx)
+DistcacheLeafValueupdateInswitch<key_t, val_t>::DistcacheLeafValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx)
+	: DistcacheSpineValueupdateInswitch<key_t, val_t>(spineswitchidx, leafswitchidx, key, val, seq, stat, kvidx)
 {
 	this->_type = optype_t(packet_type_t::DISTCACHE_LEAF_VALUEUPDATE_INSWITCH);
 }
 
 // DistcacheSpineValueupdateInswitchAck
 
-template<class key_t>
+/*template<class key_t>
 DistcacheSpineValueupdateInswitchAck<key_t>::DistcacheSpineValueupdateInswitchAck(key_t key) 
 	: WarmupRequest<key_t>(key) // DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK);
-}
+}*/
 
 template<class key_t>
 DistcacheSpineValueupdateInswitchAck<key_t>::DistcacheSpineValueupdateInswitchAck(const char * data, uint32_t recv_size) {
@@ -2573,12 +2576,12 @@ DistcacheSpineValueupdateInswitchAck<key_t>::DistcacheSpineValueupdateInswitchAc
 
 // DistcacheLeafValueupdateInswitchAck
 
-template<class key_t>
+/*template<class key_t>
 DistcacheLeafValueupdateInswitchAck<key_t>::DistcacheLeafValueupdateInswitchAck(key_t key) 
 	: WarmupRequest<key_t>(key) // DISTCACHE_Leaf_VALUEUPDATE_INSWITCH_ACK does NOT need Leaf/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
 	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK);
-}
+}*/
 
 template<class key_t>
 DistcacheLeafValueupdateInswitchAck<key_t>::DistcacheLeafValueupdateInswitchAck(const char * data, uint32_t recv_size) {
