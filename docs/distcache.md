@@ -397,11 +397,12 @@
 				- Run `bash remotescripts/stopservertestbed.sh` to stop contoller, server, and reflector if any
 	- Launch clients in end host
 		- Warmup phase: `./warmup_client`
+			* In each switch, run `bash set_all_latest.sh`
 		- Transaction phase: `./remote_client client_physical_idx`
 - Server rotation for static workload
 	- NOTEs
 		+ Enable SERVER_ROTATION in helper.h
-		+ Update bottleneck partition in configs/config.ini.rotation.* and remotescripts/test_server_rotation.sh
+		+ Update bottleneck partition in configs/config.ini.rotation-switch and remotescripts/test_server_rotation.sh
 			* global::bottleneck_serveridx_for_rotation
 			* server0::server_logical_idxes
 			* server1::server_logical_idxes
@@ -416,6 +417,7 @@
 			+ Start switchos and ptf.popserver
 			+ Start clients and servers for loading phase
 			+ Start clients and servers for warmup phase
+				* In each switch, run `bash set_all_latest.sh`
 	- Use config.ini.rotation-transaction
 		+ Run `bash test_server_rotation.sh` directly, which will stop-and-start clients and servers repeatedly with different config files
 			+ NOTE: switch, switchos, ptf.servers, controller, and reflectors are still running

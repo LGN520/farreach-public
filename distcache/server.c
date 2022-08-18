@@ -17,6 +17,8 @@
 #include <string.h>
 #include <map>
 
+#include "helper.h"
+
 #ifdef USE_YCSB
 #include "workloadparser/ycsb_parser.h"
 #elif defined USE_SYNTHETIC
@@ -28,7 +30,6 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "helper.h"
 #include "latency_helper.h"
 #include "socket_helper.h"
 
@@ -255,6 +256,7 @@ void transaction_main() {
 	system(command);
 
 #ifdef SERVER_ROTATION
+	std::vector<int> valid_global_server_logical_idxes;
 	for (int tmp_server_physical_idx = 0; tmp_server_physical_idx < server_physical_num; tmp_server_physical_idx++) {
 		for (int i = 0; i < server_logical_idxes_list[tmp_server_physical_idx].size(); i++) {
 			valid_global_server_logical_idxes.push_back(server_logical_idxes_list[tmp_server_physical_idx][i]);
@@ -279,22 +281,25 @@ void transaction_main() {
 		INVARIANT(iter != NULL);
 
 		netreach_key_t tmpkey;
+		uint16_t tmpkvidx = 0; // NOTE: kvidx of each WARMUPREQ key must follow the order in warmup.out file
 		while (true) {
 			if (!iter->next()) {
 				break;
 			}
 
-			INVARIANT(iter->type() == packet_type_t::PUTREQ);
+			INVARIANT(packet_type_t(iter->type()) == packet_type_t::PUTREQ);
 			tmpkey = iter->key();
 #ifdef USE_HASH
-			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
+			uint32_t tmp_global_server_logical_idx = tmpkey.get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
 #elif defined(USE_RANGE)
-			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_rangepartition_idx(max_server_total_logical_num);
+			uint32_t tmp_global_server_logical_idx = tmpkey.get_rangepartition_idx(max_server_total_logical_num);
 #endif
 
 			if (tmp_global_server_logical_idx == server_logical_idxes_list[server_physical_idx][0]) {
-				server_cached_keyset_list[0].insert(tmpkey);
+				server_cached_keyidxmap_list[0].insert(std::pair<netreach_key_t, uint16_t>(tmpkey, tmpkvidx));
 			}
+
+			tmpkvidx += 1;
 		}
 	}
 #endif

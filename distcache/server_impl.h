@@ -920,7 +920,8 @@ void *run_server_valueupdateserver(void *param) {
 			udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf_forspine, sendsize_forspine, 0, &client_addr, client_addrlen, "server.valueupdateserver");
 			udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf_forleaf, sendsize_forleaf, 0, &client_addr, client_addrlen, "server.valueupdateserver");
 
-			bool with_spineack = false;
+			// NOTE: valueupdate overhead is too large under write-intensive workload, which is caused by NetCache/DistCache design (write-through policy + server-issued value update) -> we skip timeout-and-retry mechanism here
+			/*bool with_spineack = false;
 			bool with_leafack = false;
 			while (true) {
 				bool is_timeout = udprecvfrom(server_valueupdateserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.valueupdateserver");
@@ -952,7 +953,7 @@ void *run_server_valueupdateserver(void *param) {
 						break;
 					}
 				}
-			}
+			}*/
 
 			// remove key from beingupdated keyset atomically
 			server_mutex_for_keyset_list[local_server_logical_idx].lock();

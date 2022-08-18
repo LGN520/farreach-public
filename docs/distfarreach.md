@@ -646,7 +646,7 @@
 - Server rotation for static workload
 	- NOTEs
 		+ Enable SERVER_ROTATION in helper.h
-		+ Update bottleneck partition in configs/config.ini.rotation.* and remotescripts/test_server_rotation.sh
+		+ Update bottleneck partition in configs/config.ini.rotation-switch and remotescripts/test_server_rotation.sh
 			* global::bottleneck_serveridx_for_rotation
 			* server0::server_logical_idxes
 			* server1::server_logical_idxes

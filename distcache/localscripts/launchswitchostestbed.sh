@@ -1,6 +1,6 @@
 DIRNAME="distcache"
 
-set -e
+#set -e
 
 if [[ $# -ne 1 ]]
 then
