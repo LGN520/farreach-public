@@ -195,7 +195,7 @@ action hash_partition_for_distcache_invalidate(eport) {
 /*action hash_partition_for_netcache_valueupdate_inswitch(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }*/
-action hash_partition_for_distcache_spine_valueupdate(eport) {
+action hash_partition_for_distcache_spine_valueupdate_inswitch(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 @pragma stage 4 2048

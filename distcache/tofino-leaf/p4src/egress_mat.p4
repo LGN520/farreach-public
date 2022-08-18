@@ -70,7 +70,7 @@ table process_scanreq_split_tbl {
 }
 #endif
 
-// Stage 1
+// Stage 1 / 3
 
 action set_server_sid_udpport_and_save_client_info(server_sid) {
 	modify_field(clone_hdr.server_sid, server_sid);
@@ -93,7 +93,11 @@ counter prepare_for_cachepop_and_save_client_info_counter {
 }
 #endif
 
+#ifdef RANGE_SUPPORT
 @pragma stage 1
+#else
+@pragma stage 3
+#endif
 table prepare_for_cachepop_and_save_client_info_tbl {
 	reads {
 		op_hdr.optype: exact;

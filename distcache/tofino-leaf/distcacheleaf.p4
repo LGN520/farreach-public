@@ -290,9 +290,11 @@ control egress {
 #endif
 
 	// Stage 1
+#ifdef RANGE_SUPPORT
 	// (1) reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/udpport for GETREQ_INSWITCH
 	// (2) save srcip/srcmac/udp.srcport (client ip/mac/udpport) for cache hit response of GETREQ_INSWITCH
-	apply(prepare_for_cachepop_and_save_client_info_tbl); 
+	apply(prepare_for_cachepop_and_save_client_info_tbl); // place in stage 1 for range
+#endif
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
@@ -305,6 +307,11 @@ control egress {
 	apply(access_savedseq_tbl);
 
 	// Stage 3
+#ifndef RANGE_SUPPORT
+	// (1) reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/udpport for GETREQ_INSWITCH
+	// (2) save srcip/srcmac/udp.srcport (client ip/mac/udpport) for cache hit response of GETREQ_INSWITCH
+	apply(prepare_for_cachepop_and_save_client_info_tbl); // place in stage 3 for hash
+#endif
 	apply(update_vallen_tbl);
 	apply(access_bf1_tbl);
 	apply(access_bf2_tbl);
