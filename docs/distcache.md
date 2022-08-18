@@ -412,12 +412,13 @@
 		+ Start switchos and ptf.servers, and configure data plane by `bash localscripts/launchswitchostestbed`
 		+ Start servers in client 0 (dl11) by `bash remotescripts/launchservertestbed`
 		+ Start clients to perform loading phase and warmup phase
+			+ In each switch, run `bash set_all_latest.sh`
+			+ Sync warmup.out to servers
 		+ Deprecated manual way
 			+ Start switch and configure data plane
 			+ Start switchos and ptf.popserver
 			+ Start clients and servers for loading phase
 			+ Start clients and servers for warmup phase
-				* In each switch, run `bash set_all_latest.sh`
 	- Use config.ini.rotation-transaction
 		+ Run `bash test_server_rotation.sh` directly, which will stop-and-start clients and servers repeatedly with different config files
 			+ NOTE: switch, switchos, ptf.servers, controller, and reflectors are still running

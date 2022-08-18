@@ -409,6 +409,7 @@
 		+ Start switchos and ptf.servers, and configure data plane by `bash localscripts/launchswitchostestbed`
 		+ Start servers in client 0 (dl11) by `bash remotescripts/launchservertestbed`
 		+ Start clients to perform loading phase and warmup phase
+			+ Sync warmup.out to servers
 		+ Deprecated manual way
 			+ Start switch and configure data plane
 			+ Start switchos and ptf.pop/snapshotserver
