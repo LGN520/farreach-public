@@ -10,7 +10,10 @@ DynamicRulemap::DynamicRulemap(int periodnum, const char * ruleprefix) {
 		sprintf(tmp_rulefile, "%s%d", ruleprefix, i); // 0, 1, 2, ..., 5
 
 		FILE *tmp_rulefd = fopen(tmp_rulefile, "r");
-		INVARIANT(tmp_rulefd != NULL);
+		if (tmp_rulefd == NULL) {
+			printf("No such dynamic rulemap file: %s\n", tmp_rulefile);
+			exit(-1);
+		}
 		
 		// format: originalkey + blank space + newkey
 		char tmp_ruleline[MAX_BUFSIZE];
