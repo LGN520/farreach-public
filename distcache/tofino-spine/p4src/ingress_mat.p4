@@ -167,6 +167,9 @@ action range_partition_for_distcache_invalidate(eport) {
 /*action range_partition_for_distcache_spine_valueupdate_inswitch(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }*/
+action range_partition_for_distcache_valueupdate_inswitch(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 4 2048
 @pragma stage 5
 table range_partition_tbl {
@@ -179,6 +182,7 @@ table range_partition_tbl {
 		range_partition_for_distcache_invalidate;
 		//range_partition_for_netcache_valueupdate;
 		//range_partition_for_distcache_spine_valueupdate_inswitch;
+		range_partition_for_distcache_valueupdate_inswitch;
 		nop;
 	}
 	default_action: nop();
@@ -192,12 +196,15 @@ action hash_partition(eport, leafswitchidx) {
 action hash_partition_for_distcache_invalidate(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-/*action hash_partition_for_netcache_valueupdate_inswitch(eport) {
+/*action hash_partition_for_netcache_valueupdate(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }*/
 /*action hash_partition_for_distcache_spine_valueupdate_inswitch(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }*/
+action hash_partition_for_distcache_valueupdate_inswitch(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 4 2048
 @pragma stage 5
 table hash_partition_tbl {
@@ -210,6 +217,7 @@ table hash_partition_tbl {
 		hash_partition_for_distcache_invalidate;
 		//hash_partition_for_netcache_valueupdate;
 		//hash_partition_for_distcache_spine_valueupdate_inswitch;
+		hash_partition_for_distcache_valueupdate_inswitch;
 		nop;
 	}
 	default_action: nop();
@@ -390,6 +398,17 @@ action update_distcache_invalidate_to_distcache_invalidate_inswitch() {
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }*/
 
+action update_distcache_valueupdate_inswitch_to_distcache_valueupdate_inswitch_origin() {
+	modify_field(op_hdr.optype, DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN);
+	modify_field(shadowtype_hdr.shadowtype, DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN);
+
+	// NOTE: range/hash_partition_tbl sets eport for DISTCACHE_VALUEUPDATE_INSWITCH to forward it to egress pipeline of server-leaf
+	//modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	// swap to set dstport as corresponding server.valueupdateserver port to convert DISTCACHE_VALUEUPDATE_INSWITCH as DISTCACHE_VALUEUPDATE_INSWITCH_ACK
+	swap(udp_hdr.srcPort, udp_hdr.dstPort);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ig_port_forward_counter {
@@ -415,6 +434,7 @@ table ig_port_forward_tbl {
 		update_distcache_invalidate_to_distcache_invalidate_inswitch;
 		//update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		//swap_udpport_for_distcache_spine_valueupdate_inswitch;
+		update_distcache_valueupdate_inswitch_to_distcache_valueupdate_inswitch_origin;
 		nop;
 	}
 	default_action: nop();

@@ -396,6 +396,20 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 	// NOTE: egress_port has already been set in hash/range_partition_tbl at ingress pipeline
 }*/
 
+action update_distcache_valueupdate_inswitch_origin_to_distcache_valueupdate_inswitch_ack() {
+	modify_field(op_hdr.optype, DISTCACHE_VALUEUPDATE_INSWITCH_ACK);
+	modify_field(shadowtype_hdr.shadowtype, DISTCACHE_VALUEUPDATE_INSWITCH_ACK);
+
+	// NOTE: hold shadowtype_hdr and inswitch_hdr for debugging
+
+	//remove_header(shadowtype_hdr);
+	remove_header(seq_hdr);
+	//remove_header(inswitch_hdr);
+	remove_header(stat_hdr);
+
+	// NOTE: egress_port has already been set in hash/range_partition_tbl at ingress pipeline
+}
+
 action update_distcache_invalidate_inswitch_to_distcache_invalidate_ack() {
 	modify_field(op_hdr.optype, DISTCACHE_INVALIDATE_ACK);
 
@@ -454,6 +468,7 @@ table eg_port_forward_tbl {
 		//update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack;
 		//update_distcache_invalidate_inswitch_to_distcache_invalidate_ack;
 		//update_distcache_spine_valueupdate_inswitch_to_distcache_spine_valueupdate_inswitch_ack;
+		update_distcache_valueupdate_inswitch_origin_to_distcache_valueupdate_inswitch_ack;
 		nop;
 	}
 	default_action: nop();
@@ -514,11 +529,18 @@ table update_ipmac_srcport_tbl {
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
 /*
-// CACHE_POP_INSWITCH_ACK, WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP), NETCACHE_VALUEUPDATE_ACK, DISTCACHE_SPINE_VALUEUPDATE_INSWITCHACK
+// CACHE_POP_INSWITCH_ACK, WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP), NETCACHE_VALUEUPDATE_ACK, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK
 action update_onlyop_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 22(ophdr)
 	modify_field(udp_hdr.hdrlen, 30);
 	modify_field(ipv4_hdr.totalLen, 50);
+}
+
+// DISTCACHE_VALUEUPDATE_INSWITCH_ACK
+action update_op_inswitch_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 2(shadowtype) + 28(inswitchhdr)
+	modify_field(udp_hdr.hdrlen, 60);
+	modify_field(ipv4_hdr.totalLen, 80);
 }
 
 // GETRES, DISTCACHE_GETRES_SPINE

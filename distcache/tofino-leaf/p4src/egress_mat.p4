@@ -560,6 +560,13 @@ action update_onlyop_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 50);
 }
 
+// DISTCACHE_VALUEUPDATE_INSWITCH_ACK
+action update_op_inswitch_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 22(ophdr) + 2(shadowtype) + 28(inswitchhdr)
+	modify_field(udp_hdr.hdrlen, 60);
+	modify_field(ipv4_hdr.totalLen, 80);
+}
+
 // GETRES, DISTCACHE_GETRES_SPINE
 action update_val_stat_pktlen(aligned_vallen) {
 	// 20[iphdr] + 8(udphdr) + 22(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(stat) + 8(switchload)
@@ -1047,6 +1054,10 @@ action drop_distcache_invalidate_inswitch() {
 	drop();
 }*/
 
+action drop_distcache_valueupdate_inswitch_origin() {
+	drop();
+}
+
 @pragma stage 11
 table drop_tbl {
 	reads {
@@ -1055,6 +1066,7 @@ table drop_tbl {
 	actions {
 		drop_distcache_invalidate_inswitch;
 		//drop_netcache_valueupdate_inswitch;
+		drop_distcache_valueupdate_inswitch_origin;
 		nop;
 	}
 	default_action: nop();

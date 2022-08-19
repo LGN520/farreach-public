@@ -259,6 +259,11 @@ action spineselect_for_getreq_toleaf(eport, spineswitchidx) {
 	bypass_egress(); // directly from ingress to spine
 }*/
 
+action spineselect_for_distcache_valueupdate_inswitch(spineswitchidx) {
+	// NOTE: eport will be set by range/hash_partition_tbl for DISTCACHE_VALUEUPDATE_INSWITCH
+	modify_field(op_hdr.spineswitchidx, spineswitchidx);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter spineselect_counter {
@@ -281,6 +286,7 @@ table spineselect_tbl {
 		//spineselect_for_netcache_valueupdate; // not necessary for server-leaf
 		spineselect_for_getreq_toleaf;
 		//spineselect_for_distcache_spine_valueupdate_inswitch;
+		spineselect_for_distcache_valueupdate_inswitch; // not necessary for server-leaf
 		nop;
 	}
 	default_action: nop();
@@ -395,6 +401,12 @@ action range_partition_for_netcache_valueupdate_ack(eport) {
 action range_partition_for_distcache_spine_valueupdate_inswitch_ack(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }*/
+action range_partition_for_distcache_valueupdate_inswitch(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+action range_partition_for_distcache_valueupdate_inswitch_ack(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 6 2048
 @pragma stage 7
 table range_partition_tbl {
@@ -413,6 +425,8 @@ table range_partition_tbl {
 		//range_partition_for_netcache_valueupdate_ack;
 		//range_partition_for_distcache_leaf_valueupdate_inswitch;
 		//range_partition_for_distcache_spine_valueupdate_inswitch_ack;
+		range_partition_for_distcache_valueupdate_inswitch;
+		range_partition_for_distcache_valueupdate_inswitch_ack;
 		nop;
 	}
 	//default_action: reset_is_wrong_pipeline();
@@ -447,6 +461,12 @@ action hash_partition_for_netcache_valueupdate_ack(eport) {
 action hash_partition_for_distcache_spine_valueupdate_inswitch_ack(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }*/
+action hash_partition_for_distcache_valueupdate_inswitch(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+action hash_partition_for_distcache_valueupdate_inswitch_ack(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 6 2048
 @pragma stage 7
 table hash_partition_tbl {
@@ -464,6 +484,8 @@ table hash_partition_tbl {
 		//hash_partition_for_netcache_valueupdate_ack;
 		//hash_partition_for_distcache_leaf_valueupdate_inswitch;
 		//hash_partition_for_distcache_spine_valueupdate_inswitch_ack;
+		hash_partition_for_distcache_valueupdate_inswitch;
+		hash_partition_for_distcache_valueupdate_inswitch_ack;
 		nop;
 	}
 	//default_action: reset_is_wrong_pipeline();
@@ -552,6 +574,12 @@ action forward_distcache_invalidate_to_server_and_clone_to_spine(client_sid) {
 	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding spine switch
 }*/
 
+action forward_distcache_valueupdate_inswitch_to_server_and_clone_to_spine(client_sid) {
+	// NOTE: eport to server has already been set by partition_tbl for DISTCACHE_VALUEUPDATE_INSWITCH
+	//modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
+	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding spine switch
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ipv4_forward_counter {
@@ -570,6 +598,7 @@ table ipv4_forward_tbl {
 		forward_normal_response;
 		forward_distcache_invalidate_to_server_and_clone_to_spine;
 		//forward_netcache_valueupdate_to_server_and_clone_to_spine;
+		forward_distcache_valueupdate_inswitch_to_server_and_clone_to_spine;
 		nop;
 	}
 	default_action: nop();
@@ -691,11 +720,18 @@ action update_distcache_invalidate_to_distcache_invalidate_inswitch() {
 	//swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }*/
 
-
 /*action swap_udpport_for_distcache_leaf_valueupdate_inswitch() {
 	// swap to set dstport as corresponding server.valueupdateserver port
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }*/
+
+action update_distcache_valueupdate_inswitch_to_distcache_valueupdate_inswitch_origin() {
+	modify_field(op_hdr.optype, DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN);
+	modify_field(shadowtype_hdr.shadowtype, DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN);
+
+	// NOTE: range/hash_partition_tbl sets eport for DISTCACHE_VALUEUPDATE_INSWITCH to forward it to egress pipeline of storage server; ipv4_forward_tbl clones NETCACHE_VALUEUPDATE to spine switch
+	//modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+}
 
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
@@ -726,6 +762,7 @@ table ig_port_forward_tbl {
 		update_distcache_invalidate_to_distcache_invalidate_inswitch;
 		//update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		//swap_udpport_for_distcache_leaf_valueupdate_inswitch;
+		update_distcache_valueupdate_inswitch_to_distcache_valueupdate_inswitch_origin;
 		nop;
 	}
 	default_action: nop();
