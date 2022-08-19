@@ -466,7 +466,7 @@ table eg_port_forward_tbl {
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loadfreq_inswitch_ack;
 		//update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack;
-		//update_distcache_invalidate_inswitch_to_distcache_invalidate_ack;
+		update_distcache_invalidate_inswitch_to_distcache_invalidate_ack;
 		//update_distcache_spine_valueupdate_inswitch_to_distcache_spine_valueupdate_inswitch_ack;
 		update_distcache_valueupdate_inswitch_origin_to_distcache_valueupdate_inswitch_ack;
 		nop;

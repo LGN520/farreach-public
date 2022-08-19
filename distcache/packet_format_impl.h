@@ -2619,6 +2619,11 @@ void DistcacheValueupdateInswitchAck<key_t>::deserialize(const char * data, uint
 	begin += sizeof(uint16_t); // inswitch_hdr.idx
 }
 
+template<class key_t>
+uint32_t DistcacheValueupdateInswitchAck<key_t>::size() {
+	return Packet<key_t>::get_ophdrsize() + INSWITCH_PREV_BYTES + sizeof(uint16_t);
+}
+
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
 	INVARIANT(maxsize >= sizeof(optype_t));

@@ -137,11 +137,11 @@
 
 #else
 
-#define KV_BUCKET_COUNT 1
-#define CM_BUCKET_COUNT 1
-#define SEQ_BUCKET_COUNT 1
+#define KV_BUCKET_COUNT 1024
+#define CM_BUCKET_COUNT 1024
+#define SEQ_BUCKET_COUNT 1024
 // 1 * 1b counter (update common.py accordingly)
-#define BF_BUCKET_COUNT 1
+#define BF_BUCKET_COUNT 1024
 
 #endif
 

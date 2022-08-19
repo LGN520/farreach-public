@@ -6,6 +6,8 @@ echo "clear tmp files in remote servers"
 ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; rm tmp_server.out"
 ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; rm tmp_server.out"
 
+bash remotescripts/stopservertestbed.sh
+
 echo "launch servers"
 ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp_server.out 2>&1 &"
 ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >tmp_server.out 2>&1 &"

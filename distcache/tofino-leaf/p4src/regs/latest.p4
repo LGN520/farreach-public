@@ -47,6 +47,14 @@ action reset_is_latest() {
 	modify_field(meta.is_latest, 0);
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter access_latest_counter {
+	type : packets_and_bytes;
+	direct: access_latest_tbl;
+}
+#endif
+
 @pragma stage 0
 table access_latest_tbl {
 	reads {
