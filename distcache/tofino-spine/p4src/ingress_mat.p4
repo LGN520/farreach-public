@@ -164,9 +164,9 @@ action range_partition_for_distcache_invalidate(eport) {
 /*action range_partition_for_netcache_valueupdate(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }*/
-action range_partition_for_distcache_spine_valueupdate_inswitch(eport) {
+/*action range_partition_for_distcache_spine_valueupdate_inswitch(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
+}*/
 @pragma stage 4 2048
 @pragma stage 5
 table range_partition_tbl {
@@ -178,7 +178,7 @@ table range_partition_tbl {
 		range_partition;
 		range_partition_for_distcache_invalidate;
 		//range_partition_for_netcache_valueupdate;
-		range_partition_for_distcache_spine_valueupdate_inswitch;
+		//range_partition_for_distcache_spine_valueupdate_inswitch;
 		nop;
 	}
 	default_action: nop();
@@ -195,9 +195,9 @@ action hash_partition_for_distcache_invalidate(eport) {
 /*action hash_partition_for_netcache_valueupdate_inswitch(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }*/
-action hash_partition_for_distcache_spine_valueupdate_inswitch(eport) {
+/*action hash_partition_for_distcache_spine_valueupdate_inswitch(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
+}*/
 @pragma stage 4 2048
 @pragma stage 5
 table hash_partition_tbl {
@@ -209,7 +209,7 @@ table hash_partition_tbl {
 		hash_partition;
 		hash_partition_for_distcache_invalidate;
 		//hash_partition_for_netcache_valueupdate;
-		hash_partition_for_distcache_spine_valueupdate_inswitch;
+		//hash_partition_for_distcache_spine_valueupdate_inswitch;
 		nop;
 	}
 	default_action: nop();
@@ -385,10 +385,10 @@ action update_distcache_invalidate_to_distcache_invalidate_inswitch() {
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }*/
 
-action swap_udpport_for_distcache_spine_valueupdate_inswitch() {
+/*action swap_udpport_for_distcache_spine_valueupdate_inswitch() {
 	// swap to set dstport as corresponding server.valueupdateserver port
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
-}
+}*/
 
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
@@ -414,7 +414,7 @@ table ig_port_forward_tbl {
 		update_loadreq_to_loadreq_spine;
 		update_distcache_invalidate_to_distcache_invalidate_inswitch;
 		//update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
-		swap_udpport_for_distcache_spine_valueupdate_inswitch;
+		//swap_udpport_for_distcache_spine_valueupdate_inswitch;
 		nop;
 	}
 	default_action: nop();

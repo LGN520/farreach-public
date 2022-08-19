@@ -2589,6 +2589,36 @@ DistcacheLeafValueupdateInswitchAck<key_t>::DistcacheLeafValueupdateInswitchAck(
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK);
 }
 
+// DistcacheValueupdateInswitch (value must <= 128B)
+
+template<class key_t, class val_t>
+DistcacheValueupdateInswitch<key_t, val_t>::DistcacheValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx)
+	: DistcacheSpineValueupdateInswitch<key_t, val_t>(spineswitchidx, leafswitchidx, key, val, seq, stat, kvidx)
+{
+	this->_type = optype_t(packet_type_t::DISTCACHE_VALUEUPDATE_INSWITCH);
+}
+
+// DistcacheValueupdateInswitchAck
+
+template<class key_t>
+DistcacheValueupdateInswitchAck<key_t>::DistcacheValueupdateInswitchAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::DISTCACHE_VALUEUPDATE_INSWITCH_ACK);
+}
+
+template<class key_t>
+void DistcacheValueupdateInswitchAck<key_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
+	const char *begin = data;
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+	begin += tmp_ophdrsize;
+	begin += sizeof(optype_t); // shadowtype
+	// inswitch_hdr
+	begin += INSWITCH_PREV_BYTES;
+	begin += sizeof(uint16_t); // inswitch_hdr.idx
+}
+
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
 	INVARIANT(maxsize >= sizeof(optype_t));

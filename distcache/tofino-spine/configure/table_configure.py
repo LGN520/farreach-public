@@ -326,8 +326,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             if RANGE_SUPPORT == False:
                 # Table: hash_for_partition_tbl (default: nop; size: 10)
                 print "Configuring hash_for_partition_tbl"
-                #, NETCACHE_VALUEUPDATE
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH]:
+                #, NETCACHE_VALUEUPDATE, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE]:
                     matchspec0 = distcachespine_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype))
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
@@ -339,8 +339,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # Table: range_partition_tbl (default: nop; size <= 11 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
-                #, NETCACHE_VALUEUPDATE
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH]:
+                #, NETCACHE_VALUEUPDATE, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE]:
                     key_start = 0 # [0, 2^16-1]
                     for i in range(leafswitch_total_logical_num):
                         global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
@@ -363,10 +363,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         #    actnspec0 = distcachespine_range_partition_for_netcache_valueupdate_action_spec_t(eport)
                         #    self.client.range_partition_tbl_table_add_with_range_partition_for_netcache_valueupdate(\
                         #            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                        elif tmpoptype == DISTCACHE_SPINE_VALUEUPDATE_INSWITCH:
-                            actnspec0 = distcachespine_range_partition_for_distcache_spine_valueupdate_inswitch_action_spec_t(eport)
-                            self.client.range_partition_tbl_table_add_with_range_partition_for_distcache_spine_valueupdate_inswitch(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        #elif tmpoptype == DISTCACHE_SPINE_VALUEUPDATE_INSWITCH:
+                        #    actnspec0 = distcachespine_range_partition_for_distcache_spine_valueupdate_inswitch_action_spec_t(eport)
+                        #    self.client.range_partition_tbl_table_add_with_range_partition_for_distcache_spine_valueupdate_inswitch(\
+                        #            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         else:
                             actnspec0 = distcachespine_range_partition_action_spec_t(eport, global_leafswitch_logical_idx)
                             self.client.range_partition_tbl_table_add_with_range_partition(\
@@ -376,8 +376,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # Table: hash_partition_tbl (default: nop; size <= 10 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_leafswitch = switch_partition_count / leafswitch_total_logical_num
-                #, NETCACHE_VALUEUPDATE
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH]:
+                #, NETCACHE_VALUEUPDATE, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE]:
                     hash_start = 0 # [0, partition_count-1]
                     for i in range(leafswitch_total_logical_num):
                         global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
@@ -400,10 +400,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         #    actnspec0 = distcachespine_hash_partition_for_netcache_valueupdate_action_spec_t(eport)
                         #    self.client.hash_partition_tbl_table_add_with_hash_partition_for_netcache_valueupdate(\
                         #            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                        elif tmpoptype == DISTCACHE_SPINE_VALUEUPDATE_INSWITCH:
-                            actnspec0 = distcachespine_hash_partition_for_distcache_spine_valueupdate_inswitch_action_spec_t(eport)
-                            self.client.hash_partition_tbl_table_add_with_hash_partition_for_distcache_spine_valueupdate_inswitch(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (hash may be overlapping)
+                        #elif tmpoptype == DISTCACHE_SPINE_VALUEUPDATE_INSWITCH:
+                        #    actnspec0 = distcachespine_hash_partition_for_distcache_spine_valueupdate_inswitch_action_spec_t(eport)
+                        #    self.client.hash_partition_tbl_table_add_with_hash_partition_for_distcache_spine_valueupdate_inswitch(\
+                        #            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (hash may be overlapping)
                         else:
                             actnspec0 = distcachespine_hash_partition_action_spec_t(eport, global_leafswitch_logical_idx)
                             self.client.hash_partition_tbl_table_add_with_hash_partition(\
@@ -518,10 +518,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        op_hdr_optype = NETCACHE_VALUEUPDATE)
             #self.client.ig_port_forward_tbl_table_add_with_update_netcache_valueupdate_to_netcache_valueupdate_inswitch(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distcachespine_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH)
-            self.client.ig_port_forward_tbl_table_add_with_swap_udpport_for_distcache_spine_valueupdate_inswitch(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec0 = distcachespine_ig_port_forward_tbl_match_spec_t(\
+            #        op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH)
+            #self.client.ig_port_forward_tbl_table_add_with_swap_udpport_for_distcache_spine_valueupdate_inswitch(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcachespine_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = LOADREQ)
             self.client.ig_port_forward_tbl_table_add_with_update_loadreq_to_loadreq_spine(\
@@ -565,11 +565,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 #if is_cached == 1: # cannot set latest = 1 even if is_cached = 1 -> Tofino bug?
                 #    self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
                 #            self.sess_hdl, self.dev_tgt, matchspec0)
-                matchspec0 = distcachespine_access_latest_tbl_match_spec_t(\
-                        op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
-                        inswitch_hdr_is_cached = is_cached)
-                self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+                #matchspec0 = distcachespine_access_latest_tbl_match_spec_t(\
+                #        op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
+                #        inswitch_hdr_is_cached = is_cached)
+                #self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
+                #        self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distcachespine_access_latest_tbl_match_spec_t(\
                         op_hdr_optype = DISTCACHE_INVALIDATE_INSWITCH,
                         inswitch_hdr_is_cached = is_cached)
@@ -727,17 +727,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         #    elif is_stat == 0:
                         #        self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
                         #                self.sess_hdl, self.dev_tgt, matchspec0)
-                        matchspec0 = distcachespine_access_deleted_tbl_match_spec_t(\
-                                op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
-                                inswitch_hdr_is_cached = is_cached,
-                                meta_is_latest = is_latest,
-                                stat_hdr_stat = is_stat)
-                        if is_stat == 1:
-                            self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                        elif is_stat == 0:
-                            self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                        #matchspec0 = distcachespine_access_deleted_tbl_match_spec_t(\
+                        #        op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
+                        #        inswitch_hdr_is_cached = is_cached,
+                        #        meta_is_latest = is_latest,
+                        #        stat_hdr_stat = is_stat)
+                        #if is_stat == 1:
+                        #    self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
+                        #            self.sess_hdl, self.dev_tgt, matchspec0)
+                        #elif is_stat == 0:
+                        #    self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
+                        #            self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_savedseq_tbl (default: nop; size: 6)
             print "Configuring access_savedseq_tbl"
@@ -756,12 +756,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     #if is_cached == 1:
                     #    self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
                     #            self.sess_hdl, self.dev_tgt, matchspec0)
-                    matchspec0 = distcachespine_access_savedseq_tbl_match_spec_t(\
-                            op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_is_latest = is_latest)
-                    self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+                    #matchspec0 = distcachespine_access_savedseq_tbl_match_spec_t(\
+                    #        op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
+                    #        inswitch_hdr_is_cached = is_cached,
+                    #        meta_is_latest = is_latest)
+                    #self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
+                    #        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 3
 
@@ -789,12 +789,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     #if is_cached == 1:
                     #    self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
                     #            self.sess_hdl, self.dev_tgt, matchspec0)
-                    matchspec0 = distcachespine_update_vallen_tbl_match_spec_t(\
-                            op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_is_latest = is_latest)
-                    self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+                    #matchspec0 = distcachespine_update_vallen_tbl_match_spec_t(\
+                    #        op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
+                    #        inswitch_hdr_is_cached = is_cached,
+                    #        meta_is_latest = is_latest)
+                    #self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
+                    #        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 4
 
@@ -1018,8 +1018,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             op_switchload_clone_iplen = 78
             op_inswitch_clone_udplen = 78
             op_inswitch_clone_iplen = 98
-            #, NETCACHE_VALUEUPDATE_ACK
-            for tmpoptype in [CACHE_POP_INSWITCH_ACK, WARMUPACK, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK]:
+            #, NETCACHE_VALUEUPDATE_ACK, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK
+            for tmpoptype in [CACHE_POP_INSWITCH_ACK, WARMUPACK]:
                 matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
                         vallen_hdr_vallen_start=0,
@@ -1427,21 +1427,21 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 #                                        self.client.eg_port_forward_tbl_table_add_with_update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack(\
 #                                                self.sess_hdl, self.dev_tgt, matchspec0)
                                     # is_report=0, tmp_client_sid=0, is_lastclone_for_pktloss=0, tmp_server_sid=0 for NETCACHE_VALUEUPDATE_INSWITCH
-                                    if is_report == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0:
-                                        # size: 8
-                                        matchspec0 = distcachespine_eg_port_forward_tbl_match_spec_t(\
-                                            op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
-                                            inswitch_hdr_is_cached = is_cached,
-                                            meta_is_report = is_report,
-                                            meta_is_latest = is_latest,
-                                            meta_is_deleted = is_deleted,
-                                            #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                            inswitch_hdr_client_sid = tmp_client_sid,
-                                            meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                            clone_hdr_server_sid = tmp_server_sid)
-                                        # Update DISTCACHE_SPINE_VALUEUPDATE_INSWITCH as DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK to server
-                                        self.client.eg_port_forward_tbl_table_add_with_update_distcache_spine_valueupdate_inswitch_to_distcache_spine_valueupdate_inswitch_ack(\
-                                                self.sess_hdl, self.dev_tgt, matchspec0)
+#                                    if is_report == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0:
+#                                        # size: 8
+#                                        matchspec0 = distcachespine_eg_port_forward_tbl_match_spec_t(\
+#                                            op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
+#                                            inswitch_hdr_is_cached = is_cached,
+#                                            meta_is_report = is_report,
+#                                            meta_is_latest = is_latest,
+#                                            meta_is_deleted = is_deleted,
+#                                            #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+#                                            inswitch_hdr_client_sid = tmp_client_sid,
+#                                            meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+#                                            clone_hdr_server_sid = tmp_server_sid)
+#                                        # Update DISTCACHE_SPINE_VALUEUPDATE_INSWITCH as DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK to server
+#                                        self.client.eg_port_forward_tbl_table_add_with_update_distcache_spine_valueupdate_inswitch_to_distcache_spine_valueupdate_inswitch_ack(\
+#                                                self.sess_hdl, self.dev_tgt, matchspec0)
                                     # is_report=0, is_deleted=0, tmp_client_sid=0, is_lastclone_for_pktloss=0, tmp_server_sid=0 for DISTCACHE_INVALIDATE_INSWITCH
                                     if is_report == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0:
                                         # size: 4
@@ -1750,20 +1750,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             self.client.eg_port_forward_tbl_table_add_with_update_distcache_invalidate_inswitch_to_distcache_invalidate_ack(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                         # is_report=0, tmp_client_sid=0, is_lastclone_for_pktloss=0, tmp_server_sid=0 for NETCACHE_VALUEUPDATE_INSWITCH
-                                        if is_report == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0 and is_last_scansplit == 0:
-                                            # size: 8
-                                            matchspec0 = distcachespine_eg_port_forward_tbl_match_spec_t(\
-                                                op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
-                                                inswitch_hdr_is_cached = is_cached,
-                                                meta_is_report = is_report,
-                                                meta_is_latest = is_latest,
-                                                meta_is_deleted = is_deleted,
-                                                #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                inswitch_hdr_client_sid = tmp_client_sid,
-                                                meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                meta_is_last_scansplit = is_last_scansplit,
-                                                clone_hdr_server_sid = tmp_server_sid)
-                                            # Update DISTCACHE_SPINE_VALUEUPDATE_INSWITCH as DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK to server
-                                            self.client.eg_port_forward_tbl_table_add_with_update_distcache_spine_valueupdate_inswitch_to_distcache_spine_valueupdate_inswitch_ack(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+#                                        if is_report == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0 and is_last_scansplit == 0:
+#                                            # size: 8
+#                                            matchspec0 = distcachespine_eg_port_forward_tbl_match_spec_t(\
+#                                                op_hdr_optype = DISTCACHE_SPINE_VALUEUPDATE_INSWITCH,
+#                                                inswitch_hdr_is_cached = is_cached,
+#                                                meta_is_report = is_report,
+#                                                meta_is_latest = is_latest,
+#                                                meta_is_deleted = is_deleted,
+#                                                #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+#                                                inswitch_hdr_client_sid = tmp_client_sid,
+#                                                meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+#                                                meta_is_last_scansplit = is_last_scansplit,
+#                                                clone_hdr_server_sid = tmp_server_sid)
+#                                            # Update DISTCACHE_SPINE_VALUEUPDATE_INSWITCH as DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK to server
+#                                            self.client.eg_port_forward_tbl_table_add_with_update_distcache_spine_valueupdate_inswitch_to_distcache_spine_valueupdate_inswitch_ack(\
+#                                                    self.sess_hdl, self.dev_tgt, matchspec0)
 

@@ -92,6 +92,8 @@ typedef DistcacheSpineValueupdateInswitch<netreach_key_t, val_t> distcache_spine
 typedef DistcacheLeafValueupdateInswitch<netreach_key_t, val_t> distcache_leaf_valueupdate_inswitch_t;
 typedef DistcacheSpineValueupdateInswitchAck<netreach_key_t> distcache_spine_valueupdate_inswitch_ack_t;
 typedef DistcacheLeafValueupdateInswitchAck<netreach_key_t> distcache_leaf_valueupdate_inswitch_ack_t;
+typedef DistcacheValueupdateInswitch<netreach_key_t, val_t> distcache_valueupdate_inswitch_t;
+typedef DistcacheValueupdateInswitchAck<netreach_key_t> distcache_valueupdate_inswitch_ack_t;
 
 /*
  * Constants

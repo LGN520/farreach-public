@@ -417,7 +417,7 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 //action forward_cache_evict_loadfreq_inswitch_ack() {
 //}
 
-action update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_inswitch_ack() {
+/*action update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_inswitch_ack() {
 	modify_field(op_hdr.optype, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK);
 
 	remove_header(shadowtype_hdr);
@@ -426,7 +426,7 @@ action update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_
 	remove_header(stat_hdr);
 
 	// NOTE: egress_port has already been set in hash/range_partition_tbl at ingress pipeline
-}
+}*/
 
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
@@ -475,7 +475,7 @@ table eg_port_forward_tbl {
 #endif
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loadfreq_inswitch_ack;
-		update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_inswitch_ack;
+		//update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_inswitch_ack;
 		nop;
 	}
 	default_action: nop();

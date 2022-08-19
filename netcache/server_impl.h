@@ -862,10 +862,12 @@ void *run_server_valueupdateserver(void *param) {
 			udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &client_addr, client_addrlen, "server.valueupdateserver");
 
 			// NOTE: valueupdate overhead is too large under write-intensive workload, which is caused by NetCache/DistCache design (write-through policy + server-issued value update) -> we skip timeout-and-retry mechanism here
-			/*while (true) {
+			while (true) {
 				bool is_timeout = udprecvfrom(server_valueupdateserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.valueupdateserver");
 				if (is_timeout) {
 					udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &client_addr, client_addrlen, "server.valueupdateserver");
+					printf("Re-send NETCACHE_VALUEUPDATE\n");
+					fflush(stdout);
 					continue;
 				}
 				else {
@@ -877,7 +879,7 @@ void *run_server_valueupdateserver(void *param) {
 						break;
 					}
 				}
-			}*/
+			}
 
 			// remove key from beingupdated keyset atomically
 			server_mutex_for_keyset_list[local_server_logical_idx].lock();
