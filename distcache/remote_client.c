@@ -975,7 +975,7 @@ void *run_client_worker(void *param) {
 			}
 		}
 		tmptype = preload_types[preload_idx];
-		//tmptype = optype_t(packet_type_t::GETREQ); // TMPDEBUG: use read-only workload
+		tmptype = optype_t(packet_type_t::GETREQ); // TMPDEBUG: use read-only workload
 		tmpkey = preload_keys[preload_idx];
 		//tmpval = preload_vals[preload_idx];
 		preload_idx += 1;

@@ -507,7 +507,7 @@ inline void parse_ini(const char* config_file) {
 	INVARIANT(leafswitch_logical_idxes.size() == leafswitch_total_logical_num);
 
 	// validate spine/leaf switchnum and servernum
-	INVARIANT(spineswitch_total_logical_num <= leafswitch_total_logical_num);
+	//INVARIANT(spineswitch_total_logical_num <= leafswitch_total_logical_num);
 	INVARIANT(leafswitch_total_logical_num <= max_server_total_logical_num);
 	INVARIANT(max_server_total_logical_num % leafswitch_total_logical_num == 0);
 

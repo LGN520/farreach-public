@@ -650,6 +650,9 @@ void *run_switchos_popworker(void *param) {
 					exit(-1);
 				}
 
+				printf("switchos_evictidx: %d, evictkey %x -> newkey %x\n", switchos_evictidx, cur_evictkey.keyhihi, tmp_cache_pop_ptr->key().keyhihi);
+				fflush(stdout);
+
 				//CUR_TIME(evict_load_t2); // TMPDEBUG
 
 				// calculate correpsonding switchidx

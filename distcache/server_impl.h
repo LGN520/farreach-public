@@ -238,6 +238,8 @@ void *run_server_popserver(void *param) {
 		// NETCACHE_CACHE_POP_FINISH's key must NOT in beingupdated keyset if NOT in cached keyset (consider duplicate NETCACHE_CACHE_POP_FINISHs)
 		bool is_cached = (server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_cached_keyidxmap_list[local_server_logical_idx].end());
 		bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_beingupdated_keyset_list[local_server_logical_idx].end());
+		printf("kvidx: %d, newkey: %x, iscached: %d\n", tmp_netcache_cache_pop_finish.kvidx(), tmp_netcache_cache_pop_finish.key().keyhihi, is_cached?0:1);
+		fflush(stdout);
 		if (!is_cached) { // not in cached keyset
 			// add key into cached keyset
 			server_cached_keyidxmap_list[local_server_logical_idx].insert(std::pair<netreach_key_t, uint16_t>(tmp_netcache_cache_pop_finish.key(), tmp_netcache_cache_pop_finish.kvidx()));
@@ -838,8 +840,11 @@ void *run_server_evictserver(void *param) {
 		server_mutex_for_keyset_list[local_server_logical_idx].lock();
 		// NETCACHE_CACHE_EVICT's key must in cached keyset
 		// consider duplicate NETCACHE_CACHE_EVICTs -> key may already be removed from cached/beingudpated keyset
+		printf("evcitidx: %d, evictkey %x\n", server_cached_keyidxmap_list[local_server_logical_idx][tmp_netcache_cache_evict.key()], tmp_netcache_cache_evict.key().keyhihi);
+		fflush(stdout);
 		if (!(server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyidxmap_list[local_server_logical_idx].end())) {
 			printf("[server.evictserver %d-%d WARNING] evicted key %x is not in cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_cached_keyidxmap_list[local_server_logical_idx].size());
+			fflush(stdout);
 		}
 		// remove key from cached/beingupdated keyset
 		server_cached_keyidxmap_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
