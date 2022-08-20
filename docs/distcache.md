@@ -292,6 +292,173 @@
 	+ Sufficient GETREQs of another key -> NETCACHE_GETREQ_POP by server-leaf and GETRES by server
 		* Perform eviction and population as mentioned above
 
+## Implementation during compilation and debugging
+
++ Compile and test DistCache
+	* Pass compilation in Tofino
+		- Remove is_hot_tbl from spine switch
+			+ NOTE: for DistCache, if pkt directly goes to server-leaf or enters server-leaf under cache miss of spine switch, we need CM/BF in server-leaf for cache population; otherwise (aka cache hit of spine switch), we do NOT need CM/BF in spine switch
+			+ Due to possible cache hit of server-leaf switch after cache miss of spine switch, for both DistFarreach and DistCache, we only hold query statistic module in server-leaf instead of spine switch for fair comparison; otherwise, we could incur unnecessary bandwidth usage in control plane
+		- Add set_spineswitchnum_tbl in client-leaf, as subtract_from_field does NOT support action parameter (files: tofino-leaf/main.p4, tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py, tofino-leaf/p4src/header.p4)
+		- Tune ingress/egress MAT placement to fix SRAM limitation in physical stage (contended by ingress and egress for exact matching)
+		- Fix power budget limitation by reducing # of MATs
+			+ Merge set_hot_threshold_tbl and set_spineswitchnum_tbl as set_hot_threshold_and_spineswitchnum_tbl (files: tofino-leaf/main.p4, tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py): 1.09W -> 0.8W
+			+ NOTE: we CANNOT merge spineload_forclient_reg and leafload_forclient_reg as trafficload_forclient_reg, as we CANNOT use two indexes (spine/leafswitchidx) to locate the same register array
+			+ NOTE: hash_for_bfX_tbl is accessed by server-leaf (for GETREQ_SPINE from spine) instead of client-leaf (for GETREQ from client) -> we CANNOT merge hash_for_bfX_tbl with MATs related with power-of-two-choices (e.g. ecmp_for_getreq_tbl and cutoff_spineswitchidx_for_ecmp_tbl)!!!
+				+ NOTE: we CANNOT merge hash_for_bfX_tbl with hash_for_cmX_tbl or sample_tbl, which uses 48-bits and 40-bits for hash results in total > 32-bits Tofino limitation
+				+ Merge prepare_for_cachehit_tbl and hash_for_bf1_tbl into prepare_for_cachehit_and_hash_for_bf1_tbl (files: tofino-leaf/main.p4, tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py): 0.8W -> 0.61W
+				+ Merge access_leafload_tbl.set_and_get_leafload and hash_for_bf2_tbl into access_leafload_tbl.set_and_get_leafload_and_hash_for_bf2 (files: tofino-leaf/main.p4, tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py, tofino-leaf/p4src/regs/leafload.p4): 0.61W -> 0.32W
+				+ Merge ig_port_forward_tbl.update_getreq_spine_to_getreq_inswitch and hash_for_bf3_tbl into ig_port_forward_tbl.update_getreq_spine_to_getreq_inswitch_and_hash_for_bf3_tbl (files: tofino-leaf/main.p4, tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py): 0.32W -> 0.03W
+			+ Merge prepare_for_cachepop_tbl.set_server_sid_and_port and save_client_info_tbl into prepare_for_cachepop_and_save_client_info_tbl.set_server_sid_udpport_and_save_client_info (files: tofino-leaf/main.p4, tofino-leaf/p4src/egress_mat.p4, tofino-leaf/configure/table_configure.py): 0.03W -> NOT exceed power budget
+		- Tune egress placement of processs_scanreq_split_tbl and prepare_for_cachepop_and_save_client_info_tbl
+	* Pass correctness test of range partition under debug mode
+		- Issue: NO GETREQ from client-leaf to spine
+			+ DEBUG: add more counters in debug mode
+				* NOTE: counter also incurs extra power budget usage -> comment vallo/hi-13/14 in server-leaf under debug mode
+			+ Reason: stable arp table -> incomplete MAC address for server ip (aka 10.0.1.16)
+			+ Solution: run configure_client/server/switchos.sh under localsctips/ each time
+		- [IMPORTANT] Issue of power-of-two-choices: GETRES does NOT update spine/leafload_forclient_reg
+			+ Reason for NOT update spineload_forclient_reg: server-leaf resets incorrect spineswitchidx of GETREQ (if toleaf_predicate = 2) as correct spineswitchidx of GETRES, so it loads another register slot from spineload_reg in spine
+				* Solution: NOT access spineselect_tbl for GETRES_SERVER -> inherit the original spineswitchidx from GETREQ set by client-leaf to update corresponding register slot in spineload_reg of spine switch (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+			+ Reason for NOT update spine/leafload_forclient_reg: GETRES/GETRES_SERVER/DISTCACHE_GETRES_SPINE enters different ingress pipeline compared with that used by GETREQ/GETREQ_SPINE -> response loads 0 from spine/leafload_reg of unmatched ingress pipeline and sets spien/leafload_forclient_reg
+				* Solution: consider different ingress pipelines!
+					- GETRES_SERVER/GETRES/DISTCACHE_GETRES_SPINE inherits switchload_hdr from GETREQ/GETREQ_SPINE instead of loading from data plane
+						+ For optypes inheriting GETREQ yet NOT need switchload_hdr, inherit WARMUPREQ (files: packet_format.*)
+						+ Add switchload_hdr in GETREQ; NOT need add/remove switchload_hdr; update pktlen accordingly (files: packet_format.*, tofino-*/p4src/parser.p4; tofino-*/p4src/ingress_mat.p4, tofino-*/p4src/egress_mat.p4; tofino-*/configure/table_configure.py)
+						+ GETREQ updates and loads spineload_reg into switchload_hdr.spineload in spine, and resets switchload_hdr.leafload as 0 (files: tofino-spine/p4src/regs/spineload.p4)
+						+ GETREQ_SPINE updates and loads leafload_reg into switchload_hdr.leafload in server-leaf as implemented before
+							* NOTE: switchload_hdr.spineload has already been set by spine switch no matter cached or not
+						+ Server sends GETRES_SERVER w/ switchload_hdr.spine/leafload from GETREQ (files: packet_format.*, server_impl.h)
+						+ server-leaf simply forwards GETRES_SERVER as GETRES to spine switch w/o loading leafload_reg (files: tofino-leaf/configure/table_configure.py)
+						+ spine simply forwards GETRES to client-leaf w/o loading touching spineload_reg (files: tofino-spine/configure/table_configure.py)
+							* NOTE: spine does NOT need to send DISTCACHE_GETRES_SPINE to client-leaf for cache hit -> use GETRES directly (files: tofino-spine/p4src/egress_mat.p4, tofino-spine/configure/table_configure.py)
+						+ client-leaf simply forwards GETRES to corresponding client w/o changing spine/leafload_forclient (files: tofino-leaf/configure/table_configure.py)
+							* NOTE: client-leaf does NOT need to process DISTCACHE_GETRES_SPINE (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+					- Client sends pkt to client-leaf switch to update spine/leafload_forclient_reg by sampling to reduce client-side overhead
+						+ NOTE: we CANNOT resort client-leaf itself to update spine/leafload_forclient_reg, as GETRES from spine may enter different pipeline compared with GETREQ from client, and switch CANNOT re-send pkt to a different ingress pipeline
+							* recircualte() can ONLY pass the pkt into the ingress pipeline of a a given port in the same pipeline of ingress port
+							* resubmit() can ONLY pass the pkt into the same port as ingress port (CANNOT specify port)
+						+ For every X GETRESs (e.g., X = 1M), client sends DISTCACHE_UPDATE_TRAFFICLOAD (w/ op_hdr and switchload_hdr as GETREQ) to client-leaf (NOT need ACK) (files: remote_client.c)
+							* Add optype of DISTCACHE_UPDATE_TRAFFICLOAD -> SYNC ONLY optype to distcache/distfarreach (files: tofino-*/main.p4, tofino-*/common.py, tofino-*/p4src/parser.p4, packet_format.*, common_impl.h)
+							* client-leaf updates spine/leafload_forclient_reg for DISTCACHE_UPDATE_TRAFFICLOAD if switchload_hdr.spine/leafload != 0, yet NOT set eport such that the pkt will be dropped after ingress pipeline (files: tofino-*/p4src/parser.p4, tofino-leaf/p4src/regs/spineload_forclient.p4, tofino-leaf/p4src/regs/leafload_forclient.p4, tofino-leaf/configure/table_configure.py)
+					- [IMPORTANT] NOTE: as the max select path length of one packet header must <= 4 (i.e., can ONLY be selected within 5 continous selects, not including directly-returned parser), we CANNOT directly select op_hdr.optype in parse_switchload -> we should use shadowtype_hdr.shadowtype
+						+ If using op_hdr.optype, parse_op (select op_hdr.optype) -> parse_val (extract vallen_hdr) -> parse_shadowtype -> parse_seq -> parse_inswitch -> parse_stat -> parse_switchload (select op_hdr.optype) -> parse_clone, then the select path length = 6 (i.e., within 7 continuous selects)
+						+ If using shadowtype_hdr.shadowtype, parse_op (op_hdr.optype) -> parse_val (val_hdr.vallen) -> parse_shadowtype (shadowtype_hdr.shadowtype) -> parse_seq -> parse_inswitch -> parse_stat -> parse_switchload (shadowtype_hdr.shadowtype) -> parse_clone, then we select shadowtype_hdr.shadowtype within 5 selected parsers (i.e., max select path length = 4)
+						+ Add shadowtype_hdr for GETREQ/GETREQ_SPINE/NETCACHE_GETREQ_POP/DISTCACHE_UPDATE_TRAFFICLOAD, and update pktlen accordingly (files: tofino-*/p4src/parser.p4, tofino-*/p4src/ingress_mat.p4, tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py, packet_format.*)
+							* NOTE: GETREQ_INSWITCH/GETRES/GETRES_SERVER already have shadowtype_hdr
+		- Pass correctness test of normal request w/ power-of-two-choices
+		- Pass correctness test of cache population
+		- Pass correctness test of cache hit
+		- Pass correctness test of cache eviction
+	* Disable debug mode
+	* Test static/dynamic workload of range partition
+		- Static workload: (bottleneck: 0; write-only)
+			+ [IMPORTANT] NOTE: we must set SERVER_ROTATION in helper.h, and update bottleneck partition index in configs/* accordingly
+			- Issue: NETCACHE_VALUE_UPDATE for multiple cache populations CANNOT set latest = 1
+				+ Reason: inswitch_hdr.is_cached is overwrite by other PHV fields -> FAIL
+					* Solution: use pa_no_overlay for inswitch_hdr.is_cached
+				+ [IMPORTANT] [TRICKY] Reason: although server sends NETCACHE_VALUEUPDATE after switchos adding the key into cache_lookup_tbl, the newly populated key has not taken effect -> iswitch_hdr.is_cached = 0 (reset by default function) and inswitch_hdr.idx = 0 (intial value of PHV) -> OK
+					* Solution: server.valueupdateserver sleep for a short time and set first_cachepop = false if first_cachepop = true, to wait the newly populated key taking effect -> FAIL under large # of cache populations -> FAIL
+						- NOTE: we need to set first_cachepop = false for server rotation transaction phase
+					* Solution: valueupdateserver sends DISTCACHE_SPINE_VALUEUPDATE_INSWITCH and DISTCACHE_LEAF_VALUEUPDATE_INSWITCH to spine and server-leaf simultaneously, and waits for two ACKs -> NOT rely on cache_lookup_tbl, which cannot take effect immediately due to Tofino limitation -> OK w/ TRICKS ===> NOTE: use DISTCACHE_VALUEUPDATE_INSWITCH/_ACK now!!! (see details below)
+						- [IMPORTANT] NOTE: that's why we use conservative read to update inswitch value instead of sending valueupdate request by server after each cache population
+							+ (1) we can avoid extra server-side overhead, as we utilize existing data plane traffic
+							+ (2) we update inswitch value after pkt can "see" the key in cache_lookup_tbl at data plane, which avoids the issue of delayed cached_lookup_tbl for immediate valueupdate requests after cache population
+						- NOTE: we do NOT need to sync to NetCache, which already directly sets latest = 1 via data plane during cache population
+						- NOTE: cache_lookup_tbl default function only resets inswitch_hdr.is_cached instead of inswitch_hdr.idx
+						- Add optypes of DISTCACHE_SPINE/LEAF_VALUEUPDATE_INSWITCH/_ACK including implementation -> ONLY sync optype to distnocache/distfarreach (files: tofino-*/main.p4, tofino-*/common.py, tofino-*/p4src/parser.p4, packet_format.*)
+						- Add kvidx in NETCACHE_CACHE_POP_FINISH -> ONLY for DistCache (files: packet_format.*, switchos.c)
+						- Server maintains cached_keyidx_map instead of cached_keyset for valueupdate triggered by PUT/DELREQ and NETCACHE_PUT/DELREQ_CACHED (files: server_impl.h)
+						- Maintain message queue of DISTCACHE_SPINE_VALUEUPDATE_INSWITCH for server.valueupdate server (files: server_impl.h)
+							+ NOTE: if we use NETCACHE_VALUEUPDATE w/o kvidx, then the key may be removed from cached_keyidx_map between adding valueupdate request into message queue and reading it from message queue -> we CANNOT find the corresponding kvidx
+						- Spine/server-leaf do NOT need to process NETCACHE_VALUEUPDATE/_ACK now (files: tofino-*/p4src/ingress_mat.p4, tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py)
+						- For DISTCACHE_LEAF_VALUEUPDATE_INSWITCH/_ACK
+							+ server-leaf ingress forwards it into server egress by hash/range_partition_tbl, swap udp ports by ig_port_forward_tbl (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+							+ server-leaf egress updates vallen, val, latest, deleted, and savedseeq, converts it as DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK, and updates pktlen & ip/mac/srcport as client2server (files: tofino-leaf/p4src/egress_mat.p4, tofino-leaf/configure/table_configure.py)
+								* NOTE: vallen and value will be removed by add_and_remove_value_header by default
+						- For DISTCACHE_SPINE_VALUEUPDATE_INSWITCH/_ACK
+							- server-leaf forwards it to spine by spineselect_tbl, and bypass egress (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+								+ NOTE: therefore, we do NOT access add_and_remove_value_header_tbl for it
+							+ spine ingress forwards it into server-leaf egress by hash/range_partition_tbl, swap udp ports by ig_port_forward_tbl (files: tofino-spine/p4src/ingress_mat.p4, tofino-spine/configure/table_configure.py)
+							+ spine egress updates vallen, val, latest, deleted, and savedseeq, converts it as DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK, and updates pktlen (files: tofino-spine/p4src/egress_mat.p4, tofino-spine/configure/table_configure.py)
+								* NOTE: vallen and value will be removed by add_and_remove_value_header by default
+						- server-leaf access hash/range_partition_tbl and update ip/mac/srcport as client2server for DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+						- NOTE: we need to set correct spine/leaf switchidx for DISTCACHE_SPINE/LEAF_VALUEUPDATE_INSWITCH/_ACK for range_partition_tbl in server-leaf (files: packet_foramt.*, server_impl.h)
+					- [TRICKS]
+						- bypass() does NOT work for DISTCACHE_SPINE_VALUEUPDATE_INSWITCH in server-leaf -> access add_and_remove_value_header_tbl to hold vallen and vals (files: tofino-leaf/configure/table_configure.py)
+						- Tofino suffers from misbehavior under burst of valueupdate requests (due to Tofino bug?) -> as it only occurs in warmup phase of DistCache/NetCache due to data plane directly processsing WARMUREQ, we introduce a small manual usleep in warmup_client to avoid such misbehavior (files: warmup_client.c) -> SYNC to NetCache -> still NOT OK
+							+ NOTE: we still CANNOT use NETCACHE_VALUEUPDATE, as a small manual usleep CANNOT fix delayed cache_lookup_tbl, and Tofino still suffers from misbehavior even under a small number of cache populations
+							+ NOTE: such Tofino issue is ok for NetCache/DistCache, as they are designed for read-intensive workloads
+						- Manually invoke tofino-*/set_all_latest.sh to set all latest_reg = 1 to ensure the correctness of warmup phase (files: tofino-*/set_all_latest.sh, tofino-*/set_all_latest/table_configure.py)
+						- test_server_rotation.sh kill servers and clients to avoid crashed servers or clients -> SYNC to all (files: remotescripts/test_server_rotation.sh, localscripts/kill_server.sh, localscripts/kill_client.sh)
+						- Dump bottleneck_serveridx and rotated_serveridx in server rotation such that we can know which experiment is incorrect and needs to re-test (files: remote_client.c, results/rotation-result.template)
+			+ [IMPORTANT] we need to resume beingcached/cached keyset for netcache and distcache under server_rotation (files: server.c) -> SYNC to NetCache
+			+ Result: ~ 0.01-0.02 MOPS for bottleneck server thread -> we NEED to update server rotation methodology to run each experiment in fixed time; for FarReach/DistFarReach, we also need to consider to introduce snapshot
+				* NOTE: long running time is reasonable, as bottleneck partition (server 0) processes too many packets under range partition, and PUTREQ CANNOT be processed by in-switch cache in DistCache
+		- Dynamic workload
+			+ 512/1 clients + 4/1 servers + write-only : 0.015 MOPS (first 10sec) -> 0.045 (following 10secs) MOPS -> increased performance after the first 10sec due to less cache coherence overhead w/ fewer pkts on cached keys
+			+ 1024/2 clients + 8/2 servers + write-only : 0.02 MOPS (first 10sec) -> 0.05 MOPS (following 10secs) -> limited improvement compared w/ 4/1 servers due to range partition (still w/ serious load imbalance even w/ more servers)
+			+ 512/1 clients + 4/1 servers + read-only (w/ trafficload update per pkt): 0.65 MOPS -> 0.75 MOPS for each of following 10secs on average -> improved perf after each key popularity change due to larger cache hit rate after runtime cache population
+			+ 1024/2 clients + 8/2 servers + read-only (w/ trafficload update per pkt): 0.9 MOPS -> 1.1 MOPS for each of following 10secs on average -> limited improvement compared with 4/1 servers due to range partition (and due to latest=0 caused by Tofino bug)
+			+ Retest after code change
+				+ 1024/2 clients + 8/2 servers + write-only : 0.02 MOPS (first 10sec) -> 0.07 MOPS (following 10secs) -> 0.07 > 0.05 due to less valueupdate overhead after removing timeout-and-retry mechanism in valueupdateserver
+				+ 1024/2 clients + 8/2 servers + read-only (w/ trafficload update per pkt): 1.3 MOPS -> 1.7 MOPS for each of following 10secs on average -> 1.7 > 1.1 due to the TRICK of set_all_latest.sh to fix Tofino bug
+	* Update visualization of range partition
+	* Test static/dynamic workload of hash partition
+		- Dynamic workload
+			+ Double-check phase 1 and phase 2 of PUTREQ in DistCache
+				* Send 1 PUT -> phase 1 (latest = 0) -> phase 2 (latest = 1) -> get PUTRES -> OK
+				* Comment phase 2 of 100 PUTs, and check whether the corresponding 100 latest = 0 -> OK
+			+ Code change: implement DISTCACHE_VALUEUPDATE_INSWITCH/_ACK similar as NETCACHE_VALUEUPDATE yet w/ inswitch_hdr to fix incorrect kvidx of NETCACHE_VALUEUPDATE after accessing delayed cache_lookup_tbl due to Tofino bug
+				* Add optype of DISTCACHE_VALUEUPDATE_INSWITCH/_ACK including implementation -> ONLY sync optype to distnocache/distfarreach (files: tofino-*/main.p4, tofino-*/common.py, tofino-*/p4src/parser.p4, packet_format.*, common_impl.h)
+				* Resume timeout-and retry mechanism in valueupdateserver -> SYNC to netcache (files: server_impl.h)
+				* distcache.valueupdateserver sends DISTCACHE_VALUEUPDATE_INSWITCH to server-leaf, and waits for ACK (files: server_impl.h)
+				* NOT process DISTCACHE_SPINE/LEAF_VALUEUPDATE_INSWITCH/_ACK (files: tofino-*/p4src/ingress_mat.p4, tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py)
+				* In server-leaf
+					- Forward DISTCACHE_VALUEUPDATE_INSWITCH as DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN to server by range/hash_partition_tbl and ig_port_forward_tbl, clone to spine by ipv4_forward_tbl (files: tofino-leaf/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+						+ Add ONLY optype of DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN -> SYNC to distnocache/distfarreach (files: tofino-*/main.p4, tofino-*/common.py, tofino-*/p4src/parser.p4, packet_format.h)
+					- For DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN, update registers and drop (files: tofino-leaf/egress_mat.p4, tofino-leaf/configure/table_configure.py)
+					- For DISTCACHE_VALUEUPDATE_INSWITCH, access add_and_remove_value_header to hold value and vallen (files: tofino-leaf/configure/table_configure.py)
+					- For DISTCACHE_VALUEUPDATE_INSWITCH_ACK, forward to server by range/hash_partition_tbl; update pktlen and ip/mac/srcport as client2server (files: tofino-leaf/ingress_mat.p4, tofino-leaf/egress_mat.p4, tofino-leaf/configure/table_configure.py)
+				* In spine
+					- Directly forward DISTCACHE_VALUEUPDATE_INSWITCH to server-leaf by range/hash_partition_tbl, convert it as DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN and swap udpport in ig_port_forward_tbl (files: tofino-spine/ingress_mat.p4, tofino-spine/configure/table_configure.py)
+					- For DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN, update registers and convert it as DISTCACHE_VALUEUPDATE_INSWITCH_ACK (files: tofino-spine/egress_mat.p4, tofino-spine/configure/table_configure.py)
+						+ NOTE: we hold inswitch_hdr in DISTCACHE_VALUEUPDATE_INSWITCH_ACK for debugging
+					- For DISTCACHE_VALUEUPDATE_INSWITCH_ACK, update pktlen (files: tofino-spine/egress_mat.p4, tofino-spine/configure/table_configure.py)
+				* NOTE: we keep inswitch_hdr in DISTCACHE_VALUEUPDATE_INSWITCH_ACK for debugging
+			+ Enable DEBUG mode w/ 1024 inswitch cache entries
+				* Code chnage
+					- Use pa_solitary for inswitch_hdr.idx and op_hdr.optype (NOT for inswitch_hdr.is_cached due to PHV limitation) -> FAIL
+					- Tune latest_reg from stage 0 to stage 1 in spine switch -> FAIL
+					- Add counter for access_latest_tbl -> latest_tbl is accessed w/ correct number -> as we have set pa_solitary for inswitch_hdr.idx and our valueupdate/ack has correct idx, it MUST be caused by some hardware bug of Tofino itself
+				* TRICKY solution (NOT reset latest reg)
+					- Use DISTCACHE_VALUEUPDATE_INSWITCH/_ACK (w/ set_all_latest.sh for warmup phase)
+						+ NOTE: It is OK to use the TRICK of set_all_latest.sh to solve the latest_reg issue caused by the Tofino bug even if it can affect DistCache perf, as it originates from the design of DistCache itself (i.e., server-issued inswitch value update for write-through policy)
+					- TODOTODO: Directly set latest = 1 for CACHE_POP_INSWITCH in DistCache -> then we do NOT need to invoke set_all_latest.sh (files: tofino-*/configure/table_configure.py)
+						+ TODOTODO: Even NOT invalidate in-switch cache for PUTREQs: for NetCache, PUTREQ does NOT reset latest reg on path; for DistCache, DISTCACHE_INVALIDATE does NOT reset latest reg (files: tofino-*/configure/table_configure.py)
+						+ NOTE: even if we directly set latest = 1, it CANNOT improve write perf of NetCache/DistCache due to write-through policy; and the # of subsequent read requests during cache population or cache coherence mechanism for PUTREQ is limited under write-intensive workload
+						+ NOTE: it is also OK to leave latest = 0 in trasction phase, which makes perf of NetCache/DistCache slightly lower than that w/ latest = 1; while it originates from their write-through design and cache coherence mechanism, and we do NOT need to improve the perf of NetCache/DistCache
+							* NetCache: low perf due to write-through policy and subsequent PUTREQs blocked by background server-driven inswitch value update
+							* DistCache: low perf due to write-through policy and cache coherence overhead (each PUTREQ has to wait for phase 1; phase 2 will block subsequent PUTREQs)
+			+ TODOTODO: Disappeared issues after using the TRICK (DISTCACHE_VALUEUPDATE_INSWITCH/_ACK w/ set_all_latest.sh)
+				* Possible reason: packet loss of DISTCACHE_SPINE/LEAF_VALUEUPDATE_INSWITCH due to Tofino bug -> yet no packet loss of DISTCACHE_VALUEUPDATE_INSWITCH/_ACK
+				+ TODOTODO: Valueupdate timeout issue: under write-only workload, why we have so many valueupdate timeouts?
+					* Under DEBUG mode -> no valueupdate timeout issue
+					* Disable DEBUG mode and uncomment vallo/hi-11/12/13/14
+				+ TODOTODO: Cache eviction issue: under read-only workload (may after write-only workload). server.keyidxmap does NOT have idx for some evicted keys
+			+ 512/1 clients + 4/1 servers + write-only : 0.06 MOPS (first 10sec) -> 0.13 (following 10secs) MOPS -> increased performance after the first 10sec due to less cache coherence overhead w/ fewer pkts on cached keys; better than range due to less load imbalance
+			+ 1024/2 clients + 8/2 servers + write-only : 0.12 MOPS (first 10sec) -> 0.26 MOPS (following 10secs) -> limited improvement compared w/ 4/1 servers due to range partition (still w/ serious load imbalance even w/ more servers)
+				* NOTE: for NoCache, 1024/2 clients + 8/2 servers + write-only -> 0.5 MOPS
+			+ 512/1 clients + 4/1 servers + read-only (w/ trafficload update per pkt) : 0.9(direct read-only)/0.32(after write-only) MOPS -> 1.0(direct read-only)/0.34(after write-only) MOPS for each of following 10secs on average -> improved perf after each key popularity change due to larger cache hit rate after runtime cache population
+				* NOTE: lower read perf after write-only workload is also reasonable -> we have similar cache hit ratio, yet rocksdb read perf degrades due to more data in memory (memtable/immutable), while close-and-restart server will convert immutable into sstable and hence lower overhead to lookup in-memory data
+			+ 1024/2 clients + 8/2 servers + read-only (w/ trafficload update per pkt): 1.4 MOPS -> 1.5 MOPS for each of following 10secs on average -> limited improvement compared with 4/1 servers due to range partition (and due to latest=0 caused by Tofino bug)
+				* NOTE: runtime throughput has serious fluctuation -> yet normalized throughput is correct (14.3 -> 15.4 each period)
+		- Static workload: (bottleneck: 123; write-only) -> OK w/o runtime error
+	* Update visualization of hash partition
+	* Add docs/run.md to make evaluation steps clear (files: docs/run.md)
+		- Create remotescripts/prepare_for_dynamic.sh to sync dynamicrules and workloads if any to another client -> SYNC to all (files: remotescripts/prepare_for_dynamic.sh)
+		- Create remotescripts/prepare_for_static.sh to sync workloads if any to another client and warmup.out to servers only for netcache/distcache -> SYNC to all (files: remotescripts/prepare_for_static.sh)
+
 ## Deprecated stuff
 
 + DEPRECATED design for cache population/eviction in DistFarReach
