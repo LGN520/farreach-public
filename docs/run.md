@@ -18,13 +18,19 @@
 	+ `sudo apt-get install hugepages`
 	+ `sudo hugeadm --thp-never`
 	+ `cat /sys/kernel/mm/transparent_hugepage/enabled` to check
+- Compile code
+	+ Under main client (i.e., the first physical client dl11), enter directory of method/
+		* `bash remotescripts/makeremotefiles` to make C/C++ code including switchos, controller, and server
+	+ Under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
+		* `bash compile.sh` (NOTE: if we have already compiled for all methods, we do NOT need to run this command unless we change in-switch implementation)
+	+ Under each physical client, enter directory of ycsb/
+		* For each method, `mvn -pl site.ycsb:method-binding -am clean package`
 
 ## Normal running
 
 - Launch switch and switchos
 	+ Single-switch testbed (i.e., bf1)
 		+ (1) Create a terminal to login a Tofino OS, and enter directory of method/tofino/
-			* `bash compile.sh` (NOTE: as we have already compiled for all methods, we do NOT need to run this command unless we change in-switch implementation)
 			* `bash start_switch.sh`
 		+ (2) Create another terminal to login the same Tofino OS, and enter directory of method/
 			* `bash localscripts/launchswitchostestbed.sh` to configure data plane and launch corresponding switchos processes
@@ -39,6 +45,7 @@
 			* NOTE: you can check tmp_server.out, tmp_controller.out, and tmp_reflector.out if any (tmp_reflector.out exist in dl11 and dl16 ONLY for distributed testbed) to see whether those processes are launched correctly
 - Loading phase
 	+ TODO: Use YCSB loading client to store a fixed amount of records into servers
+		* TODO: `./bin/ycsb load method -P workload`
 	+ TODO: Backup RocksDB files to avoid repeat loading phase in each experiment
 		* NOTE: if you have backuped RocksDB files, you can directly overwrite RocksDB files w/ backuped files before launching servers
 - Warmup phase
@@ -52,6 +59,7 @@
 		+ `bash set_all_latest.sh` to set all latest_reg = 1 to ensure the correctness of warmup phase (to fix Tofino hardware bug)
 - Transaction phase
 	+ TODO: Use YCSB transaction client to send different types of requests and receive corresponding responses based on specified workload
+		* TODO: `./bin/ycsb run method -P workload`
 
 ## Evaluation for static workload
 
