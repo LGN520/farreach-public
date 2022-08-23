@@ -930,6 +930,7 @@ class PutRequestLargevalue : public Packet<key_t> { // ophdr + val in payload (N
 		PutRequestLargevalue(const char * data, uint32_t recv_size);
 
 		static size_t get_frag_hdrsize();
+		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
 
 		val_t val() const;
 
@@ -965,6 +966,7 @@ class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr in 
 		GetResponseLargevalue(const char * data, uint32_t recv_size);
 
 		static size_t get_frag_hdrsize();
+		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
 
 		val_t val() const;
 		bool stat() const;

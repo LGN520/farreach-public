@@ -888,6 +888,7 @@ void *run_client_worker(void *param) {
 
 	// for network communication
 	char buf[MAX_BUFSIZE];
+	dynamic_array_t dynamicbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	int req_size = 0;
 	int recv_size = 0;
 	struct sockaddr_in server_addr;
@@ -1052,30 +1053,37 @@ void *run_client_worker(void *param) {
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
-				INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
-				put_request_t req(tmpkey, tmpval);
-				req_size = req.serialize(buf, MAX_BUFSIZE);
-				/*if (tmpval.val_length <= val_t::SWITCH_MAX_VALLEN) {
-					put_request_t req(hashidx, tmpkey, tmpval);
+				if (tmpval.val_length <= val_t::SWITCH_MAX_VALLEN) {
+					put_request_t req(tmpkey, tmpval);
 					req_size = req.serialize(buf, MAX_BUFSIZE);
-				}
-				else {
-					put_request_large_t req(hashidx, tmpkey, tmpval);
-					req_size = req.serialize(buf, MAX_BUFSIZE);
-				}*/
-
 #ifdef DUMP_BUF
-				dump_buf(buf, req_size);
+					dump_buf(buf, req_size);
 #endif
-
-				if (!isfirst_pkt) {
-					CUR_TIME(wait_t2);
-					DELTA_TIME(wait_t2, wait_t1, wait_t3);
-					wait_time = GET_MICROSECOND(wait_t3);
+					if (!isfirst_pkt) {
+						CUR_TIME(wait_t2);
+						DELTA_TIME(wait_t2, wait_t1, wait_t3);
+						wait_time = GET_MICROSECOND(wait_t3);
+					}
+					CUR_TIME(send_t1);
+					udpsendto(client_udpsock_list[local_client_logical_idx], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+					CUR_TIME(send_t2);
 				}
-				CUR_TIME(send_t1);
-				udpsendto(client_udpsock_list[local_client_logical_idx], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
-				CUR_TIME(send_t2);
+				else { // for large value
+					put_request_largevalue_t req(tmpkey, tmpval);
+					dynamicbuf.clear();
+					req_size = req.dynamic_serialize(dynamicbuf);
+#ifdef DUMP_BUF
+					dump_buf(dynamicbuf.array(), req_size);
+#endif
+					if (!isfirst_pkt) {
+						CUR_TIME(wait_t2);
+						DELTA_TIME(wait_t2, wait_t1, wait_t3);
+						wait_time = GET_MICROSECOND(wait_t3);
+					}
+					CUR_TIME(send_t1);
+					udpsendlarge_ipfrag(client_udpsock_list[local_client_logical_idx], dynamicbuf.array(), req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client", put_request_largevalue_t::get_frag_hdrsize());
+					CUR_TIME(send_t2);
+				}
 
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
@@ -1121,6 +1129,60 @@ void *run_client_worker(void *param) {
 							else {
 								tmp_nodeidx_foreval = rsp.nodeidx_foreval();
 								FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] stat = " << rsp.stat());
+								break; // break to update statistics and send next packet
+							}
+						}
+					}
+					else {
+						break; // break to resend
+					}
+				}
+				if (is_timeout) {
+					printf("timeout key %x\n", tmpkey.keyhihi);
+					thread_param.timeout_cnt += 1;
+					continue; // continue to resend
+				}
+			}
+			else if (tmptype == optype_t(packet_type_t::LOADREQ)) { // for loading phase
+				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
+
+				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
+				// NOTE: LOADREQ allows both small/large value
+				load_request_t req(tmpkey, tmpval);
+				dynamicbuf.clear();
+				req_size = req.dynamic_serialize(dynamicbuf);
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), req_size);
+#endif
+				if (!isfirst_pkt) {
+					CUR_TIME(wait_t2);
+					DELTA_TIME(wait_t2, wait_t1, wait_t3);
+					wait_time = GET_MICROSECOND(wait_t3);
+				}
+				CUR_TIME(send_t1);
+				udpsendlarge_ipfrag(client_udpsock_list[local_client_logical_idx], dynamicbuf.array(), req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client", load_request_t::get_frag_hdrsize());
+				CUR_TIME(send_t2);
+
+				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
+				while (true) {
+					is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					CUR_TIME(wait_t1);
+#ifdef DUMP_BUF
+					dump_buf(buf, recv_size);
+#endif
+					if (!is_timeout) {
+						INVARIANT(recv_size > 0);
+						if (get_packet_type(buf, recv_size) != packet_type_t::LOADACK) {
+							thread_param.unmatched_cnt++;
+							continue; // continue to receive next packet
+						}
+						else {
+							load_ack_t rsp(buf, recv_size);
+							if (rsp.key() != tmpkey) {
+								thread_param.unmatched_cnt++;
+								continue; // continue to receive next packet
+							}
+							else {
 								break; // break to update statistics and send next packet
 							}
 						}

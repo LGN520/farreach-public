@@ -2664,6 +2664,16 @@ size_t PutRequestLargeValue<key_t, val_t>::get_frag_hdrsize() {
 }
 
 template<class key_t, class val_t>
+uint32_t PutRequestLargevalue<key_t, val_t>::dynamic_serialize(dynamic_array_t &dynamic_data) {
+	int tmpoff = 0;
+	uint32_t tmp_ophdrsize = this->dynamic_serialize_ophdr(dynamic_data);
+	tmpoff += tmp_ophdrsize;
+	uint32_t tmp_valsize = this->_val.dynamic_serialize(dynamic_data, tmpoff);
+	tmpoff += tmp_valsize;
+	return tmp_ophdrsize + tmp_valsize;
+}
+
+template<class key_t, class val_t>
 uint32_t PutRequestLargevalue<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
@@ -2782,6 +2792,22 @@ uint32_t GetResponseLargevalue<key_t, val_t>::size() { // unused
 template<class key_t, class val_t>
 size_t GetResponseLargevalue<key_t, val_t>::get_frag_hdrsize() {
 	return Packet<key_t>::get_ophdrsize(); // op_hdr
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponseLargevalue<key_t, val_t>::dynamic_serialize(dynamic_array_t &dynamic_data) {
+	int tmpoff = 0;
+	uint32_t tmp_ophdrsize = this->dynamic_serialize_ophdr(dynamic_data);
+	tmpoff += tmp_ophdrsize;
+	uint32_t tmp_valsize = this->_val.dynamic_serialize(dynamic_data, tmpoff);
+	tmpoff += tmp_valsize;
+	dynamic_data.dynamic_memcpy(tmpoff, (char *)&this->_stat, sizeof(bool));
+	tmpoff += sizeof(bool);
+	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
+	dynamic_data.dynamic_memcpy(tmpoff, (char*)&bigendian_nodeidx_foreval, sizeof(uint16_t));
+	tmpoff += sizeof(uint16_t);
+	tmpoff += STAT_PADDING_BYTES;
+	return tmp_ophdrsize + tmp_valsize + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>

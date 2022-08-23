@@ -387,7 +387,7 @@ void *run_server_worker(void * param) {
 					get_response_largevalue_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
 					dynamicbuf.clear()
 					rsp_size = rsp.serialize(dynamicbuf);
-					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_fraghdrsize());
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_frag_hdrsize());
 #ifdef DUMP_BUF
 					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
@@ -424,7 +424,7 @@ void *run_server_worker(void * param) {
 					get_response_largevalue_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
 					dynamicbuf.clear()
 					rsp_size = rsp.serialize(dynamicbuf);
-					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_fraghdrsize());
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_frag_hdrsize());
 #ifdef DUMP_BUF
 					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
@@ -581,7 +581,7 @@ void *run_server_worker(void * param) {
 					get_response_largevalue_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
 					dynamicbuf.clear()
 					rsp_size = rsp.serialize(dynamicbuf);
-					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_fraghdrsize());
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_frag_hdrsize());
 #ifdef DUMP_BUF
 					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
