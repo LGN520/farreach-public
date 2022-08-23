@@ -75,6 +75,11 @@ typedef NetcachePutRequestSeqCached<netreach_key_t, val_t> netcache_put_request_
 typedef NetcacheDelRequestSeqCached<netreach_key_t> netcache_del_request_seq_cached_t;
 typedef NetcacheValueupdate<netreach_key_t, val_t> netcache_valueupdate_t;
 typedef NetcacheValueupdateAck<netreach_key_t> netcache_valueupdate_ack_t;
+// For large value
+typedef PutRequestLargevalue<netreach_key_t, val_t> put_request_largevalue_t;
+typedef PutRequestLargevalueSeq<netreach_key_t, val_t> put_request_largevalue_seq_t;
+typedef GetResponseLargevalue<netreach_key_t, val_t> get_response_largevalue_t;
+typedef GetResponseLargevalueServer<netreach_key_t, val_t> get_response_largevalue_server_t;
 
 /*
  * Constants

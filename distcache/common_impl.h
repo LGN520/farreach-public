@@ -94,6 +94,11 @@ typedef DistcacheSpineValueupdateInswitchAck<netreach_key_t> distcache_spine_val
 typedef DistcacheLeafValueupdateInswitchAck<netreach_key_t> distcache_leaf_valueupdate_inswitch_ack_t;
 typedef DistcacheValueupdateInswitch<netreach_key_t, val_t> distcache_valueupdate_inswitch_t;
 typedef DistcacheValueupdateInswitchAck<netreach_key_t> distcache_valueupdate_inswitch_ack_t;
+// For large value
+typedef PutRequestLargevalue<netreach_key_t, val_t> put_request_largevalue_t;
+typedef PutRequestLargevalueSeq<netreach_key_t, val_t> put_request_largevalue_seq_t;
+typedef GetResponseLargevalue<netreach_key_t, val_t> get_response_largevalue_t;
+typedef GetResponseLargevalueServer<netreach_key_t, val_t> get_response_largevalue_server_t;
 
 /*
  * Constants

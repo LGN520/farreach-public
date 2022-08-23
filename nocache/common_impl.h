@@ -63,6 +63,11 @@ typedef LoadsnapshotdataInswitch<netreach_key_t> loadsnapshotdata_inswitch_t;
 typedef LoadsnapshotdataInswitchAck<netreach_key_t, val_t> loadsnapshotdata_inswitch_ack_t;
 typedef SetvalidInswitch<netreach_key_t> setvalid_inswitch_t;
 typedef SetvalidInswitchAck<netreach_key_t> setvalid_inswitch_ack_t;
+// For large value
+typedef PutRequestLargevalue<netreach_key_t, val_t> put_request_largevalue_t;
+typedef PutRequestLargevalueSeq<netreach_key_t, val_t> put_request_largevalue_seq_t;
+typedef GetResponseLargevalue<netreach_key_t, val_t> get_response_largevalue_t;
+typedef GetResponseLargevalueServer<netreach_key_t, val_t> get_response_largevalue_server_t;
 
 /*
  * Constants

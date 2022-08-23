@@ -60,18 +60,24 @@
 	+ Xindex with tofino-based netbuffer (DPDK) + in-memory KVS + variable length value w/ snapshot + YCSB + majority voting + data-plane-based eviction optimization
 - [netreach-v4-xindex](./netreach-v4-xindex.md)
 	+ Xindex with tofino-based netbuffer (DPDK) + in-memory KVS (XIndex) + variable length value w/ snapshot + YCSB + control-plane-based cache update (copy from netreach-voting-v3-memory, refer to netreach-voting-v2)
-- [netreach-v4-lsm](./netreach-v4-lsm.md) -> rename as farreach
+- [netreach-v4-lsm](./netreach-v4-lsm.md)
 	+ Deprecated: Xindex with tofino-based netbuffer (DPDK) + LSM-based KVS (rocksdb) + variable length value w/ snapshot + YCSB + control-plane-based cache update (copy from netreach-v4-xindex)
 		* NOTE: netreach-v4-lsm should have the same in-switch implementation as in netreach-v4-xindex, which only changes server-side implementation
 
 ### Latest implementation
 
-- [netreach-v4-lsm](./netreach-v4-lsm.md) (latest farreach code)
+- [netreach-v4-lsm](./netreach-v4-lsm.md) (latest farreach code) -> rename as farreach
 	+ NetReach with UDP-based communication + LSM-based KVS (rocksdb) + YCSB + control-plane-based cache population/eviction
 - [nocache](./nocache.md) (baseline of single switch; copy from netreach-v4-lsm)
 	+ NoCache with UDP-based communication + LSM-based KVS (rocksdb) + YCSB + NO in-switch cache
 - [netcache](./netcache.md) (baseline of single switch; copy from netreach-v4-lsm)
 	+ NetCache with UDP-based communication + LSM-based KVS (rocksdb) + YCSB + write-through in-switch cache
+- [distfarreach](./distfarreach.md) (distributed farreach; copy from netreach-v4-lsm)
+- [distnocache](./distnocache.md) (distributed nocache; copy from nocache)
+- [distcache](./distcache.md) (distcache; copy from netcache)
+- Other implementation logs
+	+ [run.md](./run.md) (guideline for running commands)
+	+ [largekv.md](./largekv.md) (support >128B variable-length value and variable-length key)
 
 ## Global Configuration
 

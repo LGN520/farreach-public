@@ -264,7 +264,7 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 }
 
 
-// GetResponse (value can be any size)
+// GetResponse (value must <= 128B)
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse()
@@ -276,12 +276,14 @@ template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
 	: Packet<key_t>(PacketType::GETRES, key), _val(val), _stat(stat), _nodeidx_foreval(nodeidx_foreval)
 {	
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
@@ -2140,6 +2142,200 @@ template<class key_t>
 NetcacheValueupdateAck<key_t>::NetcacheValueupdateAck(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_VALUEUPDATE_ACK);
+}
+
+// PutRequestLargevalue (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue()
+	: Packet<key_t>(), _val()
+{
+}
+
+template<class key_t, class val_t>
+PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue(key_t key, val_t val) 
+	: Packet<key_t>(PacketType::PUTREQ_LARGEVALUE, key), _val(val)
+{	
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+val_t PutRequestLargevalue<key_t, val_t>::val() const {
+	return _val;
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargevalue<key_t, val_t>::size() { // not used
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN;
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargevalue<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+	begin += tmp_ophdrsize;
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - tmp_ophdrsize);
+	begin += tmp_valsize;
+	return tmp_ophdrsize + tmp_valsize;
+}
+
+template<class key_t, class val_t>
+void PutRequestLargevalue<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
+	const char *begin = data;
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+	begin += tmp_ophdrsize;
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-tmp_ophdrsize);
+	UNUSED(tmp_valsize);
+	begin += tmp_valsize;
+}
+
+// PutRequestLargevalueSeq (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq) 
+	: PutRequesetLargevalue<key_t, val_t>(key, val), _seq(seq)
+{	
+	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargevalueSeq<key_t, val_t>::seq() const {
+	return _seq;
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargevalueSeq<key_t, val_t>::size() { // not used
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN;
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargevalueSeq<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+	begin += tmp_ophdrsize;
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize); // shadowtype
+	begin += tmp_shadowtypesize;
+	uint32_t bigendian_seq = htonl(this->_seq);
+	memcpy(begin, &bigendian_seq, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - tmp_ophdrsize - tmp_shadowtypesize - sizeof(uint32_t));
+	begin += tmp_valsize;
+	return tmp_ophdrsize + tmp_shadowtypesize + sizeof(uint32_t) + tmp_valsize;
+}
+
+template<class key_t, class val_t>
+void PutRequestLargevalueSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
+	const char *begin = data;
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+	begin += tmp_ophdrsize;
+	begin += sizeof(optype_t); // shadowtype
+	memcpy(&this->_seq, begin, sizeof(uint32_t));
+	this->_seq = ntohl(this->_seq);
+	begin += sizeof(uint32_t);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-tmp_ophdrsize);
+	UNUSED(tmp_valsize);
+	begin += tmp_valsize;
+}
+
+// GetResponseLargevalue (value must > 128B)
+
+template<class key_t, class val_t>
+GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue()
+	: Packet<key_t>(), _val(), _stat(false), _nodeidx_foreval(0)
+{
+}
+
+template<class key_t, class val_t>
+GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
+	: Packet<key_t>(PacketType::GETRES_LARGEVALUE, key), _val(val), _stat(stat), _nodeidx_foreval(nodeidx_foreval)
+{	
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_LARGEVALUE);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponseLargevalue<key_t, val_t>::size() { // unused
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponseLargevalue<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+	begin += tmp_ophdrsize;
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_ophdrsize);
+	begin += tmp_valsize;
+	memcpy(begin, (void *)&this->_stat, sizeof(bool));
+	begin += sizeof(bool);
+	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
+	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
+	return tmp_ophdrsize + tmp_valsize + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+}
+
+template<class key_t, class val_t>
+void GetResponseLargevalue<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
+	const char *begin = data;
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+	begin += tmp_ophdrsize;
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_ophdrsize);
+	begin += tmp_valsize;
+	memcpy((void *)&this->_stat, begin, sizeof(bool));
+	begin += sizeof(bool);
+	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
+	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
+}
+
+// GetResponseLargevalueServer (value must > 128B)
+
+template<class key_t, class val_t>
+GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
+	: GetResponseLargevalue<key_t, val_t>(key, val, stat, nodeidx_foreval)
+{	
+	this->_type = static_cast<optype_t>(packet_type_t::GETRES_LARGEVALUE_SERVER)
+}
+
+template<class key_t, class val_t>
+GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_LARGEVALUE_SERVER);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 // APIs

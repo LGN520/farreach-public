@@ -40,12 +40,12 @@ enum class PacketType {
 	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b, NETCACHE_VALUEUPDATE=0x003b, GETRES_LATEST_SEQ_SERVER=0x004b, GETRES_DELETED_SEQ_SERVER=0x005b,
 	GETRES=0x0009, GETRES_SERVER=0x0019, DISTCACHE_GETRES_SPINE=0x0029,
 	PUTREQ_INSWITCH=0x0005,
-	DELREQ_SEQ_INSWITCH=0x0006,
+	DELREQ_SEQ_INSWITCH=0x0006, PUTREQ_LARGEVALUE_SEQ_INSWITCH=0x0016,
 	PUTREQ_SEQ_INSWITCH=0x0007,
 	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034, LOADSNAPSHOTDATA_INSWITCH=0x0044, SETVALID_INSWITCH=0x0054, NETCACHE_WARMUPREQ_INSWITCH=0x0064, NETCACHE_WARMUPREQ_INSWITCH_POP=0x0074, DISTCACHE_INVALIDATE_INSWITCH=0x0084, DISTCACHE_VALUEUPDATE_INSWITCH=0x0094,
-	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012, NETCACHE_DELREQ_SEQ_CACHED=0x0022,
+	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012, NETCACHE_DELREQ_SEQ_CACHED=0x0022, PUTREQ_LARGEVALUE_SEQ=0x0032,
 	PUTRES=0x0008, DELRES=0x0018, PUTRES_SERVER=0x0028, DELRES_SERVER=0x0038,
-	WARMUPREQ=0x0000, SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100, SETVALID_INSWITCH_ACK=0x0110, NETCACHE_GETREQ_POP=0x0120, NETCACHE_CACHE_POP=0x0130, NETCACHE_CACHE_POP_ACK=0x0140, NETCACHE_CACHE_POP_FINISH=0x0150, NETCACHE_CACHE_POP_FINISH_ACK=0x0160, NETCACHE_CACHE_EVICT=0x0170, NETCACHE_CACHE_EVICT_ACK=0x0180, NETCACHE_VALUEUPDATE_ACK=0x0190, GETREQ_SPINE=0x0200, SCANRES_SPLIT_SERVER=0x0210, WARMUPREQ_SPINE=0x0220, WARMUPACK_SERVER=0x0230, LOADACK_SERVER=0x0240, DISTCACHE_CACHE_EVICT_VICTIM=0x0250, DISTCACHE_CACHE_EVICT_VICTIM_ACK=0x0260, DISTNOCACHE_DELREQ_SPINE=0x0270, DISTCACHE_INVALIDATE=0x0280, DISTCACHE_INVALIDATE_ACK=0x0290, DISTCACHE_UPDATE_TRAFFICLOAD=0x02a0, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK=0x02b0, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK=0x02c0
+	WARMUPREQ=0x0000, SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100, SETVALID_INSWITCH_ACK=0x0110, NETCACHE_GETREQ_POP=0x0120, NETCACHE_CACHE_POP=0x0130, NETCACHE_CACHE_POP_ACK=0x0140, NETCACHE_CACHE_POP_FINISH=0x0150, NETCACHE_CACHE_POP_FINISH_ACK=0x0160, NETCACHE_CACHE_EVICT=0x0170, NETCACHE_CACHE_EVICT_ACK=0x0180, NETCACHE_VALUEUPDATE_ACK=0x0190, GETREQ_SPINE=0x0200, SCANRES_SPLIT_SERVER=0x0210, WARMUPREQ_SPINE=0x0220, WARMUPACK_SERVER=0x0230, LOADACK_SERVER=0x0240, DISTCACHE_CACHE_EVICT_VICTIM=0x0250, DISTCACHE_CACHE_EVICT_VICTIM_ACK=0x0260, DISTNOCACHE_DELREQ_SPINE=0x0270, DISTCACHE_INVALIDATE=0x0280, DISTCACHE_INVALIDATE_ACK=0x0290, DISTCACHE_UPDATE_TRAFFICLOAD=0x02a0, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK=0x02b0, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK=0x02c0, PUTREQ_LARGEVALUE=0x02d0, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE=0x02e0, GETRES_LARGEVALUE_SERVER=0x02f0, GETRES_LARGEVALUE=0x0300
 };
 /*enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
@@ -685,6 +685,66 @@ template<class key_t>
 class LoadAckServer : public LoadAck<key_t> { // ophdr
 	public: 
 		LoadAckServer(key_t key);
+};
+
+// For large value
+
+template<class key_t, class val_t>
+class PutRequestLargevalue : public Packet<key_t> { // ophdr + val in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
+	public:
+		PutRequestLargevalue();
+		PutRequestLargevalue(key_t key, val_t val);
+		PutRequestLargevalue(const char * data, uint32_t recv_size);
+
+		val_t val() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		val_t _val;
+};
+
+template<class key_t, class val_t>
+class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // ophdr + shadowtype + seq + val in payload (NOT parsed by switch)
+	public:
+		PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq);
+		PutRequestLargevalueSeq(const char * data, uint32_t recv_size);
+
+		uint32_t seq() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint32_t _seq;
+};
+
+template<class key_t, class val_t>
+class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
+	public:
+		GetResponseLargevalue();
+		GetResponseLargevalue(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
+		GetResponseLargevalue(const char * data, uint32_t recv_size);
+
+		val_t val() const;
+		bool stat() const;
+		uint16_t nodeidx_foreval() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		val_t _val;
+		bool _stat;
+		uint16_t _nodeidx_foreval;
+};
+
+template<class key_t, class val_t>
+class GetResponseLargevalueServer : public GetResponseLargevalue<key_t, val_t> { // ophdr + val&stat_hdr in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
+	public:
+		GetResponseLargevalueServer(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
+		GetResponseLargevalueServer(const char * data, uint32_t recv_size);
 };
 
 // APIs
