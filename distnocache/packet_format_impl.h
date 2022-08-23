@@ -1977,6 +1977,11 @@ uint32_t PutRequestLargevalue<key_t, val_t>::size() { // not used
 }
 
 template<class key_t, class val_t>
+size_t PutRequestLargeValue<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t); // op_hdr
+}
+
+template<class key_t, class val_t>
 uint32_t PutRequestLargevalue<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
@@ -2028,6 +2033,11 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::size() { // not used
 }
 
 template<class key_t, class val_t>
+size_t PutRequestLargeValueSeq<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr
+}
+
+template<class key_t, class val_t>
 uint32_t PutRequestLargevalueSeq<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
@@ -2055,7 +2065,7 @@ void PutRequestLargevalueSeq<key_t, val_t>::deserialize(const char * data, uint3
 	memcpy(&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq);
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-tmp_ophdrsize);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-tmp_ophdrsize-sizeof(optype_t)-sizeof(uint32_t));
 	UNUSED(tmp_valsize);
 	begin += tmp_valsize;
 }
@@ -2085,6 +2095,11 @@ GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue(const char * data, ui
 template<class key_t, class val_t>
 uint32_t GetResponseLargevalue<key_t, val_t>::size() { // unused
 	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+}
+
+template<class key_t, class val_t>
+size_t GetResponseLargevalue<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t); // op_hdr
 }
 
 template<class key_t, class val_t>
@@ -2136,6 +2151,11 @@ GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(const cha
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_LARGEVALUE_SERVER);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+size_t GetResponseLargevalueServer<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t); // op_hdr
 }
 
 // APIs

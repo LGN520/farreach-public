@@ -696,6 +696,8 @@ class PutRequestLargevalue : public Packet<key_t> { // ophdr + val in payload (N
 		PutRequestLargevalue(key_t key, val_t val);
 		PutRequestLargevalue(const char * data, uint32_t recv_size);
 
+		static size_t get_frag_hdrsize();
+
 		val_t val() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -710,6 +712,8 @@ class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // o
 	public:
 		PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq);
 		PutRequestLargevalueSeq(const char * data, uint32_t recv_size);
+
+		static size_t get_frag_hdrsize();
 
 		uint32_t seq() const;
 
@@ -726,6 +730,8 @@ class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr in 
 		GetResponseLargevalue();
 		GetResponseLargevalue(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
 		GetResponseLargevalue(const char * data, uint32_t recv_size);
+
+		static size_t get_frag_hdrsize();
 
 		val_t val() const;
 		bool stat() const;
@@ -745,6 +751,8 @@ class GetResponseLargevalueServer : public GetResponseLargevalue<key_t, val_t> {
 	public:
 		GetResponseLargevalueServer(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
 		GetResponseLargevalueServer(const char * data, uint32_t recv_size);
+
+		static size_t get_frag_hdrsize();
 };
 
 // APIs

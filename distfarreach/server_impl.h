@@ -309,7 +309,7 @@ void *run_server_worker(void * param) {
   netreach_key_t max_endkey(std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), max_endkeyhihi);
 
   char buf[MAX_BUFSIZE];
-  dynamic_array_t scanbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
+  dynamic_array_t dynamicbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
   int recv_size = 0;
   int rsp_size = 0;
   char recvbuf[MAX_BUFSIZE];
@@ -365,48 +365,71 @@ void *run_server_worker(void * param) {
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				get_request_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				get_response_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+
+				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
+					get_response_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+					dump_buf(buf, rsp_size);
 #endif
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+				}
+				else {
+					get_response_largevalue_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					dynamicbuf.clear()
+					rsp_size = rsp.dynamic_serialize(dynamicbuf);
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_server_t::get_fraghdrsize());
 #ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
+					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
+				}
 				break;
 			}
 		case packet_type_t::GETREQ_NLATEST:
 			{
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				get_request_nlatest_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
 
-				uint16_t tmp_leafswitchidx = req.key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
-				if (tmp_stat) { // key exists
-					get_response_latest_seq_server_t rsp(tmp_leafswitchidx, req.key(), tmp_val, tmp_seq, global_server_logical_idx);
-					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				}
-				else { // key not exist
-					get_response_deleted_seq_server_t rsp(tmp_leafswitchidx, req.key(), tmp_val, tmp_seq, global_server_logical_idx);
-					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				}
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
+					uint16_t tmp_leafswitchidx = req.key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
+					if (tmp_stat) { // key exists
+						get_response_latest_seq_server_t rsp(tmp_leafswitchidx, req.key(), tmp_val, tmp_seq, global_server_logical_idx);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					}
+					else { // key not exist
+						get_response_deleted_seq_server_t rsp(tmp_leafswitchidx, req.key(), tmp_val, tmp_seq, global_server_logical_idx);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					}
+					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
+					dump_buf(buf, rsp_size);
 #endif
+				}
+				else {
+					get_response_largevalue_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					dynamicbuf.clear()
+					rsp_size = rsp.dynamic_serialize(dynamicbuf);
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_server_t::get_fraghdrsize());
+#ifdef DUMP_BUF
+					dump_buf(dynamicbuf.array(), rsp_size);
+#endif
+				}
 				break;
 			}
 		case packet_type_t::PUTREQ_SEQ:
@@ -420,6 +443,34 @@ void *run_server_worker(void * param) {
 #endif
 
 				put_request_seq_t req(buf, recv_size);
+				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
+				UNUSED(tmp_stat);
+				//COUT_THIS("[server] stat = " << tmp_stat)
+				
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t2);
+#endif
+				
+				put_response_server_t rsp(req.key(), true, global_server_logical_idx);
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
+				break;
+			}
+		case packet_type_t::PUTREQ_LARGEVALUE_SEQ:
+			{
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
+
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t1);
+#endif
+
+				put_request_largevalue_seq_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				UNUSED(tmp_stat);
@@ -482,16 +533,19 @@ void *run_server_worker(void * param) {
 #endif
 				//rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				//udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-				scanbuf.clear();
-				rsp_size = rsp.dynamic_serialize(scanbuf);
-				udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], scanbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
+				dynamicbuf.clear();
+				rsp_size = rsp.dynamic_serialize(dynamicbuf);
+				udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
 #ifdef DUMP_BUF
-				dump_buf(scanbuf.array(), rsp_size);
+				dump_buf(dynamicbuf.array(), rsp_size);
 #endif
 				break;
 			}
 		case packet_type_t::GETREQ_POP: 
 			{
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				get_request_pop_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
@@ -499,31 +553,39 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
-				get_response_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
+					get_response_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
+					dump_buf(buf, rsp_size);
 #endif
 
-				// Trigger cache population if necessary (key exist and not being cached)
-				if (workload_mode != 0) {
-					bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
-					if (!is_cached_before) {
-						server_cached_keyset_list[local_server_logical_idx].insert(req.key());
-						// Send CACHE_POP to server.popclient
-						//cache_pop_t cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx); // freed by server.popclient
-						//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
-						
-						cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
-						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
-						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
+					// Trigger cache population if necessary (key exist and not being cached)
+					if (workload_mode != 0) {
+						bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
+						if (!is_cached_before) {
+							server_cached_keyset_list[local_server_logical_idx].insert(req.key());
+							// Send CACHE_POP to server.popclient
+							//cache_pop_t cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx); // freed by server.popclient
+							//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+							
+							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
+							rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+							send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+							cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
+							INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
+						}
 					}
+				}
+				else {
+					get_response_largevalue_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					dynamicbuf.clear()
+					rsp_size = rsp.dynamic_serialize(dynamicbuf);
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_server_t::get_fraghdrsize());
+#ifdef DUMP_BUF
+					dump_buf(dynamicbuf.array(), rsp_size);
+#endif
 				}
 				break;
 			}

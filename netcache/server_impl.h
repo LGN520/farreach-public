@@ -336,7 +336,7 @@ void *run_server_worker(void * param) {
   netreach_key_t max_endkey(std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), max_endkeyhihi);
 
   char buf[MAX_BUFSIZE];
-  dynamic_array_t scanbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
+  dynamic_array_t dynamicbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
   int recv_size = 0;
   int rsp_size = 0;
   char recvbuf[MAX_BUFSIZE];
@@ -399,25 +399,38 @@ void *run_server_worker(void * param) {
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				get_request_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				get_response_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+
+				if (tmp_val.val_length <= val_t::MAX_SWITCH_VALLEN) {
+					get_response_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+					dump_buf(buf, rsp_size);
 #endif
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+				}
+				else {
+					get_response_largevalue_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					dynamicbuf.clear();
+					rsp_size = rsp.dynamic_serialize(dynamicbuf);
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_fraghdrsize());
 #ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
+					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
+				}
 				break;
 			}
 		case packet_type_t::PUTREQ_SEQ:
 		case packet_type_t::DELREQ_SEQ:
+		case packet_type_t::PUTREQ_LARGEVALUE_SEQ:
 			{
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
@@ -432,6 +445,12 @@ void *run_server_worker(void * param) {
 				uint32_t tmp_seq;
 				if (pkt_type == packet_type_t::PUTREQ_SEQ) {
 					put_request_seq_t req(buf, recv_size);
+					tmp_key = req.key();
+					tmp_val = req.val();
+					tmp_seq = req.seq();
+				}
+				else if (pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
+					put_request_largevalue_seq_t req(buf, recv_size);
 					tmp_key = req.key();
 					tmp_val = req.val();
 					tmp_seq = req.seq();
@@ -514,6 +533,7 @@ void *run_server_worker(void * param) {
 
 						// notify server.valueupdateserver to update inswitch value in background
 						netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
+						INVARIANT(pkt_type != packet_type_t::PUTREQ_LARGEVALUE_SEQ);
 						if (pkt_type == packet_type_t::PUTREQ_SEQ) {
 							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, true);
 						}
@@ -527,7 +547,7 @@ void *run_server_worker(void * param) {
 					}
 					// else: do nothing as key is removed from beingupdated keyset by server.evictserver
 
-					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+					if (pkt_type == packet_type_t::PUTREQ_SEQ || pkt_type == packet_type_t::PUREQ_LARGEVALUE_SEQ) {
 						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
@@ -542,7 +562,7 @@ void *run_server_worker(void * param) {
 				CUR_TIME(rocksdb_t2);
 #endif
 				
-				if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+				if (pkt_type == packet_type_t::PUTREQ_SEQ || pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
 					put_response_t rsp(tmp_key, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
@@ -713,11 +733,11 @@ void *run_server_worker(void * param) {
 #endif
 				//rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				//udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-				scanbuf.clear();
-				rsp_size = rsp.dynamic_serialize(scanbuf);
-				udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], scanbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
+				dynamicbuf.clear();
+				rsp_size = rsp.dynamic_serialize(dynamicbuf);
+				udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
 #ifdef DUMP_BUF
-				dump_buf(scanbuf.array(), rsp_size);
+				dump_buf(dynamicbuf.array(), rsp_size);
 #endif
 				break;
 			}
