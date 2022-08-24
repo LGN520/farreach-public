@@ -491,7 +491,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: ipv4_forward_tbl (default: nop; size: 8*client_physical_num=16 < 8*8=64)
+            # Table: ipv4_forward_tbl (default: nop; size: 9*client_physical_num=18 < 9*8=72)
             print "Configuring ipv4_forward_tbl"
             for tmp_client_physical_idx in range(client_physical_num):
                 ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
@@ -499,7 +499,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 #tmpsid = self.client_sids[tmp_client_physical_idx]
                 eport = self.clientleafswitch_devport
                 tmpsid = self.clientleafswitch_sid
-                for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
+                for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK, GETRES_LARGEVALUE]:
                     matchspec0 = distfarreachspine_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,

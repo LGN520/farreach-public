@@ -852,14 +852,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.prepare_for_cachehit_and_hash_for_bf1_tbl_table_add_with_set_client_sid_and_hash_for_bf1(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: ipv4_forward_tbl (default: nop; size: 14*client_physical_num=28 < 14*8=112)
+            # Table: ipv4_forward_tbl (default: nop; size: 15*client_physical_num=30 < 15*8=120)
             print "Configuring ipv4_forward_tbl"
             for tmp_client_physical_idx in range(client_physical_num):
                 ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
                 eport = self.client_devports[tmp_client_physical_idx]
                 tmpsid = self.client_sids[tmp_client_physical_idx]
                 #for tmpoptype in [GETRES, DISTCACHE_GETRES_SPINE, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
-                for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
+                for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK, GETRES_LARGEVALUE]:
                     matchspec0 = distcacheleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
@@ -869,7 +869,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 eport = self.spineswitch_devport
                 tmpsid = self.spineswitch_sid
-                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, LOADACK_SERVER]:
+                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, LOADACK_SERVER, GETRES_LARGEVALUE_SERVER]:
                     matchspec0 = distcacheleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
@@ -910,7 +910,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
 
-            # Table: ig_port_forward_tbl (default: nop; size: 14)
+            # Table: ig_port_forward_tbl (default: nop; size: 15)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ_SPINE)
@@ -979,6 +979,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE)
             self.client.ig_port_forward_tbl_table_add_with_update_distnocache_putreq_largevalue_spine_to_putreq_largevalue(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_LARGEVALUE_SERVER)
+            self.client.ig_port_forward_tbl_table_add_with_update_getres_largevalue_server_to_getres_largevalue(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline
