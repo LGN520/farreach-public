@@ -1547,19 +1547,78 @@ WarmupAck<key_t>::WarmupAck(const char * data, uint32_t recv_size) {
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::WARMUPACK);
 }
 
-// LoadRequest
+// LoadRequest (value can be any size)
 
 template<class key_t, class val_t>
 LoadRequest<key_t, val_t>::LoadRequest(key_t key, val_t val) 
 	: PutRequest<key_t, val_t>(key, val)
 {
-	this->_type = static_cast<optype_t>(PacketType::LOADREQ);
+	// NOTE: val can be any size for LOADREQ
 }
 
 template<class key_t, class val_t>
 LoadRequest<key_t, val_t>::LoadRequest(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::LOADREQ);
+	// NOTE: val can be any size for LOADREQ
+}
+
+template<class key_t, class val_t>
+val_t LoadRequest<key_t, val_t>::val() const {
+	return _val;
+}
+
+template<class key_t, class val_t>
+uint32_t LoadRequest<key_t, val_t>::size() { // not used
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN;
+}
+
+template<class key_t, class val_t>
+size_t LoadRequest<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(key_t); // op_hdr
+}
+
+template<class key_t, class val_t>
+uint32_t LoadRequest<key_t, val_t>::dynamic_serialize(dynamic_array_t &dynamic_data) {
+	int tmpoff = 0;
+	uint32_t tmp_typesize = dynamic_serialize_packet_type(this->_type, dynamic_data);
+	tmpoff += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.dynamic_serialize(dynamic_data, tmpoff);
+	tmpoff += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.dynamic_serialize(dynamic_data, tmpoff);
+	tmpoff += tmp_valsize;
+	return tmp_typesize + tmp_keysize + tmp_valsize;
+}
+
+template<class key_t, class val_t>
+uint32_t LoadRequest<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - tmp_typesize - tmp_keysize);
+	begin += tmp_valsize;
+	//uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
+	//begin += tmp_shadowtypesize;
+	return tmp_typesize + tmp_keysize + tmp_valsize;// + tmp_shadowtypesize;
+}
+
+template<class key_t, class val_t>
+void LoadRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
+	const char *begin = data;
+	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	UNUSED(tmp_valsize);
+	begin += tmp_valsize;
+	//// deserialize shadowtype
 }
 
 // LoadAck

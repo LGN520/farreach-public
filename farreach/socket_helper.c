@@ -133,9 +133,13 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 		memset(fragbuf + frag_hdrsize, 0, frag_maxsize - frag_hdrsize);
 
 		// prepare for final fragment header
-		// NOTE: UDP fragmentation is processed by end-hosts instead of switch -> no need for endianess conversion
-		memcpy(fragbuf + frag_hdrsize, &cur_fragidx, sizeof(uint16_t));
-		memcpy(fragbuf + frag_hdrsize + sizeof(uint16_t), &max_fragnum, sizeof(uint16_t));
+		//// NOTE: UDP fragmentation is processed by end-hosts instead of switch -> no need for endianess conversion
+		//memcpy(fragbuf + frag_hdrsize, &cur_fragidx, sizeof(uint16_t));
+		//memcpy(fragbuf + frag_hdrsize + sizeof(uint16_t), &max_fragnum, sizeof(uint16_t));
+		uint16_t bigendian_cur_fragidx = htons(cur_fragidx); // littleendian -> bigendian for large value
+		memcpy(fragbuf + frag_hdrsize, &bigendian_cur_fragidx, sizeof(uint16_t));
+		uint16_t bigendian_max_fragnum = htons(max_fragnum); // littleendian -> bigendian for large value
+		memcpy(fragbuf + frag_hdrsize + sizeof(uint16_t), &bigendian_max_fragnum, sizeof(uint16_t));
 
 		// prepare for fragment body
 		int cur_frag_bodysize = frag_bodysize;
@@ -180,6 +184,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 
 			buf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
 			memcpy(&max_fragnum, fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
+			max_fragnum = ntohs(max_fragnum); // bigendian -> littleendian for large value
 			is_first = false;
 		}
 		else {
@@ -192,6 +197,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 
 		uint16_t cur_fragidx = 0;
 		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
+		cur_fragidx = ntohs(cur_fragidx); // bigendian -> littleendian for large value
 		INVARIANT(cur_fragidx < max_fragnum);
 		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnum, frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 
@@ -305,12 +311,14 @@ bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnu
 
 			tmpbuf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
 			memcpy(&max_fragnums[tmp_bufidx], fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
+			max_fragnums[tmp_bufidx] = ntohs(max_fragnums[tmp_bufidx]); // bigendian -> littleendian for large value
 
 			local_isfirsts[tmp_bufidx] = false;
 		}
 
 		uint16_t cur_fragidx = 0;
 		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
+		cur_fragidx = ntohs(cur_fragidx); // bigendian -> littleendian for large value
 		INVARIANT(cur_fragidx < max_fragnums[tmp_bufidx]);
 		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnums[tmp_bufidx], frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 

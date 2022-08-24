@@ -1707,8 +1707,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
             #, NETCACHE_VALUEUPDATE
             # NOTE: we do NOT access add_and_remove_value_header_tbl for DISTCACHE_SPINE_VALUEUPDATE_INSWITCH, as we bypass_egress in spineselect_tbl in ingress pipeline
-            #, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH
-            for tmpoptype in [PUTREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, GETRES, LOADREQ, DISTCACHE_VALUEUPDATE_INSWITCH]:
+            #, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH, LOADREQ
+            for tmpoptype in [PUTREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, GETRES, DISTCACHE_VALUEUPDATE_INSWITCH]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                     if i == 0:
                         vallen_start = 0
