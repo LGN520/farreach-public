@@ -286,9 +286,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             if RANGE_SUPPORT == False:
-                # Table: hash_for_partition_tbl (default: nop; size: 4)
+                # Table: hash_for_partition_tbl (default: nop; size: 5)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ, PUTREQ, DELREQ, LOADREQ]:
+                for tmpoptype in [GETREQ, PUTREQ, DELREQ, LOADREQ, PUTREQ_LARGEVALUE]:
                     matchspec0 = nocache_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype))
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
@@ -297,10 +297,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             if RANGE_SUPPORT == True:
-                # Table: range_partition_tbl (default: nop; size <= 5 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 6 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_server = pow(2, 16) / server_total_logical_num
-                for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, LOADREQ]:
+                for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, LOADREQ, PUTREQ_LARGEVALUE]:
                     key_start = 0 # [0, 2^16-1]
                     for global_server_logical_idx in range(server_total_logical_num):
                         if global_server_logical_idx == server_total_logical_num - 1:
@@ -337,10 +337,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
-                # Table: hash_partition_tbl (default: nop; size <= 4 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 5 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = switch_partition_count / server_total_logical_num
-                for tmpoptype in [GETREQ, PUTREQ, DELREQ, LOADREQ]:
+                for tmpoptype in [GETREQ, PUTREQ, DELREQ, LOADREQ, PUTREQ_LARGEVALUE]:
                     hash_start = 0 # [0, partition_count-1]
                     for global_server_logical_idx in range(server_total_logical_num):
                         if global_server_logical_idx == server_total_logical_num - 1:

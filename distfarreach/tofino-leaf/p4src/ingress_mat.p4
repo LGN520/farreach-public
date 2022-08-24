@@ -555,6 +555,11 @@ action update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch(
 	//add_header(inswitch_hdr);
 }
 
+action update_distnocache_putreq_largevalue_spine_to_putreq_largevalue() {
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE);
+	// NOTE: NO shadowtype_hdr for PUTREQ_LARGEVALUE
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ig_port_forward_counter {
@@ -585,8 +590,9 @@ table ig_port_forward_tbl {
 		update_loadack_server_to_loadack;
 		update_getres_latest_seq_server_inswitch_to_getres_latest_seq_inswitch;
 		update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch;
+		update_distnocache_putreq_largevalue_spine_to_putreq_largevalue;
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 32;
 }

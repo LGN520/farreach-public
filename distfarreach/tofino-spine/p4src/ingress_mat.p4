@@ -150,7 +150,7 @@ table hash_for_partition_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 32;
 }
 #endif
 
@@ -462,6 +462,11 @@ action update_getres_deleted_seq_server_to_getres_deleted_seq_server_inswitch() 
 	add_header(inswitch_hdr);
 }
 
+action update_putreq_largevalue_to_distnocache_putreq_largevalue_spine() {
+	modify_field(op_hdr.optype, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE);
+	// NOTE: NO shadowtype_hdr for DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ig_port_forward_counter {
@@ -491,6 +496,7 @@ table ig_port_forward_tbl {
 		update_delreq_seq_to_delreq_seq_inswitch;
 		update_getres_latest_seq_server_to_getres_latest_seq_server_inswitch;
 		update_getres_deleted_seq_server_to_getres_deleted_seq_server_inswitch;
+		update_putreq_largevalue_to_distnocache_putreq_largevalue_spine;
 		nop;
 	}
 	default_action: nop();

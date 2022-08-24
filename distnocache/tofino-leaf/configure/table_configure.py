@@ -315,16 +315,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: hash_for_spineselect_tbl (default: nop; size: 6)
             print "Configuring hash_for_spineselect_tbl"
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, LOADREQ]:
+            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, LOADREQ, PUTREQ_LARGEVALUE]:
                 matchspec0 = distnocacheleaf_hash_for_spineselect_tbl_match_spec_t(\
                         op_hdr_optype = convert_u16_to_i16(tmpoptype))
                 self.client.hash_for_spineselect_tbl_table_add_with_hash_for_spineselect(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT == False:
-                # Table: hash_for_partition_tbl (default: nop; size: 4)
+                # Table: hash_for_partition_tbl (default: nop; size: 5)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ_SPINE, DISTNOCACHE_PUTREQ_SPINE, DISTNOCACHE_DELREQ_SPINE, LOADREQ_SPINE]:
+                for tmpoptype in [GETREQ_SPINE, DISTNOCACHE_PUTREQ_SPINE, DISTNOCACHE_DELREQ_SPINE, LOADREQ_SPINE, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE]:
                     matchspec0 = distnocacheleaf_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype))
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
@@ -333,10 +333,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: spineselect_tbl (default: nop; size <= 5 * spineswitch_total_logical_num)
+            # Table: spineselect_tbl (default: nop; size <= 6 * spineswitch_total_logical_num)
             print "Configuring spineselect_tbl"
             key_range_per_spineswitch = switch_partition_count / spineswitch_total_logical_num
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, LOADREQ]:
+            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, LOADREQ, PUTREQ_LARGEVALUE]:
                 key_start = 0 # [0, 2^16-1]
                 for i in range(spineswitch_total_logical_num):
                     global_spineswitch_logical_idx = spineswitch_logical_idxes[i]
@@ -359,12 +359,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 2
 
             if RANGE_SUPPORT == True:
-                # Table: range_partition_tbl (default: nop; size <= 5 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 6 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_server = pow(2, 16) / server_total_logical_num
                 key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
                 servernum_per_leafswitch = server_total_logical_num / leafswitch_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, DISTNOCACHE_PUTREQ_SPINE, DISTNOCACHE_DELREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE]:
+                for tmpoptype in [GETREQ_SPINE, DISTNOCACHE_PUTREQ_SPINE, DISTNOCACHE_DELREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE]:
                     valid_serveridx_start = 0 # [0, server_total_logical_num-1]
                     valid_key_start = 0 # [0, 2^16-1]
                     for i in range(leafswitch_total_logical_num):
@@ -425,10 +425,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         valid_serveridx_start = valid_serveridx_end + 1
                         valid_key_start = valid_key_end + 1
             else:
-                # Table: hash_partition_tbl (default: nop; size <= 4 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 5 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = switch_partition_count / server_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, DISTNOCACHE_PUTREQ_SPINE, DISTNOCACHE_DELREQ_SPINE, LOADREQ_SPINE]:
+                for tmpoptype in [GETREQ_SPINE, DISTNOCACHE_PUTREQ_SPINE, DISTNOCACHE_DELREQ_SPINE, LOADREQ_SPINE, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE]:
                     hash_start = 0 # [0, partition_count-1]
                     for global_server_logical_idx in range(server_total_logical_num):
                         if global_server_logical_idx == server_total_logical_num - 1:
@@ -540,7 +540,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 5
 
-            # Table: ig_port_forward_tbl (default: nop; size: 9)
+            # Table: ig_port_forward_tbl (default: nop; size: 10)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = distnocacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ_SPINE)
@@ -577,6 +577,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = distnocacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = LOADACK_SERVER)
             self.client.ig_port_forward_tbl_table_add_with_update_loadack_server_to_loadack(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distnocacheleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE)
+            self.client.ig_port_forward_tbl_table_add_with_update_distnocache_putreq_largevalue_spine_to_putreq_largevalue(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline

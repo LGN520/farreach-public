@@ -409,6 +409,11 @@ action update_distcache_valueupdate_inswitch_to_distcache_valueupdate_inswitch_o
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }
 
+action update_putreq_largevalue_to_distnocache_putreq_largevalue_spine() {
+	modify_field(op_hdr.optype, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE);
+	// NOTE: NO shadowtype_hdr for DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ig_port_forward_counter {
@@ -435,6 +440,7 @@ table ig_port_forward_tbl {
 		//update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		//swap_udpport_for_distcache_spine_valueupdate_inswitch;
 		update_distcache_valueupdate_inswitch_to_distcache_valueupdate_inswitch_origin;
+		update_putreq_largevalue_to_distnocache_putreq_largevalue_spine;
 		nop;
 	}
 	default_action: nop();
