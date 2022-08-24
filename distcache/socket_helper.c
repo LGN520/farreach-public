@@ -521,18 +521,19 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 }
 
 bool udprecvlarge_udpfrag(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role) {
-	return udprecvlarge(sockfd, buf, flags, src_addr, addrlen, role, 0, UDP_FRAGMENT_MAXSIZE);
+	return udprecvlarge(sockfd, buf, flags, src_addr, addrlen, role, UDP_FRAGMENT_MAXSIZE, UDP_FRAGTYPE);
 }
 
-bool udprecvlarge_ipfrag(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, size_t frag_hdrsize) {
-	return udprecvlarge(sockfd, buf, flags, src_addr, addrlen, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE);
+bool udprecvlarge_ipfrag(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role) {
+	return udprecvlarge(sockfd, buf, flags, src_addr, addrlen, role, IP_FRAGMENT_MAXSIZE, IP_FRAGTYPE);
 }
 
 // NOTE: receive large packet from one source
-bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, size_t frag_hdrsize, size_t frag_maxsize) {
+bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, size_t frag_maxsize, int fragtype) {
 	bool is_timeout = false;
-	size_t final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
-	size_t frag_bodysize = frag_maxsize - final_frag_hdrsize;
+	size_t frag_hdrsize = 0;
+	size_t final_frag_hdrsize = 0;
+	size_t frag_bodysize = 0;
 
 	char fragbuf[frag_maxsize];
 	int frag_recvsize = 0;
@@ -545,6 +546,36 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 			if (is_timeout) {
 				break;
 			}
+
+			bool is_largepkt = false;
+			if (fragtype == IP_FRAGTYPE) { // NOTE: server and client (ONLY for GETREQ) do NOT know whether the packet will be large or not before udprecvlarge_ipfrag
+				packet_type_t tmp_optype = get_packet_type(fragbuf, frag_recvsize);
+				for (uint32_t tmp_optype_for_updrecvlarge_ipfrag_idx = 0; tmp_optype_for_udprecvlarge_ipfrag_idx < optype_for_udprecvlarge_ipfrag_num; tmp_optype_for_udprecvlarge_ipfrag_idx++) {
+					if (tmp_optype == optype_for_udprecvlarge_ipfrag_list[tmp_optype_for_udprecvlarge_ipfrag_idx]) {
+						frag_hdrsize = get_frag_hdrsize(tmp_optype);
+						is_largepkt = true;
+						break;
+					}
+				}
+			}
+			else if (fragtype == UDP_FRAGTYPE) {
+				frag_hdrsize = 0;
+				is_largepkt = true; // SNAPSHOT_GETDATA_ACK or SNAPSHOT_SENDDATA MUST be large packet
+			}
+			else {
+				printf("[ERROR] invalid fragtype in udprecvlarge: %d\n", fragtype);
+				exit(-1);
+			}
+
+			if (!is_largepkt) {
+				// NOT large packet -> behave similar as udprecvfrom to receive a single small packet
+				buf.dynamic_memcpy(0, fragbuf, frag_recvsize);
+				break;
+			}
+
+			final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
+			frag_bodysize = frag_maxsize - final_frag_hdrsize;
+			INVARIANT(final_frag_hdrsize != 0 && frag_bodysize != 0);
 			INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize && size_t(frag_recvsize) <= frag_maxsize);
 			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
 

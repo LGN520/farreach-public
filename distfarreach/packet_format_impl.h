@@ -4,6 +4,9 @@
 #include "packet_format.h"
 #include <arpa/inet.h>
 
+#include "key.h"
+#include "val.h"
+
 // Packet
 template<class key_t>
 Packet<key_t>::Packet() 
@@ -2280,6 +2283,26 @@ static uint32_t deserialize_switchidx(switchidx_t &switchidx, const char * data,
 	memcpy(&switchidx, data, sizeof(switchidx_t));
 	switchidx = ntohs(switchidx);
 	return sizeof(switchidx_t);
+}
+
+static size_t get_frag_hdrsize(optype_t type) {
+	size_t frag_hdrsize = 0;
+	if (type == static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE)) {
+		frag_hdrsize = PutRequestLargevalue<netreach_key_t, val_t>::get_frag_hdrsize();
+	}
+	else if (type == static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ)) {
+		frag_hdrsize = PutRequestLargevalueSeq<netreach_key_t, val_t>::get_frag_hdrsize();
+	}
+	else if (type == static_cast<optype_t>(packet_type_t::GETRES_LARGEVALUE)) {
+		frag_hdrsize = GetResponseLargevalue<netreach_key_t, val_t>::get_frag_hdrsize();
+	}
+	else if (type == static_cast<optype_t>(packet_type_t::LOADREQ)) {
+		frag_hdrsize = LoadRequest<netreach_key_t, val_t>::get_frag_hdrsize();
+	}
+	else {
+		printf("[WARNING] get_frag_hdrsize: no matched optype: %x\n", type);
+	}
+	return frag_hdrsize;
 }
 
 #endif

@@ -59,6 +59,10 @@ enum class PacketType {
 };*/
 typedef PacketType packet_type_t;
 
+// NOTE: update get_frag_hdrsize accordingly
+static const uint32_t optype_for_udprecvlarge_large_num = 4;
+static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_recvlarge_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::GETRES_LARGEVALUE, packet_type_t::LOADREQ};
+
 typedef uint16_t optype_t;
 typedef uint16_t switchidx_t;
 
@@ -777,5 +781,6 @@ static uint32_t deserialize_packet_type(optype_t &type, const char * data, uint3
 static uint32_t serialize_switchidx(switchidx_t switchidx, char *data, uint32_t maxsize);
 static uint32_t dynamic_serialize_switchidx(switchidx_t switchidx, dynamic_array_t &dynamic_data, int off);
 static uint32_t deserialize_switchidx(switchidx_t &switchidx, const char *data, uint32_t recvsize);
+static size_t get_frag_hdrsize(optype_t type);
 
 #endif
