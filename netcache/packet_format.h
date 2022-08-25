@@ -508,20 +508,22 @@ class WarmupAck : public GetRequest<key_t> { // ophdr
 };
 
 template<class key_t, class val_t>
-class LoadRequest : public Packet<key_t> { // ophdr + val in payload (NOT parsed by switch -> NOT need shadowtype)
+class LoadRequest : public Packet<key_t> { // ophdr + client_logical_idx + val in payload (NOT parsed by switch -> NOT need shadowtype)
 	public: 
-		LoadRequest(key_t key, val_t val);
+		LoadRequest(key_t key, val_t val, uint16_t client_logical_idx);
 		LoadRequest(const char * data, uint32_t recv_size);
 
 		static size_t get_frag_hdrsize();
 		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
 
+		uint16_t client_logical_idx() const; // parsed into frag_hdr.padding by switch
 		val_t val() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint16_t _client_logical_idx; // parsed into frag_hdr.padding by switch
 		val_t _val;
 };
 
@@ -744,28 +746,30 @@ class NetcacheValueupdateAck : public GetRequest<key_t> { // ophdr
 // For large value
 
 template<class key_t, class val_t>
-class PutRequestLargevalue : public Packet<key_t> { // ophdr + val in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
+class PutRequestLargevalue : public Packet<key_t> { // ophdr + client_logical_idx + val in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
 	public:
 		PutRequestLargevalue();
-		PutRequestLargevalue(key_t key, val_t val);
+		PutRequestLargevalue(key_t key, val_t val, uint16_t client_logical_idx);
 		PutRequestLargevalue(const char * data, uint32_t recv_size);
 
 		static size_t get_frag_hdrsize();
 		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
 
+		uint16_t client_logical_idx() const; // parsed into frag_hdr.padding by switch
 		val_t val() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint16_t _client_logical_idx; // parsed into frag_hdr.padding by switch
 		val_t _val;
 };
 
 template<class key_t, class val_t>
-class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // ophdr + shadowtype + seq + val in payload (NOT parsed by switch)
+class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + val in payload (NOT parsed by switch)
 	public:
-		PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq);
+		PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx);
 		PutRequestLargevalueSeq(const char * data, uint32_t recv_size);
 
 		static size_t get_frag_hdrsize();

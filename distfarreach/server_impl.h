@@ -340,7 +340,10 @@ void *run_server_worker(void * param) {
 	}
 #endif
 
-	bool is_timeout = udprecvfrom(server_worker_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
+	//bool is_timeout = udprecvfrom(server_worker_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
+	dynamicbuf.clear();
+	bool is_timeout = udprecvlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf, 0, &client_addr, &client_addrlen, "server.worker");
+	recv_size = dynamicbuf.size();
 	if (is_timeout) {
 		/*if (!is_first_pkt) {
 			printf("timeout\n");
@@ -361,14 +364,15 @@ void *run_server_worker(void * param) {
 	CUR_TIME(process_t1);
 #endif
 
-	packet_type_t pkt_type = get_packet_type(buf, recv_size);
+	//packet_type_t pkt_type = get_packet_type(buf, recv_size);
+	packet_type_t pkt_type = get_packet_type(dynamicbuf.array(), recv_size);
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+				dump_buf(dynamicbuf.array(), recv_size);
 #endif
-				get_request_t req(buf, recv_size);
+				get_request_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
@@ -397,9 +401,9 @@ void *run_server_worker(void * param) {
 		case packet_type_t::GETREQ_NLATEST:
 			{
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+				dump_buf(dynamicbuf.array(), recv_size);
 #endif
-				get_request_nlatest_t req(buf, recv_size);
+				get_request_nlatest_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
@@ -435,14 +439,14 @@ void *run_server_worker(void * param) {
 		case packet_type_t::PUTREQ_SEQ:
 			{
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+				dump_buf(dynamicbuf.array(), recv_size);
 #endif
 
 #ifdef DEBUG_SERVER
 				CUR_TIME(rocksdb_t1);
 #endif
 
-				put_request_seq_t req(buf, recv_size);
+				put_request_seq_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				UNUSED(tmp_stat);
@@ -463,14 +467,14 @@ void *run_server_worker(void * param) {
 		case packet_type_t::PUTREQ_LARGEVALUE_SEQ:
 			{
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+				dump_buf(dynamicbuf.array(), recv_size);
 #endif
 
 #ifdef DEBUG_SERVER
 				CUR_TIME(rocksdb_t1);
 #endif
 
-				put_request_largevalue_seq_t req(buf, recv_size);
+				put_request_largevalue_seq_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				UNUSED(tmp_stat);
@@ -490,15 +494,15 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::DELREQ_SEQ:
 			{
-				del_request_seq_t req(buf, recv_size);
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), recv_size);
+#endif
+				del_request_seq_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].remove(req.key(), req.seq());
 				UNUSED(tmp_stat);
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				del_response_server_t rsp(req.key(), true, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -508,7 +512,10 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::SCANREQ_SPLIT:
 			{
-				scan_request_split_t req(buf, recv_size);
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), recv_size);
+#endif
+				scan_request_split_t req(dynamicbuf.array(), recv_size);
 				
 				// get verified key range
 				INVARIANT(req.key() <= max_endkey);
@@ -528,9 +535,6 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("results size: " << results.size());
 
 				scan_response_split_server_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), req.cur_scanswitchidx(), req.max_scanswitchnum(), global_server_logical_idx, db_wrappers[local_server_logical_idx].get_snapshotid(), results.size(), results);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
 				//rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				//udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 				dynamicbuf.clear();
@@ -544,9 +548,9 @@ void *run_server_worker(void * param) {
 		case packet_type_t::GETREQ_POP: 
 			{
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+				dump_buf(dynamicbuf.array(), recv_size);
 #endif
-				get_request_pop_t req(buf, recv_size);
+				get_request_pop_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
@@ -592,14 +596,14 @@ void *run_server_worker(void * param) {
 		case packet_type_t::PUTREQ_POP_SEQ: 
 			{
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+				dump_buf(dynamicbuf.array(), recv_size);
 #endif
 
 #ifdef DEBUG_SERVER
 				CUR_TIME(rocksdb_t1);
 #endif
 
-				put_request_pop_seq_t req(buf, recv_size);
+				put_request_pop_seq_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] val = " << req.val().to_string())
@@ -635,8 +639,11 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::PUTREQ_SEQ_CASE3:
 			{
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), recv_size);
+#endif
 				//COUT_THIS("PUTREQ_SEQ_CASE3")
-				put_request_seq_case3_t req(buf, recv_size);
+				put_request_seq_case3_t req(dynamicbuf.array(), recv_size);
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
 					db_wrappers[local_server_logical_idx].make_snapshot();
@@ -646,9 +653,6 @@ void *run_server_worker(void * param) {
 				UNUSED(tmp_stat);
 				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 				put_response_server_t rsp(req.key(), true, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -658,8 +662,11 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::PUTREQ_POP_SEQ_CASE3: 
 			{
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), recv_size);
+#endif
 				//COUT_THIS("PUTREQ_POP_SEQ_CASE3")
-				put_request_pop_seq_case3_t req(buf, recv_size);
+				put_request_pop_seq_case3_t req(dynamicbuf.array(), recv_size);
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
 					db_wrappers[local_server_logical_idx].make_snapshot();
@@ -669,9 +676,6 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				put_response_server_t rsp(req.key(), true, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -698,8 +702,11 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::DELREQ_SEQ_CASE3:
 			{
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), recv_size);
+#endif
 				//COUT_THIS("DELREQ_SEQ_CASE3")
-				del_request_seq_case3_t req(buf, recv_size);
+				del_request_seq_case3_t req(dynamicbuf.array(), recv_size);
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
 					db_wrappers[local_server_logical_idx].make_snapshot();
@@ -709,9 +716,6 @@ void *run_server_worker(void * param) {
 				UNUSED(tmp_stat);
 				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 				del_response_server_t rsp(req.key(), true, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -721,10 +725,10 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::WARMUPREQ:
 			{
-				warmup_request_t req(buf, recv_size);
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+				dump_buf(dynamicbuf.array(), recv_size);
 #endif
+				warmup_request_t req(dynamicbuf.array(), recv_size);
 
 				//uint32_t tmp_seq = 0;
 				// NOTE: we do not need to write the key-value pair for WARMUPREQ except cache population
@@ -759,10 +763,10 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::LOADREQ:
 			{
-				load_request_t req(buf, recv_size);
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+				dump_buf(dynamicbuf.array(), recv_size);
 #endif
+				load_request_t req(dynamicbuf.array(), recv_size);
 
 				//char val_buf[Val::SWITCH_MAX_VALLEN];
 				//memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);

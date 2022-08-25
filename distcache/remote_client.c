@@ -1024,26 +1024,41 @@ void *run_client_worker(void *param) {
 				uint16_t tmp_rsp_spineswitchidx = 0, tmp_rsp_leafswitchidx = 0;
 				uint32_t tmp_rsp_spineload = 0, tmp_rsp_leafload = 0;
 				while (true) {
-					is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					//is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					dynamicbuf.clear();
+					is_timeout = udprecvlarge_ipfrag(client_udpsock_list[local_client_logical_idx], dynamicbuf, 0, NULL, NULL, "ycsb_remote_client");
+					recv_size = dynamicbuf.size();
 					CUR_TIME(wait_t1);
 #ifdef DUMP_BUF
-					dump_buf(buf, recv_size);
+					dump_buf(dynamicbuf.array(), recv_size);
 #endif
 					if (!is_timeout) {
 						INVARIANT(recv_size > 0);
-						if (get_packet_type(buf, recv_size) != packet_type_t::GETRES) {
+						packet_type_t tmp_pkttype_for_getreq = get_packet_type(dynamicbuf.array(), recv_size);
+						if (tmp_pkttype_for_getreq != packet_type_t::GETRES && tmp_pkttype_for_getreq != packet_type_t::GETRES_LARGEVALUE) {
 							thread_param.unmatched_cnt++;
 							continue; // continue to receive next packet
 						}
 						else {
-							get_response_t rsp(buf, recv_size);
-							if (rsp.key() != tmpkey) {
+							netreach_key_t tmp_key_for_getreq();
+							uint16_t tmp_nodeidx_foreval_for_getreq = 0;
+							if (tmp_pkttype_for_getreq == packet_type_t::GETRES) {
+								get_response_t rsp(dynamicbuf.array(), recv_size);
+								tmp_key_for_getreq = rsp.key();
+								tmp_nodeidx_foreval_for_getreq = rsp.nodeidx_foreval();
+							}
+							else {
+								get_response_largevalue_t rsp(dynamicbuf.array(), recv_size);
+								tmp_key_for_getreq = rsp.key()
+								tmp_nodeidx_foreval_for_getreq = rsp.nodeidx_foreval();
+							}
+							if (tmp_key_for_getreq != tmpkey) {
 								thread_param.unmatched_cnt++;
 								continue; // continue to receive next packet
 							}
 							else {
-								tmp_nodeidx_foreval = rsp.nodeidx_foreval();
-								FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+								tmp_nodeidx_foreval = tmp_nodeidx_foreval_for_getreq;
+								//FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 
 								tmp_rsp_spineswitchidx = rsp.spineswitchidx();
 								tmp_rsp_leafswitchidx = rsp.leafswitchidx();
