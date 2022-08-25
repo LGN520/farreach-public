@@ -59,9 +59,11 @@ enum class PacketType {
 };*/
 typedef PacketType packet_type_t;
 
-// NOTE: update get_frag_hdrsize accordingly
+// For large value -> NOTE: update the util APIs for large value (at the bottom of packet_format.h)
 static const uint32_t optype_for_udprecvlarge_large_num = 4;
 static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_recvlarge_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::GETRES_LARGEVALUE, packet_type_t::LOADREQ};
+static const uint32_t optype_with_clientlogicalidx_num = 3;
+static const packet_type_t optype_with_clientlogicalidx_list[optype_with_clientlogicalidx_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::LOADREQ};
 
 typedef uint16_t optype_t;
 typedef uint16_t switchidx_t;
@@ -785,6 +787,12 @@ static uint32_t deserialize_packet_type(optype_t &type, const char * data, uint3
 static uint32_t serialize_switchidx(switchidx_t switchidx, char *data, uint32_t maxsize);
 static uint32_t dynamic_serialize_switchidx(switchidx_t switchidx, dynamic_array_t &dynamic_data, int off);
 static uint32_t deserialize_switchidx(switchidx_t &switchidx, const char *data, uint32_t recvsize);
-static size_t get_frag_hdrsize(optype_t type);
+
+static netreach_key_t get_packet_key(const char * data, uint32_t recvsize);
+// Util APIs for large value
+static size_t get_frag_hdrsize(packet_type_t type);
+static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize);
+bool is_packet_with_largevalue(packet_type_t type); // whether the packet is large to be processed by udprecvlarge_ipfrag
+bool is_packet_with_clientlogicalidx(paket_type_t type); // whether the large packet is sent to server
 
 #endif

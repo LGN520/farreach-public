@@ -2520,24 +2520,83 @@ static uint32_t deserialize_packet_type(optype_t &type, const char * data, uint3
 	return sizeof(optype_t);
 }
 
-static size_t get_frag_hdrsize(optype_t type) {
+
+
+
+
+
+
+static netreach_key_t get_packet_key(const char * data, uint32_t recvsize) {
+	netreach_key_t tmpkey;
+	const char *begin = data + sizeof(optype_t);
+	tmpkey.deserialize(begin, recvsize - sizeof(optype_t));
+	return tmpkey;
+}
+
+// Util APIs for large value
+
+static size_t get_frag_hdrsize(packet_type_t type) {
 	size_t frag_hdrsize = 0;
-	if (type == static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE)) {
+	if (type == packet_type_t::PUTREQ_LARGEVALUE) {
 		frag_hdrsize = PutRequestLargevalue<netreach_key_t, val_t>::get_frag_hdrsize();
 	}
-	else if (type == static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ)) {
+	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
 		frag_hdrsize = PutRequestLargevalueSeq<netreach_key_t, val_t>::get_frag_hdrsize();
 	}
-	else if (type == static_cast<optype_t>(packet_type_t::GETRES_LARGEVALUE)) {
+	else if (type == packet_type_t::GETRES_LARGEVALUE) {
 		frag_hdrsize = GetResponseLargevalue<netreach_key_t, val_t>::get_frag_hdrsize();
 	}
-	else if (type == static_cast<optype_t>(packet_type_t::LOADREQ)) {
+	else if (type == packet_type_t::LOADREQ) {
 		frag_hdrsize = LoadRequest<netreach_key_t, val_t>::get_frag_hdrsize();
 	}
 	else {
 		printf("[WARNING] get_frag_hdrsize: no matched optype: %x\n", type);
 	}
 	return frag_hdrsize;
+}
+
+static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize) {
+	packet_type_t tmp_optype = get_packet_type(data, recvsize);
+	uint32_t prevbytes = 0;
+	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE) {
+		prevbytes = sizeof(optype_t) + sizeof(netreach_key_t); // op_hdr
+	}
+	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
+		prevbytes = sizeof(optype_t) + sizeof(netreach_key_t) + sizeof(optype_t) + sizeof(uint32_t); // op_hdr + shadowtype + seq
+	}
+	else if (tmp_optype == packet_type_t::LOADREQ) {
+		prevbytes = sizeof(optype_t) + sizeof(netreach_key_t); // op_hdr
+	}
+	else {
+		printf("[ERROR] invalid packet type for get_packet_clientlogicalidx: %x\n", optype_t(tmp_optype));
+		exit(-1);
+	}
+	
+	INVARIANT(recvsize >= prevbytes + sizeof(uint16_t));
+	uint16_t tmp_clientlogicalidx = 0;
+	memcpy(&tmp_clientlogicalidx, data + prevbytes, sizeof(uint16_t));
+	tmp_clientlogicalidx = ntohs(tmp_clientlogicalidx);
+	return tmp_clientlogicalidx;
+}
+
+// whether the packet is large to be processed by udprecvlarge_ipfrag
+bool is_packet_with_largevalue(packet_type_t type) {
+	for (uint32_t tmp_optype_for_udprecvlarge_ipfrag_idx = 0; tmp_optype_for_udprecvlarge_ipfrag_idx < optype_for_udprecvlarge_ipfrag_num; tmp_optype_for_udprecvlarge_ipfrag_idx++) {
+		if (type == optype_for_udprecvlarge_ipfrag_list[tmp_optype_for_udprecvlarge_ipfrag_idx]) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// whether the large packet is sent to server
+bool is_packet_with_clientlogicalidx(packet_type_t type) {
+	for (uint32_t tmp_optype_with_clientlogicalidx_idx = 0; tmp_optype_with_clientlogicalidx_idx < optype_with_clientlogicalidx_num; tmp_optype_with_clientlogicalidx_idx++) {
+		if (type == optype_with_clientlogicalidx_list[tmp_optype_with_clientlogicalidx_idx]) {
+			return true;
+		}
+	}
+	return false;
 }
 
 #endif
