@@ -136,6 +136,7 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 		//// NOTE: UDP fragmentation is processed by end-hosts instead of switch -> no need for endianess conversion
 		//memcpy(fragbuf + frag_hdrsize, &cur_fragidx, sizeof(uint16_t));
 		//memcpy(fragbuf + frag_hdrsize + sizeof(uint16_t), &max_fragnum, sizeof(uint16_t));
+		// NOTE: to support large value, switch needs to parse fragidx and fragnum -> NEED endianess conversion now
 		uint16_t bigendian_cur_fragidx = htons(cur_fragidx); // littleendian -> bigendian for large value
 		memcpy(fragbuf + frag_hdrsize, &bigendian_cur_fragidx, sizeof(uint16_t));
 		uint16_t bigendian_max_fragnum = htons(max_fragnum); // littleendian -> bigendian for large value
@@ -155,16 +156,20 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 }
 
 bool udprecvlarge_udpfrag(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role) {
-	return udprecvlarge(sockfd, buf, flags, src_addr, addrlen, role, UDP_FRAGMENT_MAXSIZE, UDP_FRAGTYPE);
+	return udprecvlarge(sockfd, buf, flags, src_addr, addrlen, role, UDP_FRAGMENT_MAXSIZE, UDP_FRAGTYPE, NULL);
 }
 
-bool udprecvlarge_ipfrag(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role) {
-	return udprecvlarge(sockfd, buf, flags, src_addr, addrlen, role, IP_FRAGMENT_MAXSIZE, IP_FRAGTYPE);
+bool udprecvlarge_ipfrag(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, pkt_ring_buffer_t *pkt_ring_buffer_ptr) {
+	return udprecvlarge(sockfd, buf, flags, src_addr, addrlen, role, IP_FRAGMENT_MAXSIZE, IP_FRAGTYPE, pkt_ring_buffer_ptr);
 }
 
 // NOTE: receive large packet from one source
-bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, size_t frag_maxsize, int fragtype) {
+bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, size_t frag_maxsize, int fragtype, pkt_ring_buffer_t *pkt_ring_buffer_ptr) {
+
 	bool is_timeout = false;
+	struct sockaddr_in tmp_src_addr;
+	socklen_t tmp_addrlen = sizeof(struct sockaddr_in);
+
 	size_t frag_hdrsize = 0;
 	size_t final_frag_hdrsize = 0;
 	size_t frag_bodysize = 0;
@@ -174,22 +179,65 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 	bool is_first = true;
 	uint16_t max_fragnum = 0;
 	uint16_t cur_fragnum = 0;
+
+	// ONLY for udprecvlarge_ipfrag
+	bool is_used_by_server = (pkt_ring_buffer_ptr != NULL);
+	netreach_key_t largepkt_key;
+	packet_type_t largepkt_optype;
+	uint16_t largepkt_client_logical_idx; // ONLY for server
+
+	// pop pkt from pkt_ring_buffer if any ONLY for IP_FRAGTYPE by server
+	if (fragtype == IP_FRAGTYPE && is_used_by_server) {
+		bool has_pkt = pkt_ring_buffer_ptr->pop(largepkt_optype, largepkt_key, buf, cur_fragnum, max_fragnum, tmp_src_addr, tmp_addrlen, largepkt_client_logical_idx);
+		if (has_pkt) { // if w/ pkt in pkt_ring_buffer
+			// Copy src address of the first packet for both large and not-large packet
+			if (src_addr != NULL) {
+				*src_addr = tmp_src_addr;
+			}
+			if (src_addrlen != NULL) {
+				*addrlen = tmp_addrlen;
+			}
+
+			if (max_fragnum == 0) { // small packet
+				return true;
+			}
+			else { // large packet
+				if (cur_fragnum >= max_fragnum) { // w/ all fragments
+					return true;
+				}
+				else { // need to receive remaining fragments
+					is_first = false; // we do NOT need to process the first packet
+					INVARIANT(is_packet_with_largevalue(largepkt_optype)) == true;
+					frag_hdrsize = get_frag_hdrsize(largepkt_optype);
+					final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
+					frag_bodysize = frag_maxsize - final_frag_hdrsize;
+				}
+			}
+		}
+	}
+
 	while (true) {
 		if (is_first) {
-			is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, src_addr, addrlen, frag_recvsize, role);
+			is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, &tmp_src_addr, &tmp_addrlen, frag_recvsize, role);
 			if (is_timeout) {
 				break;
 			}
 
+			// Copy src address of the first packet for both large and not-large packet
+			if (src_addr != NULL) {
+				*src_addr = tmp_src_addr;
+			}
+			if (src_addrlen != NULL) {
+				*addrlen = tmp_addrlen;
+			}
+
+			// Judge whether the current packet is large or not
 			bool is_largepkt = false;
 			if (fragtype == IP_FRAGTYPE) { // NOTE: server and client (ONLY for GETREQ) do NOT know whether the packet will be large or not before udprecvlarge_ipfrag
 				packet_type_t tmp_optype = get_packet_type(fragbuf, frag_recvsize);
-				for (uint32_t tmp_optype_for_updrecvlarge_ipfrag_idx = 0; tmp_optype_for_udprecvlarge_ipfrag_idx < optype_for_udprecvlarge_ipfrag_num; tmp_optype_for_udprecvlarge_ipfrag_idx++) {
-					if (tmp_optype == optype_for_udprecvlarge_ipfrag_list[tmp_optype_for_udprecvlarge_ipfrag_idx]) {
-						frag_hdrsize = get_frag_hdrsize(tmp_optype);
-						is_largepkt = true;
-						break;
-					}
+				is_largepkt = is_packet_with_largevalue(tmp_optype);
+				if (is_largepkt) {
+					frag_hdrsize = get_frag_hdrsize(tmp_optype);
 				}
 			}
 			else if (fragtype == UDP_FRAGTYPE) {
@@ -202,29 +250,120 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 			}
 
 			if (!is_largepkt) {
-				// NOT large packet -> behave similar as udprecvfrom to receive a single small packet
+				// NOT large packet -> jump out of the while loop -> behave similar as udprecvfrom to receive a single small packet
 				buf.dynamic_memcpy(0, fragbuf, frag_recvsize);
-				break;
+				break; // <=> return;
 			}
 
+			// NOTE: now the current packet MUST be large
+
+			// Save optype and key [and client_logical_idx] ONLY for udprecvlarge_ipfrag to filter unnecessary packet fro client [and server]
+			if (fragtype == IP_FRAGTYPE) {
+				largepkt_key = get_packet_key(fragbuf, frag_recvsize);
+				largepkt_optype = get_packet_type(fragbuf, frag_recvsize);
+				if (is_used_by_server) {
+					largepkt_client_logical_idx = get_packet_logicalidx(fragbuf, frag_recvsize);
+				}
+			}
+
+			// Calculate fraghdrsize, final fraghdrsize, and fragbodysize based on optype
 			final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
 			frag_bodysize = frag_maxsize - final_frag_hdrsize;
 			INVARIANT(final_frag_hdrsize != 0 && frag_bodysize != 0);
 			INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize && size_t(frag_recvsize) <= frag_maxsize);
 			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
 
+			// Copy fraghdr and get max fragnum
 			buf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
 			memcpy(&max_fragnum, fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
 			max_fragnum = ntohs(max_fragnum); // bigendian -> littleendian for large value
 			is_first = false;
 		}
-		else {
-			is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, NULL, NULL, frag_recvsize, role);
+		else { // NOTE: access the following code block ONLY if we are pursuiting a large packet
+			is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, &tmp_src_addr, &tmp_addrlen, frag_recvsize, role);
 			if (is_timeout) {
 				break;
 			}
+	
+			// Filter unexpected packets ONLY for udprecvlarge_ipfrag
+			if (fragtype == IP_FRAGTYPE) {
+				netreach_key_t tmp_nonfirstpkt_key = get_packet_key(fragbuf, frag_recvsize);
+				packet_type_t tmp_nonfirstpkt_optype = get_packet_type(fragbuf, frag_recvsize);
+				if (!is_used_by_server) { // used by client
+					if (tmp_nonfirstpkt_key != largepkt_key || tmp_nonfirstpkt_optype != largepkt_optype) { // unmatched packet
+						continue; // skip current unmatched packet, go to receive next one
+					}
+					// else {} // matched packet
+				}
+				else { // used by server
+					bool tmp_stat = false;
+					if (!is_packet_with_largevalue(tmp_nonfirstpkt_optype)) { // not-large packet
+						// Push small request into PktRingBuffer
+						tmp_stat = pkt_ring_buffer_ptr->push(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, fragbuf, frag_recvsize, tmp_src_addr, tmp_addrlen);
+						if (!tmp_stat) {
+							printf("[ERROR] overflow of pkt_ring_buffer when push optype %x\n", optype_t(tmp_nonfirstpkt_optype));
+							exit(-1);
+						}
+						continue;
+					}
+					else { // large packet
+						if (is_packet_with_clientlogicalidx(tmp_nonfirstpkt_optype)) { // large packet for server
+							uint16_t tmp_nonfirstpkt_clientlogicalidx = get_packet_clientlogicalidx(fragbuf, frag_recvsize);
+							if (tmp_nonfirstpkt_clientlogicalidx != largepkt_clientlogicalidx) { // from different client
+								// calculate fraghdrsize and fragbodysize for the large packet from different client
+								uint32_t tmp_nonfirstpkt_frag_hdrsize = get_frag_hdrsize(tmp_nonfirstpkt_optype);
+								uint32_t tmp_nonfirstpkt_final_frag_hdrsize = tmp_nonfirstpkt_frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
+								uint32_t tmp_nonfirstpkt_frag_bodysize = frag_maxsize - tmp_nonfirstpkt_final_frag_hdrsize;
+								INVARIANT(tmp_nonfirstpkt_final_frag_hdrsize != 0 && tmp_nonfirstpkt_frag_bodysize != 0);
+								INVARIANT(size_t(frag_recvsize) >= tmp_nonfirstpkt_final_frag_hdrsize && size_t(frag_recvsize) <= frag_maxsize);
+
+								// calculate maxfragnum and curfragidx for the large packet from different client
+								uint16_t tmp_nonfirstpkt_max_fragnum = 0, tmp_nonfirstpkt_cur_fragidx = 0;
+								memcpy(&tmp_nonfirstpkt_max_fragnum, fragbuf + tmp_nonfirstpkt_frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
+								tmp_nonfirstpkt_max_fragnum = ntohs(tmp_nonfirstpkt_max_fragnum); // bigendian -> littleendian for large value
+								memcpy(&tmp_nonfirstpkt_cur_fragidx, fragbuf + tmp_nonfirstpkt_frag_hdrsize, sizeof(uint16_t));
+								tmp_nonfirstpkt_cur_fragidx = ntohs(tmp_nonfirstpkt_cur_fragidx); // bigendian -> littleendian for large value
+
+								// judge whether it is a new large packet or existing large packet
+								bool is_clientlogicalidx_exist = pkt_ring_buffer_ptr->is_clientlogicalidx_exist(tmp_nonfirstpkt_clientlogicalidx);
+								if (is_client_logicalidx_exist) { // update large packet received before
+									// Update existing large packet in PktRingBuffer
+									tmp_stat = pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
+									if (!tmp_stat) {
+										printf("[ERROR] overflow of pkt_ring_buffer when push_large optype %x clientlogicalidx %d\n", optype_t(tmp_nonfirstpkt_optype), tmp_nonfirstpkt_clientlogicalidx);
+										exit(-1);
+									}
+								}
+								else { // add new large packet
+									// Push large packet into PktRingBuffer
+									tmp_stat = pkt_ring_buffer_ptr->push_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, fragbuf, tmp_nonfirstpkt_frag_hdrsize, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_nonfirstpkt_max_fragnum, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
+									if (!tmp_stat) {
+										printf("[ERROR] overflow of pkt_ring_buffer when push_large optype %x clientlogicalidx %d\n", optype_t(tmp_nonfirstpkt_optype), tmp_nonfirstpkt_clientlogicalidx);
+										exit(-1);
+									}
+								}
+								continue;
+							}
+							else { // from the same client
+								if (tmp_nonfirstpkt_key != largepkt_key || tmp_nonfirstpkt_optype != largepkt_optype) { // unmatched packet
+									continue; // skip current unmatched packet, go to receive next one
+								}
+								// else {} // matched packet
+							}
+						}
+						else { // packet NOT for server
+							printf("[ERROR] invalid packet type received by server: %x\n", optype_t(tmp_nonfirstpkt_optype));
+							exit(-1);
+						} // large packet to server w/ clientlogicalidx
+					} // large/small to server
+				} // to client/server
+			} // IP_FRAGTYPE
+
+			// NOTE: ONLY matched packet to client OR matched large packet from the same client to server can arrive here
 			INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
 		}
+
+		// NOTE: ONLY large packet can access the following code
 
 		uint16_t cur_fragidx = 0;
 		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));

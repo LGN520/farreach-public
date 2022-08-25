@@ -139,6 +139,10 @@ DEPS += dynamic_array.d
 CLEAN += dynamic_array.o
 UTILS_OBJECTS += dynamic_array.o
 
+DEPS += pkt_ring_buffer.d
+CLEAN += pkt_ring_buffer.o
+UTILS_OBJECTS += pkt_ring_buffer.o
+
 #DEPS += seq_cache.d
 #CLEAN += seq_cache.o
 #UTILS_OBJECTS += seq_cache.o
