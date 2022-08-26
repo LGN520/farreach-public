@@ -473,7 +473,7 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 		fragnum = (total_bodysize + frag_bodysize - 1) / frag_bodysize;
 	}
 	INVARIANT(fragnum > 0);
-	//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, total_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, total_bodysize);
+	//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, total_bodysize: %d, fragnum: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, total_bodysize, fragnum);
 
 	// <frag_hdrsize, cur_fragidx, max_fragnum, frag_bodysize>
 	char fragbuf[frag_maxsize];
@@ -876,7 +876,7 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
 		cur_fragidx = ntohs(cur_fragidx); // bigendian -> littleendian for large value
 		INVARIANT(cur_fragidx < perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]);
-		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnums[tmp_bufidx], frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
+		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx], frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 
 		tmpbuf.dynamic_memcpy(frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
 

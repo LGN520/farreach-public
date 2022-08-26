@@ -881,9 +881,14 @@ void *run_client_worker(void *param) {
 	INVARIANT(iter != NULL);
 
 	netreach_key_t tmpkey;
-	char tmpval_bytes[128];
-	memset(tmpval_bytes, 0x11, 128 * sizeof(char));
-	val_t tmpval(tmpval_bytes, 128);
+	// small value
+	//char tmpval_bytes[128];
+	//memset(tmpval_bytes, 0x11, 128 * sizeof(char));
+	//val_t tmpval(tmpval_bytes, 128);
+	// large value
+	char tmpval_bytes[10240];
+	memset(tmpval_bytes, 0x11, 10240 * sizeof(char));
+	val_t tmpval(tmpval_bytes, 10240);
 	optype_t tmptype;
 
 	// for network communication

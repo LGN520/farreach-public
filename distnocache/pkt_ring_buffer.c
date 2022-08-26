@@ -8,18 +8,18 @@ PktRingBuffer::PktRingBuffer(uint32_t tmpcapacity) {
 }
 
 void PktRingBuffer::init(uint32_t tmpcapacity) {
-	valid_list.resize(capacity, false);
-	optype_list.resize(capacity, packet_type_t(0));
-	key_list.resize(capacity, netreach_key_t());
-	dynamicbuf_list.resize(capacity);
-	for (uint32_t i = 0; i < capacity; i++) {
+	valid_list.resize(tmpcapacity, false);
+	optype_list.resize(tmpcapacity, packet_type_t(0));
+	key_list.resize(tmpcapacity, netreach_key_t());
+	dynamicbuf_list.resize(tmpcapacity);
+	for (uint32_t i = 0; i < tmpcapacity; i++) {
 		dynamicbuf_list[i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
-	curfragnum_list.resize(capacity, 0);
-	maxfragnum_list.resize(capacity, 0);
-	clientaddr_list.resize(capacity);
-	clientaddrlen_list.resize(capacity, sizeof(struct sockaddr_in));
-	clientlogicalidx_list.resize(capacity, 0);
+	curfragnum_list.resize(tmpcapacity, 0);
+	maxfragnum_list.resize(tmpcapacity, 0);
+	clientaddr_list.resize(tmpcapacity);
+	clientaddrlen_list.resize(tmpcapacity, sizeof(struct sockaddr_in));
+	clientlogicalidx_list.resize(tmpcapacity, 0);
 
 	head = 0;
 	tail = 0;
