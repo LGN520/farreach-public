@@ -12,13 +12,13 @@ class Val {
 
  public:
 
-  static uint16_t MAX_VALLEN; // max # of bytes
-  static uint16_t SWITCH_MAX_VALLEN; // max # of bytes in switch
-  static uint16_t get_padding_size(uint16_t vallen);
+  static uint32_t MAX_VALLEN; // max # of bytes
+  static uint32_t SWITCH_MAX_VALLEN; // max # of bytes in switch
+  static uint32_t get_padding_size(uint32_t vallen);
 
   Val();
   ~Val();
-  Val(const char* buf, uint16_t length);
+  Val(const char* buf, uint32_t length);
   Val(const Val &other);
   Val(const volatile Val &other);
   Val &operator=(const Val &other);
@@ -37,7 +37,7 @@ class Val {
 
   //void from_string(std::string& str);
 
-  // operation on packet buf (1B vallength + valdata)
+  // operation on packet buf (2B vallength + valdata)
   uint32_t deserialize(const char *buf, uint32_t buflen);
   uint32_t deserialize(const char *buf, uint32_t buflen) volatile;
   uint32_t deserialize_vallen(const char *buf, uint32_t buflen);
@@ -45,12 +45,19 @@ class Val {
   uint32_t serialize(char *buf, uint32_t buflen);
   uint32_t dynamic_serialize(dynamic_array_t &buf, int offset);
 
-  uint16_t get_bytesnum() const;
+  // operation on large packet buf (4B vallength + valdata)
+  uint32_t deserialize_large(const char *buf, uint32_t buflen);
+  uint32_t deserialize_vallen_large(const char *buf, uint32_t buflen);
+  uint32_t deserialize_val_large(const char *buf, uint32_t buflen);
+  uint32_t serialize_large(char *buf, uint32_t buflen);
+  uint32_t dynamic_serialize_large(dynamic_array_t &buf, int offset);
+
+  uint32_t get_bytesnum() const;
 
   std::string to_string_for_print() const; // For print
 
   //uint32_t val_length; // val_length (# of bytes)
-  uint16_t val_length; // val_length (# of bytes)
+  uint32_t val_length; // val_length (# of bytes)
   char *val_data;
 } PACKED;
 

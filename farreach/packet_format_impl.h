@@ -581,7 +581,7 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.serialize(begin, max_size - totalsize);
 		begin += tmp_pair_keysize;
 		totalsize += tmp_pair_keysize;
-		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.val.serialize(begin, max_size - totalsize);
+		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.val.serialize_large(begin, max_size - totalsize);
 		begin += tmp_pair_valsize;
 		totalsize += tmp_pair_valsize;
 	}
@@ -623,7 +623,7 @@ uint32_t ScanResponseSplit<key_t, val_t>::dynamic_serialize(dynamic_array_t &dyn
 		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.dynamic_serialize(dynamic_data, tmpoff);
 		tmpoff += tmp_pair_keysize;
 		totalsize += tmp_pair_keysize;
-		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.val.dynamic_serialize(dynamic_data, tmpoff);
+		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.val.dynamic_serialize_large(dynamic_data, tmpoff);
 		tmpoff += tmp_pair_valsize;
 		totalsize += tmp_pair_valsize;
 	}
@@ -665,7 +665,7 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.deserialize(begin, recv_size - totalsize);
 		begin += tmp_pair_keysize;
 		totalsize += tmp_pair_keysize;
-		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.val.deserialize(begin, recv_size - totalsize);
+		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.val.deserialize_large(begin, recv_size - totalsize);
 		begin += tmp_pair_valsize;
 		totalsize += tmp_pair_valsize;
 	}
@@ -1569,7 +1569,7 @@ uint16_t LoadRequest<key_t, val_t>::client_logical_idx() const {
 
 template<class key_t, class val_t>
 uint32_t LoadRequest<key_t, val_t>::size() { // not used
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN;
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN;
 }
 
 template<class key_t, class val_t>
@@ -1587,7 +1587,7 @@ uint32_t LoadRequest<key_t, val_t>::dynamic_serialize(dynamic_array_t &dynamic_d
 	uint16_t bigendian_client_logical_idx = htons(this->_client_logical_idx);
 	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_client_logical_idx, sizeof(uint16_t));
 	tmpoff += sizeof(uint16_t);
-	uint32_t tmp_valsize = this->_val.dynamic_serialize(dynamic_data, tmpoff);
+	uint32_t tmp_valsize = this->_val.dynamic_serialize_large(dynamic_data, tmpoff);
 	tmpoff += tmp_valsize;
 	return tmp_typesize + tmp_keysize + sizeof(uint16_t) + tmp_valsize;
 }
@@ -1604,7 +1604,7 @@ uint32_t LoadRequest<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	uint16_t bigendian_client_logical_idx = htons(this->_client_logical_idx);
 	memcpy(begin, &bigendian_client_logical_idx, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
 	//uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
 	//begin += tmp_shadowtypesize;
@@ -1623,7 +1623,7 @@ void LoadRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	memcpy(&this->_client_logical_idx, begin, sizeof(uint16_t));
 	this->_client_logical_idx = ntohs(this->_client_logical_idx);
 	begin += sizeof(uint16_t);
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_typesize - tmp_keysize);
 	UNUSED(tmp_valsize);
 	begin += tmp_valsize;
 	//// deserialize shadowtype
@@ -1960,7 +1960,7 @@ uint16_t PutRequestLargevalue<key_t, val_t>::client_logical_idx() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequestLargevalue<key_t, val_t>::size() { // not used
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN;
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN;
 }
 
 template<class key_t, class val_t>
@@ -1978,7 +1978,7 @@ uint32_t PutRequestLargevalue<key_t, val_t>::dynamic_serialize(dynamic_array_t &
 	uint16_t bigendian_client_logical_idx = htons(this->_client_logical_idx);
 	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_client_logical_idx, sizeof(uint16_t));
 	tmpoff += sizeof(uint16_t);
-	uint32_t tmp_valsize = this->_val.dynamic_serialize(dynamic_data, tmpoff);
+	uint32_t tmp_valsize = this->_val.dynamic_serialize_large(dynamic_data, tmpoff);
 	tmpoff += tmp_valsize;
 	return tmp_typesize + tmp_keysize + sizeof(uint16_t) + tmp_valsize;
 }
@@ -1995,7 +1995,7 @@ uint32_t PutRequestLargevalue<key_t, val_t>::serialize(char * const data, uint32
 	uint16_t bigendian_client_logical_idx = htons(this->_client_logical_idx);
 	memcpy(begin, &bigendian_client_logical_idx, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
 	return tmp_typesize + tmp_keysize + sizeof(uint16_t) + tmp_valsize;
 }
@@ -2012,7 +2012,7 @@ void PutRequestLargevalue<key_t, val_t>::deserialize(const char * data, uint32_t
 	memcpy(&this->_client_logical_idx, begin, sizeof(uint16_t));
 	this->_client_logical_idx = ntohs(this->_client_logical_idx);
 	begin += sizeof(uint16_t);
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_typesize - tmp_keysize);
 	UNUSED(tmp_valsize);
 	begin += tmp_valsize;
 }
@@ -2041,7 +2041,7 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::seq() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequestLargevalueSeq<key_t, val_t>::size() { // not used
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN;
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN;
 }
 
 template<class key_t, class val_t>
@@ -2066,7 +2066,7 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::serialize(char * const data, uin
 	uint16_t bigendian_client_logical_idx = htons(this->_client_logical_idx);
 	memcpy(begin, &bigendian_client_logical_idx, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - tmp_typesize - tmp_keysize - tmp_shadowtypesize - sizeof(uint32_t));
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_typesize - tmp_keysize - tmp_shadowtypesize - sizeof(uint32_t));
 	begin += tmp_valsize;
 	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + sizeof(uint32_t) + sizeof(uint16_t) + tmp_valsize;
 }
@@ -2087,7 +2087,7 @@ void PutRequestLargevalueSeq<key_t, val_t>::deserialize(const char * data, uint3
 	memcpy(&this->_client_logical_idx, begin, sizeof(uint16_t));
 	this->_client_logical_idx = ntohs(this->_client_logical_idx);
 	begin += sizeof(uint16_t);
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize - sizeof(optype_t) - sizeof(uint32_t));
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_typesize - tmp_keysize - sizeof(optype_t) - sizeof(uint32_t));
 	UNUSED(tmp_valsize);
 	begin += tmp_valsize;
 }
@@ -2131,7 +2131,7 @@ uint16_t GetResponseLargevalue<key_t, val_t>::nodeidx_foreval() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLargevalue<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -2146,7 +2146,7 @@ uint32_t GetResponseLargevalue<key_t, val_t>::dynamic_serialize(dynamic_array_t 
 	tmpoff += tmp_typesize;
 	uint32_t tmp_keysize = this->_key.dynamic_serialize(dynamic_data, tmpoff);
 	tmpoff += tmp_keysize;
-	uint32_t tmp_valsize = this->_val.dynamic_serialize(dynamic_data, tmpoff);
+	uint32_t tmp_valsize = this->_val.dynamic_serialize_large(dynamic_data, tmpoff);
 	tmpoff += tmp_valsize;
 	dynamic_data.dynamic_memcpy(tmpoff, (char *)&this->_stat, sizeof(bool));
 	tmpoff += sizeof(bool);
@@ -2166,7 +2166,7 @@ uint32_t GetResponseLargevalue<key_t, val_t>::serialize(char * const data, uint3
 	begin += tmp_typesize;
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
 	begin += tmp_keysize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
@@ -2186,7 +2186,7 @@ void GetResponseLargevalue<key_t, val_t>::deserialize(const char * data, uint32_
 	begin += tmp_typesize;
 	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
 	begin += tmp_keysize;
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 	begin += sizeof(bool);
@@ -2212,6 +2212,10 @@ GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(const cha
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
+template<class key_t, class val_t>
+size_t GetResponseLargevalueServer<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t); // op_hdr
+}
 
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
