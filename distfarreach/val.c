@@ -30,7 +30,7 @@ Val::~Val() {
 
 Val::Val(const char* buf, uint16_t length) {
 	INVARIANT(buf != nullptr);
-	INVARIANT(length >= 0 && length <= MAX_VALLEN);
+	//INVARIANT(length >= 0 && length <= MAX_VALLEN);
 
 	// Deep copy
 	val_data = new char[length];
@@ -177,7 +177,7 @@ void Val::from_slice(rocksdb::Slice& slice) {
 
 
 std::string Val::to_string_for_rocksdb(uint32_t seq) {
-	char tmpbuf[256];
+	char tmpbuf[val_length + sizeof(uint32_t)];
 	if (val_length > 0) {
 		INVARIANT(val_data != NULL);
 		memcpy(tmpbuf, val_data, val_length);
@@ -206,7 +206,7 @@ uint32_t Val::from_string_for_rocksdb(std::string valstr) {
 }
 
 std::string Val::to_string_for_rocksdb_noseq() {
-	char tmpbuf[256];
+	char tmpbuf[val_length];
 	if (val_length > 0) {
 		INVARIANT(val_data != NULL);
 		memcpy(tmpbuf, val_data, val_length);
@@ -295,7 +295,7 @@ uint32_t Val::deserialize_vallen(const char *buf, uint32_t buflen) {
 	INVARIANT(buflen >= sizeof(uint16_t));
 	val_length = *(const uint16_t*)buf; // # of bytes
 	val_length = ntohs(val_length); // Big-endian to little-endian
-	INVARIANT(val_length >= 0 && val_length <= MAX_VALLEN);
+	//INVARIANT(val_length >= 0 && val_length <= MAX_VALLEN);
 	//return sizeof(uint32_t); // sizeof(vallen)
 	return sizeof(uint16_t); // sizeof(vallen)
 }

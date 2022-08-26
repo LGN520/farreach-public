@@ -60,8 +60,11 @@ enum class PacketType {
 typedef PacketType packet_type_t;
 
 // For large value -> NOTE: update the util APIs for large value (at the bottom of packet_format.h)
+// (1) server/client does NOT know whether the request or get response has large value -> use optype_for_udprecvlarge_ipfrag_list to juduge if it needs to return from udprecvlarge_ipfrag in advance
 static const uint32_t optype_for_udprecvlarge_ipfrag_num = 4;
-static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_udprecvlarge_ipfrag_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::GETRES_LARGEVALUE, packet_type_t::LOADREQ};
+// NOTE: NOT including SCANRES_SPLIT which is processed by udprecvlarge_multisrc_ipfrag instead of udprecvlarge_ipfrag
+static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_udprecvlarge_ipfrag_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::LOADREQ, packet_type_t::GETRES_LARGEVALUE};
+// (2) server may receive other requests when waiting for a large request -> use optype_with_clientlogicalidx_list to judge whether server needs to extract clientlogicalidx from the current packet to push/update PktRingBuffer
 static const uint32_t optype_with_clientlogicalidx_num = 3;
 static const packet_type_t optype_with_clientlogicalidx_list[optype_with_clientlogicalidx_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::LOADREQ};
 
