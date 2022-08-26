@@ -1,18 +1,25 @@
 #include "pkt_ring_buffer.h"
 
+PktRingBuffer::PktRingBuffer() {
+}
+
 PktRingBuffer::PktRingBuffer(uint32_t tmpcapacity) {
-	valid_list.resize(size, false);
-	optype_list.resize(size, 0);
-	key_list.resize(size, netreach_key_t());
-	dynamicbuf_list.resize(size);
-	for (uint32_t i = 0; i < size; i++) {
-		dynamicbuf_list[i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
+	init(tmpcapacity);
+}
+
+void PktRingBuffer::init(uint32_t tmpcapacity) {
+	valid_list.recapacity(capacity, false);
+	optype_list.recapacity(capacity, 0);
+	key_list.recapacity(capacity, netreach_key_t());
+	dynamicbuf_list.recapacity(capacity);
+	for (uint32_t i = 0; i < capacity; i++) {
+		dynamicbuf_list[i].init(MAX_BUFcapacity, MAX_LARGE_BUFcapacity);
 	}
-	curfragnum_list.resize(size, 0);
-	maxfragnum_list.resize(size, 0);
-	clientaddr_list.resize(size);
-	clientaddrlen_list.resize(size, sizeof(struct sockaddr_in));
-	clientlogicalidx_list.resize(size, 0);
+	curfragnum_list.recapacity(capacity, 0);
+	maxfragnum_list.recapacity(capacity, 0);
+	clientaddr_list.recapacity(capacity);
+	clientaddrlen_list.recapacity(capacity, capacityof(struct sockaddr_in));
+	clientlogicalidx_list.recapacity(capacity, 0);
 
 	head = 0;
 	tail = 0;

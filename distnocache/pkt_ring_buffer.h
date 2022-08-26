@@ -15,7 +15,10 @@
 
 class PktRingBuffer {
 	public:
+		PktRingBuffer();
 		PktRingBufer(uint32_t tmpcapacity);
+
+		void init(uint32_t tmpcapacity);
 
 		// functions
 

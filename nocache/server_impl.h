@@ -14,6 +14,7 @@
 #include "message_queue_impl.h"
 #include "rocksdb_wrapper.h"
 #include "dynamic_array.h"
+#include "pkt_ring_buffer.h"
 
 //#define DUMP_BUF
 
@@ -32,6 +33,7 @@ typedef ServerWorkerParam server_worker_param_t;
 RocksdbWrapper *db_wrappers = NULL;
 int * server_worker_udpsock_list = NULL;
 int * server_worker_lwpid_list = NULL;
+pkt_ring_buffer_t * server_worker_pkt_ring_buffer_list = NULL;
 
 void prepare_server();
 void *run_server_worker(void *param); // server.workers for processing pkts
@@ -72,6 +74,12 @@ void prepare_server() {
 	server_worker_lwpid_list = new int[current_server_logical_num];
 	memset(server_worker_lwpid_list, 0, current_server_logical_num);
 
+	// for large value
+	server_worker_pkt_ring_buffer_list = new pkt_ring_buffer_t[current_server_logical_num];
+	for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
+		server_worker_pkt_ring_buffer_list[tmp_local_server_logical_idx].init(PKT_RING_BUFFER_SIZE);
+	}
+
 	memory_fence();
 
 	printf("[server] prepare end\n");
@@ -93,6 +101,10 @@ void close_server() {
 		delete [] server_worker_lwpid_list;
 		server_worker_lwpid_list = NULL;
 	}
+	if (server_worker_pkt_ring_buffer_list != NULL) {
+		delete [] server_worker_pkt_ring_buffer_list;
+		server_worker_pkt_ring_buffer_list = NULL;
+	}
 }
 
 /*
@@ -107,6 +119,8 @@ void *run_server_worker(void * param) {
 
   // NOTE: pthread id != LWP id (linux thread id)
   server_worker_lwpid_list[local_server_logical_idx] = CUR_LWPID();
+  
+  pkt_ring_buffer_t &cur_worker_pkt_ring_buffer = server_worker_pkt_ring_buffer_list[local_server_logical_idx];
 
   // open rocksdb
   bool is_existing = db_wrappers[local_server_logical_idx].open(global_server_logical_idx);
@@ -174,7 +188,7 @@ void *run_server_worker(void * param) {
 
 	//bool is_timeout = udprecvfrom(server_worker_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
 	dynamicbuf.clear();
-	bool is_timeout = udprecvlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf, 0, &client_addr, &client_addrlen, "server.worker");
+	bool is_timeout = udprecvlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf, 0, &client_addr, &client_addrlen, "server.worker", &cur_worker_pkt_ring_buffer);
 	recv_size = dynamicbuf.size();
 	if (is_timeout) {
 		/*if (!is_first_pkt) {
