@@ -5,7 +5,7 @@
 
 // Uncomment it if support range query, or comment it otherwise
 // Change distnocachespine.p4, common.py, and helper.h accordingly
-//#define RANGE_SUPPORT
+#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly

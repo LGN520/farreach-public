@@ -550,17 +550,17 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 	bool is_used_by_server = (pkt_ring_buffer_ptr != NULL);
 	netreach_key_t largepkt_key;
 	packet_type_t largepkt_optype;
-	uint16_t largepkt_client_logical_idx; // ONLY for server
+	uint16_t largepkt_clientlogicalidx; // ONLY for server
 
 	// pop pkt from pkt_ring_buffer if any ONLY for IP_FRAGTYPE by server
 	if (fragtype == IP_FRAGTYPE && is_used_by_server) {
-		bool has_pkt = pkt_ring_buffer_ptr->pop(largepkt_optype, largepkt_key, buf, cur_fragnum, max_fragnum, tmp_src_addr, tmp_addrlen, largepkt_client_logical_idx);
+		bool has_pkt = pkt_ring_buffer_ptr->pop(largepkt_optype, largepkt_key, buf, cur_fragnum, max_fragnum, tmp_src_addr, tmp_addrlen, largepkt_clientlogicalidx);
 		if (has_pkt) { // if w/ pkt in pkt_ring_buffer
 			// Copy src address of the first packet for both large and not-large packet
 			if (src_addr != NULL) {
 				*src_addr = tmp_src_addr;
 			}
-			if (src_addrlen != NULL) {
+			if (addrlen != NULL) {
 				*addrlen = tmp_addrlen;
 			}
 
@@ -573,7 +573,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 				}
 				else { // need to receive remaining fragments
 					is_first = false; // we do NOT need to process the first packet
-					INVARIANT(is_packet_with_largevalue(largepkt_optype)) == true;
+					INVARIANT(is_packet_with_largevalue(largepkt_optype) == true);
 					frag_hdrsize = get_frag_hdrsize(largepkt_optype);
 					final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
 					frag_bodysize = frag_maxsize - final_frag_hdrsize;
@@ -593,7 +593,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 			if (src_addr != NULL) {
 				*src_addr = tmp_src_addr;
 			}
-			if (src_addrlen != NULL) {
+			if (addrlen != NULL) {
 				*addrlen = tmp_addrlen;
 			}
 
@@ -628,7 +628,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 				largepkt_key = get_packet_key(fragbuf, frag_recvsize);
 				largepkt_optype = get_packet_type(fragbuf, frag_recvsize);
 				if (is_used_by_server) {
-					largepkt_client_logical_idx = get_packet_logicalidx(fragbuf, frag_recvsize);
+					largepkt_clientlogicalidx = get_packet_clientlogicalidx(fragbuf, frag_recvsize);
 				}
 			}
 
@@ -692,13 +692,9 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 
 								// judge whether it is a new large packet or existing large packet
 								bool is_clientlogicalidx_exist = pkt_ring_buffer_ptr->is_clientlogicalidx_exist(tmp_nonfirstpkt_clientlogicalidx);
-								if (is_client_logicalidx_exist) { // update large packet received before
+								if (is_clientlogicalidx_exist) { // update large packet received before
 									// Update existing large packet in PktRingBuffer
-									tmp_stat = pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
-									if (!tmp_stat) {
-										printf("[ERROR] overflow of pkt_ring_buffer when push_large optype %x clientlogicalidx %d\n", optype_t(tmp_nonfirstpkt_optype), tmp_nonfirstpkt_clientlogicalidx);
-										exit(-1);
-									}
+									pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
 								}
 								else { // add new large packet
 									// Push large packet into PktRingBuffer

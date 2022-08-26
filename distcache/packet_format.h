@@ -60,8 +60,8 @@ enum class PacketType {
 typedef PacketType packet_type_t;
 
 // For large value -> NOTE: update the util APIs for large value (at the bottom of packet_format.h)
-static const uint32_t optype_for_udprecvlarge_large_num = 4;
-static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_recvlarge_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::GETRES_LARGEVALUE, packet_type_t::LOADREQ};
+static const uint32_t optype_for_udprecvlarge_ipfrag_num = 4;
+static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_udprecvlarge_ipfrag_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::GETRES_LARGEVALUE, packet_type_t::LOADREQ};
 static const uint32_t optype_with_clientlogicalidx_num = 3;
 static const packet_type_t optype_with_clientlogicalidx_list[optype_with_clientlogicalidx_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::LOADREQ};
 
@@ -1025,7 +1025,7 @@ static netreach_key_t get_packet_key(const char * data, uint32_t recvsize);
 // Util APIs for large value
 static size_t get_frag_hdrsize(packet_type_t type);
 static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize);
-bool is_packet_with_largevalue(packet_type_t type); // whether the packet is large to be processed by udprecvlarge_ipfrag
-bool is_packet_with_clientlogicalidx(paket_type_t type); // whether the large packet is sent to server
+static bool is_packet_with_largevalue(packet_type_t type); // whether the packet is large to be processed by udprecvlarge_ipfrag
+static bool is_packet_with_clientlogicalidx(packet_type_t type); // whether the large packet is sent to server
 
 #endif

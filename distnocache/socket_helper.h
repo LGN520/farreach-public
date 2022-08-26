@@ -2,7 +2,7 @@
 #define SOCKET_HELPER_H
 
 #include <sys/socket.h> // socket API
-#include <netinet/in.h> // struct sockaddr_in_in
+#include <netinet/in.h> // struct sockaddr_in
 #include <errno.h> // errno
 #include <net/if.h> // struct ifreq; ifname -> ifidx
 #include <netinet/ether.h> // ether_header

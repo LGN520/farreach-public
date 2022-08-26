@@ -18,6 +18,15 @@ field_list_calculation hash_calc {
 	output_width: 32;
 }
 
+field_list_calculation hash_calc3 {
+	input {
+		hash_fields;
+	}
+	algorithm: identity;
+	//output_width: 16;
+	output_width: 32;
+}
+
 action nop() {}
 
 // Stage 0

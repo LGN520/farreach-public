@@ -8,18 +8,18 @@ PktRingBuffer::PktRingBuffer(uint32_t tmpcapacity) {
 }
 
 void PktRingBuffer::init(uint32_t tmpcapacity) {
-	valid_list.recapacity(capacity, false);
-	optype_list.recapacity(capacity, 0);
-	key_list.recapacity(capacity, netreach_key_t());
-	dynamicbuf_list.recapacity(capacity);
+	valid_list.resize(capacity, false);
+	optype_list.resize(capacity, packet_type_t(0));
+	key_list.resize(capacity, netreach_key_t());
+	dynamicbuf_list.resize(capacity);
 	for (uint32_t i = 0; i < capacity; i++) {
-		dynamicbuf_list[i].init(MAX_BUFcapacity, MAX_LARGE_BUFcapacity);
+		dynamicbuf_list[i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
-	curfragnum_list.recapacity(capacity, 0);
-	maxfragnum_list.recapacity(capacity, 0);
-	clientaddr_list.recapacity(capacity);
-	clientaddrlen_list.recapacity(capacity, capacityof(struct sockaddr_in));
-	clientlogicalidx_list.recapacity(capacity, 0);
+	curfragnum_list.resize(capacity, 0);
+	maxfragnum_list.resize(capacity, 0);
+	clientaddr_list.resize(capacity);
+	clientaddrlen_list.resize(capacity, sizeof(struct sockaddr_in));
+	clientlogicalidx_list.resize(capacity, 0);
 
 	head = 0;
 	tail = 0;
@@ -60,7 +60,7 @@ bool PktRingBuffer::is_clientlogicalidx_exist(uint16_t clientlogicalidx) {
 	else {
 		uint32_t bufidx = iter->second;
 		INVARIANT(valid_list[bufidx] == true);
-		INVARIANT(maxfragnum[bufidx] > 0); // aka a large packet/request
+		INVARIANT(maxfragnum_list[bufidx] > 0); // aka a large packet/request
 		return true;
 	}
 }
@@ -106,8 +106,8 @@ void PktRingBuffer::update_large(const packet_type_t &optype, const netreach_key
 	INVARIANT(key_list[bufidx] == key);
 	dynamicbuf_list[bufidx].dynamic_memcpy(fragbody_off, fragbody_buf, fragbody_bufsize);
 	curfragnum_list[bufidx] += 1;
-	INVARIANT(maxfragnum[bufidx] > 0);
-	INVARIANT(clientaddr_list[bufidx] == clientaddr);
+	INVARIANT(maxfragnum_list[bufidx] > 0);
+	//INVARIANT(clientaddr_list[bufidx] == clientaddr);
 	INVARIANT(clientaddrlen_list[bufidx] == clientaddrlen);
 	INVARIANT(clientlogicalidx_list[bufidx] == clientlogicalidx);
 }
@@ -121,7 +121,7 @@ bool PktRingBuffer::pop(packet_type_t &optype, netreach_key_t &key, dynamic_arra
 	valid_list[tail] = false;
 
 	optype = optype_list[tail];
-	optype_list[tail] = 0;
+	optype_list[tail] = packet_type_t(0);
 
 	key = key_list[tail];
 	key_list[tail] = netreach_key_t();

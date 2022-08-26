@@ -1108,7 +1108,7 @@ void *run_client_worker(void *param) {
 					CUR_TIME(send_t2);
 				}
 				else { // for large value
-					put_request_largevalue_t req(tmpkey, tmpval);
+					put_request_largevalue_t req(tmpkey, tmpval, local_client_logical_idx);
 					dynamicbuf.clear();
 					req_size = req.dynamic_serialize(dynamicbuf);
 #ifdef DUMP_BUF
@@ -1187,7 +1187,7 @@ void *run_client_worker(void *param) {
 
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 				// NOTE: LOADREQ allows both small/large value
-				load_request_t req(tmpkey, tmpval);
+				load_request_t req(tmpkey, tmpval, local_client_logical_idx);
 				dynamicbuf.clear();
 				req_size = req.dynamic_serialize(dynamicbuf);
 #ifdef DUMP_BUF
@@ -1285,51 +1285,6 @@ void *run_client_worker(void *param) {
 					}
 				}
 				if (is_timeout) {
-					thread_param.timeout_cnt += 1;
-					continue; // continue to resend
-				}
-			}
-			else if (tmptype == optype_t(packet_type_t::LOADREQ)) { // update or insert
-				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
-				INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
-				load_request_t req(tmpkey, tmpval);
-				req_size = req.serialize(buf, MAX_BUFSIZE);
-
-#ifdef DUMP_BUF
-				dump_buf(buf, req_size);
-#endif
-
-				udpsendto(client_udpsock_list[local_client_logical_idx], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
-
-				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
-				while (true) {
-					is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
-#ifdef DUMP_BUF
-					dump_buf(buf, recv_size);
-#endif
-					if (!is_timeout) {
-						INVARIANT(recv_size > 0);
-						if (get_packet_type(buf, recv_size) != packet_type_t::LOADACK) {
-							thread_param.unmatched_cnt++;
-							continue; // continue to receive next packet
-						}
-						else {
-							load_ack_t rsp(buf, recv_size);
-							if (rsp.key() != tmpkey) {
-								thread_param.unmatched_cnt++;
-								continue; // continue to receive next packet
-							}
-							else {
-								break; // break to update statistics and send next packet
-							}
-						}
-					}
-					else {
-						break; // break to resend
-					}
-				}
-				if (is_timeout) {
-					printf("timeout key %x\n", tmpkey.keyhihi);
 					thread_param.timeout_cnt += 1;
 					continue; // continue to resend
 				}

@@ -4,11 +4,13 @@
 #include <vector>
 #include <map>
 
+#include <netinet/in.h> // struct sockaddr_in
+#include <arpa/inet.h> // htons htonl
+
 #include "helper.h"
 #include "key.h"
 #include "packet_format_impl.h"
 #include "dynamic_array.h"
-#include "socket_helper.h"
 
 // at most one packet from each logical client ideally
 #define PKT_RING_BUFFER_SIZE 2048
@@ -16,7 +18,7 @@
 class PktRingBuffer {
 	public:
 		PktRingBuffer();
-		PktRingBufer(uint32_t tmpcapacity);
+		PktRingBuffer(uint32_t tmpcapacity);
 
 		void init(uint32_t tmpcapacity);
 
@@ -35,7 +37,7 @@ class PktRingBuffer {
 
 		std::vector<bool> valid_list;	
 		std::vector<packet_type_t> optype_list;
-		std::vector<netreaech_key_t> key_list;
+		std::vector<netreach_key_t> key_list;
 		std::vector<dynamic_array_t> dynamicbuf_list;
 		std::vector<uint16_t> curfragnum_list;
 		std::vector<uint16_t> maxfragnum_list;

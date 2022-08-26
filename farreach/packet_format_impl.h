@@ -1964,7 +1964,7 @@ uint32_t PutRequestLargevalue<key_t, val_t>::size() { // not used
 }
 
 template<class key_t, class val_t>
-size_t PutRequestLargeValue<key_t, val_t>::get_frag_hdrsize() {
+size_t PutRequestLargevalue<key_t, val_t>::get_frag_hdrsize() {
 	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t); // op_hdr + client_logical_idx
 }
 
@@ -2021,7 +2021,7 @@ void PutRequestLargevalue<key_t, val_t>::deserialize(const char * data, uint32_t
 
 template<class key_t, class val_t>
 PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx) 
-	: PutRequesetLargevalue<key_t, val_t>(key, val, client_logical_idx), _seq(seq)
+	: PutRequestLargevalue<key_t, val_t>(key, val, client_logical_idx), _seq(seq)
 {	
 	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
@@ -2045,7 +2045,7 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::size() { // not used
 }
 
 template<class key_t, class val_t>
-size_t PutRequestLargeValueSeq<key_t, val_t>::get_frag_hdrsize() {
+size_t PutRequestLargevalueSeq<key_t, val_t>::get_frag_hdrsize() {
 	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx
 }
 
@@ -2112,6 +2112,21 @@ GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue(const char * data, ui
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_LARGEVALUE);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+val_t GetResponseLargevalue<key_t, val_t>::val() const {
+	return _val;
+}
+
+template<class key_t, class val_t>
+bool GetResponseLargevalue<key_t, val_t>::stat() const {
+	return _stat;
+}
+
+template<class key_t, class val_t>
+uint16_t GetResponseLargevalue<key_t, val_t>::nodeidx_foreval() const {
+	return _nodeidx_foreval;
 }
 
 template<class key_t, class val_t>
@@ -2187,7 +2202,7 @@ template<class key_t, class val_t>
 GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
 	: GetResponseLargevalue<key_t, val_t>(key, val, stat, nodeidx_foreval)
 {	
-	this->_type = static_cast<optype_t>(packet_type_t::GETRES_LARGEVALUE_SERVER)
+	this->_type = static_cast<optype_t>(packet_type_t::GETRES_LARGEVALUE_SERVER);
 }
 
 template<class key_t, class val_t>
