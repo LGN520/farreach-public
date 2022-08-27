@@ -1697,7 +1697,7 @@ uint32_t LoadRequest<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	uint32_t bigendian_fragseq = htonl(this->_fragseq);
 	memcpy(begin, &bigendian_fragseq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize);
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize - sizeof(uint16_t) _ sizeof(uint32_t));
 	begin += tmp_valsize;
 	//uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
 	//begin += tmp_shadowtypesize;
@@ -1717,7 +1717,7 @@ void LoadRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	memcpy(&this->_fragseq, begin, sizeof(uint32_t));
 	this->_fragseq = ntohs(this->_fragseq);
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size-tmp_ophdrsize);
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_ophdrsize - sizeof(uint16_t) - sizeof(uint32_t));
 	UNUSED(tmp_valsize);
 	begin += tmp_valsize;
 	//// deserialize shadowtype
@@ -2104,7 +2104,7 @@ uint32_t PutRequestLargevalue<key_t, val_t>::serialize(char * const data, uint32
 	uint32_t bigendian_fragseq = htonl(this->_fragseq);
 	memcpy(begin, &bigendian_fragseq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize);
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize - sizeof(uint16_t) - sizeof(uint32_t));
 	begin += tmp_valsize;
 	return tmp_ophdrsize + sizeof(uint16_t) + sizeof(uint32_t) + tmp_valsize;
 }
@@ -2122,7 +2122,7 @@ void PutRequestLargevalue<key_t, val_t>::deserialize(const char * data, uint32_t
 	memcpy(&this->_fragseq, begin, sizeof(uint32_t));
 	this->_fragseq = ntohs(this->_fragseq);
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size-tmp_ophdrsize);
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_ophdrsize - sizeof(uint16_t) - sizeof(uint32_t));
 	UNUSED(tmp_valsize);
 	begin += tmp_valsize;
 }
@@ -2177,7 +2177,7 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::serialize(char * const data, uin
 	uint32_t bigendian_fragseq = htonl(this->_fragseq);
 	memcpy(begin, &bigendian_fragseq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize - tmp_shadowtypesize - sizeof(uint32_t));
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize - tmp_shadowtypesize - sizeof(uint32_t) - sizeof(uint16_t) - sizeof(uint32_t));
 	begin += tmp_valsize;
 	return tmp_ophdrsize + tmp_shadowtypesize + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t) + tmp_valsize;
 }
@@ -2199,7 +2199,7 @@ void PutRequestLargevalueSeq<key_t, val_t>::deserialize(const char * data, uint3
 	memcpy(&this->_fragseq, begin, sizeof(uint32_t));
 	this->_fragseq = ntohs(this->_fragseq);
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size-tmp_ophdrsize-sizeof(optype_t)-sizeof(uint32_t));
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_ophdrsize - sizeof(optype_t) - sizeof(uint32_t) - sizeof(uint16_t) - sizeof(uint32_t));
 	UNUSED(tmp_valsize);
 	begin += tmp_valsize;
 }

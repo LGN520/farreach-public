@@ -745,16 +745,16 @@ void run_benchmark() {
 				fprintf(fd, "%d\n", max_server_total_logical_num);
 			}
 			if (valid_global_server_logical_idxes.size() == 2) {
-				printf("result for server rotation of all clients: %d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
-						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
-				fprintf(fd, "%d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
-						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
+				printf("result for server rotation of all clients: %d %d %d %f %f %d %d\n", agg_bottleneckserver_pktcnt, \
+						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0], server_logical_idxes_list[1][0]);
+				fprintf(fd, "%d %d %d %f %f %d %d\n", agg_bottleneckserver_pktcnt, \
+						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0], server_logical_idxes_list[1][0]);
 			}
 			else if (valid_global_server_logical_idxes.size() == 1) {
-				printf("result for server rotation of all clients: %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
-						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
-				fprintf(fd, "%d %d %f %f\n", agg_bottleneckserver_pktcnt, \
-						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
+				printf("result for server rotation of all clients: %d %d %f %f %d\n", agg_bottleneckserver_pktcnt, \
+						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0]);
+				fprintf(fd, "%d %d %f %f %d\n", agg_bottleneckserver_pktcnt, \
+						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0]);
 			}
 			fflush(fd);
 			fclose(fd);

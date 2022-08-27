@@ -687,7 +687,6 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 						// Push small request into PktRingBuffer
 						//printf("push a small request %x into pkt ring buffer\n", int(tmp_nonfirstpkt_optype));
 						tmp_stat = pkt_ring_buffer_ptr->push(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, fragbuf, frag_recvsize, tmp_src_addr, tmp_addrlen);
-						//printf("finish push\n");
 						if (!tmp_stat) {
 							printf("[ERROR] overflow of pkt_ring_buffer when push optype %x\n", optype_t(tmp_nonfirstpkt_optype));
 							exit(-1);

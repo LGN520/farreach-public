@@ -2,7 +2,7 @@
 #define SOCKET_HELPER_H
 
 #include <sys/socket.h> // socket API
-#include <netinet/in.h> // struct sockaddr_in_in
+#include <netinet/in.h> // struct sockaddr_in
 #include <errno.h> // errno
 #include <net/if.h> // struct ifreq; ifname -> ifidx
 //#include <sys/ioctl.h> // ioctl
@@ -15,6 +15,8 @@
 #include "pkt_ring_buffer.h"
 
 #define SOCKET_TIMEOUT 5 // 5s
+// for pktloss of large value
+#define SERVER_SOCKET_TIMEOUT_USECS 10000 // 10ms
 // for limited effect on system thpt of normal request timeout
 //#define CLIENT_SOCKET_TIMEOUT_SECS 1 // 1s (for static workload under server rotation)
 #define CLIENT_SOCKET_TIMEOUT_SECS 5 // 5s (for dynamic workload due to server-side disk contention of simulation overhead)

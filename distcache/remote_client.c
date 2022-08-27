@@ -747,7 +747,7 @@ void run_benchmark() {
 			if (valid_global_server_logical_idxes.size() == 2) {
 				printf("result for server rotation of all clients: %d %d %d %f %f %d %d\n", agg_bottleneckserver_pktcnt, \
 						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0], server_logical_idxes_list[1][0]);
-				fprintf(fd, "%d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
+				fprintf(fd, "%d %d %d %f %f %d %d\n", agg_bottleneckserver_pktcnt, \
 						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency, server_logical_idxes_list[0][0], server_logical_idxes_list[1][0]);
 			}
 			else if (valid_global_server_logical_idxes.size() == 1) {
@@ -881,9 +881,22 @@ void *run_client_worker(void *param) {
 	INVARIANT(iter != NULL);
 
 	netreach_key_t tmpkey;
-	char tmpval_bytes[128];
-	memset(tmpval_bytes, 0x11, 128 * sizeof(char));
-	val_t tmpval(tmpval_bytes, 128);
+	//char tmpval_bytes[128];
+	//memset(tmpval_bytes, 0x11, 128 * sizeof(char));
+	char tmpval_bytes[10240];
+	memset(tmpval_bytes, 0x11, 10240 * sizeof(char));
+	val_t *tmpval_ptr = NULL;
+	// small value
+	if (local_client_logical_idx >= 0) { // all small packets
+	//if (local_client_logical_idx >= 256) { // [0, x] small packets; [x+1, 512] all large packets
+	//if (local_client_logical_idx >= 512) { // all large packets
+		tmpval_ptr = new val_t(tmpval_bytes, 128);
+	}
+	// large value
+	else {
+		tmpval_ptr = new val_t(tmpval_bytes, 10240);
+	}
+	val_t &tmpval = *tmpval_ptr;
 	optype_t tmptype;
 
 	// for network communication
@@ -949,6 +962,7 @@ void *run_client_worker(void *param) {
 
 	bool is_timeout = false;
 	bool isfirst_pkt = true;
+	uint32_t fragseq = 0; // for packet loss of large value to server
 	while (running) {
 /*#ifndef SERVER_ROTATION
 		if (!iter->next()) {
@@ -1040,7 +1054,7 @@ void *run_client_worker(void *param) {
 							continue; // continue to receive next packet
 						}
 						else {
-							netreach_key_t tmp_key_for_getreq();
+							netreach_key_t tmp_key_for_getreq;
 							uint16_t tmp_nodeidx_foreval_for_getreq = 0;
 							if (tmp_pkttype_for_getreq == packet_type_t::GETRES) {
 								get_response_t rsp(dynamicbuf.array(), recv_size);
@@ -1049,7 +1063,7 @@ void *run_client_worker(void *param) {
 							}
 							else {
 								get_response_largevalue_t rsp(dynamicbuf.array(), recv_size);
-								tmp_key_for_getreq = rsp.key()
+								tmp_key_for_getreq = rsp.key();
 								tmp_nodeidx_foreval_for_getreq = rsp.nodeidx_foreval();
 							}
 							if (tmp_key_for_getreq != tmpkey) {
@@ -1108,7 +1122,8 @@ void *run_client_worker(void *param) {
 					CUR_TIME(send_t2);
 				}
 				else { // for large value
-					put_request_largevalue_t req(tmpkey, tmpval, local_client_logical_idx);
+					put_request_largevalue_t req(tmpkey, tmpval, local_client_logical_idx, fragseq);
+					fragseq += 1;
 					dynamicbuf.clear();
 					req_size = req.dynamic_serialize(dynamicbuf);
 #ifdef DUMP_BUF
@@ -1177,7 +1192,7 @@ void *run_client_worker(void *param) {
 					}
 				}
 				if (is_timeout) {
-					printf("timeout key %x\n", tmpkey.keyhihi);
+					printf("timeout key %x from client %d to server %d\n", tmpkey.keyhihi, local_client_logical_idx, tmpkey.get_rangepartition_idx(max_server_total_logical_num));
 					thread_param.timeout_cnt += 1;
 					continue; // continue to resend
 				}
@@ -1187,7 +1202,8 @@ void *run_client_worker(void *param) {
 
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 				// NOTE: LOADREQ allows both small/large value
-				load_request_t req(tmpkey, tmpval, local_client_logical_idx);
+				load_request_t req(tmpkey, tmpval, local_client_logical_idx, fragseq);
+				fragseq += 1;
 				dynamicbuf.clear();
 				req_size = req.dynamic_serialize(dynamicbuf);
 #ifdef DUMP_BUF
