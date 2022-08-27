@@ -23,6 +23,8 @@
 #define AF_PACKET_RAW
 
 #define SOCKET_TIMEOUT 5 // 5s
+// for pktloss of large value
+#define SERVER_SOCKET_TIMEOUT_USECS 10000 // 10ms
 // for limited effect on system thpt of normal request timeout
 //#define CLIENT_SOCKET_TIMEOUT_SECS 1 // 1s (for static workload under server rotation)
 #define CLIENT_SOCKET_TIMEOUT_SECS 5 // 5s (for dynamic workload due to server-side disk contention of simulation overhead)
@@ -30,7 +32,7 @@
 // for low snapshot latency
 #define SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS 100000 // 0.1s
 #define SWITCHOS_SNAPSHOTCLIENT_FOR_REFLECTOR_TIMEOUT_USECS 100000 // 0.1s
-#define SWITCHOS_SPECIALCASESERVER_TIMEOUT_USECS 1000 // 1ms
+#define SWITCHOS_SPECIALCASESERVER_TIMEOUT_USECS 10000 // 10ms
 #define CONTROLLER_SNAPSHOTCLIENT_FOR_SPINESWITCHOS_TIMEOUT_USECS 100000 // 0.1s
 #define CONTROLLER_SNAPSHOTCLIENT_FOR_LEAFSWITCHOS_TIMEOUT_USECS 100000 // 0.1s
 

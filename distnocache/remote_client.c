@@ -881,14 +881,22 @@ void *run_client_worker(void *param) {
 	INVARIANT(iter != NULL);
 
 	netreach_key_t tmpkey;
-	// small value
 	//char tmpval_bytes[128];
 	//memset(tmpval_bytes, 0x11, 128 * sizeof(char));
-	//val_t tmpval(tmpval_bytes, 128);
-	// large value
 	char tmpval_bytes[10240];
 	memset(tmpval_bytes, 0x11, 10240 * sizeof(char));
-	val_t tmpval(tmpval_bytes, 10240);
+	val_t *tmpval_ptr = NULL;
+	// small value
+	//if (local_client_logical_idx >= 0) { // all small packets
+	if (local_client_logical_idx >= 256) { // [0, x] small packets; [x+1, 512] all large packets
+	//if (local_client_logical_idx >= 512) { // all large packets
+		tmpval_ptr = new val_t(tmpval_bytes, 128);
+	}
+	// large value
+	else {
+		tmpval_ptr = new val_t(tmpval_bytes, 10240);
+	}
+	val_t &tmpval = *tmpval_ptr;
 	optype_t tmptype;
 
 	// for network communication
@@ -954,6 +962,7 @@ void *run_client_worker(void *param) {
 
 	bool is_timeout = false;
 	bool isfirst_pkt = true;
+	uint32_t fragseq = 0; // for packet loss of large value to server
 	while (running) {
 /*#ifndef SERVER_ROTATION
 		if (!iter->next()) {
@@ -1089,7 +1098,8 @@ void *run_client_worker(void *param) {
 					CUR_TIME(send_t2);
 				}
 				else { // for large value
-					put_request_largevalue_t req(tmpkey, tmpval, local_client_logical_idx);
+					put_request_largevalue_t req(tmpkey, tmpval, local_client_logical_idx, fragseq);
+					fragseq += 1;
 					dynamicbuf.clear();
 					req_size = req.dynamic_serialize(dynamicbuf);
 #ifdef DUMP_BUF
@@ -1158,7 +1168,7 @@ void *run_client_worker(void *param) {
 					}
 				}
 				if (is_timeout) {
-					printf("timeout key %x\n", tmpkey.keyhihi);
+					printf("timeout key %x from client %d to server %d\n", tmpkey.keyhihi, local_client_logical_idx, tmpkey.get_rangepartition_idx(max_server_total_logical_num));
 					thread_param.timeout_cnt += 1;
 					continue; // continue to resend
 				}
@@ -1168,7 +1178,8 @@ void *run_client_worker(void *param) {
 
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 				// NOTE: LOADREQ allows both small/large value
-				load_request_t req(tmpkey, tmpval, local_client_logical_idx);
+				load_request_t req(tmpkey, tmpval, local_client_logical_idx, fragseq);
+				fragseq += 1;
 				dynamicbuf.clear();
 				req_size = req.dynamic_serialize(dynamicbuf);
 #ifdef DUMP_BUF
