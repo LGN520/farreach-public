@@ -96,7 +96,9 @@ bool PktRingBuffer::push_large(const packet_type_t &optype, const netreach_key_t
 	return true;
 }
 		
-void PktRingBuffer::update_large(const packet_type_t &optype, const netreach_key_t &key, uint32_t fragbody_off, char *fragbody_buf, uint32_t fragbody_bufsize, const struct sockaddr_in &clientaddr, const socklen_t &clientaddrlen, uint16_t clientlogicalidx) {
+void PktRingBuffer::update_large(const packet_type_t &optype, const netreach_key_t &key, char *fraghdr_buf, uint32_t fraghdr_bufsize, uint32_t fragbody_off, char *fragbody_buf, uint32_t fragbody_bufsize, const struct sockaddr_in &clientaddr, const socklen_t &clientaddrlen, uint16_t clientlogicalidx) {
+	INVARIANT(fragbody_buf != NULL);
+
 	std::map<uint16_t, uint32_t>::iterator iter = clientlogicalidx_bufidx_map.find(clientlogicalidx);
 	INVARIANT(iter != clientlogicalidx_bufidx_map.end());
 
@@ -104,6 +106,10 @@ void PktRingBuffer::update_large(const packet_type_t &optype, const netreach_key
 	INVARIANT(valid_list[bufidx] == true);
 	INVARIANT(optype_list[bufidx] == optype);
 	INVARIANT(key_list[bufidx] == key);
+	if (fraghdr_buf != NULL) {
+		// memcpy fraghdr again for fragment 0 to ensure correct seq for farreach/distfarreach/netcache/distcache
+		dynamicbuf_list[bufidx].dynamic_memcpy(0, fraghdr_buf, fraghdr_bufsize);
+	}
 	dynamicbuf_list[bufidx].dynamic_memcpy(fragbody_off, fragbody_buf, fragbody_bufsize);
 	curfragnum_list[bufidx] += 1;
 	INVARIANT(maxfragnum_list[bufidx] > 0);

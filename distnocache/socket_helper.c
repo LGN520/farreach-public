@@ -697,7 +697,13 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 								bool is_clientlogicalidx_exist = pkt_ring_buffer_ptr->is_clientlogicalidx_exist(tmp_nonfirstpkt_clientlogicalidx);
 								if (is_clientlogicalidx_exist) { // update large packet received before
 									// Update existing large packet in PktRingBuffer
-									pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
+									INVARIANT(fragtype == IP_FRAGTYPE);
+									if (tmp_nonfirstpkt_cur_fragidx != 0) {
+										pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, NULL, 0, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
+									}
+									else { // memcpy fraghdr again for fragment 0 to ensure correct seq for farreach/distfarreach/netcache/distcache
+										pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, fragbuf, tmp_nonfirstpkt_frag_hdrsize, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
+									}
 								}
 								else { // add new large packet
 									/*if (tmp_nonfirstpkt_clientlogicalidx == 16) {
@@ -746,6 +752,11 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 		//fflush(stdout);
 
 		buf.dynamic_memcpy(0 + frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
+
+		// memcpy fraghdr again for fragment 0 to ensure correct seq for farreach/distfarreach/netcache/distcache
+		if (fragtype == IP_FRAGTYPE && cur_fragidx == 0) {
+			buf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
+		}
 
 		cur_fragnum += 1;
 		if (cur_fragnum >= max_fragnum) {

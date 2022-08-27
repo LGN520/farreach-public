@@ -473,7 +473,7 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 		fragnum = (total_bodysize + frag_bodysize - 1) / frag_bodysize;
 	}
 	INVARIANT(fragnum > 0);
-	//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, total_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, total_bodysize);
+	//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, total_bodysize: %d, fragnum: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, total_bodysize, fragnum);
 
 	// <frag_hdrsize, cur_fragidx, max_fragnum, frag_bodysize>
 	char fragbuf[frag_maxsize];
@@ -681,7 +681,13 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 								bool is_clientlogicalidx_exist = pkt_ring_buffer_ptr->is_clientlogicalidx_exist(tmp_nonfirstpkt_clientlogicalidx);
 								if (is_clientlogicalidx_exist) { // update large packet received before
 									// Update existing large packet in PktRingBuffer
-									pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
+									INVARIANT(fragtype == IP_FRAGTYPE);
+									if (tmp_nonfirstpkt_cur_fragidx != 0) {
+										pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, NULL, 0, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
+									}
+									else { // memcpy fraghdr again for fragment 0 to ensure correct seq for farreach/distfarreach/netcache/distcache
+										pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, fragbuf, tmp_nonfirstpkt_frag_hdrsize, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
+									}
 								}
 								else { // add new large packet
 									// Push large packet into PktRingBuffer
@@ -695,6 +701,8 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 							}
 							else { // from the same client
 								if (tmp_nonfirstpkt_key != largepkt_key || tmp_nonfirstpkt_optype != largepkt_optype) { // unmatched packet
+									printf("[WARNING] unmatched packet %x (expect: %x) from client %d of key %x (expect: %x)\n", \
+											int(tmp_nonfirstpkt_optype), int(largepkt_optype), tmp_nonfirstpkt_clientlogicalidx, tmp_nonfirstpkt_key.keyhihi, largepkt_key.keyhihi);
 									continue; // skip current unmatched packet, go to receive next one
 								}
 								// else {} // matched packet
@@ -721,6 +729,11 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnum, frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 
 		buf.dynamic_memcpy(0 + frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
+
+		// memcpy fraghdr again for fragment 0 to ensure correct seq for farreach/distfarreach/netcache/distcache
+		if (fragtype == IP_FRAGTYPE && cur_fragidx == 0) {
+			buf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
+		}
 
 		cur_fragnum += 1;
 		if (cur_fragnum >= max_fragnum) {

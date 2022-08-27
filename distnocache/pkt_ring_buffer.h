@@ -28,7 +28,7 @@ class PktRingBuffer {
 
 		bool is_clientlogicalidx_exist(uint16_t clientlogicalidx);
 		bool push_large(const packet_type_t &optype, const netreach_key_t &key, char *fraghdr_buf, uint32_t fraghdr_bufsize, uint32_t fragbody_off, char *fragbody_buf, uint32_t fragbody_bufsize, uint16_t maxfragnum, const struct sockaddr_in &clientaddr, const socklen_t &clientaddrlen, uint16_t clientlogicalidx);
-		void update_large(const packet_type_t &optype, const netreach_key_t &key, uint32_t fragbody_off, char *fragbody_buf, uint32_t fragbody_bufsize, const struct sockaddr_in &clientaddr, const socklen_t &clientaddrlen, uint16_t clientlogicalidx);
+		void update_large(const packet_type_t &optype, const netreach_key_t &key, char *fraghudr_buf, uint32_t fraghdr_bufsize, uint32_t fragbody_off, char *fragbody_buf, uint32_t fragbody_bufsize, const struct sockaddr_in &clientaddr, const socklen_t &clientaddrlen, uint16_t clientlogicalidx);
 
 		// NOTE: FIFO order
 		bool pop(packet_type_t &optype, netreach_key_t &key, dynamic_array_t &dynamicbuf, uint16_t &curfragnum, uint16_t &maxfragnum, struct sockaddr_in &clientaddr, socklen_t &clientaddrlen, uint16_t &clientlogicalidx);
