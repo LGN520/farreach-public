@@ -549,7 +549,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         ipv4Addr_to_i32(tmp_client_ip), \
                         ipv4Addr_to_i32(tmp_server_ip), \
                         server_worker_port_start)
-                for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, LOADACK]:
+                for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, LOADACK, GETRES_LARGEVALUE]:
                     matchspec0 = nocache_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
@@ -563,7 +563,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = nocache_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ_SPLIT, LOADREQ]:
+                for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ_SPLIT, LOADREQ, PUTREQ_LARGEVALUE]:
                     matchspec0 = nocache_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)

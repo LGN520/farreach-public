@@ -1697,7 +1697,7 @@ uint32_t LoadRequest<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	uint32_t bigendian_fragseq = htonl(this->_fragseq);
 	memcpy(begin, &bigendian_fragseq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize - sizeof(uint16_t) _ sizeof(uint32_t));
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize - sizeof(uint16_t) - sizeof(uint32_t));
 	begin += tmp_valsize;
 	//uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
 	//begin += tmp_shadowtypesize;

@@ -1336,36 +1336,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         ipv4Addr_to_i32(tmp_client_ip), \
                         ipv4Addr_to_i32(tmp_server_ip), \
                         server_worker_port_start)
-                matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype = convert_u16_to_i16(GETRES), 
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec1 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(PUTRES), 
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec2 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(DELRES),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec3 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(SCANRES_SPLIT),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec4 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(WARMUPACK),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec5 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(LOADACK),
-                        eg_intr_md_egress_port = tmp_devport)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec3, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec4, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec5, actnspec0)
+                for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK, GETRES_LARGEVALUE]:
+                    matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
+                            eg_intr_md_egress_port = tmp_devport)
+                    self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             # for request from client to server, egress port has been set by partition_tbl in ingress pipeline
             for tmp_server_physical_idx in range(server_physical_num):
                 tmp_devport = self.server_devports[tmp_server_physical_idx]
@@ -1374,7 +1350,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = netbufferv4_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ]:
+                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE]:
                     matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)

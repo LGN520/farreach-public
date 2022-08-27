@@ -1122,7 +1122,7 @@ void *run_client_worker(void *param) {
 					CUR_TIME(send_t2);
 				}
 				else { // for large value
-					put_request_largevalue_t req(tmpkey, tmpval, local_client_logical_idx, fragseq);
+					put_request_largevalue_t req(tmpkey, tmpval, global_client_logical_idx, fragseq);
 					fragseq += 1;
 					dynamicbuf.clear();
 					req_size = req.dynamic_serialize(dynamicbuf);
@@ -1202,7 +1202,7 @@ void *run_client_worker(void *param) {
 
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 				// NOTE: LOADREQ allows both small/large value
-				load_request_t req(tmpkey, tmpval, local_client_logical_idx, fragseq);
+				load_request_t req(tmpkey, tmpval, global_client_logical_idx, fragseq);
 				fragseq += 1;
 				dynamicbuf.clear();
 				req_size = req.dynamic_serialize(dynamicbuf);
