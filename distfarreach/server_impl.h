@@ -342,10 +342,11 @@ void *run_server_worker(void * param) {
   struct timespec statistic_t1, statistic_t2, statistic_t3;
 #endif
   bool is_first_pkt = true;
+  bool is_timeout = false;
   while (transaction_running) {
 
 #ifdef DEBUG_SERVER
-	if (!is_first_pkt) {
+	if (!is_first_pkt && !is_timeout) {
 		CUR_TIME(udprecv_t1);
 
 		CUR_TIME(wait_beforerecv_t2);
@@ -356,7 +357,7 @@ void *run_server_worker(void * param) {
 
 	//bool is_timeout = udprecvfrom(server_worker_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
 	dynamicbuf.clear();
-	bool is_timeout = udprecvlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf, 0, &client_addr, &client_addrlen, "server.worker", &cur_worker_pkt_ring_buffer);
+	is_timeout = udprecvlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf, 0, &client_addr, &client_addrlen, "server.worker", &cur_worker_pkt_ring_buffer);
 	recv_size = dynamicbuf.size();
 	if (is_timeout) {
 		/*if (!is_first_pkt) {

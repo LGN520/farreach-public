@@ -3,6 +3,8 @@
 #include <arpa/inet.h> // inetaddr conversion; endianess conversion
 #include <netinet/tcp.h> // TCP_NODELAY
 
+//struct timespec process_t1, process_t2, process_t3; // TMPDEBUG
+
 // utils for raw socket
 
 uint16_t checksum (uint16_t *addr, int len) {
@@ -552,11 +554,19 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 			}
 
 			if (max_fragnum == 0) { // small packet
-				return true;
+				return false;
 			}
 			else { // large packet
 				if (cur_fragnum >= max_fragnum) { // w/ all fragments
-					return true;
+					/*printf("pop a complete large packet %x of key %x from client %d\n", int(largepkt_optype), largepkt_key.keyhihi, largepkt_clientlogicalidx);
+					if (largepkt_clientlogicalidx == 16) {
+						CUR_TIME(process_t2);
+						DELTA_TIME(process_t2, process_t1, process_t3);
+						double process_time = GET_MICROSECOND(process_t3);
+						printf("process time for client 16: %f\n", process_time);
+						fflush(stdout);
+					}*/
+					return false;
 				}
 				else { // need to receive remaining fragments
 					is_first = false; // we do NOT need to process the first packet
@@ -564,6 +574,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 					frag_hdrsize = get_frag_hdrsize(largepkt_optype);
 					final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
 					frag_bodysize = frag_maxsize - final_frag_hdrsize;
+					//printf("pop incomplete large packet %x of key %x from client %d w/ cur_fragnum %d max_fragnum %d\n", int(largepkt_optype), largepkt_key.keyhihi, largepkt_clientlogicalidx, cur_fragnum, max_fragnum);
 				}
 			}
 		}
@@ -616,6 +627,9 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 				largepkt_optype = get_packet_type(fragbuf, frag_recvsize);
 				if (is_used_by_server) {
 					largepkt_clientlogicalidx = get_packet_clientlogicalidx(fragbuf, frag_recvsize);
+					/*if (largepkt_clientlogicalidx == 16) {
+						CUR_TIME(process_t1);
+					}*/
 				}
 			}
 
@@ -652,7 +666,9 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 					bool tmp_stat = false;
 					if (!is_packet_with_largevalue(tmp_nonfirstpkt_optype)) { // not-large packet
 						// Push small request into PktRingBuffer
+						//printf("push a small request %x into pkt ring buffer\n", int(tmp_nonfirstpkt_optype));
 						tmp_stat = pkt_ring_buffer_ptr->push(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, fragbuf, frag_recvsize, tmp_src_addr, tmp_addrlen);
+						//printf("finish push\n");
 						if (!tmp_stat) {
 							printf("[ERROR] overflow of pkt_ring_buffer when push optype %x\n", optype_t(tmp_nonfirstpkt_optype));
 							exit(-1);
@@ -684,7 +700,11 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 									pkt_ring_buffer_ptr->update_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
 								}
 								else { // add new large packet
+									/*if (tmp_nonfirstpkt_clientlogicalidx == 16) {
+										CUR_TIME(process_t1);
+									}*/
 									// Push large packet into PktRingBuffer
+									//printf("push a large packet %x of key %x from client %d into pkt ring buffer\n", int(tmp_nonfirstpkt_optype), tmp_nonfirstpkt_key.keyhihi, tmp_nonfirstpkt_clientlogicalidx);
 									tmp_stat = pkt_ring_buffer_ptr->push_large(tmp_nonfirstpkt_optype, tmp_nonfirstpkt_key, fragbuf, tmp_nonfirstpkt_frag_hdrsize, tmp_nonfirstpkt_frag_hdrsize + tmp_nonfirstpkt_cur_fragidx * tmp_nonfirstpkt_frag_bodysize, fragbuf + tmp_nonfirstpkt_final_frag_hdrsize, frag_recvsize - tmp_nonfirstpkt_final_frag_hdrsize, tmp_nonfirstpkt_max_fragnum, tmp_src_addr, tmp_addrlen, tmp_nonfirstpkt_clientlogicalidx);
 									if (!tmp_stat) {
 										printf("[ERROR] overflow of pkt_ring_buffer when push_large optype %x clientlogicalidx %d\n", optype_t(tmp_nonfirstpkt_optype), tmp_nonfirstpkt_clientlogicalidx);
@@ -695,6 +715,8 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 							}
 							else { // from the same client
 								if (tmp_nonfirstpkt_key != largepkt_key || tmp_nonfirstpkt_optype != largepkt_optype) { // unmatched packet
+									printf("[WARNING] unmatched packet %x (expect: %x) from client %d of key %x (expect: %x)\n", \
+											int(tmp_nonfirstpkt_optype), int(largepkt_optype), tmp_nonfirstpkt_clientlogicalidx, tmp_nonfirstpkt_key.keyhihi, largepkt_key.keyhihi);
 									continue; // skip current unmatched packet, go to receive next one
 								}
 								// else {} // matched packet
@@ -719,11 +741,21 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 		cur_fragidx = ntohs(cur_fragidx); // bigendian -> littleendian for large value
 		INVARIANT(cur_fragidx < max_fragnum);
 		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnum, frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
+		
+		//printf("cur_fragidx %d cur_fragnum %d max_fragnum %d key %x client %d\n", cur_fragidx, cur_fragnum, max_fragnum, largepkt_key.keyhihi, largepkt_clientlogicalidx);
+		//fflush(stdout);
 
 		buf.dynamic_memcpy(0 + frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
 
 		cur_fragnum += 1;
 		if (cur_fragnum >= max_fragnum) {
+			/*if (largepkt_clientlogicalidx == 16) {
+				CUR_TIME(process_t2);
+				DELTA_TIME(process_t2, process_t1, process_t3);
+				double process_time = GET_MICROSECOND(process_t3);
+				printf("process time for client 16: %f\n", process_time);
+				fflush(stdout);
+			}*/
 			break;
 		}
 	}

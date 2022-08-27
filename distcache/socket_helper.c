@@ -565,11 +565,11 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 			}
 
 			if (max_fragnum == 0) { // small packet
-				return true;
+				return false;
 			}
 			else { // large packet
 				if (cur_fragnum >= max_fragnum) { // w/ all fragments
-					return true;
+					return false;
 				}
 				else { // need to receive remaining fragments
 					is_first = false; // we do NOT need to process the first packet
