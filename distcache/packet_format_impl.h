@@ -3002,7 +3002,7 @@ GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(const cha
 
 template<class key_t, class val_t>
 size_t GetResponseLargevalueServer<key_t, val_t>::get_frag_hdrsize() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t); // op_hdr
+	return Packet<key_t>::get_ophdrsize(); // op_hdr
 }
 
 // APIs
