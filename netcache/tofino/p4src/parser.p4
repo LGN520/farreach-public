@@ -65,7 +65,7 @@ parser parse_udp_srcport {
 	}
 }
 
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr
+// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr/fraginfo_hdr
 
 parser parse_op {
 	extract(op_hdr);
@@ -73,6 +73,7 @@ parser parse_op {
 		//CACHE_POP_INSWITCH_ACK: parse_clone;
 		NETCACHE_GETREQ_POP: parse_clone;
 		CACHE_EVICT_LOADFREQ_INSWITCH_ACK: parse_frequency;
+		PUTREQ_LARGEVALUE: parse_fraginfo;
 		1 mask 0x01: parse_vallen;
 		/*2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
@@ -300,6 +301,7 @@ parser parse_seq {
 	extract(seq_hdr);
 	//return select(op_hdr.optype) {
 	return select(shadowtype_hdr.shadowtype) {
+		PUTREQ_LARGEVALUE_SEQ: parse_fraginfo;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
 		default: ingress;
@@ -322,6 +324,8 @@ parser parse_inswitch {
 	//return select(op_hdr.optype) {
 	return select(shadowtype_hdr.shadowtype) {
 		NETCACHE_WARMUPREQ_INSWITCH_POP: parse_clone;
+		PUTREQ_LARGEVALUE_INSWITCH: parse_fraginfo;
+		PUTREQ_LARGEVALUE_SEQ_INSWITCH: parse_fraginfo;
 		8 mask 0x08: parse_stat;
 		default: ingress;
 		//default: parse_debug;
@@ -359,6 +363,11 @@ parser parse_clone {
 parser parse_frequency {
 	extract(frequency_hdr);
 	return ingress; // CACHE_EVICT_LOADFREQ_INSWITCH_ACK
+}
+
+parser parse_fraginfo {
+	extract(fraginfo_hdr);
+	return ingress; // PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_INSWITCH, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH
 }
 
 /*parser parse_debug {

@@ -26,6 +26,7 @@ action assign_seq() {
 table access_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
+		fraginfo_hdr.cur_fragidx: exact;
 	}
 	actions {
 		assign_seq;
@@ -35,7 +36,7 @@ table access_seq_tbl {
 #ifdef DEBUG
 	size: 32; // use seq_req for debugging (check whether some packet type enters the egress pipeline)
 #else
-	size: 2;
+	size: 4;
 #endif
 }
 

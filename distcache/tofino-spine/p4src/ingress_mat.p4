@@ -148,7 +148,7 @@ table hash_for_seq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 4;
 }
 
 // Stage 4~5
@@ -409,9 +409,13 @@ action update_distcache_valueupdate_inswitch_to_distcache_valueupdate_inswitch_o
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }
 
-action update_putreq_largevalue_to_distnocache_putreq_largevalue_spine() {
-	modify_field(op_hdr.optype, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE);
-	// NOTE: NO shadowtype_hdr for DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE
+action update_putreq_largevalue_to_putreq_largevalue_inswitch() {
+	// NOTE: PUTREQ_LARGEVALUE only w/ op_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_INSWITCH);
+
+	add_header(shadowtype_hdr);
+	add_header(inswitch_hdr);
 }
 
 #ifdef DEBUG
@@ -440,7 +444,7 @@ table ig_port_forward_tbl {
 		//update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		//swap_udpport_for_distcache_spine_valueupdate_inswitch;
 		update_distcache_valueupdate_inswitch_to_distcache_valueupdate_inswitch_origin;
-		update_putreq_largevalue_to_distnocache_putreq_largevalue_spine;
+		update_putreq_largevalue_to_putreq_largevalue_inswitch;
 		nop;
 	}
 	default_action: nop();

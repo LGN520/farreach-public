@@ -1,5 +1,11 @@
 # Variable-length key-value for all six methods (nocache/netcache/farreach/distcache/distnocache/distfarreach)
 
+- NOTE: about fraghdr
+	+ For switch, it parses fraginfo_hdr including 16b clientlogicalidx, 32b fragseq, and 16b fragidx & 16b fragnum
+	+ For end-hosts
+		* In socket helper, udpsendlarge_ipfrag adds fragidx&fragnum; udprecvlarge_ipfrag parses clientlogicalidx and fragseq for large requests from client to server, and fragidx&fragnum for all packets
+		* In client/server.worker, it ONLY serializes/deserializes clientlogicalidx&fragseq, yet NOT aware of fragidx&fragnum
+
 ## Implementation of large value part 1 (forwarding rule + ip fragmentation)
 
 - Implement >128B variable-length value (part 1)
@@ -88,7 +94,7 @@
 				+ Dump filtered packets in socket helper to see whether we drop some correct packets which should not be dropped -> NO unmatched packets
 				+ Reason: udprecvlarge return true (is_timeout) for complete packets popped from PktRingBuffer -> server.worker does NOT send response as is_timeout = true
 				+ Solution: udprecvlarge should return false (is_timeout) for complete packets popped from PktRingBuffer
-			- [IMPORTANT] Code change: op_hdr + [shadowtype_hdr + seq_hdr + inswitch_hdr] + in-switch frag_hdr (clientlogicalidx + fragseq + fragidx&fragnum) + payload -> NOTE: server-side frag_hdr includes clientlogicalidx and fragseq yet W/O fragidx&fragnum -> SYNC to ALL
+			- [IMPORTANT] Code change: op_hdr + [shadowtype_hdr + seq_hdr + inswitch_hdr] + in-switch fraginfo_hdr (clientlogicalidx + fragseq + fragidx&fragnum) + payload -> NOTE: server-side frag_hdr includes clientlogicalidx and fragseq yet W/O fragidx&fragnum -> SYNC to ALL
 				+ Implement fraghdr memcpy for IP_FRAGTYPE and fragidx = 0 (files: socket_helper.c, pkt_ring_buffer.*)
 				+ Add fragseq between clientlogicalidx and fragidx&fragnum for udprecvlarge_ipfrag to avoid duplicate large packet caused by packet loss (files: remote_client.c, packet_format.*, socket_helper.c, pkt_ring_buffer.*)
 					* NOTE: ONLY for packets w/ clientlogicalidx (aka client to server), as NO duplicate responses for server to client

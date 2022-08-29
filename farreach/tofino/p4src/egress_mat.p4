@@ -776,6 +776,15 @@ action update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(switchos
 //action forward_setvalid_inswitch_ack() {
 //}
 
+action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq() {
+	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -854,6 +863,7 @@ table eg_port_forward_tbl {
 		//forward_loadsnapshotdata_inswitch_ack;
 		update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
 		//forward_setvalid_inswitch_ack;
+		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq;
 		nop;
 	}
 	default_action: nop();
@@ -997,11 +1007,23 @@ action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
 	add(udp_hdr.hdrlen, aligned_vallen, 54);
 	add(ipv4_hdr.totalLen, aligned_vallen, 74);
 }
+
+// PUTREQ_LARGEVALUE_SEQ
+action add_shadowtypehdr_seqhdr_pktlen() {
+	// 2(shadowtype) + 4(seq)
+	add_to_field(udp_hdr.hdrlen, 6);
+	add_to_field(ipv4_hdr.totalLen, 6);
+}
 */
 
 action update_pktlen(udplen, iplen) {
 	modify_field(udp_hdr.hdrlen, udplen);
 	modify_field(ipv4_hdr.totalLen, iplen);
+}
+
+action add_pktlen(udplen_delta, iplen_delta) {
+	add_to_field(udp_hdr.hdrlen, udplen_delta);
+	add_to_field(ipv4_hdr.totalLen, iplen_delta);
 }
 
 @pragma stage 11
@@ -1018,6 +1040,7 @@ table update_pktlen_tbl {
 		update_stat_pktlen;
 		update_seq_pktlen;*/
 		update_pktlen;
+		add_pktlen;
 		nop;
 	}
 	default_action: nop(); // not change udp_hdr.hdrlen (GETREQ/GETREQ_POP/GETREQ_NLATEST)

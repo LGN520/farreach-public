@@ -321,7 +321,7 @@ table hash_for_seq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 4;
 }
 
 // Stage 4
@@ -495,6 +495,15 @@ action update_delreq_to_delreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+action update_putreq_largevalue_to_putreq_largevalue_inswitch() {
+	// NOTE: PUTREQ_LARGEVALUE only w/ op_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_INSWITCH);
+
+	add_header(shadowtype_hdr);
+	add_header(inswitch_hdr);
+}
+
 #ifdef RANGE_SUPPORT
 action update_scanreq_to_scanreq_split() {
 	modify_field(op_hdr.optype, SCANREQ_SPLIT);
@@ -517,6 +526,7 @@ table ig_port_forward_tbl {
 #ifdef RANGE_SUPPORT
 		update_scanreq_to_scanreq_split;
 #endif
+		update_putreq_largevalue_to_putreq_largevalue_inswitch;
 		nop;
 	}
 	default_action: nop();

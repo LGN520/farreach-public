@@ -504,12 +504,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             meta_toleaf_predicate = 1,
                             meta_hashval_for_spineselect_start = convert_u16_to_i16(key_start),
                             meta_hashval_for_spineselect_end = convert_u16_to_i16(key_end))
-                    if tmpoptype == GETRES_SERVER:
-                        # server-leaf sets spineswitchidx to read spineload_reg (NOTE: pkt will be forwarded to spine switch based on dstip in ipv4_forward_tbl later)
-                        actnspec0 = distcacheleaf_spineselect_for_getres_server_action_spec_t(global_spineswitch_logical_idx)
-                        self.client.spineselect_tbl_table_add_with_spineselect_for_getres_server(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                    elif tmpoptype == DISTCACHE_INVALIDATE:
+                    #if tmpoptype == GETRES_SERVER:
+                    #    # server-leaf sets spineswitchidx to read spineload_reg (NOTE: pkt will be forwarded to spine switch based on dstip in ipv4_forward_tbl later)
+                    #    actnspec0 = distcacheleaf_spineselect_for_getres_server_action_spec_t(global_spineswitch_logical_idx)
+                    #    self.client.spineselect_tbl_table_add_with_spineselect_for_getres_server(\
+                    #            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    #elif tmpoptype == DISTCACHE_INVALIDATE:
+                    if tmpoptype == DISTCACHE_INVALIDATE:
                         # server-leaf sets spineswitchidx to invalidate in-spine-switch value (NOTE: pkt will be forwarded to server pipeline by range/hash_partition_tbl; another pkt will be cloned to spine switch by ipv4_forward_tbl -> it is OK as we have set spineswitchidx to simulate multiple spine switches)
                         # TODO: we can also clone the pkt to spine switch in spineselect_tbl based on key
                         actnspec0 = distcacheleaf_spineselect_for_distcache_invalidate_action_spec_t(global_spineswitch_logical_idx)

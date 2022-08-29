@@ -149,6 +149,15 @@ header_type validvalue_t {
 	}
 }
 
+header_type fraginfo_t {
+	fields {
+		padding1: 16; // clientlogicalidx in T-PHV
+		padding2: 32; // fragseq in T-PHV
+		cur_fragidx: 16;
+		max_fragnum: 16;
+	}
+}
+
 header_type metadata_t {
 	fields {
 		need_recirculate: 1;
@@ -219,6 +228,9 @@ header stat_t stat_hdr;
 header clone_t clone_hdr;
 header frequency_t frequency_hdr;
 header validvalue_t validvalue_hdr;
+@pragma pa_no_overlay ingress fraginfo_hdr.cur_fragidx
+@pragma pa_no_overlay egress fraginfo_hdr.cur_fragidx
+header fraginfo_t fraginfo_hdr;
 metadata metadata_t meta;
 
 //header debug_t debug_hdr;
