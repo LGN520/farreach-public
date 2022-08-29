@@ -410,7 +410,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             if RANGE_SUPPORT == False:
                 # Table: hash_for_partition_tbl (default: nop; size: 18)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ]:
                     matchspec0 = distfarreachleaf_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             meta_need_recirculate = 0)
@@ -455,7 +455,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 key_range_per_server = pow(2, 16) / server_total_logical_num
                 key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
                 servernum_per_leafswitch = server_total_logical_num / leafswitch_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ]:
                     valid_serveridx_start = 0 # [0, server_total_logical_num-1]
                     valid_key_start = 0 # [0, 2^16-1]
                     for i in range(leafswitch_total_logical_num):
@@ -524,7 +524,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # Table: hash_partition_tbl (default: nop; size <= 18 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = switch_partition_count / server_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ]:
                     hash_start = 0 # [0, partition_count-1]
                     for global_server_logical_idx in range(server_total_logical_num):
                         if global_server_logical_idx == server_total_logical_num - 1:
@@ -791,9 +791,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE,
+                    op_hdr_optype = PUTREQ_LARGEVALUE_SEQ,
                     meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_distnocache_putreq_largevalue_spine_to_putreq_largevalue(\
+            self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETRES_LARGEVALUE_SERVER,
@@ -925,9 +925,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.access_cache_frequency_tbl_table_add_with_get_cache_frequency(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_validvalue_tbl (default: reset_meta_validvalue; size: 7)
+            # Table: access_validvalue_tbl (default: reset_meta_validvalue; size: 8)
             print "Configuring access_validvalue_tbl"
-            for tmpoptype in [GETREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
+            for tmpoptype in [GETREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, PUTREQ_LARGEVALUE_SEQ_INSWITCH]:
                 matchspec0 = distfarreachleaf_access_validvalue_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         inswitch_hdr_is_cached = 1)
@@ -951,14 +951,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.save_client_info_tbl_table_add_with_save_client_info(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_latest_tbl (default: reset_is_latest; size: 18)
+            # Table: access_latest_tbl (default: reset_is_latest; size: 20)
             print "Configuring access_latest_tbl"
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
                     matchspec0 = distfarreachleaf_access_latest_tbl_match_spec_t(\
                             op_hdr_optype = GETREQ_INSWITCH,
                             inswitch_hdr_is_cached = is_cached,
-                            validvalue_hdr_validvalue = validvalue)
+                            validvalue_hdr_validvalue = validvalue,
+                            fraginfo_hdr_cur_fragidx = 0)
                     if is_cached == 1:
                         self.client.access_latest_tbl_table_add_with_get_latest(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
@@ -966,7 +967,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = distfarreachleaf_access_latest_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr_validvalue = validvalue)
+                                validvalue_hdr_validvalue = validvalue,
+                                fraginfo_hdr_cur_fragidx = 0)
                         if is_cached == 1 and validvalue == 1:
                             self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -974,7 +976,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = distfarreachleaf_access_latest_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr_validvalue = validvalue)
+                                validvalue_hdr_validvalue = validvalue,
+                                fraginfo_hdr_cur_fragidx = 0)
                         if is_cached == 1 and validvalue == 1:
                             self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -984,9 +987,22 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     matchspec0 = distfarreachleaf_access_latest_tbl_match_spec_t(\
                             op_hdr_optype = CACHE_POP_INSWITCH,
                             inswitch_hdr_is_cached = is_cached,
-                            validvalue_hdr_validvalue = validvalue)
+                            validvalue_hdr_validvalue = validvalue,
+                            fraginfo_hdr_cur_fragidx = 0)
                     self.client.access_latest_tbl_table_add_with_reset_and_get_latest(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
+                    # on-path in-switch invalidation for fragment 0 of PUTREQ_LARGEVALUE_SEQ_INSWITCH
+                    matchspec0 = distfarreachleaf_access_latest_tbl_match_spec_t(\
+                            op_hdr_optype = PUTREQ_LARGEVALUE_SEQ_INSWITCH,
+                            inswitch_hdr_is_cached = is_cached,
+                            validvalue_hdr_validvalue = validvalue,
+                            fraginfo_hdr_cur_fragidx = 0)
+                    if is_cached == 1 and validvalue == 1:
+                        self.client.access_latest_tbl_table_add_with_reset_and_get_latest(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+                    elif is_cached == 1 and validvalue == 3:
+                        self.client.access_latest_tbl_table_add_with_reset_and_get_latest(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 3
 
@@ -1496,7 +1512,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = distfarreachleaf_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE]:
+                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE_SEQ]:
                     matchspec0 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
@@ -2269,6 +2285,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                 pass
+                                            # is_hot (cm_predicate=1), is_deleted, tmp_client_sid=0, is_lastclone_for_pktloss, is_case1 should be 0 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
+                                            # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for PUTREQ_LARGEVALUE_SEQ_INSWITCH)
+                                            # NOTE: validvalue can be 0/1/3 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
+                                            # size: 32
+                                            if is_hot == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0:
+                                                matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = PUTREQ_LARGEVALUE_SEQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    validvalue_hdr_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    inswitch_hdr_client_sid = tmp_client_sid,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server
+                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_eg_port_forward_tbl_with_range(self):
         # Table: eg_port_forward_tbl (default: nop; size: 19+340*spine_physical_num+2*server_physical_num=363 < 2048)
@@ -2783,4 +2818,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                         # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                         pass
+                                                    # is_hot (cm_predicate=1), is_deleted, tmp_client_sid=0, is_lastclone_for_pktloss, is_case1, is_last_scansplit, tmp_server_sid should be 0 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
+                                                    # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for PUTREQ_LARGEVALUE_SEQ_INSWITCH)
+                                                    # NOTE: validvalue can be 0/1/3 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
+                                                    # size: 32
+                                                    if is_hot == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                        matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
+                                                            op_hdr_optype = PUTREQ_LARGEVALUE_SEQ_INSWITCH,
+                                                            inswitch_hdr_is_cached = is_cached,
+                                                            meta_is_hot = is_hot,
+                                                            validvalue_hdr_validvalue = validvalue,
+                                                            meta_is_latest = is_latest,
+                                                            meta_is_deleted = is_deleted,
+                                                            inswitch_hdr_client_sid = tmp_client_sid,
+                                                            meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                            inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                            meta_is_case1 = is_case1,
+                                                            meta_is_last_scansplit = is_last_scansplit,
+                                                            meta_server_sid = tmp_server_sid)
+                                                        # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
 

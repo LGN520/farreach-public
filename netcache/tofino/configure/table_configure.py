@@ -1207,7 +1207,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = netcache_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, SCANREQ_SPLIT, LOADREQ, PUTREQ_LARGEVALUE]:
+                for tmpoptype in [GETREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, SCANREQ_SPLIT, LOADREQ, PUTREQ_LARGEVALUE_SEQ]:
                     matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)

@@ -60,6 +60,7 @@ table access_latest_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		fraginfo_hdr.cur_fragidx: exact;
 	}
 	actions {
 		get_latest;

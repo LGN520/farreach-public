@@ -555,9 +555,12 @@ action update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch(
 	//add_header(inswitch_hdr);
 }
 
-action update_distnocache_putreq_largevalue_spine_to_putreq_largevalue() {
-	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE);
-	// NOTE: NO shadowtype_hdr for PUTREQ_LARGEVALUE
+action update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch() {
+	// NOTE: PUTREQ_LARGEVALUE_SEQ w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_INSWITCH w/ op_hdr + shadowtype_hdr + seq_hdr + inswitch_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_INSWITCH);
+
+	add_header(inswitch_hdr);
 }
 
 action update_getres_largevalue_server_to_getres_largevalue() {
@@ -595,7 +598,7 @@ table ig_port_forward_tbl {
 		update_loadack_server_to_loadack;
 		update_getres_latest_seq_server_inswitch_to_getres_latest_seq_inswitch;
 		update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch;
-		update_distnocache_putreq_largevalue_spine_to_putreq_largevalue;
+		update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch;
 		update_getres_largevalue_server_to_getres_largevalue;
 		nop;
 	}

@@ -428,6 +428,14 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 	// NOTE: egress_port has already been set in hash/range_partition_tbl at ingress pipeline
 }*/
 
+action update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq() {
+	// NOTE: PUTREQ_LARGEVALUE_SEQ_INSWITCH w/ op_hdr + shadowtype_hdr + seq_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ);
+
+	remove_header(inswitch_hdr);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -476,6 +484,7 @@ table eg_port_forward_tbl {
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loadfreq_inswitch_ack;
 		//update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_inswitch_ack;
+		update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq;
 		nop;
 	}
 	default_action: nop();
