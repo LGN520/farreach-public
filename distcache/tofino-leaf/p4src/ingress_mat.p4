@@ -741,6 +741,14 @@ action update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+action update_putreq_largevalue_seq_cached_to_putreq_largevalue_seq_inswitch() {
+	// NOTE: PUTREQ_LARGEVALUE_SEQ_CACHED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_INSWITCH w/ op_hdr + shadowtype_hdr + seq_hdr + inswitch_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_INSWITCH);
+
+	add_header(inswitch_hdr);
+}
+
 action update_getres_largevalue_server_to_getres_largevalue() {
 	modify_field(op_hdr.optype, GETRES_LARGEVALUE);
 	// NOTE: NO shadowtype_hdr for GETRES_LARGEVALUE
@@ -777,6 +785,7 @@ table ig_port_forward_tbl {
 		//swap_udpport_for_distcache_leaf_valueupdate_inswitch;
 		update_distcache_valueupdate_inswitch_to_distcache_valueupdate_inswitch_origin;
 		update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch;
+		update_putreq_largevalue_seq_cached_to_putreq_largevalue_seq_inswitch;
 		update_getres_largevalue_server_to_getres_largevalue;
 		nop;
 	}

@@ -466,6 +466,15 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq() {
 	add_header(seq_hdr);
 }
 
+action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_cached() {
+	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CACHED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CACHED);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CACHED);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+}
+
 action update_netcache_cache_pop_inswitch_nlatest_to_cache_pop_inswitch_ack_drop_and_clone(switchos_sid, reflector_port) {
 	modify_field(op_hdr.optype, CACHE_POP_INSWITCH_ACK);
 	modify_field(udp_hdr.dstPort, reflector_port);
@@ -532,6 +541,7 @@ table eg_port_forward_tbl {
 		//forward_cache_evict_loadfreq_inswitch_ack;
 		update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack;
 		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq;
+		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_cached;
 		update_netcache_cache_pop_inswitch_nlatest_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
 		nop;
 	}
@@ -678,7 +688,7 @@ action update_ophdr_inswitchhdr_clonehdr_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 84);
 }
 
-// PUTREQ_LARGEVALUE_SEQ
+// PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CACHED
 action add_shadowtypehdr_seqhdr_pktlen() {
 	// 2(shadowtype) + 4(seq)
 	add_to_field(udp_hdr.hdrlen, 6);

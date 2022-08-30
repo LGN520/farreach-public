@@ -1135,13 +1135,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # For large value
             shadowtype_seq_udp_delta = 6
             shadowtype_seq_ip_delta = 6
-            matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
-                    op_hdr_optype=PUTREQ_LARGEVALUE_INSWITCH,
-                    vallen_hdr_vallen_start=0,
-                    vallen_hdr_vallen_end=convert_u16_to_i16(pow(2, 16)-1)) # [0, 65535] (NOTE: vallen MUST = 0 for PUTREQ_LARGEVALUE_INSWITCH)
-            actnspec0 = distcachespine_add_pktlen_action_spec_t(shadowtype_seq_udp_delta, shadowtype_seq_ip_delta)
-            self.client.update_pktlen_tbl_table_add_with_add_pktlen(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            for tmpoptype in [PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CACHED]:
+                matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
+                        op_hdr_optype=tmpoptype,
+                        vallen_hdr_vallen_start=0,
+                        vallen_hdr_vallen_end=convert_u16_to_i16(pow(2, 16)-1)) # [0, 65535] (NOTE: vallen MUST = 0 for PUTREQ_LARGEVALUE_INSWITCH)
+                actnspec0 = distcachespine_add_pktlen_action_spec_t(shadowtype_seq_udp_delta, shadowtype_seq_ip_delta)
+                self.client.update_pktlen_tbl_table_add_with_add_pktlen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
             # Table: update_ipmac_srcport_tbl (default: nop; 7*client_physical_num+12*server_physical_num+9=47 < 19*8+9=161 < 256)
             # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
@@ -1560,9 +1561,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             inswitch_hdr_client_sid = tmp_client_sid,
                                             meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                             clone_hdr_server_sid = tmp_server_sid)
-                                        # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server-leaf
-                                        self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq(\
-                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                        if is_cached == 0:
+                                            # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server-leaf
+                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                        elif is_cached == 1:
+                                            # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CACHED to server-leaf
+                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_cached(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_eg_port_forward_tbl_with_range(self):
         # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num+2*server_physical_num=27+854*2=1735 < 2048 < 21+854*8=6859 < 8192)
@@ -1902,7 +1908,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                 meta_is_last_scansplit = is_last_scansplit,
                                                 clone_hdr_server_sid = tmp_server_sid)
-                                            # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server-leaf
-                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-
+                                            if is_cached == 0:
+                                                # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server-leaf
+                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                            elif is_cached == 1:
+                                                # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CACHED to server-leaf
+                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_cached(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)

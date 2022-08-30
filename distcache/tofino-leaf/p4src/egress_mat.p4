@@ -437,6 +437,14 @@ action update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq() {
 	remove_header(inswitch_hdr);
 }
 
+action update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_cached() {
+	// NOTE: PUTREQ_LARGEVALUE_SEQ_INSWITCH w/ op_hdr + shadowtype_hdr + seq_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CACHED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CACHED);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CACHED);
+
+	remove_header(inswitch_hdr);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -486,6 +494,7 @@ table eg_port_forward_tbl {
 		//forward_cache_evict_loadfreq_inswitch_ack;
 		//update_distcache_leaf_valueupdate_inswitch_to_distcache_leaf_valueupdate_inswitch_ack;
 		update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq;
+		update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_cached;
 		nop;
 	}
 	default_action: nop();

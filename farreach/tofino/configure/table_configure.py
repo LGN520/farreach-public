@@ -1344,7 +1344,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             shadowtype_seq_udp_delta = 6
             shadowtype_seq_ip_delta = 6
             matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
-                    op_hdr_optype=PUTREQ_LARGEVALUE_INSWITCH,
+                    op_hdr_optype=PUTREQ_LARGEVALUE_SEQ,
                     vallen_hdr_vallen_start=0,
                     vallen_hdr_vallen_end=convert_u16_to_i16(pow(2, 16)-1)) # [0, 65535] (NOTE: vallen MUST = 0 for PUTREQ_LARGEVALUE_INSWITCH)
             actnspec0 = netbufferv4_add_pktlen_action_spec_t(shadowtype_seq_udp_delta, shadowtype_seq_ip_delta)
