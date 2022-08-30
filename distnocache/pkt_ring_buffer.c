@@ -108,7 +108,7 @@ void PktRingBuffer::update_large(const packet_type_t &optype, const netreach_key
 
 	uint32_t bufidx = iter->second;
 	INVARIANT(valid_list[bufidx] == true);
-	INVARIANT(optype_list[bufidx] == optype);
+	INVARIANT(is_same_optype(optype_list[bufidx], optype));
 	INVARIANT(key_list[bufidx] == key);
 	dynamicbuf_list[bufidx].dynamic_memcpy(fragbody_off, fragbody_buf, fragbody_bufsize);
 	curfragnum_list[bufidx] += 1;

@@ -389,7 +389,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 								continue;
 							}
 							else { // from the same client
-								if (tmp_nonfirstpkt_key != largepkt_key || tmp_nonfirstpkt_optype != largepkt_optype || tmp_nonfirstpkt_fragseq < largepkt_fragseq) { // unmatched packet
+								if (tmp_nonfirstpkt_key != largepkt_key || !is_same_optype(tmp_nonfirstpkt_optype, largepkt_optype) || tmp_nonfirstpkt_fragseq < largepkt_fragseq) { // unmatched packet
 									printf("[WARNING] unmatched large packet %x (expect: %x) from client %d of key %x (expect: %x) with fragseq %d (expect %d)\n", \
 											int(tmp_nonfirstpkt_optype), int(largepkt_optype), tmp_nonfirstpkt_clientlogicalidx, tmp_nonfirstpkt_key.keyhihi, largepkt_key.keyhihi, tmp_nonfirstpkt_fragseq, largepkt_fragseq);
 									continue; // skip current unmatched packet, go to receive next one

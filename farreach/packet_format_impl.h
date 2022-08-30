@@ -2337,6 +2337,15 @@ static netreach_key_t get_packet_key(const char * data, uint32_t recvsize) {
 	return tmpkey;
 }
 
+static bool is_same_optype(packet_type_t type1, packet_type_t type2) {
+	if (type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
+		if (type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
+			return true;
+		}
+	}
+	return type1 == type2;
+}
+
 // Util APIs for large value
 
 static size_t get_frag_hdrsize(packet_type_t type) {

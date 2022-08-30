@@ -723,6 +723,7 @@ static packet_type_t get_packet_type(const char * data, uint32_t recv_size);
 static uint32_t deserialize_packet_type(optype_t &type, const char * data, uint32_t recvsize);
 
 static netreach_key_t get_packet_key(const char * data, uint32_t recvsize);
+static bool is_same_optype(packet_type_t type1, packet_type_t type2);
 // Util APIs for large value
 static size_t get_frag_hdrsize(packet_type_t type);
 static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize);
