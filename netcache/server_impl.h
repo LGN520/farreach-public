@@ -505,7 +505,7 @@ void *run_server_worker(void * param) {
 				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
 				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 				if (likely(!is_being_cached && !is_cached)) { // uncached
-					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+					if (pkt_type == packet_type_t::PUTREQ_SEQ || pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
 						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
@@ -611,6 +611,7 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED:
 		case packet_type_t::NETCACHE_DELREQ_SEQ_CACHED:
+		case packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED:
 			{
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
@@ -625,6 +626,12 @@ void *run_server_worker(void * param) {
 				uint32_t tmp_seq;
 				if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
 					netcache_put_request_seq_cached_t req(dynamicbuf.array(), recv_size);
+					tmp_key = req.key();
+					tmp_val = req.val();
+					tmp_seq = req.seq();
+				}
+				else if (pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
+					put_request_largevalue_seq_cached_t req(dynamicbuf.array(), recv_size);
 					tmp_key = req.key();
 					tmp_val = req.val();
 					tmp_seq = req.seq();
@@ -652,7 +659,7 @@ void *run_server_worker(void * param) {
 				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
 				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 				if (unlikely(!is_being_cached && !is_cached)) { // uncached
-					if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
+					if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED || pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
 						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
@@ -674,43 +681,48 @@ void *run_server_worker(void * param) {
 #ifdef DEBUG_SERVER
 					CUR_TIME(beingupdated_t1);
 #endif
-					while (is_being_updated) { // being updated
-						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
-						//usleep(1); // wait for inswitch value update finish
-						nanosleep(&polling_interrupt_for_blocking, NULL); // wait for cache population finish
-						server_mutex_for_keyset_list[local_server_logical_idx].lock();
-						is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
+					if (pkt_type != packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
+						while (is_being_updated) { // being updated
+							server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+							//usleep(1); // wait for inswitch value update finish
+							nanosleep(&polling_interrupt_for_blocking, NULL); // wait for cache population finish
+							server_mutex_for_keyset_list[local_server_logical_idx].lock();
+							is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
+						}
+						INVARIANT(!is_being_updated);
 					}
-					INVARIANT(!is_being_updated);
 #ifdef DEBUG_SERVER
 					CUR_TIME(beingupdated_t2);
 					DELTA_TIME(beingupdated_t2, beingupdated_t1, beingupdated_t3);
 					beingupdated_time = GET_MICROSECOND(beingupdated_t3);
 #endif
 
-					// Double-check due to potential cache eviction
-					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
-					INVARIANT(!is_being_cached); // key must NOT in beingcached keyset
-					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
-					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateserver
-						server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_key); // mark it as being updated
+					if (pkt_type != packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
+						// Double-check due to potential cache eviction
+						is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
+						INVARIANT(!is_being_cached); // key must NOT in beingcached keyset
+						is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
+						if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateserver
+							server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_key); // mark it as being updated
 
-						// notify server.valueupdateserver to update inswitch value in background
-						netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
-						if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
-							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, true);
+							// notify server.valueupdateserver to update inswitch value in background
+							netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
+							INVARIANT(pkt_type != packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED);
+							if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
+								tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, true);
+							}
+							else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
+								tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, false);
+							}
+							bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
+							if (!res) {
+								printf("[server.worker %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
+							}
 						}
-						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
-							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, false);
-						}
-						bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
-						if (!res) {
-							printf("[server.worker %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
-						}
+						// else: do nothing as key is removed from beingupdated keyset by server.evictserver
 					}
-					// else: do nothing as key is removed from beingupdated keyset by server.evictserver
 
-					if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
+					if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED || pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
 						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
@@ -725,7 +737,7 @@ void *run_server_worker(void * param) {
 				CUR_TIME(rocksdb_t2);
 #endif
 				
-				if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
+				if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED || pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
 					put_response_t rsp(tmp_key, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}

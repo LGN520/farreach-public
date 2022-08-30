@@ -314,7 +314,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.l2l3_forward_tbl_table_add_with_l2l3_forward(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             
-            # Table: need_recirculate_tbl (default: reset_need_recirculate; size: <=8)
+            # Table: need_recirculate_tbl (default: reset_need_recirculate; size: 10)
             # See enable/disable_singlepath in ptf_snapshotserver/table_configure.py
 
             # Table: set_hot_threshold_tbl (default: set_hot_threshold; size: 1)
@@ -325,9 +325,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: recirculate_tbl (default: nop; size: 8)
+            # Table: recirculate_tbl (default: nop; size: 10)
             print "Configuring recirculate_tbl"
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_SEQ]:
                 matchspec0 = distfarreachspine_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
@@ -339,9 +339,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             if RANGE_SUPPORT == False:
-                # Table: hash_for_partition_tbl (default: nop; size: 17)
+                # Table: hash_for_partition_tbl (default: nop; size: 18)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_SEQ]:
                     matchspec0 = distfarreachspine_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             meta_need_recirculate = 0)
@@ -351,10 +351,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 2
 
             if RANGE_SUPPORT == True:
-                # Table: range_partition_tbl (default: nop; size <= 18 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 19 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_SEQ]:
                     key_start = 0 # [0, 2^16-1]
                     for i in range(leafswitch_total_logical_num):
                         global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
@@ -391,10 +391,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
-                # Table: hash_partition_tbl (default: nop; size <= 17 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 18 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_leafswitch = switch_partition_count / leafswitch_total_logical_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_SEQ]:
                     hash_start = 0 # [0, partition_count-1]
                     for i in range(leafswitch_total_logical_num):
                         global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
@@ -472,7 +472,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=4)
+            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: 9)
             #print "Configuring snapshot_flag_tbl"
             # See details in ptf_snapshotserver/table_configure,py, where we set snapshot_flag for PUT/DELREQ/_SEQ, GETRES_LATEST/DELETED_SEQ/_SERVER
 
@@ -597,6 +597,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = PUTREQ_LARGEVALUE,
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_to_putreq_largevalue_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_LARGEVALUE_SEQ,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline

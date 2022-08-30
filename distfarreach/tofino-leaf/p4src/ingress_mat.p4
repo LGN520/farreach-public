@@ -258,7 +258,7 @@ table snapshot_flag_tbl {
 		nop;
 	}
 	default_action: reset_snapshot_flag();
-	size: 8;
+	size: 16;
 }
 
 // Stage 3~4

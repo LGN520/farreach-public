@@ -86,7 +86,7 @@ table need_recirculate_tbl {
 		reset_need_recirculate;
 	}
 	default_action: reset_need_recirculate();
-	size: 8;
+	size: 16;
 }
 
 action set_hot_threshold(hot_threshold) {
@@ -223,7 +223,7 @@ table snapshot_flag_tbl {
 		reset_snapshot_flag;
 	}
 	default_action: reset_snapshot_flag();
-	size: 8;
+	size: 16;
 }
 
 // Stage 4~5
@@ -471,6 +471,14 @@ action update_putreq_largevalue_to_putreq_largevalue_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+action update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch() {
+	// NOTE: PUTREQ_LARGEVALUE_SEQ w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_INSWITCH w/ op_hdr + shadowtype_hdr + seq_hdr + inswitch_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_INSWITCH);
+
+	add_header(inswitch_hdr);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ig_port_forward_counter {
@@ -501,6 +509,7 @@ table ig_port_forward_tbl {
 		update_getres_latest_seq_server_to_getres_latest_seq_server_inswitch;
 		update_getres_deleted_seq_server_to_getres_deleted_seq_server_inswitch;
 		update_putreq_largevalue_to_putreq_largevalue_inswitch;
+		update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch;
 		nop;
 	}
 	default_action: nop();

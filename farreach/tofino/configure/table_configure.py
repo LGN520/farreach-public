@@ -365,9 +365,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: recirculate_tbl (default: nop; size: 4)
+            # Table: recirculate_tbl (default: nop; size: 5)
             print "Configuring recirculate_tbl"
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
                 matchspec0 = netbufferv4_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
@@ -1343,13 +1343,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # For large value
             shadowtype_seq_udp_delta = 6
             shadowtype_seq_ip_delta = 6
-            matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
-                    op_hdr_optype=PUTREQ_LARGEVALUE_SEQ,
-                    vallen_hdr_vallen_start=0,
-                    vallen_hdr_vallen_end=convert_u16_to_i16(pow(2, 16)-1)) # [0, 65535] (NOTE: vallen MUST = 0 for PUTREQ_LARGEVALUE_INSWITCH)
-            actnspec0 = netbufferv4_add_pktlen_action_spec_t(shadowtype_seq_udp_delta, shadowtype_seq_ip_delta)
-            self.client.update_pktlen_tbl_table_add_with_add_pktlen(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            for tmpoptype in [PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CASE3]:
+                matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
+                        op_hdr_optype=tmpoptype,
+                        vallen_hdr_vallen_start=0,
+                        vallen_hdr_vallen_end=convert_u16_to_i16(pow(2, 16)-1)) # [0, 65535] (NOTE: vallen MUST = 0 for PUTREQ_LARGEVALUE_INSWITCH)
+                actnspec0 = netbufferv4_add_pktlen_action_spec_t(shadowtype_seq_udp_delta, shadowtype_seq_ip_delta)
+                self.client.update_pktlen_tbl_table_add_with_add_pktlen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
             # Table: update_ipmac_srcport_tbl (default: nop; 6*client_physical_num+12*server_physical_num+7=43 < 18*8+7=151 < 256)
             # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
@@ -1383,7 +1384,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = netbufferv4_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE_SEQ]:
+                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CASE3]:
                     matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
@@ -2137,9 +2138,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
-                                                # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server
-                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                if snapshot_flag == 0:
+                                                    # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                elif snapshot_flag == 1:
+                                                    # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CASE3 to server
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_eg_port_forward_tbl_with_range(self):
         # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num+2*server_physical_num=27+854*2=1735 < 2048 < 21+854*8=6859 < 8192)
@@ -2873,7 +2879,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                             inswitch_hdr_snapshot_flag = snapshot_flag,
                                                             meta_is_case1 = is_case1)
-                                                        # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                        if snapshot_flag == 0:
+                                                            # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                        elif snapshot_flag == 1:
+                                                            # Update PUTREQ_LARGEVALUE_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CASE3 to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
 

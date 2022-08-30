@@ -675,6 +675,39 @@ void *run_server_worker(void * param) {
 #endif
 				break;
 			}
+		case packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3:
+			{
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), recv_size);
+#endif
+
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t1);
+#endif
+
+				put_request_largevalue_seq_case3_t req(dynamicbuf.array(), recv_size);
+
+				if (!server_issnapshot_list[local_server_logical_idx]) {
+					db_wrappers[local_server_logical_idx].make_snapshot();
+				}
+
+				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
+				UNUSED(tmp_stat);
+				//COUT_THIS("[server] stat = " << tmp_stat)
+				
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t2);
+#endif
+				
+				put_response_t rsp(req.key(), true, global_server_logical_idx);
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
+				break;
+			}
 		case packet_type_t::PUTREQ_POP_SEQ_CASE3: 
 			{
 #ifdef DUMP_BUF
