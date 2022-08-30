@@ -2240,7 +2240,7 @@ template<class key_t, class val_t>
 NetcacheCachePopAck<key_t, val_t>::NetcacheCachePopAck(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP_ACK);
-	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(this->_seq >= 0);
 	INVARIANT(this->_serveridx >= 0);
 }

@@ -266,28 +266,33 @@ void *run_server_popserver(void *param) {
 
 			// must NOT in beingupdated keyset
 			INVARIANT(!is_being_updated);
-			server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key()); // mark it as being updated
 
 			// get value from storage server KVS
 			val_t tmp_val;
 			uint32_t tmp_seq = 0;
 			bool tmp_stat = db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq);
-			uint16_t tmp_spineswitchidx = uint16_t(tmp_netcache_cache_pop_finish.key().get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
-			uint16_t tmp_leafswitchidx = uint16_t(tmp_netcache_cache_pop_finish.key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
 
-			// Phase 2 of cache coherence: notify server.valueupdateserver to update inswitch value in background
-			////netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
-			////tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat);
-			////bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
-			//distcache_spine_valueupdate_inswitch_t *tmp_distcache_spine_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
-			//tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat, tmp_netcache_cache_pop_finish.kvidx());
-			//bool res = server_distcache_spine_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_spine_valueupdate_inswitch_ptr);
-			distcache_valueupdate_inswitch_t *tmp_distcache_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
-			tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat, tmp_netcache_cache_pop_finish.kvidx());
-			bool res = server_distcache_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_valueupdate_inswitch_ptr);
-			if (!res) {
-				printf("[server.popserver %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
-				fflush(stdout);
+			if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
+				// mark it as being updated
+				server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key());
+
+				uint16_t tmp_spineswitchidx = uint16_t(tmp_netcache_cache_pop_finish.key().get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+				uint16_t tmp_leafswitchidx = uint16_t(tmp_netcache_cache_pop_finish.key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+
+				// Phase 2 of cache coherence: notify server.valueupdateserver to update inswitch value in background
+				////netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
+				////tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat);
+				////bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
+				//distcache_spine_valueupdate_inswitch_t *tmp_distcache_spine_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
+				//tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat, tmp_netcache_cache_pop_finish.kvidx());
+				//bool res = server_distcache_spine_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_spine_valueupdate_inswitch_ptr);
+				distcache_valueupdate_inswitch_t *tmp_distcache_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
+				tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat, tmp_netcache_cache_pop_finish.kvidx());
+				bool res = server_distcache_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_valueupdate_inswitch_ptr);
+				if (!res) {
+					printf("[server.popserver %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
+					fflush(stdout);
+				}
 			}
 		}
 		server_mutex_for_keyset_list[local_server_logical_idx].unlock();

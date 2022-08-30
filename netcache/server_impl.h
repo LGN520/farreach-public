@@ -249,8 +249,15 @@ void *run_server_popserver(void *param) {
 		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 
 		// send NETCACHE_CACHE_POP_ACK to controller
-		netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-		uint32_t pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
+		uint32_t pktsize = 0;
+		if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
+			netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
+			pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
+		}
+		else { // large value
+			netcache_cache_pop_ack_nlatest_t tmp_netcache_cache_pop_ack_nlatest(tmp_netcache_cache_pop.key(), tmp_seq, tmp_stat, global_server_logical_idx); // use default value to invalidate inswitch cache
+			pktsize = tmp_netcache_cache_pop_ack_nlatest.serialize(buf, MAX_BUFSIZE);
+		}
 		udpsendto(server_popserver_udpsock_list[local_server_logical_idx], buf, pktsize, 0, &controller_popserver_popclient_addr, controller_popserver_popclient_addrlen, "server.popserver");
 	}
 	else if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {

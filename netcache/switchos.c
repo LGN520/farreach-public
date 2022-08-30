@@ -498,6 +498,7 @@ void *run_switchos_popworker(void *param) {
 			val_t tmp_val;
 			uint32_t tmp_seq = 0;
 			bool tmp_stat = false;
+			bool is_nlatest_for_largevalue = false;
 			while (true) {
 				udpsendto(switchos_popworker_popclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "switchos.popworker.popclient_for_controller");
 
@@ -506,23 +507,52 @@ void *run_switchos_popworker(void *param) {
 					continue;
 				}
 				else {
-					netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(ackbuf, ack_recvsize);
-					if (unlikely(tmp_netcache_cache_pop_ack.key() != tmp_netcache_cache_pop.key())) {
-						printf("unmatched key of NETCACHE_CACHE_POP_ACK!\n");
-						continue;
+					packet_type_t tmp_acktype = get_packet_type(ackbuf, ack_recvsize);
+					if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_ACK) {
+						netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(ackbuf, ack_recvsize);
+						if (unlikely(tmp_netcache_cache_pop_ack.key() != tmp_netcache_cache_pop.key())) {
+							printf("unmatched key of NETCACHE_CACHE_POP_ACK!\n");
+							continue;
+						}
+						else {
+							tmp_val = tmp_netcache_cache_pop_ack.val();
+							tmp_seq = tmp_netcache_cache_pop_ack.seq();
+							tmp_stat = tmp_netcache_cache_pop_ack.stat();
+							is_nlatest_for_largevalue = false;
+							break;
+						}
+					}
+					else if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_ACK_NLATEST) { // for large value
+						netcache_cache_pop_ack_nlatest_t tmp_netcache_cache_pop_ack_nlatest(ackbuf, ack_recvsize);
+						if (unlikely(tmp_netcache_cache_pop_ack_nlatest.key() != tmp_netcache_cache_pop.key())) {
+							printf("unmatched key of NETCACHE_CACHE_POP_ACK_NLATEST!\n");
+							continue;
+						}
+						else {
+							tmp_val = tmp_netcache_cache_pop_ack_nlatest.val(); // default value w/ vallen = 0
+							INVARIANT(tmp_val.val_length == 0);
+							tmp_seq = tmp_netcache_cache_pop_ack_nlatest.seq();
+							tmp_stat = tmp_netcache_cache_pop_ack_nlatest.stat();
+							is_nlatest_for_largevalue = true;
+							break;
+						}
 					}
 					else {
-						tmp_val = tmp_netcache_cache_pop_ack.val();
-						tmp_seq = tmp_netcache_cache_pop_ack.seq();
-						tmp_stat = tmp_netcache_cache_pop_ack.stat();
-						break;
+						printf("[ERRPR] invalid packet type %x\n", int(tmp_acktype));
+						exit(-1);
 					}
 				}
 			}
 
-			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-			cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_netcache_getreq_pop_ptr->key(), tmp_val, tmp_seq, switchos_freeidx, tmp_stat);
-			pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
+			// send CACHE_POP_INSWITCH/NETCACHE_CACHE_POP_INSWITCH_NLATEST to reflector (TODO: try internal pcie port)
+			if (is_nlatest_for_largevalue == false) {
+				cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_netcache_getreq_pop_ptr->key(), tmp_val, tmp_seq, switchos_freeidx, tmp_stat);
+				pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
+			}
+			else { // for large value
+				cache_pop_inswitch_nlatest_t tmp_cache_pop_inswitch_nlatest(tmp_netcache_getreq_pop_ptr->key(), tmp_seq, switchos_freeidx, tmp_stat); // use default value w/ vallen = 0
+				pktsize = tmp_cache_pop_inswitch_nlatest.serialize(pktbuf, MAX_BUFSIZE);
+			}
 
 			while (true) {
 				udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient");
@@ -537,7 +567,7 @@ void *run_switchos_popworker(void *param) {
 					}
 
 					cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(ackbuf, ack_recvsize);
-					if (tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_inswitch.key()) {
+					if (tmp_cache_pop_inswitch_ack.key() == tmp_netcache_getreq_pop_ptr->key()) {
 						with_correctack = true;
 						break;
 					}

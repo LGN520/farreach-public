@@ -226,6 +226,10 @@ void *run_controller_popserver(void *param) {
 				netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(buf, recvsize);
 				INVARIANT(tmp_netcache_cache_pop_ack.key() == tmp_key);
 			}
+			else if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_ACK_NLATEST) {
+				netcache_cache_pop_ack_nlatest_t tmp_netcache_cache_pop_ack_nlatest(buf, recvsize);
+				INVARIANT(tmp_netcache_cache_pop_ack_nlatest.key() == tmp_key);
+			}
 			else if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_FINISH_ACK) {
 				netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(buf, recvsize);
 				INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_key);

@@ -2072,7 +2072,7 @@ template<class key_t, class val_t>
 NetcacheCachePopAck<key_t, val_t>::NetcacheCachePopAck(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP_ACK);
-	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(this->_seq >= 0);
 	INVARIANT(this->_serveridx >= 0);
 }
@@ -2543,6 +2543,39 @@ GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(const cha
 template<class key_t, class val_t>
 size_t GetResponseLargevalueServer<key_t, val_t>::get_frag_hdrsize() {
 	return sizeof(optype_t) + sizeof(key_t); // op_hdr
+}
+
+// NetcacheCachePopAckNLatest (default value length must = 0B; only used in end-hosts)
+
+template<class key_t, class val_t>
+NetcacheCachePopAckNLatest<key_t, val_t>::NetcacheCachePopAckNLatest(key_t key, uint32_t seq, bool stat, uint16_t serveridx)
+	: NetcacheCachePopAck<key_t, val_t>(key, val_t(), seq, stat, serveridx)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_ACK_NLATEST);
+	INVARIANT(this->_val.val_length == 0);
+	INVARIANT(seq >= 0);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t, class val_t>
+NetcacheCachePopAckNLatest<key_t, val_t>::NetcacheCachePopAckNLatest(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP_ACK_NLATEST);
+	INVARIANT(this->_val.val_length == 0);
+	INVARIANT(this->_seq >= 0);
+	INVARIANT(this->_serveridx >= 0);
+}
+
+// NetcacheCachePopInswitchNLatest (default value length must = 0B)
+
+template<class key_t, class val_t>
+NetcacheCachePopInswitchNLatest<key_t, val_t>::NetcacheCachePopInswitchNLatest(key_t key, uint32_t seq, uint16_t freeidx, bool stat)
+	: CachePopInswitch<key_t, val_t>(key, val_t(), seq, freeidx, stat)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_INSWITCH_NLATEST);
+	INVARIANT(this->_val.val_length == 0);
+	INVARIANT(seq >= 0);
+	INVARIANT(freeidx >= 0);
 }
 
 // APIs

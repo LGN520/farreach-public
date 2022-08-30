@@ -769,6 +769,9 @@ void *run_server_worker(void * param) {
 				//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, tmp_stat, serveridx); // freed by server.popclient
 				//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
 						
+				if (tmp_val.val_length > val_t::SWITCH_MAX_VALLEN) { // large value
+					tmp_val = val_t(); // replace large value with default value for cache population (OK as distfarreach.CACHE_POP_INSWITCH resets latest_reg = 0)
+				}
 				cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 				rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 				send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
