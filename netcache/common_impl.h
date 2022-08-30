@@ -82,6 +82,8 @@ typedef GetResponseLargevalue<netreach_key_t, val_t> get_response_largevalue_t;
 typedef GetResponseLargevalueServer<netreach_key_t, val_t> get_response_largevalue_server_t;
 typedef NetcacheCachePopAckNLatest<netreach_key_t, val_t> netcache_cache_pop_ack_nlatest_t;
 typedef NetcacheCachePopInswitchNLatest<netreach_key_t, val_t> netcache_cache_pop_inswitch_nlatest_t;
+typedef PutRequestLargevalueSeqCached<netreach_key_t, val_t> put_request_largevalue_seq_cached_t;
+typedef PutRequestLargevalueSeqCase3<netreach_key_t, val_t> put_request_largevalue_seq_case3_t;
 
 /*
  * Constants

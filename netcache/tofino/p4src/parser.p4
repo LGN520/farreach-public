@@ -302,6 +302,8 @@ parser parse_seq {
 	//return select(op_hdr.optype) {
 	return select(shadowtype_hdr.shadowtype) {
 		PUTREQ_LARGEVALUE_SEQ: parse_fraginfo;
+		PUTREQ_LARGEVALUE_SEQ_CACHED: parse_fraginfo;
+		PUTREQ_LARGEVALUE_SEQ_CASE3: parse_fraginfo;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
 		default: ingress;
@@ -367,7 +369,7 @@ parser parse_frequency {
 
 parser parse_fraginfo {
 	extract(fraginfo_hdr);
-	return ingress; // PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_INSWITCH, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH
+	return ingress; // PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_INSWITCH, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH, PUTREQ_LARGEVALUE_SEQ_CACHED, PUTREQ_LARGEVALUE_SEQ_CASE3
 }
 
 /*parser parse_debug {

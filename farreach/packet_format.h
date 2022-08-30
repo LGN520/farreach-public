@@ -43,7 +43,7 @@ enum class PacketType {
 	PUTREQ_INSWITCH=0x0005,
 	DELREQ_SEQ_INSWITCH=0x0006, PUTREQ_LARGEVALUE_SEQ_INSWITCH=0x0016,
 	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034, LOADSNAPSHOTDATA_INSWITCH=0x0044, SETVALID_INSWITCH=0x0054, NETCACHE_WARMUPREQ_INSWITCH=0x0064, NETCACHE_WARMUPREQ_INSWITCH_POP=0x0074, PUTREQ_LARGEVALUE_INSWITCH=0x00a4,
-	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012, NETCACHE_DELREQ_SEQ_CACHED=0x0022, PUTREQ_LARGEVALUE_SEQ=0x0032,
+	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012, NETCACHE_DELREQ_SEQ_CACHED=0x0022, PUTREQ_LARGEVALUE_SEQ=0x0032, PUTREQ_LARGEVALUE_SEQ_CACHED=0x0042, PUTREQ_LARGEVALUE_SEQ_CASE3=0x0052,
 	PUTRES=0x0008, DELRES=0x0018,
 	WARMUPREQ=0x0000, SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100, SETVALID_INSWITCH_ACK=0x0110, NETCACHE_GETREQ_POP=0x0120, NETCACHE_CACHE_POP=0x0130, NETCACHE_CACHE_POP_ACK=0x0140, NETCACHE_CACHE_POP_FINISH=0x0150, NETCACHE_CACHE_POP_FINISH_ACK=0x0160, NETCACHE_CACHE_EVICT=0x0170, NETCACHE_CACHE_EVICT_ACK=0x0180, NETCACHE_VALUEUPDATE_ACK=0x0190, PUTREQ_LARGEVALUE=0x02d0, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE=0x02e0, GETRES_LARGEVALUE_SERVER=0x02f0, GETRES_LARGEVALUE=0x0300, LOADREQ=0x0310, LOADREQ_SPINE=0x0320, NETCACHE_CACHE_POP_ACK_NLATEST=0x0330
 };
@@ -60,12 +60,12 @@ typedef PacketType packet_type_t;
 
 // For large value -> NOTE: update the util APIs for large value (at the bottom of packet_format.h)
 // (1) server/client does NOT know whether the request or get response has large value -> use optype_for_udprecvlarge_ipfrag_list to juduge if it needs to return from udprecvlarge_ipfrag in advance
-static const uint32_t optype_for_udprecvlarge_ipfrag_num = 4;
+static const uint32_t optype_for_udprecvlarge_ipfrag_num = 6;
 // NOTE: NOT including SCANRES_SPLIT which is processed by udprecvlarge_multisrc_ipfrag instead of udprecvlarge_ipfrag
-static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_udprecvlarge_ipfrag_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::LOADREQ, packet_type_t::GETRES_LARGEVALUE};
+static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_udprecvlarge_ipfrag_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3, packet_type_t::LOADREQ, packet_type_t::GETRES_LARGEVALUE};
 // (2) server may receive other requests when waiting for a large request -> use optype_with_clientlogicalidx_list to judge whether server needs to extract clientlogicalidx from the current packet to push/update PktRingBuffer
-static const uint32_t optype_with_clientlogicalidx_num = 3;
-static const packet_type_t optype_with_clientlogicalidx_list[optype_with_clientlogicalidx_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::LOADREQ};
+static const uint32_t optype_with_clientlogicalidx_num = 5;
+static const packet_type_t optype_with_clientlogicalidx_list[optype_with_clientlogicalidx_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3, packet_type_t::LOADREQ};
 
 typedef uint16_t optype_t;
 
@@ -682,6 +682,24 @@ class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // o
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint32_t _seq;
+};
+
+template<class key_t, class val_t>
+class PutRequestLargevalueSeqCached : public PutRequestLargevalueSeq<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + val in payload (NOT parsed by switch)
+	public:
+		PutRequestLargevalueSeqCached(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
+		PutRequestLargevalueSeqCached(const char * data, uint32_t recv_size);
+
+		static size_t get_frag_hdrsize();
+};
+
+template<class key_t, class val_t>
+class PutRequestLargevalueSeqCase3 : public PutRequestLargevalueSeq<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + val in payload (NOT parsed by switch)
+	public:
+		PutRequestLargevalueSeqCase3(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
+		PutRequestLargevalueSeqCase3(const char * data, uint32_t recv_size);
+
+		static size_t get_frag_hdrsize();
 };
 
 template<class key_t, class val_t>

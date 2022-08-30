@@ -2204,6 +2204,50 @@ void PutRequestLargevalueSeq<key_t, val_t>::deserialize(const char * data, uint3
 	begin += tmp_valsize;
 }
 
+// PutRequestLargevalueSeqCached (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqCached<key_t, val_t>::PutRequestLargevalueSeqCached(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
+	: PutRequestLargevalueSeq<key_t, val_t>(key, val, seq, client_logical_idx, fragseq)
+{	
+	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqCached<key_t, val_t>::PutRequestLargevalueSeqCached(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ_CACHED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+size_t PutRequestLargevalueSeqCached<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+}
+
+// PutRequestLargevalueSeqCase3 (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqCase3<key_t, val_t>::PutRequestLargevalueSeqCase3(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
+	: PutRequestLargevalueSeq<key_t, val_t>(key, val, seq, client_logical_idx, fragseq)
+{	
+	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqCase3<key_t, val_t>::PutRequestLargevalueSeqCase3(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ_CASE3);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+size_t PutRequestLargevalueSeqCase3<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+}
+
 // GetResponseLargevalue (value must > 128B)
 
 template<class key_t, class val_t>
@@ -2395,6 +2439,12 @@ static size_t get_frag_hdrsize(packet_type_t type) {
 	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
 		frag_hdrsize = PutRequestLargevalueSeq<netreach_key_t, val_t>::get_frag_hdrsize();
 	}
+	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
+		frag_hdrsize = PutRequestLargevalueSeqCached<netreach_key_t, val_t>::get_frag_hdrsize();
+	}
+	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
+		frag_hdrsize = PutRequestLargevalueSeqCase3<netreach_key_t, val_t>::get_frag_hdrsize();
+	}
 	else if (type == packet_type_t::GETRES_LARGEVALUE) {
 		frag_hdrsize = GetResponseLargevalue<netreach_key_t, val_t>::get_frag_hdrsize();
 	}
@@ -2413,7 +2463,7 @@ static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize
 	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE) {
 		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(netreach_key_t); // op_hdr
 	}
-	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
+	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
 		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(optype_t) + sizeof(uint32_t); // op_hdr + shadowtype + seq
 	}
 	else if (tmp_optype == packet_type_t::LOADREQ) {
@@ -2437,7 +2487,7 @@ static uint32_t get_packet_fragseq(const char * data, uint32_t recvsize) {
 	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE) {
 		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(uint16_t); // op_hdr + client_logical_idx
 	}
-	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
+	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
 		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t); // op_hdr + shadowtype + seq + client_logical_idx
 	}
 	else if (tmp_optype == packet_type_t::LOADREQ) {
