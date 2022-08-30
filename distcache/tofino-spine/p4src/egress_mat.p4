@@ -297,6 +297,7 @@ action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(switch
 	remove_header(shadowtype_hdr);
 	remove_header(seq_hdr);
 	remove_header(inswitch_hdr);
+	remove_header(stat_hdr);
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos

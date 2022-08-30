@@ -366,6 +366,7 @@ action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(switch
 	remove_header(shadowtype_hdr);
 	remove_header(seq_hdr);
 	remove_header(inswitch_hdr);
+	remove_header(stat_hdr);
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
@@ -465,6 +466,20 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq() {
 	add_header(seq_hdr);
 }
 
+action update_netcache_cache_pop_inswitch_nlatest_to_cache_pop_inswitch_ack_drop_and_clone(switchos_sid, reflector_port) {
+	modify_field(op_hdr.optype, CACHE_POP_INSWITCH_ACK);
+	modify_field(udp_hdr.dstPort, reflector_port);
+
+	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
+	remove_header(shadowtype_hdr);
+	remove_header(seq_hdr);
+	remove_header(inswitch_hdr);
+	remove_header(stat_hdr);
+
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -517,6 +532,7 @@ table eg_port_forward_tbl {
 		//forward_cache_evict_loadfreq_inswitch_ack;
 		update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack;
 		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq;
+		update_netcache_cache_pop_inswitch_nlatest_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
 		nop;
 	}
 	default_action: nop();
