@@ -434,6 +434,7 @@ class CachePop : public PutRequestSeq<key_t, val_t> { // ophdr + val + seq + sta
 template<class key_t, class val_t>
 class CachePopInswitch : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr + stat_hdr
 	public: 
+		CachePopInswitch();
 		CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -678,6 +679,7 @@ class NetcacheCachePop : public GetRequest<key_t> { // ophdr + serveridx
 template<class key_t, class val_t>
 class NetcacheCachePopAck : public CachePop<key_t, val_t> { // ophdr + val + seq + stat (not stat_hdr) + serveridx
 	public: 
+		NetcacheCachePopAck();
 		NetcacheCachePopAck(key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx);
 		NetcacheCachePopAck(const char * data, uint32_t recv_size);
 };
@@ -778,6 +780,7 @@ class PutRequestLargevalue : public Packet<key_t> { // ophdr + client_logical_id
 template<class key_t, class val_t>
 class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + val in payload (NOT parsed by switch)
 	public:
+		PutRequestLargevalueSeq();
 		PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
 		PutRequestLargevalueSeq(const char * data, uint32_t recv_size);
 
@@ -850,6 +853,7 @@ class NetcacheCachePopAckNLatest : public NetcacheCachePopAck<key_t, val_t> { //
 		NetcacheCachePopAckNLatest(const char * data, uint32_t recv_size);
 };
 
+template<class key_t, class val_t>
 class NetcacheCachePopInswitchNLatest : public CachePopInswitch<key_t, val_t> { // ophdr + default val (vallen=0) + shadowtype + seq + inswitch_hdr + stat_hdr
 	public:
 		NetcacheCachePopInswitchNLatest(key_t key, uint32_t seq, uint16_t freeidx, bool stat);
@@ -865,6 +869,7 @@ static netreach_key_t get_packet_key(const char * data, uint32_t recvsize);
 static bool is_same_optype(packet_type_t type1, packet_type_t type2);
 // Util APIs for large value
 static size_t get_frag_hdrsize(packet_type_t type);
+static size_t get_frag_totalsize(packet_type_t type, size_t frag_maxsize);
 static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize);
 static uint32_t get_packet_fragseq(const char * data, uint32_t recvsize);
 static bool is_packet_with_largevalue(packet_type_t type); // whether the packet is large to be processed by udprecvlarge_ipfrag

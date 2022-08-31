@@ -508,8 +508,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
             print "Leave cache_lookup_tbl managed by controller in runtime"
 
-            # Table: hash_for_cm1/2/3/4_tbl (default: nop; size: 2)
-            for i in range(1, 5):
+            # Table: hash_for_cm12/34_tbl (default: nop; size: 2)
+            for i in ["12", "34"]:
                 print "Configuring hash_for_cm{}_tbl".format(i)
                 for tmpoptype in [GETREQ, PUTREQ]:
                     matchspec0 = eval("netbufferv4_hash_for_cm{}_tbl_match_spec_t".format(i))(\

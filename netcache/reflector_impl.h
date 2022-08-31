@@ -67,6 +67,7 @@ void *run_reflector_cp2dpserver(void *param) {
 		packet_type_t tmp_optype = packet_type_t(get_packet_type(buf, recvsize));
 		switch (tmp_optype) {
 			case packet_type_t::CACHE_POP_INSWITCH:
+			case packet_type_t::NETCACHE_CACHE_POP_INSWITCH_NLATEST:
 			case packet_type_t::CACHE_EVICT_LOADFREQ_INSWITCH:
 				{
 					if (!reflector_with_switchos_popworker_popclient_for_reflector_addr) {

@@ -436,7 +436,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 
-				if (tmp_val.val_length <= val_t::MAX_SWITCH_VALLEN) {
+				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
 					get_response_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");

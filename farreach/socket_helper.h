@@ -30,11 +30,12 @@
 // max payload size to avoid udp fragmentation (manual udp fragmentation): 65535(ipmax) - 20(iphdr) - 8(udphdr)
 #define UDP_FRAGMENT_MAXSIZE 65507
 // programmable switch needs to process udp_hdr and op_hdr in payload -> we must perform ip-level fragmentation manually
-// max ethernet pkt 1518 - ethernet header 18 - ipv4 header 20 - udp header 8
+// max ethernet pkt 1518 - ethernet header 14 - ipv4 header 20 - udp header 8
 // max payload size to avoid ipv4 fragmentation (manual ipv4 fragmentation)
-//#define IP_FRAGMENT_MAXSIZE 1472
+//#define IP_FRAGMENT_MAXSIZE 1476
 // NOTE: reserve 64B for PUTREQ_LARGEVALUE_SEQ_INSWITCH
-#define IP_FRAGMENT_MAXSIZE 1408
+#define IP_FRAGMENT_MAXSIZE 1412
+#define IP_FRAGMENT_RESERVESIZE 64
 
 #define IP_FRAGTYPE 1
 #define UDP_FRAGTYPE 2

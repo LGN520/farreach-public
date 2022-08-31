@@ -529,9 +529,17 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 
 	size_t frag_hdrsize = 0;
 	size_t final_frag_hdrsize = 0;
+	size_t frag_totalsize = frag_maxsize; // frag_maxsize (final_frag_hdrsize of sent optype + frag_bodysize) + extra packet headers if any = final_frag_hdrsize of received optype + frag_bodysize
 	size_t frag_bodysize = 0;
 
-	char fragbuf[frag_maxsize];
+	// frag_maxsize = frag_hdrsize of sent optype + 16b fragidx + 16b fragnum + payload of frag_bodysize (used by udpsendlarge)
+	// NOTE: programmable switch may introduce extra packet headers
+	size_t fragbuf_maxsize = frag_maxsize;
+	if (fragtype == IP_FRAGTYPE) {
+		fragbuf_maxsize += IP_FRAGMENT_RESERVESIZE; // assign more bytes for extra packet headers
+	}
+
+	char fragbuf[fragbuf_maxsize];
 	int frag_recvsize = 0;
 	bool is_first = true;
 	uint16_t max_fragnum = 0;
@@ -577,9 +585,10 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 				else { // need to receive remaining fragments
 					is_first = false; // we do NOT need to process the first packet
 					INVARIANT(is_packet_with_largevalue(largepkt_optype) == true);
+					frag_totalsize = get_frag_totalsize(largepkt_optype, frag_maxsize); // update frag_totalsize for extra packet headers if any
 					frag_hdrsize = get_frag_hdrsize(largepkt_optype);
 					final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
-					frag_bodysize = frag_maxsize - final_frag_hdrsize;
+					frag_bodysize = frag_totalsize - final_frag_hdrsize;
 					largepkt_clientaddr = tmp_src_addr;
 					largepkt_clientaddrlen = tmp_addrlen;
 					//printf("pop incomplete large packet %x of key %x from client %d w/ cur_fragnum %d max_fragnum %d\n", int(largepkt_optype), largepkt_key.keyhihi, largepkt_clientlogicalidx, cur_fragnum, max_fragnum);
@@ -590,7 +599,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 
 	while (true) {
 		if (is_first) {
-			is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, &tmp_src_addr, &tmp_addrlen, frag_recvsize, role);
+			is_timeout = udprecvfrom(sockfd, fragbuf, fragbuf_maxsize, flags, &tmp_src_addr, &tmp_addrlen, frag_recvsize, role);
 			if (is_timeout) {
 				// NOTE: we do NOT need to push packet back into PktRingBuffer as even the first packet is NOT received
 				break;
@@ -636,6 +645,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 				largepkt_key = get_packet_key(fragbuf, frag_recvsize);
 				largepkt_optype = get_packet_type(fragbuf, frag_recvsize);
 				if (is_used_by_server) {
+					frag_totalsize = get_frag_totalsize(largepkt_optype, frag_maxsize); // update frag_totalsize for extra packet headers if any
 					largepkt_clientlogicalidx = get_packet_clientlogicalidx(fragbuf, frag_recvsize);
 					largepkt_fragseq = get_packet_fragseq(fragbuf, frag_recvsize);
 					largepkt_clientaddr = tmp_src_addr;
@@ -648,9 +658,9 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 
 			// Calculate fraghdrsize, final fraghdrsize, and fragbodysize based on optype
 			final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
-			frag_bodysize = frag_maxsize - final_frag_hdrsize;
+			frag_bodysize = frag_totalsize - final_frag_hdrsize;
 			INVARIANT(final_frag_hdrsize != 0 && frag_bodysize != 0);
-			INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize && size_t(frag_recvsize) <= frag_maxsize);
+			INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize && size_t(frag_recvsize) <= frag_totalsize);
 			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
 
 			// Copy fraghdr and get max fragnum
@@ -666,7 +676,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 				break;
 			}*/
 
-			is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, &tmp_src_addr, &tmp_addrlen, frag_recvsize, role);
+			is_timeout = udprecvfrom(sockfd, fragbuf, fragbuf_maxsize, flags, &tmp_src_addr, &tmp_addrlen, frag_recvsize, role);
 			if (is_timeout) {
 				break;
 			}
@@ -700,11 +710,12 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 							uint32_t tmp_nonfirstpkt_fragseq = get_packet_fragseq(fragbuf, frag_recvsize);
 							if (tmp_nonfirstpkt_clientlogicalidx != largepkt_clientlogicalidx) { // from different client
 								// calculate fraghdrsize and fragbodysize for the large packet from different client
+								uint32_t tmp_nonfirstpkt_frag_totalsize = get_frag_totalsize(tmp_nonfirstpkt_optype, frag_maxsize);
 								uint32_t tmp_nonfirstpkt_frag_hdrsize = get_frag_hdrsize(tmp_nonfirstpkt_optype);
 								uint32_t tmp_nonfirstpkt_final_frag_hdrsize = tmp_nonfirstpkt_frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
-								uint32_t tmp_nonfirstpkt_frag_bodysize = frag_maxsize - tmp_nonfirstpkt_final_frag_hdrsize;
+								uint32_t tmp_nonfirstpkt_frag_bodysize = tmp_nonfirstpkt_frag_totalsize - tmp_nonfirstpkt_final_frag_hdrsize;
 								INVARIANT(tmp_nonfirstpkt_final_frag_hdrsize != 0 && tmp_nonfirstpkt_frag_bodysize != 0);
-								INVARIANT(size_t(frag_recvsize) >= tmp_nonfirstpkt_final_frag_hdrsize && size_t(frag_recvsize) <= frag_maxsize);
+								INVARIANT(size_t(frag_recvsize) >= tmp_nonfirstpkt_final_frag_hdrsize && size_t(frag_recvsize) <= tmp_nonfirstpkt_frag_totalsize);
 
 								// calculate maxfragnum and curfragidx for the large packet from different client
 								uint16_t tmp_nonfirstpkt_max_fragnum = 0, tmp_nonfirstpkt_cur_fragidx = 0;

@@ -180,7 +180,8 @@
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (2B vallen + 128B value + 4B frequency + 1B status)
-#define KV_BUCKET_COUNT 32768
+//#define KV_BUCKET_COUNT 32768
+#define KV_BUCKET_COUNT 16384
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
 //#define HH_THRESHOLD 10

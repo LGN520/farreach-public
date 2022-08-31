@@ -670,6 +670,7 @@ class PutRequestLargevalue : public Packet<key_t> { // ophdr + client_logical_id
 template<class key_t, class val_t>
 class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + val in payload (NOT parsed by switch)
 	public:
+		PutRequestLargevalueSeq();
 		PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
 		PutRequestLargevalueSeq(const char * data, uint32_t recv_size);
 
@@ -726,6 +727,7 @@ static netreach_key_t get_packet_key(const char * data, uint32_t recvsize);
 static bool is_same_optype(packet_type_t type1, packet_type_t type2);
 // Util APIs for large value
 static size_t get_frag_hdrsize(packet_type_t type);
+static size_t get_frag_totalsize(packet_type_t type, size_t frag_maxsize);
 static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize);
 static uint32_t get_packet_fragseq(const char * data, uint32_t recvsize);
 static bool is_packet_with_largevalue(packet_type_t type); // whether the packet is large to be processed by udprecvlarge_ipfrag

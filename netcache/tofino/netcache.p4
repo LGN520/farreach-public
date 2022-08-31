@@ -111,7 +111,8 @@
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (2B vallen + 128B value + 4B frequency + 1B status)
-#define KV_BUCKET_COUNT 32768
+//#define KV_BUCKET_COUNT 32768
+#define KV_BUCKET_COUNT 16384
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
 // 32K * 4B counter
@@ -197,7 +198,7 @@ control ingress {
 	// -> so as long as op_hdr.key matches an entry in cache_lookup_tbl, inswitch_hdr.is_cached must be 1 (e.g., CACHE_EVICT_LOADXXX)
 	// -> but note that if the optype does not have inswitch_hdr, is_cached of 1 will be dropped after entering egress pipeline, and is_cached is still 0 (e.g., SCANREQ_SPLIT)
 	apply(cache_lookup_tbl); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
-	apply(hash_for_cm1_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
+	apply(hash_for_cm12_tbl); // for CM (access inswitch_hdr.hashval_for_cm1/2)
 
 	// Stage 3
 #ifdef RANGE_SUPPORT
@@ -205,15 +206,15 @@ control ingress {
 #endif
 
 	// Stage 4
-	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
+	//apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
 	// Stgae 5
-	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
+	apply(hash_for_cm34_tbl); // for CM (access inswitch_hdr.hashval_for_cm3/4)
 	apply(hash_for_bf1_tbl);
 
 	// Stage 6
-	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
+	//apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
 	apply(hash_for_bf2_tbl);
 
 	// Stage 7

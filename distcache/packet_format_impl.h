@@ -2812,6 +2812,12 @@ void PutRequestLargevalue<key_t, val_t>::deserialize(const char * data, uint32_t
 // PutRequestLargevalueSeq (value must > 128B)
 
 template<class key_t, class val_t>
+PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq() 
+	: PutRequestLargevalue<key_t, val_t>(), _seq(0)
+{	
+}
+
+template<class key_t, class val_t>
 PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
 	: PutRequestLargevalue<key_t, val_t>(key, val, client_logical_idx, fragseq), _seq(seq)
 {	
@@ -2969,7 +2975,7 @@ uint16_t GetResponseLargevalue<key_t, val_t>::nodeidx_foreval() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLargevalue<key_t, val_t>::size() { // unused
-	return packet<key_t>:;get_ophdrsize() + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return Packet<key_t>::get_ophdrsize() + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -3148,6 +3154,21 @@ static size_t get_frag_hdrsize(packet_type_t type) {
 	return frag_hdrsize;
 }
 
+// NOTE: frag_maxsize = frag_hdrsize of sent type + fragidx&fragnum + payload
+// NOTE: frag_totalsize = frag_hdrsize of received type + fragidx&fragnum + payload = frag_hdrsize of sent type + extra packet headers added by switch + fragidx&fragnum + payload
+static size_t get_frag_totalsize(packet_type_t type, size_t frag_maxsize) {
+	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
+		int sent_frag_hdrsize = int(get_frag_hdrsize(packet_type_t::PUTREQ_LARGEVALUE));
+		int received_frag_hdrsize = int(get_frag_hdrsize(packet_type_t::PUTREQ_LARGEVALUE_SEQ));
+		int extra_frag_hdrsize = received_frag_hdrsize - sent_frag_hdrsize; // NOTE: may be negative
+
+		int result = int(frag_maxsize) + extra_frag_hdrsize;
+		INVARIANT(result >= 0);
+		return size_t(result);
+	}
+	return frag_maxsize;
+}
+
 static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize) {
 	packet_type_t tmp_optype = get_packet_type(data, recvsize);
 	uint32_t prevbytes = 0;
@@ -3197,7 +3218,7 @@ static uint32_t get_packet_fragseq(const char * data, uint32_t recvsize) {
 }
 
 // whether the packet is large to be processed by udprecvlarge_ipfrag
-bool is_packet_with_largevalue(packet_type_t type) {
+static bool is_packet_with_largevalue(packet_type_t type) {
 	for (uint32_t tmp_optype_for_udprecvlarge_ipfrag_idx = 0; tmp_optype_for_udprecvlarge_ipfrag_idx < optype_for_udprecvlarge_ipfrag_num; tmp_optype_for_udprecvlarge_ipfrag_idx++) {
 		if (type == optype_for_udprecvlarge_ipfrag_list[tmp_optype_for_udprecvlarge_ipfrag_idx]) {
 			return true;
@@ -3207,7 +3228,7 @@ bool is_packet_with_largevalue(packet_type_t type) {
 }
 
 // whether the large packet is sent to server
-bool is_packet_with_clientlogicalidx(packet_type_t type) {
+static bool is_packet_with_clientlogicalidx(packet_type_t type) {
 	for (uint32_t tmp_optype_with_clientlogicalidx_idx = 0; tmp_optype_with_clientlogicalidx_idx < optype_with_clientlogicalidx_num; tmp_optype_with_clientlogicalidx_idx++) {
 		if (type == optype_with_clientlogicalidx_list[tmp_optype_with_clientlogicalidx_idx]) {
 			return true;

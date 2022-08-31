@@ -550,7 +550,7 @@ void *run_switchos_popworker(void *param) {
 				pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 			}
 			else { // for large value
-				cache_pop_inswitch_nlatest_t tmp_cache_pop_inswitch_nlatest(tmp_netcache_getreq_pop_ptr->key(), tmp_seq, switchos_freeidx, tmp_stat); // use default value w/ vallen = 0
+				netcache_cache_pop_inswitch_nlatest_t tmp_cache_pop_inswitch_nlatest(tmp_netcache_getreq_pop_ptr->key(), tmp_seq, switchos_freeidx, tmp_stat); // use default value w/ vallen = 0
 				pktsize = tmp_cache_pop_inswitch_nlatest.serialize(pktbuf, MAX_BUFSIZE);
 			}
 
