@@ -295,7 +295,7 @@ control egress {
 	apply(access_savedseq_tbl);
 	apply(access_case1_tbl);
 
-	// Stage 4-7
+	// Stage 4-6
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
@@ -309,13 +309,17 @@ control egress {
 	apply(update_valhi5_tbl);
 	apply(update_vallo6_tbl);
 	apply(update_valhi6_tbl);
+
+	// Stage 7
+	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 	apply(update_vallo7_tbl);
 	apply(update_valhi7_tbl);
 	apply(update_vallo8_tbl);
 	apply(update_valhi8_tbl);
 
 	// Stage 8
-	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
+	// NOTE: we must guarantee that the output optype of another_eg_port_forward_tbl will NOT be matched in eg_port_forward_tbl
+	apply(another_eg_port_forward_tbl); // used to reduce VLIW usage of eg_port_forward_tbl
 	apply(update_vallo9_tbl);
 	apply(update_valhi9_tbl);
 	apply(update_vallo10_tbl);
