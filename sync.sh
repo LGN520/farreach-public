@@ -1,6 +1,6 @@
-#DIRNAME="farreach"
+DIRNAME="farreach"
 #DIRNAME="nocache"
-DIRNAME="netcache"
+#DIRNAME="netcache"
 #DIRNAME="distnocache"
 #DIRNAME="distfarreach"
 #DIRNAME="distcache"

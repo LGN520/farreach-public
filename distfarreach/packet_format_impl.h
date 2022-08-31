@@ -2475,7 +2475,7 @@ static size_t get_frag_hdrsize(packet_type_t type) {
 // NOTE: frag_maxsize = frag_hdrsize of sent type + fragidx&fragnum + payload
 // NOTE: frag_totalsize = frag_hdrsize of received type + fragidx&fragnum + payload = frag_hdrsize of sent type + extra packet headers added by switch + fragidx&fragnum + payload
 static size_t get_frag_totalsize(packet_type_t type, size_t frag_maxsize) {
-	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
+	if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
 		int sent_frag_hdrsize = int(get_frag_hdrsize(packet_type_t::PUTREQ_LARGEVALUE));
 		int received_frag_hdrsize = int(get_frag_hdrsize(packet_type_t::PUTREQ_LARGEVALUE_SEQ));
 		int extra_frag_hdrsize = received_frag_hdrsize - sent_frag_hdrsize; // NOTE: may be negative
