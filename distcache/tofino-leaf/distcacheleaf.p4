@@ -151,6 +151,7 @@
 // 32K * 4B counter
 #define SEQ_BUCKET_COUNT 4096
 // 256K * 1b counter (update common.py accordingly)
+// NOTE: reduce number of BF buckets to fix Tofino power budget limitation -> OK as we clear BF every 1 second and NOT need too many BF buckets
 #define BF_BUCKET_COUNT 262144
 
 #else
@@ -238,10 +239,10 @@ control ingress {
 	apply(access_spineload_forclient_tbl); // set meta.spineload_forclient
 
 	// Stage 1
-#ifndef RANGE_SUPPORT
-	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
-#endif
-	apply(hash_for_ecmp_tbl); // method B for incorrect spineswitchidx to set meta.hashval_for_ecmp
+//#ifndef RANGE_SUPPORT
+//	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
+//#endif
+	apply(hash_for_ecmp_and_partition_tbl); // method B for incorrect spineswitchidx to set meta.hashval_for_ecmp; and set meta.hashval_for_partition if with hash partition
 	// For power-of-two-choices in client-leaf for GETREQ from client
 	////apply(set_spineswitchnum_tbl); // set meta.spineswitchnum for cutoff_spineswitchidx_for_ecmp_tbl (NOTE: merged into set_hot_threshold_tbl to save power budget)
 
@@ -289,7 +290,7 @@ control ingress {
 
 	// Stage 11
 	// (1) update op_hdr.optype (update egress_port for NETCACHE_VALUEUPDATE)
-	// (2) for GETREQ_SPINE -> GETRES_INSWITCH, set inswitch_hdr.hashval_for_bf3
+	// (2) for GETREQ_SPINE -> GETREQ_INSWITCH, set inswitch_hdr.hashval_for_bf3
 	apply(ig_port_forward_tbl); 
 }
 
@@ -319,7 +320,7 @@ control egress {
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
-	apply(access_cm4_tbl);
+	//apply(access_cm4_tbl);
 
 	// Stage 2
 	apply(is_hot_tbl);
@@ -336,7 +337,7 @@ control egress {
 	apply(update_vallen_tbl);
 	apply(access_bf1_tbl);
 	apply(access_bf2_tbl);
-	apply(access_bf3_tbl);
+	//apply(access_bf3_tbl);
 
 	// Stage 4
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3

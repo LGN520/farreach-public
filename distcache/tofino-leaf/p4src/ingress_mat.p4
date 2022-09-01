@@ -145,6 +145,7 @@ table set_spineswitchnum_tbl {
 /*action reset_is_wrong_pipeline() {
 	modify_field(inswitch_hdr.is_wrong_pipeline, 0);
 }*/
+/*
 #ifndef RANGE_SUPPORT
 action hash_for_partition() {
 	modify_field_with_hash_based_offset(meta.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
@@ -162,21 +163,27 @@ table hash_for_partition_tbl {
 	size: 16;
 }
 #endif
+*/
 
-action hash_for_ecmp() {
+action hash_for_ecmp_and_partition() {
 	modify_field_with_hash_based_offset(meta.hashval_for_ecmp, 0, random_hash_calc, PARTITION_COUNT);
+#ifndef RANGE_SUPPORT
+	modify_field_with_hash_based_offset(meta.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
+#endif
 }
 
 @pragma stage 1
-table hash_for_ecmp_tbl {
-	reads {
+table hash_for_ecmp_and_partition_tbl {
+	/*reads {
 		op_hdr.optype: exact;
-	}
+	}*/
 	actions {
-		hash_for_ecmp;
-		nop;
+		hash_for_ecmp_and_partition;
+		//nop;
 	}
-	default_action: nop();
+	//default_action: nop();
+	//size: 16;
+	default_action: hash_for_ecmp_and_partition();
 	size: 1;
 }
 
@@ -357,7 +364,7 @@ table cache_lookup_tbl {
 
 action hash_for_cm34() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc3, CM_BUCKET_COUNT);
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
+	//modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
 }
 
 @pragma stage 6
@@ -633,7 +640,7 @@ action update_getreq_spine_to_getreq_inswitch_and_hash_for_bf3() {
 
 	// NOTE: sum of hash results' bits CANNOT > 32-bits in one ALU due to Tofino limitation (18-bit hashval_for_bf = 32-bit cost)
 	// NOTE: cannot pass action parameter into modify_field_with_hash_based_offset, which only accepts constant
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
+	//modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
 	
 	//add_header(shadowtype_hdr);
 	add_header(inswitch_hdr);

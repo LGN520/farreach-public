@@ -428,22 +428,35 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: hash_for_ecmp_tbl (default: nop; size: 1)
-            print "Configuring hash_for_ecmp_tbl"
-            matchspec0 = distcacheleaf_hash_for_ecmp_tbl_match_spec_t(\
-                    op_hdr_optype = GETREQ)
-            self.client.hash_for_ecmp_tbl_table_add_with_hash_for_ecmp(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            ## Table: hash_for_ecmp_tbl (default: nop; size: 1)
+            #print "Configuring hash_for_ecmp_tbl"
+            #matchspec0 = distcacheleaf_hash_for_ecmp_tbl_match_spec_t(\
+            #        op_hdr_optype = GETREQ)
+            #self.client.hash_for_ecmp_tbl_table_add_with_hash_for_ecmp(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
 
-            if RANGE_SUPPORT == False:
-                # Table: hash_for_partition_tbl (default: nop; size: 15)
-                print "Configuring hash_for_partition_tbl"
-                #, NETCACHE_VALUEUPDATE, NETCACHE_VALUEUPDATE_ACK, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE, DISTCACHE_INVALIDATE_ACK, DISTCACHE_VALUEUPDATE_INSWITCH, DISTCACHE_VALUEUPDATE_INSWITCH_ACK, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CACHED]:
-                    matchspec0 = distcacheleaf_hash_for_partition_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype))
-                    self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+            #if RANGE_SUPPORT == False:
+            #    # Table: hash_for_partition_tbl (default: nop; size: 15)
+            #    print "Configuring hash_for_partition_tbl"
+            #    #, NETCACHE_VALUEUPDATE, NETCACHE_VALUEUPDATE_ACK, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK
+            #    for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE, DISTCACHE_INVALIDATE_ACK, DISTCACHE_VALUEUPDATE_INSWITCH, DISTCACHE_VALUEUPDATE_INSWITCH_ACK, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CACHED]:
+            #        matchspec0 = distcacheleaf_hash_for_partition_tbl_match_spec_t(\
+            #                op_hdr_optype = convert_u16_to_i16(tmpoptype))
+            #        self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
+            #                self.sess_hdl, self.dev_tgt, matchspec0)
+
+            ## Table: hash_for_ecmp_and_partition_tbl (default: nop; size: 16)
+            ## NOTE: although we set meta.hashval_for_partition for GETREQ, hash_partition_tbl will NOT forward GETREQ to server
+            ## NOTE: although we set meta.hashval_for_ecmp for other optypes, ecmp_for_getreq_tbl will NOT set toleaf_off for them, spineselect_tbl will NOT add toleaf_off to spineswitchidx for them, and cutoff_spineswitchidx_for_ecmp_tbl will NOT cutoff spineswitchidx for them
+            #print "Configuring hash_for_ecmp_and_partition_tbl"
+            #for tmpoptype in [GETREQ, GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH, DISTCACHE_INVALIDATE, DISTCACHE_INVALIDATE_ACK, DISTCACHE_VALUEUPDATE_INSWITCH, DISTCACHE_VALUEUPDATE_INSWITCH_ACK, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CACHED]:
+            #    matchspec0 = distcacheleaf_hash_for_ecmp_and_partition_tbl_match_spec_t(\
+            #            op_hdr_optype = convert_u16_to_i16(tmpoptype))
+            #    self.client.hash_for_ecmp_and_partition_tbl_table_add_with_hash_for_ecmp_and_partition(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
+            # Table: hash_for_ecmp_and_partition_tbl (default: hash_for_ecmp_and_partition; size: 1)
+            # NOTE: although we set meta.hashval_for_partition/ecmp for all packets (hash_for_ecmp_and_partition_tbl w/o matching fields), hash_partition_tbl ONLY uses hashval_for_partition for specific optypes, and ecmp-related MATs ONLY use hashval_for_ecmp for GETREQ
+            print "Configuring hash_for_ecmp_and_partition_tbl"
 
             # Stage 2
 
@@ -1161,7 +1174,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_cmi_tbl (default: initialize_cmi_predicate; size: 3)
-            cm_hashnum = 4
+            #cm_hashnum = 4
+            cm_hashnum = 3
             for i in range(1, cm_hashnum+1):
                 print "Configuring access_cm{}_tbl".format(i)
                 for tmpoptype in [GETREQ_INSWITCH]:
@@ -1185,8 +1199,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = distcacheleaf_is_hot_tbl_match_spec_t(\
                     meta_cm1_predicate = 2,
                     meta_cm2_predicate = 2,
-                    meta_cm3_predicate = 2,
-                    meta_cm4_predicate = 2)
+                    meta_cm3_predicate = 2)
+                    #meta_cm4_predicate = 2)
             self.client.is_hot_tbl_table_add_with_set_is_hot(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -1347,7 +1361,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_bfX_tbl (default: reset_is_reportX; size: 3)
-            bf_hashnum = 3
+            #bf_hashnum = 3
+            bf_hashnum = 2
             for i in range(1, bf_hashnum+1):
                 print "Configuring access_bf{}_tbl".format(i)
                 for tmpoptype in [GETREQ_INSWITCH]:
@@ -1363,8 +1378,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring is_report_tbl"
             matchspec0 = distcacheleaf_is_report_tbl_match_spec_t(\
                     meta_is_report1 = 1,
-                    meta_is_report2 = 1,
-                    meta_is_report3 = 1)
+                    meta_is_report2 = 1)
+                    #meta_is_report3 = 1)
             self.client.is_report_tbl_table_add_with_set_is_report(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 

@@ -121,7 +121,7 @@ table access_cm3_tbl {
 	size: 4;
 }
 
-register cm4_reg {
+/*register cm4_reg {
 	width: 16;
 	instance_count: CM_BUCKET_COUNT;
 }
@@ -160,4 +160,4 @@ table access_cm4_tbl {
 	}
 	default_action: initialize_cm4_predicate();
 	size: 4;
-}
+}*/

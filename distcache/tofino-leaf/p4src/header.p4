@@ -185,11 +185,11 @@ header_type metadata_t {
 		cm1_predicate: 4;
 		cm2_predicate: 4;
 		cm3_predicate: 4;
-		cm4_predicate: 4;
+		//cm4_predicate: 4;
 		is_hot: 1;
 		is_report1: 1;
 		is_report2: 1;
-		is_report3: 1;
+		//is_report3: 1;
 		is_report: 1;
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted

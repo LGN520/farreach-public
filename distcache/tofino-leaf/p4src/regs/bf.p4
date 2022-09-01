@@ -70,7 +70,7 @@ table access_bf2_tbl {
 	size: 4;
 }
 
-register bf3_reg {
+/*register bf3_reg {
 	width: 1;
 	instance_count: BF_BUCKET_COUNT;
 }
@@ -104,4 +104,4 @@ table access_bf3_tbl {
 	}
 	default_action: reset_is_report3;
 	size: 4;
-}
+}*/

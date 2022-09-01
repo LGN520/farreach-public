@@ -130,7 +130,7 @@ table is_hot_tbl {
 		meta.cm1_predicate: exact;
 		meta.cm2_predicate: exact;
 		meta.cm3_predicate: exact;
-		meta.cm4_predicate: exact;
+		//meta.cm4_predicate: exact;
 	}
 	actions {
 		set_is_hot;
@@ -155,7 +155,7 @@ table is_report_tbl {
 	reads {
 		meta.is_report1: exact;
 		meta.is_report2: exact;
-		meta.is_report3: exact;
+		//meta.is_report3: exact;
 	}
 	actions {
 		set_is_report;

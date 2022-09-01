@@ -311,7 +311,7 @@ control egress {
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
-	apply(access_cm4_tbl);
+	//apply(access_cm4_tbl);
 
 	// Stage 1
 	apply(is_hot_tbl);

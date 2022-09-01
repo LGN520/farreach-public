@@ -586,7 +586,7 @@ void *run_server_worker(void * param) {
 							bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);*/
 							//distcache_spine_valueupdate_inswitch_t *tmp_distcache_spine_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
 							distcache_valueupdate_inswitch_t *tmp_distcache_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
-							INVARIANT(pkt_type != PUTREQ_LARGEVALUE_SEQ);
+							INVARIANT(pkt_type != packet_type_t::PUTREQ_LARGEVALUE_SEQ);
 							if (pkt_type == packet_type_t::PUTREQ_SEQ) {
 								//tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
 								tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
@@ -718,7 +718,7 @@ void *run_server_worker(void * param) {
 #ifdef DEBUG_SERVER
 					CUR_TIME(beingupdated_t1);
 #endif
-					if (pkt_type != PUTREQ_LARGEVALUE_SEQ_CACHED) {
+					if (pkt_type != packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
 						while (is_being_updated) { // being updated
 							server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 							//usleep(1); // wait for inswitch value update finish
@@ -734,7 +734,7 @@ void *run_server_worker(void * param) {
 					beingupdated_time = GET_MICROSECOND(beingupdated_t3);
 #endif
 
-					if (pkt_type != PUTREQ_LARGEVALUE_SEQ_CACHED) {
+					if (pkt_type != packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
 						// Double-check due to potential cache eviction
 						is_cached = (server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_key) != server_cached_keyidxmap_list[local_server_logical_idx].end());
 						if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateserver

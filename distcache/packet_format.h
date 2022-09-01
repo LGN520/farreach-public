@@ -1007,10 +1007,10 @@ class PutRequestLargevalueSeqCase3 : public PutRequestLargevalueSeq<key_t, val_t
 };
 
 template<class key_t, class val_t>
-class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
+class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr&switchload_hdr in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
 	public:
 		GetResponseLargevalue();
-		GetResponseLargevalue(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
+		GetResponseLargevalue(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval); // NOTE: DistCache will NOT serialize GETRES_LARGEVALUE
 		GetResponseLargevalue(const char * data, uint32_t recv_size);
 
 		static size_t get_frag_hdrsize();
@@ -1019,6 +1019,8 @@ class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr in 
 		val_t val() const;
 		bool stat() const;
 		uint16_t nodeidx_foreval() const;
+		uint32_t spineload() const;
+		uint32_t leafload() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -1027,12 +1029,14 @@ class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr in 
 		val_t _val;
 		bool _stat;
 		uint16_t _nodeidx_foreval;
+		uint32_t _spineload;
+		uint32_t _leafload;
 };
 
 template<class key_t, class val_t>
 class GetResponseLargevalueServer : public GetResponseLargevalue<key_t, val_t> { // ophdr + val&stat_hdr in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
 	public:
-		GetResponseLargevalueServer(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
+		GetResponseLargevalueServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload);
 		GetResponseLargevalueServer(const char * data, uint32_t recv_size);
 
 		static size_t get_frag_hdrsize();

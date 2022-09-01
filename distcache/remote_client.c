@@ -1060,11 +1060,21 @@ void *run_client_worker(void *param) {
 								get_response_t rsp(dynamicbuf.array(), recv_size);
 								tmp_key_for_getreq = rsp.key();
 								tmp_nodeidx_foreval_for_getreq = rsp.nodeidx_foreval();
+
+								tmp_rsp_spineswitchidx = rsp.spineswitchidx();
+								tmp_rsp_leafswitchidx = rsp.leafswitchidx();
+								tmp_rsp_spineload = rsp.spineload();
+								tmp_rsp_leafload = rsp.leafload();
 							}
 							else {
 								get_response_largevalue_t rsp(dynamicbuf.array(), recv_size);
 								tmp_key_for_getreq = rsp.key();
 								tmp_nodeidx_foreval_for_getreq = rsp.nodeidx_foreval();
+
+								tmp_rsp_spineswitchidx = rsp.spineswitchidx();
+								tmp_rsp_leafswitchidx = rsp.leafswitchidx();
+								tmp_rsp_spineload = rsp.spineload();
+								tmp_rsp_leafload = rsp.leafload();
 							}
 							if (tmp_key_for_getreq != tmpkey) {
 								thread_param.unmatched_cnt++;
@@ -1074,10 +1084,6 @@ void *run_client_worker(void *param) {
 								tmp_nodeidx_foreval = tmp_nodeidx_foreval_for_getreq;
 								//FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 
-								tmp_rsp_spineswitchidx = rsp.spineswitchidx();
-								tmp_rsp_leafswitchidx = rsp.leafswitchidx();
-								tmp_rsp_spineload = rsp.spineload();
-								tmp_rsp_leafload = rsp.leafload();
 								break; // break to update statistics and send next packet
 							}
 						}
