@@ -544,7 +544,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcachespine_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_LARGEVALUE)
-            self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_to_putreq_largevalue_iswitch(\
+            self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_to_putreq_largevalue_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline

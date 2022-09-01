@@ -2911,7 +2911,7 @@ PutRequestLargevalueSeqCached<key_t, val_t>::PutRequestLargevalueSeqCached(const
 
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqCached<key_t, val_t>::get_frag_hdrsize() {
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	return Packet<key_t>::get_ophdrsize() + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
 }
 
 // PutRequestLargevalueSeqCase3 (value must > 128B)
