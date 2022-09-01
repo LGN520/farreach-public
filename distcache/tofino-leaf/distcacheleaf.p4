@@ -312,15 +312,10 @@ control egress {
 #endif
 
 	// Stage 1
-#ifdef RANGE_SUPPORT
-	// (1) reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/udpport for GETREQ_INSWITCH
-	// (2) save srcip/srcmac/udp.srcport (client ip/mac/udpport) for cache hit response of GETREQ_INSWITCH
-	apply(prepare_for_cachepop_and_save_client_info_tbl); // place in stage 1 for range
-#endif
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
-	//apply(access_cm4_tbl);
+	//apply(access_cm4_tbl); // reduce cm4 to fix Tofino limitation of power budget -> OK, as we clean CM every 1 second which does NOT have too many false positives, and it is due to Tofino limitation itself (SYNC to distfarreach for fair comparison)
 
 	// Stage 2
 	apply(is_hot_tbl);
@@ -329,15 +324,13 @@ control egress {
 	apply(access_savedseq_tbl);
 
 	// Stage 3
-#ifndef RANGE_SUPPORT
 	// (1) reset clone_hdr.server_sid by default here; set clone_hdr.server_sid/udpport for GETREQ_INSWITCH
 	// (2) save srcip/srcmac/udp.srcport (client ip/mac/udpport) for cache hit response of GETREQ_INSWITCH
-	apply(prepare_for_cachepop_and_save_client_info_tbl); // place in stage 3 for hash
-#endif
+	apply(prepare_for_cachepop_and_save_client_info_tbl); // place in stage 3 for hash (NOTE: place here for BOTH hash/range partition)
 	apply(update_vallen_tbl);
 	apply(access_bf1_tbl);
 	apply(access_bf2_tbl);
-	//apply(access_bf3_tbl);
+	//apply(access_bf3_tbl); // reduce bf3 to fix Tofino limitation of power budget -> OK, as we clean BF every 1 second which does NOT have too many false positives, and it is due to Tofino limitation itself
 
 	// Stage 4
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3

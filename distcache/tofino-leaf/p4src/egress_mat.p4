@@ -70,48 +70,6 @@ table process_scanreq_split_tbl {
 }
 #endif
 
-// Stage 1 / 3
-
-action set_server_sid_udpport_and_save_client_info(server_sid) {
-	modify_field(clone_hdr.server_sid, server_sid);
-	modify_field(clone_hdr.server_udpport, udp_hdr.dstPort); // dstport is serverport for GETREQ_INSWITCH
-
-	modify_field(clone_hdr.client_ip, ipv4_hdr.srcAddr);
-	modify_field(clone_hdr.client_mac, ethernet_hdr.srcAddr);
-	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
-}
-
-action reset_server_sid() {
-	modify_field(clone_hdr.server_sid, 0);
-}
-
-#ifdef DEBUG
-// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
-counter prepare_for_cachepop_and_save_client_info_counter {
-	type : packets_and_bytes;
-	direct: prepare_for_cachepop_and_save_client_info_tbl;
-}
-#endif
-
-#ifdef RANGE_SUPPORT
-@pragma stage 1
-#else
-@pragma stage 3
-#endif
-table prepare_for_cachepop_and_save_client_info_tbl {
-	reads {
-		op_hdr.optype: exact;
-		eg_intr_md.egress_port: exact;
-	}
-	actions {
-		set_server_sid_udpport_and_save_client_info;
-		reset_server_sid;
-		nop;
-	}
-	default_action: reset_server_sid();
-	size: 32;
-}
-
 // Stage 2
 
 action set_is_hot() {
@@ -138,6 +96,44 @@ table is_hot_tbl {
 	}
 	default_action: reset_is_hot();
 	size: 1;
+}
+
+// Stage 3
+
+action set_server_sid_udpport_and_save_client_info(server_sid) {
+	modify_field(clone_hdr.server_sid, server_sid);
+	modify_field(clone_hdr.server_udpport, udp_hdr.dstPort); // dstport is serverport for GETREQ_INSWITCH
+
+	modify_field(clone_hdr.client_ip, ipv4_hdr.srcAddr);
+	modify_field(clone_hdr.client_mac, ethernet_hdr.srcAddr);
+	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
+}
+
+action reset_server_sid() {
+	modify_field(clone_hdr.server_sid, 0);
+}
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter prepare_for_cachepop_and_save_client_info_counter {
+	type : packets_and_bytes;
+	direct: prepare_for_cachepop_and_save_client_info_tbl;
+}
+#endif
+
+@pragma stage 3
+table prepare_for_cachepop_and_save_client_info_tbl {
+	reads {
+		op_hdr.optype: exact;
+		eg_intr_md.egress_port: exact;
+	}
+	actions {
+		set_server_sid_udpport_and_save_client_info;
+		reset_server_sid;
+		nop;
+	}
+	default_action: reset_server_sid();
+	size: 32;
 }
 
 // Stage 7

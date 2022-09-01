@@ -383,14 +383,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.set_hot_threshold_tbl_set_default_action_set_hot_threshold(\
                     self.sess_hdl, self.dev_tgt, actnspec0)
 
-            # Table: hash_for_spineselect_tbl (default: nop; size: 11)
-            # NOTE: we calculate meta.spineswitchidx for special get responses here
+            ## Table: hash_for_spineselect_tbl (default: nop; size: 11)
+            ## NOTE: we calculate meta.spineswitchidx for special get responses here
+            # Table: hash_for_spineselect_tbl (default: hash_for_spineselect(); size: 1)
+            # NOTE: although we set meta.hashval_for_spineselect for all packets, spineselect_tbl ONLY uses it for specific optypes
             print "Configuring hash_for_spineselect_tbl"
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, PUTREQ_LARGEVALUE]:
-                matchspec0 = distfarreachleaf_hash_for_spineselect_tbl_match_spec_t(\
-                        op_hdr_optype = convert_u16_to_i16(tmpoptype))
-                self.client.hash_for_spineselect_tbl_table_add_with_hash_for_spineselect(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+            #for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, PUTREQ_LARGEVALUE]:
+            #    matchspec0 = distfarreachleaf_hash_for_spineselect_tbl_match_spec_t(\
+            #            op_hdr_optype = convert_u16_to_i16(tmpoptype))
+            #    self.client.hash_for_spineselect_tbl_table_add_with_hash_for_spineselect(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 1
 
@@ -408,14 +410,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             if RANGE_SUPPORT == False:
-                # Table: hash_for_partition_tbl (default: nop; size: 19)
+                ## Table: hash_for_partition_tbl (default: nop; size: 19)
+                # Table: hash_for_partition_tbl (default: hash_for_partition(); size: 1)
+                # NOTE: although we set meta.hashval_for_partition for all packets, hash_partition_tbl ONLY uses hashval_for_partition for specific optypes if need_recirculate=0
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH]:
-                    matchspec0 = distfarreachleaf_hash_for_partition_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
-                            meta_need_recirculate = 0)
-                    self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+                #for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH]:
+                #    matchspec0 = distfarreachleaf_hash_for_partition_tbl_match_spec_t(\
+                #            op_hdr_optype = convert_u16_to_i16(tmpoptype),
+                #            meta_need_recirculate = 0)
+                #    self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
+                #            self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: spineselect_tbl (default: nop; size <= 11 * spineswitch_total_logical_num)
             # NOTE: we calculate meta.spineswitchidx for special get responses here
@@ -617,15 +621,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
             print "Leave cache_lookup_tbl managed by controller in runtime"
 
-            # Table: hash_for_cm12/34_tbl (default: nop; size: 4)
+            ## Table: hash_for_cm12/34_tbl (default: nop; size: 4)
+            # Table: hash_for_cm12/34_tbl (default: hash_for_cm12/34; size: 1)
+            # NOTE: although we set inswitch_hdr.hashval_for_cm1/2/3/4 for all packets, access_cmX_tbl ONLY uses it for specific optypes
             for funcname in ["12", "34"]:
                 print "Configuring hash_for_cm{}_tbl".format(funcname)
-                for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, PUTREQ_SEQ_INSWITCH]:
-                    matchspec0 = eval("distfarreachleaf_hash_for_cm{}_tbl_match_spec_t".format(funcname))(\
-                            op_hdr_optype = tmpoptype,
-                            meta_need_recirculate = 0)
-                    eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(funcname, funcname))(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+                #for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, PUTREQ_SEQ_INSWITCH]:
+                #    matchspec0 = eval("distfarreachleaf_hash_for_cm{}_tbl_match_spec_t".format(funcname))(\
+                #            op_hdr_optype = tmpoptype,
+                #            meta_need_recirculate = 0)
+                #    eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(funcname, funcname))(\
+                #            self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 3
 
@@ -703,14 +709,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 4
 
-            # Table: sample_tbl (default: nop; size: 3)
+            ## Table: sample_tbl (default: nop; size: 3)
+            # Table: sample_tbl (default: sample(); size: 1)
+            # NOTE: although we set inswitch_hdr.is_sampled for all packets, CM/cache_frequency MATs ONLY use it for specific optypes
             print "Configuring sample_tbl"
-            for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, PUTREQ_SEQ_INSWITCH]:
-                matchspec0 = distfarreachleaf_sample_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        meta_need_recirculate = 0)
-                self.client.sample_tbl_table_add_with_sample(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+            #for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, PUTREQ_SEQ_INSWITCH]:
+            #    matchspec0 = distfarreachleaf_sample_tbl_match_spec_t(\
+            #            op_hdr_optype = tmpoptype,
+            #            meta_need_recirculate = 0)
+            #    self.client.sample_tbl_table_add_with_sample(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
 
 
             # Table: ig_port_forward_tbl (default: nop; size: 17)

@@ -385,15 +385,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.set_hot_threshold_and_spineswitchnum_tbl_set_default_action_set_hot_threshold_and_spineswitchnum(\
                     self.sess_hdl, self.dev_tgt, actnspec0)
 
-            # Table: hash_for_spineselect_tbl (default: nop; size: 9)
+            ## Table: hash_for_spineselect_tbl (default: nop; size: 9)
+            #print "Configuring hash_for_spineselect_tbl"
+            ## Deprecated: GETRES_SERVER (inherit original spineswitchidx from GETREQ set by client-leaf to update corresponding register slot in spineload_reg of spine switch)
+            ##, NETCACHE_VALUEUPDATE, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH
+            #for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, DISTCACHE_INVALIDATE, DISTCACHE_VALUEUPDATE_INSWITCH, PUTREQ_LARGEVALUE]:
+            #    matchspec0 = distcacheleaf_hash_for_spineselect_tbl_match_spec_t(\
+            #            op_hdr_optype = convert_u16_to_i16(tmpoptype))
+            #    self.client.hash_for_spineselect_tbl_table_add_with_hash_for_spineselect(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
+            # Table: hash_for_spineselect_tbl (default: hash_for_spineselect(); size: 1)
+            # NOTE: although we set meta.hashval_for_spineselect for all packets, spineselect_tbl ONLY uses it for specific optypes
             print "Configuring hash_for_spineselect_tbl"
-            # Deprecated: GETRES_SERVER (inherit original spineswitchidx from GETREQ set by client-leaf to update corresponding register slot in spineload_reg of spine switch)
-            #, NETCACHE_VALUEUPDATE, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, DISTCACHE_INVALIDATE, DISTCACHE_VALUEUPDATE_INSWITCH, PUTREQ_LARGEVALUE]:
-                matchspec0 = distcacheleaf_hash_for_spineselect_tbl_match_spec_t(\
-                        op_hdr_optype = convert_u16_to_i16(tmpoptype))
-                self.client.hash_for_spineselect_tbl_table_add_with_hash_for_spineselect(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_leafload_tbl (default: nop; size: 1)
             print "Configuring access_leafload_tbl"
@@ -831,15 +834,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     valid_serveridx_start = valid_serveridx_end + 1
                     valid_key_start = valid_key_end + 1
 
-            # Table: hash_for_cm1/2/3/4_tbl (default: nop; size: 1)
-            # Table: hash_for_cm12/34_tbl (default: nop; size: 4)
+            ## Table: hash_for_cm12/34_tbl (default: nop; size: 4)
+            # Table: hash_for_cm12/34_tbl (default: hash_for_cm12/34(); size: 1)
+            # NOTE: although we set inswitch_hdr.hashval_for_cm1/2/3/4 for all packets, access_cmX_tbl ONLY uses it for specific optypes
             for funcname in ["12", "34"]:
                 print "Configuring hash_for_cm{}_tbl".format(funcname)
-                for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, PUTREQ_SEQ_INSWITCH]:
-                    matchspec0 = eval("distcacheleaf_hash_for_cm{}_tbl_match_spec_t".format(funcname))(\
-                            op_hdr_optype = tmpoptype)
-                    eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(funcname, funcname))(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+                #for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, PUTREQ_SEQ_INSWITCH]:
+                #    matchspec0 = eval("distcacheleaf_hash_for_cm{}_tbl_match_spec_t".format(funcname))(\
+                #            op_hdr_optype = tmpoptype)
+                #    eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(funcname, funcname))(\
+                #            self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: hash_for_bfX_tbl (default: nop; size: 1)
             #for funcname in [1, 2, 3]:
@@ -915,13 +919,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 10
 
-            # Table: sample_tbl (default: nop; size: 1)
+            ## Table: sample_tbl (default: nop; size: 1)
+            # Table: sample_tbl (default: sample(); size: 1)
+            # NOTE: although we set inswitch_hdr.is_sampled for all packets, CM/cache_frequency MATs ONLY use it for specific optypes
             print "Configuring sample_tbl"
-            for tmpoptype in [GETREQ_SPINE]:
-                matchspec0 = distcacheleaf_sample_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype)
-                self.client.sample_tbl_table_add_with_sample(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+            #for tmpoptype in [GETREQ_SPINE]:
+            #    matchspec0 = distcacheleaf_sample_tbl_match_spec_t(\
+            #            op_hdr_optype = tmpoptype)
+            #    self.client.sample_tbl_table_add_with_sample(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
 
 
             # Table: ig_port_forward_tbl (default: nop; size: 16)

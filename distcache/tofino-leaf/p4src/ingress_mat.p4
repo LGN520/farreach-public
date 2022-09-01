@@ -112,15 +112,17 @@ action hash_for_spineselect() {
 
 @pragma stage 0
 table hash_for_spineselect_tbl {
-	reads {
+	/*reads {
 		op_hdr.optype: exact;
-	}
+	}*/
 	actions {
 		hash_for_spineselect;
-		nop;
+		//nop;
 	}
-	default_action: nop();
-	size: 16;
+	//default_action: nop();
+	//size: 16;
+	default_action: hash_for_spineselect();
+	size: 1;
 }
 
 // Stage 1
@@ -196,15 +198,17 @@ action hash_for_cm12() {
 
 @pragma stage 2
 table hash_for_cm12_tbl {
-	reads {
+	/*reads {
 		op_hdr.optype: exact;
-	}
+	}*/
 	actions {
 		hash_for_cm12;
-		nop;
+		//nop;
 	}
-	default_action: nop();
-	size: 4;
+	//default_action: nop();
+	//size: 4;
+	default_action: hash_for_cm12();
+	size: 1;
 }
 
 action set_toleaf_offset(toleaf_offset) {
@@ -369,14 +373,16 @@ action hash_for_cm34() {
 
 @pragma stage 6
 table hash_for_cm34_tbl {
-	reads {
+	/*reads {
 		op_hdr.optype: exact;
-	}
+	}*/
 	actions {
 		hash_for_cm34;
-		nop;
+		//nop;
 	}
-	default_action: nop();
+	//default_action: nop();
+	//size: 4;
+	default_action: hash_for_cm34();
 	size: 4;
 }
 
@@ -621,15 +627,17 @@ action sample() {
 
 @pragma stage 10
 table sample_tbl {
-	reads {
+	/*reads {
 		op_hdr.optype: exact;
-	}
+	}*/
 	actions {
 		sample;
-		nop;
+		//nop;
 	}
-	default_action: nop();
-	size: 2;
+	//default_action: nop();
+	//size: 2;
+	default_action: sample();
+	size: 1;
 }
 
 // Stage 11
