@@ -568,12 +568,13 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 			}
 
 			if (max_fragnum == 0) { // small packet
+				//printf("pop a complete small packet %x of key %x from client %d\n", int(largepkt_optype), largepkt_key.keyhihi, largepkt_clientlogicalidx);
 				return false;
 			}
 			else { // large packet
 				if (cur_fragnum >= max_fragnum) { // w/ all fragments
-					/*printf("pop a complete large packet %x of key %x from client %d\n", int(largepkt_optype), largepkt_key.keyhihi, largepkt_clientlogicalidx);
-					if (largepkt_clientlogicalidx == 16) {
+					//printf("pop a complete large packet %x of key %x from client %d\n", int(largepkt_optype), largepkt_key.keyhihi, largepkt_clientlogicalidx);
+					/*if (largepkt_clientlogicalidx == 16) {
 						CUR_TIME(process_t2);
 						DELTA_TIME(process_t2, process_t1, process_t3);
 						double process_time = GET_MICROSECOND(process_t3);
@@ -789,8 +790,10 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 		INVARIANT(cur_fragidx < max_fragnum);
 		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnum, frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 		
-		//printf("cur_fragidx %d cur_fragnum %d max_fragnum %d key %x client %d\n", cur_fragidx, cur_fragnum, max_fragnum, largepkt_key.keyhihi, largepkt_clientlogicalidx);
-		//fflush(stdout);
+		/*if (fragtype == IP_FRAGTYPE) {
+			printf("cur_fragidx %d cur_fragnum %d max_fragnum %d key %x client %d\n", cur_fragidx, cur_fragnum, max_fragnum, largepkt_key.keyhihi, largepkt_clientlogicalidx);
+			fflush(stdout);
+		}*/
 
 		buf.dynamic_memcpy(0 + frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
 

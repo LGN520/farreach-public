@@ -796,20 +796,22 @@ void *run_server_worker(void * param) {
 
 				// Trigger cache population if necessary (key exist and not being cached)
 				bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
-				INVARIANT(!is_cached_before);
-				server_cached_keyset_list[local_server_logical_idx].insert(req.key());
-				// Send CACHE_POP to server.popclient
-				//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, tmp_stat, serveridx); // freed by server.popclient
-				//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
-						
-				if (tmp_val.val_length > val_t::SWITCH_MAX_VALLEN) { // large value
-					tmp_val = val_t(); // replace large value with default value for cache population (OK as distfarreach.CACHE_POP_INSWITCH resets latest_reg = 0)
+				//INVARIANT(!is_cached_before);
+				if (!is_cached_before) {
+					server_cached_keyset_list[local_server_logical_idx].insert(req.key());
+					// Send CACHE_POP to server.popclient
+					//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, tmp_stat, serveridx); // freed by server.popclient
+					//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+							
+					if (tmp_val.val_length > val_t::SWITCH_MAX_VALLEN) { // large value
+						tmp_val = val_t(); // replace large value with default value for cache population (OK as distfarreach.CACHE_POP_INSWITCH resets latest_reg = 0)
+					}
+					cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
+					rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+					send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+					cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
+					INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 				}
-				cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-				rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-				send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
-				cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
-				INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 				break;
 			}
 		case packet_type_t::LOADREQ:

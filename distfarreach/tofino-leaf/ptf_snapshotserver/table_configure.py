@@ -48,7 +48,7 @@ switchos_ptf_snapshotserver_udpsock.bind(("127.0.0.1", switchos_ptf_snapshotserv
 
 flags = distfarreachleaf_register_flags_t(read_hw_sync=True)
 
-initial_entrynum_for_snapshot_flag = 4
+initial_entrynum_for_snapshot_flag = 5
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):

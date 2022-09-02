@@ -47,6 +47,10 @@ bool PktRingBuffer::push(const packet_type_t &optype, const netreach_key_t &key,
 	clientlogicalidx_list[head] = 0;
 	fragseq_list[head] = 0;
 
+	// TMPDEBUG
+	//printf("push key %x into bufidx %d\n", key.keyhihi, head);
+	//fflush(stdout);
+
 	// NOTE: small packet does NOT need to update clientlogicalidx_bufidx_map
 	
 	// update head
@@ -90,6 +94,10 @@ bool PktRingBuffer::push_large(const packet_type_t &optype, const netreach_key_t
 	clientlogicalidx_list[head] = clientlogicalidx;
 	fragseq_list[head] = fragseq;
 
+	// TMPDEBUG
+	//printf("push large key %x into bufidx %d\n", key.keyhihi, head);
+	//fflush(stdout);
+
 	// NOTE: large packet NEEDs to update clientlogicalidx_bufidx_map
 	INVARIANT(clientlogicalidx_bufidx_map.find(clientlogicalidx) == clientlogicalidx_bufidx_map.end());
 	clientlogicalidx_bufidx_map.insert(std::pair<uint16_t, uint32_t>(clientlogicalidx, head));
@@ -107,9 +115,20 @@ void PktRingBuffer::update_large(const packet_type_t &optype, const netreach_key
 	INVARIANT(iter != clientlogicalidx_bufidx_map.end());
 
 	uint32_t bufidx = iter->second;
+
+	// TMPDEBUG
+	//printf("update large key %x into bufidx %d\n", key.keyhihi, bufidx);
+	//fflush(stdout);
+
 	INVARIANT(valid_list[bufidx] == true);
 	INVARIANT(is_same_optype(optype_list[bufidx], optype));
+
+	/*if (key_list[bufidx] != key) { // TMPDEBUG
+		printf("[ERROR] key_list[%d] should be %x, while deparsed key is %x\n", bufidx, key_list[bufidx].keyhihi, key.keyhihi);
+		fflush(stdout);
+	}*/
 	INVARIANT(key_list[bufidx] == key);
+
 	dynamicbuf_list[bufidx].dynamic_memcpy(fragbody_off, fragbody_buf, fragbody_bufsize);
 	curfragnum_list[bufidx] += 1;
 	INVARIANT(maxfragnum_list[bufidx] > 0);
@@ -142,6 +161,10 @@ bool PktRingBuffer::pop(packet_type_t &optype, netreach_key_t &key, dynamic_arra
 
 	key = key_list[tail];
 	key_list[tail] = netreach_key_t();
+
+	// TMPDEBUG
+	//printf("pop key %x from bufidx %d\n", key.keyhihi, tail);
+	//fflush(stdout);
 
 	dynamicbuf.clear();
 	dynamicbuf.dynamic_memcpy(0, dynamicbuf_list[tail].array(), dynamicbuf_list[tail].size());

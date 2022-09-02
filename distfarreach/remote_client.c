@@ -887,8 +887,8 @@ void *run_client_worker(void *param) {
 	memset(tmpval_bytes, 0x11, 10240 * sizeof(char));
 	val_t *tmpval_ptr = NULL;
 	// small value
-	if (local_client_logical_idx >= 0) { // all small packets
-	//if (local_client_logical_idx >= 256) { // [0, x] small packets; [x+1, 512] all large packets
+	//if (local_client_logical_idx >= 0) { // all small packets
+	if (local_client_logical_idx >= 256) { // [0, x] small packets; [x+1, 512] all large packets
 	//if (local_client_logical_idx >= 512) { // all large packets
 		tmpval_ptr = new val_t(tmpval_bytes, 128);
 	}
@@ -963,6 +963,7 @@ void *run_client_worker(void *param) {
 	bool is_timeout = false;
 	bool isfirst_pkt = true;
 	uint32_t fragseq = 0; // for packet loss of large value to server
+
 	while (running) {
 /*#ifndef SERVER_ROTATION
 		if (!iter->next()) {
@@ -1168,7 +1169,11 @@ void *run_client_worker(void *param) {
 					}
 				}
 				if (is_timeout) {
+#ifdef USE_HASH
+					printf("timeout key %x from client %d to server %d\n", tmpkey.keyhihi, local_client_logical_idx, tmpkey.get_hashpartition_idx(switch_partition_count, max_server_total_logical_num));
+#else
 					printf("timeout key %x from client %d to server %d\n", tmpkey.keyhihi, local_client_logical_idx, tmpkey.get_rangepartition_idx(max_server_total_logical_num));
+#endif
 					thread_param.timeout_cnt += 1;
 					continue; // continue to resend
 				}

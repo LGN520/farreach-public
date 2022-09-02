@@ -1909,7 +1909,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for PUTREQ_LARGEVALUE_INSWITCH)
                                         # NOTE: validvalue can be 0/1/3 for PUTREQ_LARGEVALUE_INSWITCH
                                         # size: 32
-                                        if is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                        if is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0:
                                             matchspec0 = distfarreachspine_eg_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = PUTREQ_LARGEVALUE_INSWITCH,
                                                 inswitch_hdr_is_cached = is_cached,
@@ -2553,7 +2553,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for PUTREQ_LARGEVALUE_INSWITCH)
                                                 # NOTE: validvalue can be 0/1/3 for PUTREQ_LARGEVALUE_INSWITCH
                                                 # size: 32
-                                                if is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                if is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                     matchspec0 = distfarreachspine_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = PUTREQ_LARGEVALUE_INSWITCH,
                                                         inswitch_hdr_is_cached = is_cached,

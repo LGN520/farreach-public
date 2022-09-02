@@ -228,8 +228,14 @@ header stat_t stat_hdr;
 header clone_t clone_hdr;
 header frequency_t frequency_hdr;
 header validvalue_t validvalue_hdr;
+@pragma pa_no_overlay ingress fraginfo_hdr.padding1
+@pragma pa_no_overlay egress fraginfo_hdr.padding1
+@pragma pa_no_overlay ingress fraginfo_hdr.padding2
+@pragma pa_no_overlay egress fraginfo_hdr.padding2
 @pragma pa_no_overlay ingress fraginfo_hdr.cur_fragidx
 @pragma pa_no_overlay egress fraginfo_hdr.cur_fragidx
+@pragma pa_no_overlay ingress fraginfo_hdr.max_fragnum
+@pragma pa_no_overlay egress fraginfo_hdr.max_fragnum
 header fraginfo_t fraginfo_hdr;
 metadata metadata_t meta;
 
