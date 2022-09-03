@@ -35,7 +35,7 @@ void DeletedSet<key_t, seq_t>::add(key_t key, seq_t seq) {
 	if (res.second == true) { // successful insertion
 		std::pair<iterator_byseq_t, bool> tmpres = records_sorted_byseq.insert(std::pair<seq_t, key_t>(seq, key));
 		UNUSED(tmpres);
-		INVARIANT(tmpres.second == true);
+		//INVARIANT(tmpres.second == true); // uncomment for debug (many evcited data w/ seq=0 during debug)
 		if (records_sorted_bykey.size() > max_size) { // For memory efficiency
 			iterator_byseq_t minseq_iter = records_sorted_byseq.begin();
 			key_t minseq_key = minseq_iter->second;
