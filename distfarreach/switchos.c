@@ -548,11 +548,41 @@ void *run_switchos_popworker(void *param) {
 					exit(-1);
 				}
 
+				// calculate corresponding switchidx based on role
+				uint16_t switchidx_for_tmp_cache_pop_key = calculate_switchidx(tmp_cache_pop_ptr->key());
+
 				// assign switchos_freeidx for new record 
 				if (switchos_perpipeline_cached_empty_index[tmp_pipeidx] < switch_kv_bucket_num) { // With free idx
 					switchos_freeidx = switchos_perpipeline_cached_empty_index[tmp_pipeidx];
 					switchos_perpipeline_cached_empty_index[tmp_pipeidx] += 1;
 					// NOTE: as freeidx of new record must > switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx], no case2 for cache population
+				
+					//CUR_TIME(pop_setvalid0_t1); // TMPDEBUG
+
+					// set valid = 0 through reflector
+					// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
+					// NOTE: we MUST set correct key and switchidx to enter the corresponding egress pipeline
+					while (true) {
+						setvalid_inswitch_t tmp_setvalid_req(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 0);
+						pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
+						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
+
+						bool is_timeout = false;
+						is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
+						if (unlikely(is_timeout)) {
+							continue;
+						}
+
+						setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
+						//INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
+						if (unlikely(tmp_setvalid_rsp.key() != tmp_cache_pop_ptr->key())) {
+							printf("invalid key of SETVALID_INSWITCH_ACK %x which should be %x\n", tmp_setvalid_rsp.key().keyhihi, tmp_cache_pop_ptr->key().keyhihi);
+							continue;
+						}
+						break;
+					}
+
+					//CUR_TIME(pop_setvalid0_t2); //TMPDEBUG
 				}
 				else { // Without free idx
 					//CUR_TIME(evict_total_t1); // TMPDEBUG
@@ -735,6 +765,26 @@ void *run_switchos_popworker(void *param) {
 								uint32_t(switchos_evictseq), bool(switchos_evictstat));
 					}
 
+					// NOTE: by now, server MUST have a value at least with the same freshness as that in switch
+				
+					// NOTE: we should set valid = 0 through reflector before removing victim key from cache_lookup_tbl
+					// NOTE: we MUST set correct key and switchidx to enter the corresponding egress pipeline
+					while (true) {
+						setvalid_inswitch_t tmp_setvalid_req(switchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx, 0);
+						pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
+						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
+
+						bool is_timeout = false;
+						is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
+						if (unlikely(is_timeout)) {
+							continue;
+						}
+
+						setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
+						INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
+						break;
+					}
+
 					//CUR_TIME(evict_remove_t1); // TMPDEBUG
 					// remove evicted data from cache_lookup_tbl
 					//system("bash tofino/remove_cache_lookup.sh");
@@ -779,9 +829,6 @@ void *run_switchos_popworker(void *param) {
 					}*/
 				}
 
-				// calculate corresponding switchidx based on role
-				uint16_t switchidx_for_tmp_cache_pop_key = calculate_switchidx(tmp_cache_pop_ptr->key());
-
 				/* cache population for new record */
 
 				INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < switch_kv_bucket_num);
@@ -793,32 +840,7 @@ void *run_switchos_popworker(void *param) {
 				//udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				//udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				//INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID0_ACK); // wait for SWITCHOS_SETVALID0_ACK
-				
-				//CUR_TIME(pop_setvalid0_t1); // TMPDEBUG
 
-				// set valid = 0 through reflector
-				// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
-				while (true) {
-					setvalid_inswitch_t tmp_setvalid_req(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 0);
-					pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
-					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
-
-					bool is_timeout = false;
-					is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
-					if (unlikely(is_timeout)) {
-						continue;
-					}
-
-					setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
-					//INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
-					if (unlikely(tmp_setvalid_rsp.key() != tmp_cache_pop_ptr->key())) {
-						printf("invalid key of SETVALID_INSWITCH_ACK %x which should be %x\n", tmp_setvalid_rsp.key().keyhihi, tmp_cache_pop_ptr->key().keyhihi);
-						continue;
-					}
-					break;
-				}
-
-				//CUR_TIME(pop_setvalid0_t2); //TMPDEBUG
 				//CUR_TIME(pop_cachepop_t1); // TMPDEBUG
 
 				// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)

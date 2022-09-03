@@ -577,6 +577,12 @@
 	+ Re-compile and re-test GETRES_LATEST/DELETED_SEQ_SERVER w/ cache hit in spine or server-leaf switch
 	+ Update visualization under range and hash partition
 
+## Implementation after large value
+
+- Fix a bug of cache management atomicity
+	+ After load frequency by sampling -> choose victim -> set valid=3 -> load evicted data -> notify server with evicted data, we should set valid=0 before removing victim key from cache_lookup_tbl for availability of latest value (files: switchos.c) -> SYNC to farreach/distfarreach
+	+ Test cache population and cache eviction of farreach and distfarreach
+
 ## Run
 
 - Hardware configure
