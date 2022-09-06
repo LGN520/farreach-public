@@ -305,15 +305,12 @@ class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val
 		GetResponseLatestSeqInswitchCase1(const char * data, uint32_t recv_size);
 
 		uint16_t idx() const;
-		bool stat() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint16_t _idx;
-		bool _stat;
-		uint16_t _nodeidx_foreval;
 };
 
 template<class key_t, class val_t>
@@ -334,14 +331,15 @@ class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCa
 };
 
 template<class key_t, class val_t>
-class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
+class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq + payload (varkey)
 	public: 
 		PutRequestSeq();
-		PutRequestSeq(key_t key, val_t val, uint32_t seq);
+		PutRequestSeq(key_t key, val_t val, uint32_t seq, varkey_t varkey);
 		PutRequestSeq(const char * data, uint32_t recv_size);
 
 		val_t val() const;
 		uint32_t seq() const;
+		varkey_t varkey() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -350,10 +348,11 @@ class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
 		uint32_t _seq;
+		varkey_t _varkey;
 };
 
 template<class key_t, class val_t>
-class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
+class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + payload (varkey)
 	public: 
 		PutRequestPopSeq(const char * data, uint32_t recv_size);
 
@@ -361,10 +360,16 @@ class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + s
 };
 
 template<class key_t, class val_t>
-class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr + clone_hdr
+class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr + clone_hdr + payload (varkey inherited from PUTREQ w/ cache hit -> NOT need to be deserialized)
 	public: 
-		PutRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat);
+		PutRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat, varkey_t varkey);
 		PutRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		varkey_t _varkey; // NOT need to expose the varkey inherited from original PUTREQ out of the class
 };
 
 template<class key_t, class val_t>
