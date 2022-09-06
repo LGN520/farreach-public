@@ -1,4 +1,4 @@
-# Variable-length key-value for all six methods (nocache/netcache/farreach/distcache/distnocache/distfarreach)
+# Variable-length value for all six methods (nocache/netcache/farreach/distcache/distnocache/distfarreach)
 
 - NOTE: about fraghdr
 	+ For switch, it parses fraginfo_hdr including 16b clientlogicalidx, 32b fragseq, and 16b fragidx & 16b fragnum

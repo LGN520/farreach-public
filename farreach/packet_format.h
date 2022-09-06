@@ -8,7 +8,6 @@
 #include "helper.h"
 #include "snapshot_record.h"
 #include "dynamic_array.h"
-#include "varkey.h"
 
 // mask for other_hdr
 //#define VALID_MASK 0x01
@@ -90,77 +89,61 @@ class Packet {
 
 		virtual uint32_t size() = 0;
 		virtual void deserialize(const char * data, uint32_t recv_size) = 0;
-
-		uint32_t serialize_ophdr(char * const data, uint32_t max_size);
-		uint32_t dynamic_serialize_ophdr(dynamic_array_t &dynamic_data);
-		uint32_t deserialize_ophdr(const char * data, uint32_t recv_size);
-		static uint32_t get_ophdrsize();
 };
 
 template<class key_t>
-class GetRequest : public Packet<key_t> { // ophdr + payload (varkey)
+class GetRequest : public Packet<key_t> { // ophdr
 	public: 
 		GetRequest();
-		GetRequest(key_t key, varkey_t varkey);
+		GetRequest(key_t key);
 		GetRequest(const char * data, uint32_t recv_size);
 		virtual ~GetRequest(){}
-
-		varkey_t varkey() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-		varkey_t _varkey;
 };
 
 template<class key_t, class val_t>
-class PutRequest : public Packet<key_t> { // ophdr + val + shadowtype + payload (varkey)
+class PutRequest : public Packet<key_t> { // ophdr + val + shadowtype
 	public:
 		PutRequest();
-		PutRequest(key_t key, val_t val, varkey_t varkey);
+		PutRequest(key_t key, val_t val);
 		PutRequest(const char * data, uint32_t recv_size);
 
 		val_t val() const;
-		varkey_t varkey() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
-		varkey_t _varkey;
 };
 
 template<class key_t>
-class DelRequest : public Packet<key_t> { // ophdr + payload (varkey)
+class DelRequest : public Packet<key_t> { // ophdr
 	public: 
 		DelRequest();
-		DelRequest(key_t key, varkey_t varkey);
+		DelRequest(key_t key);
 		DelRequest(const char * data, uint32_t recv_size);
-
-		varkey_t varkey() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-		varkey_t _varkey;
 };
 
 template<class key_t>
-class ScanRequest : public Packet<key_t> { // ophdr + scanhdr + payload (varkey + varendkey)
+class ScanRequest : public Packet<key_t> { // ophdr + scanhdr
 	public: 
 		ScanRequest();
 		//ScanRequest(key_t key, key_t endkey, uint32_t num);
-		ScanRequest(key_t key, key_t endkey, varkey_t varkey, varkey_t varendkey);
+		ScanRequest(key_t key, key_t endkey);
 		ScanRequest(const char * data, uint32_t recv_size);
 
 		key_t endkey() const;
 		//uint32_t num() const;
-		// NOTE: we use startkey and endkey for in-switch range partition, yet we still use varkey and varendkey for server-side range query for correctness -> to support general range query, we can use range-query-aware conversion between varkey/varendkey and startkey/endkey or client/server-side partition, which is just application-level difference unrelated with our core design
-		varkey_t varkey() const; // original key of startkey
-		varkey_t varendkey() const; // original key of endkey
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -168,8 +151,6 @@ class ScanRequest : public Packet<key_t> { // ophdr + scanhdr + payload (varkey 
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		key_t _endkey;
 		//uint32_t _num;
-		varkey_t _varkey;
-		varkey_t _varendkey;
 };
 
 template<class key_t, class val_t>
@@ -230,16 +211,16 @@ class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 };
 
 template<class key_t, class val_t>
-class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(endkey) + splithdr(isclone+curscanidx+maxscannum) + payload (nodeidx_foreval(not processed by switch) + snapshotid(not processed by switch) + pairs w/ varkeys and varvalues)
+class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(endkey) + splithdr(isclone+curscanidx+maxscannum) + nodeidx_foreval(not processed by switch) + snapshotid(not processed by switch) + pairs
 	public: 
 		//ScanResponseSplit(key_t key, key_t endkey, uint32_t num, uint16_t cur_scanidx, uint16_t max_scannum, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs);
-		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<varkey_t, snapshot_record_t>> pairs);
+		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<key_t, snapshot_record_t>> pairs);
 		ScanResponseSplit(const char * data, uint32_t recv_size);
 
 		uint16_t nodeidx_foreval() const;
 		int snapshotid() const;
 		int32_t pairnum() const;
-		std::vector<std::pair<varkey_t, snapshot_record_t>> pairs() const;
+		std::vector<std::pair<key_t, snapshot_record_t>> pairs() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
@@ -257,11 +238,11 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(en
 		uint16_t _nodeidx_foreval;
 		int _snapshotid;
 		int32_t _pairnum;
-		std::vector<std::pair<varkey_t, snapshot_record_t>> _pairs;
+		std::vector<std::pair<key_t, snapshot_record_t>> _pairs;
 };
 
 template<class key_t>
-class GetRequestPOP : public GetRequest<key_t> { // ophdr + payload (varkey)
+class GetRequestPOP : public GetRequest<key_t> { // ophdr
 	public: 
 		GetRequestPOP(const char * data, uint32_t recv_size);
 
@@ -269,7 +250,7 @@ class GetRequestPOP : public GetRequest<key_t> { // ophdr + payload (varkey)
 };
 
 template<class key_t>
-class GetRequestNLatest : public GetRequest<key_t> { // ophdr + payload (varkey)
+class GetRequestNLatest : public GetRequest<key_t> { // ophdr
 	public: 
 		GetRequestNLatest(const char * data, uint32_t recv_size);
 
@@ -277,7 +258,7 @@ class GetRequestNLatest : public GetRequest<key_t> { // ophdr + payload (varkey)
 };
 
 template<class key_t, class val_t>
-class GetResponseLatestSeq : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=true)
+class GetResponseLatestSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=true)
 	public: 
 		GetResponseLatestSeq();
 		GetResponseLatestSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
@@ -285,14 +266,12 @@ class GetResponseLatestSeq : public GetResponse<key_t, val_t> { // ophdr + val +
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
-		uint32_t seq() const;
 		bool stat() const;
 		uint16_t nodeidx_foreval() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-		uint32_t _seq;
 		bool _stat; // must be true for GetResponseLatestSeq
 		uint16_t _nodeidx_foreval;
 };
@@ -305,12 +284,15 @@ class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val
 		GetResponseLatestSeqInswitchCase1(const char * data, uint32_t recv_size);
 
 		uint16_t idx() const;
+		bool stat() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint16_t _idx;
+		bool _stat;
+		uint16_t _nodeidx_foreval;
 };
 
 template<class key_t, class val_t>
@@ -331,15 +313,14 @@ class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCa
 };
 
 template<class key_t, class val_t>
-class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq + payload (varkey)
+class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 	public: 
 		PutRequestSeq();
-		PutRequestSeq(key_t key, val_t val, uint32_t seq, varkey_t varkey);
+		PutRequestSeq(key_t key, val_t val, uint32_t seq);
 		PutRequestSeq(const char * data, uint32_t recv_size);
 
 		val_t val() const;
 		uint32_t seq() const;
-		varkey_t varkey() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -348,11 +329,10 @@ class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq +
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
 		uint32_t _seq;
-		varkey_t _varkey;
 };
 
 template<class key_t, class val_t>
-class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + payload (varkey)
+class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
 	public: 
 		PutRequestPopSeq(const char * data, uint32_t recv_size);
 
@@ -360,16 +340,10 @@ class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + s
 };
 
 template<class key_t, class val_t>
-class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr + clone_hdr + payload (varkey inherited from PUTREQ w/ cache hit -> NOT need to be deserialized)
+class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr + clone_hdr
 	public: 
-		PutRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat, varkey_t varkey);
+		PutRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat);
 		PutRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-	protected:
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-		varkey_t _varkey; // NOT need to expose the varkey inherited from original PUTREQ out of the class
 };
 
 template<class key_t, class val_t>

@@ -8,15 +8,16 @@
 #include "helper.h"
 #include "snapshot_record.h"
 #include "dynamic_array.h"
+#include "varkey.h"
 
 // mask for other_hdr
 //#define VALID_MASK 0x01
 
 // # of bytes before idx in inswitch_hdr
-#define INSWITCH_PREV_BYTES 26
+#define INSWITCH_PREV_BYTES 14
 
 // # of bytes in clone_hdr
-#define CLONE_BYTES 8
+#define CLONE_BYTES 4
 
 // # of bytes before cur_scanidx&max_scannum in split_hdr
 #define SPLIT_PREV_BYTES 3
@@ -89,61 +90,77 @@ class Packet {
 
 		virtual uint32_t size() = 0;
 		virtual void deserialize(const char * data, uint32_t recv_size) = 0;
+
+		uint32_t serialize_ophdr(char * const data, uint32_t max_size);
+		uint32_t dynamic_serialize_ophdr(dynamic_array_t &dynamic_data);
+		uint32_t deserialize_ophdr(const char * data, uint32_t recv_size);
+		static uint32_t get_ophdrsize();
 };
 
 template<class key_t>
-class GetRequest : public Packet<key_t> { // ophdr
+class GetRequest : public Packet<key_t> { // ophdr + payload (varkey)
 	public: 
 		GetRequest();
-		GetRequest(key_t key);
+		GetRequest(key_t key, varkey_t varkey);
 		GetRequest(const char * data, uint32_t recv_size);
 		virtual ~GetRequest(){}
+
+		varkey_t varkey() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		varkey_t _varkey;
 };
 
 template<class key_t, class val_t>
-class PutRequest : public Packet<key_t> { // ophdr + val + shadowtype
+class PutRequest : public Packet<key_t> { // ophdr + val + shadowtype + payload (varkey)
 	public:
 		PutRequest();
-		PutRequest(key_t key, val_t val);
+		PutRequest(key_t key, val_t val, varkey_t varkey);
 		PutRequest(const char * data, uint32_t recv_size);
 
 		val_t val() const;
+		varkey_t varkey() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
+		varkey_t _varkey;
 };
 
 template<class key_t>
-class DelRequest : public Packet<key_t> { // ophdr
+class DelRequest : public Packet<key_t> { // ophdr + payload (varkey)
 	public: 
 		DelRequest();
-		DelRequest(key_t key);
+		DelRequest(key_t key, varkey_t varkey);
 		DelRequest(const char * data, uint32_t recv_size);
+
+		varkey_t varkey() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		varkey_t _varkey;
 };
 
 template<class key_t>
-class ScanRequest : public Packet<key_t> { // ophdr + scanhdr
+class ScanRequest : public Packet<key_t> { // ophdr + scanhdr + payload (varkey + varendkey)
 	public: 
 		ScanRequest();
 		//ScanRequest(key_t key, key_t endkey, uint32_t num);
-		ScanRequest(key_t key, key_t endkey);
+		ScanRequest(key_t key, key_t endkey, varkey_t varkey, varkey_t varendkey);
 		ScanRequest(const char * data, uint32_t recv_size);
 
 		key_t endkey() const;
 		//uint32_t num() const;
+		// NOTE: we use startkey and endkey for in-switch range partition, yet we still use varkey and varendkey for server-side range query for correctness -> to support general range query, we can use range-query-aware conversion between varkey/varendkey and startkey/endkey or client/server-side partition, which is just application-level difference unrelated with our core design
+		varkey_t varkey() const; // original key of startkey
+		varkey_t varendkey() const; // original key of endkey
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -151,6 +168,8 @@ class ScanRequest : public Packet<key_t> { // ophdr + scanhdr
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		key_t _endkey;
 		//uint32_t _num;
+		varkey_t _varkey;
+		varkey_t _varendkey;
 };
 
 template<class key_t, class val_t>
@@ -211,16 +230,16 @@ class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 };
 
 template<class key_t, class val_t>
-class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(endkey) + splithdr(isclone+curscanidx+maxscannum) + nodeidx_foreval(not processed by switch) + snapshotid(not processed by switch) + pairs
+class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(endkey) + splithdr(isclone+curscanidx+maxscannum) + payload (nodeidx_foreval(not processed by switch) + snapshotid(not processed by switch) + pairs w/ varkeys and varvalues)
 	public: 
 		//ScanResponseSplit(key_t key, key_t endkey, uint32_t num, uint16_t cur_scanidx, uint16_t max_scannum, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs);
-		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<key_t, snapshot_record_t>> pairs);
+		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<varkey_t, snapshot_record_t>> pairs);
 		ScanResponseSplit(const char * data, uint32_t recv_size);
 
 		uint16_t nodeidx_foreval() const;
 		int snapshotid() const;
 		int32_t pairnum() const;
-		std::vector<std::pair<key_t, snapshot_record_t>> pairs() const;
+		std::vector<std::pair<varkey_t, snapshot_record_t>> pairs() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
@@ -238,11 +257,11 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(en
 		uint16_t _nodeidx_foreval;
 		int _snapshotid;
 		int32_t _pairnum;
-		std::vector<std::pair<key_t, snapshot_record_t>> _pairs;
+		std::vector<std::pair<varkey_t, snapshot_record_t>> _pairs;
 };
 
 template<class key_t>
-class GetRequestPOP : public GetRequest<key_t> { // ophdr
+class GetRequestPOP : public GetRequest<key_t> { // ophdr + payload (varkey)
 	public: 
 		GetRequestPOP(const char * data, uint32_t recv_size);
 
@@ -250,7 +269,7 @@ class GetRequestPOP : public GetRequest<key_t> { // ophdr
 };
 
 template<class key_t>
-class GetRequestNLatest : public GetRequest<key_t> { // ophdr
+class GetRequestNLatest : public GetRequest<key_t> { // ophdr + payload (varkey)
 	public: 
 		GetRequestNLatest(const char * data, uint32_t recv_size);
 
@@ -258,7 +277,7 @@ class GetRequestNLatest : public GetRequest<key_t> { // ophdr
 };
 
 template<class key_t, class val_t>
-class GetResponseLatestSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=true)
+class GetResponseLatestSeq : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=true)
 	public: 
 		GetResponseLatestSeq();
 		GetResponseLatestSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
@@ -266,12 +285,14 @@ class GetResponseLatestSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
+		uint32_t seq() const;
 		bool stat() const;
 		uint16_t nodeidx_foreval() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint32_t _seq;
 		bool _stat; // must be true for GetResponseLatestSeq
 		uint16_t _nodeidx_foreval;
 };
@@ -284,15 +305,12 @@ class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val
 		GetResponseLatestSeqInswitchCase1(const char * data, uint32_t recv_size);
 
 		uint16_t idx() const;
-		bool stat() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint16_t _idx;
-		bool _stat;
-		uint16_t _nodeidx_foreval;
 };
 
 template<class key_t, class val_t>
@@ -313,14 +331,15 @@ class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCa
 };
 
 template<class key_t, class val_t>
-class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
+class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq + payload (varkey)
 	public: 
 		PutRequestSeq();
-		PutRequestSeq(key_t key, val_t val, uint32_t seq);
+		PutRequestSeq(key_t key, val_t val, uint32_t seq, varkey_t varkey);
 		PutRequestSeq(const char * data, uint32_t recv_size);
 
 		val_t val() const;
 		uint32_t seq() const;
+		varkey_t varkey() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -329,10 +348,11 @@ class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
 		uint32_t _seq;
+		varkey_t _varkey;
 };
 
 template<class key_t, class val_t>
-class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
+class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + payload (varkey)
 	public: 
 		PutRequestPopSeq(const char * data, uint32_t recv_size);
 
@@ -340,10 +360,16 @@ class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + s
 };
 
 template<class key_t, class val_t>
-class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr + clone_hdr
+class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr + clone_hdr + payload (varkey inherited from PUTREQ w/ cache hit -> NOT need to be deserialized)
 	public: 
-		PutRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat);
+		PutRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat, varkey_t varkey);
 		PutRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		varkey_t _varkey; // NOT need to expose the varkey inherited from original PUTREQ out of the class
 };
 
 template<class key_t, class val_t>
@@ -415,7 +441,6 @@ class ScanRequestSplit : public ScanRequest<key_t> { // ophdr + scanhdr + splith
 template<class key_t, class val_t>
 class CachePop : public PutRequestSeq<key_t, val_t> { // ophdr + val + seq + stat (not stat_hdr) + serveridx
 	public: 
-		CachePop();
 		CachePop(key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx);
 		CachePop(const char * data, uint32_t recv_size);
 
@@ -434,7 +459,6 @@ class CachePop : public PutRequestSeq<key_t, val_t> { // ophdr + val + seq + sta
 template<class key_t, class val_t>
 class CachePopInswitch : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr + stat_hdr
 	public: 
-		CachePopInswitch();
 		CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -553,7 +577,6 @@ class CachePopAck : public GetRequest<key_t> { // ophdr
 template<class key_t>
 class CacheEvictLoadfreqInswitch : public Packet<key_t> { // ophdr + shadowtype + inswitch_hdr
 	public: 
-		CacheEvictLoadfreqInswitch();
 		CacheEvictLoadfreqInswitch(key_t key, uint16_t evictidx);
 
 		uint16_t evictidx() const;
@@ -643,113 +666,6 @@ class SetvalidInswitchAck : public GetRequest<key_t> { // ophdr
 		SetvalidInswitchAck(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t>
-class NetcacheGetRequestPop : public GetRequest<key_t> { // ophdr + clonehdr
-	public:
-		NetcacheGetRequestPop(key_t key);
-		NetcacheGetRequestPop(const char * data, uint32_t recvsize);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-	private:
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-};
-
-// NOTE: only used in end-hosts
-template<class key_t>
-class NetcacheCachePop : public GetRequest<key_t> { // ophdr + serveridx
-	public: 
-		NetcacheCachePop();
-		NetcacheCachePop(key_t key, uint16_t serveridx);
-		NetcacheCachePop(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-
-		uint16_t serveridx() const;
-
-	protected:
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-		uint16_t _serveridx;
-};
-
-// NOTE: only used in end-hosts
-template<class key_t, class val_t>
-class NetcacheCachePopAck : public CachePop<key_t, val_t> { // ophdr + val + seq + stat (not stat_hdr) + serveridx
-	public: 
-		NetcacheCachePopAck();
-		NetcacheCachePopAck(key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx);
-		NetcacheCachePopAck(const char * data, uint32_t recv_size);
-};
-
-// NOTE: only used in end-hosts
-template<class key_t>
-class NetcacheCachePopFinish : public NetcacheCachePop<key_t> { // ophdr + serveridx
-	public: 
-		NetcacheCachePopFinish(key_t key, uint16_t serveridx);
-		NetcacheCachePopFinish(const char * data, uint32_t recv_size);
-};
-
-// NOTE: only used in end-hosts
-template<class key_t>
-class NetcacheCachePopFinishAck : public NetcacheCachePop<key_t> { // ophdr + serveridx
-	public: 
-		NetcacheCachePopFinishAck(key_t key, uint16_t serveridx);
-		NetcacheCachePopFinishAck(const char * data, uint32_t recv_size);
-};
-
-template<class key_t>
-class NetcacheWarmupRequestInswitchPop : public CacheEvictLoadfreqInswitch<key_t> { // ophdr + shadowtype + inswitch_hdr + clone_hdr
-	public: 
-		NetcacheWarmupRequestInswitchPop(key_t key);
-		NetcacheWarmupRequestInswitchPop(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-	protected:
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-};
-
-// NOTE: only used in end-hosts
-template<class key_t>
-class NetcacheCacheEvict : public NetcacheCachePop<key_t> { // ophdr + serveridx
-	public: 
-		NetcacheCacheEvict(key_t key, uint16_t serveridx);
-		NetcacheCacheEvict(const char * data, uint32_t recv_size);
-};
-
-// NOTE: only used in end-hosts
-template<class key_t>
-class NetcacheCacheEvictAck : public NetcacheCachePop<key_t> { // ophdr + serveridx
-	public: 
-		NetcacheCacheEvictAck(key_t key, uint16_t serveridx);
-		NetcacheCacheEvictAck(const char * data, uint32_t recv_size);
-};
-
-template<class key_t, class val_t>
-class NetcachePutRequestSeqCached : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
-	public: 
-		NetcachePutRequestSeqCached(const char * data, uint32_t recv_size);
-};
-
-template<class key_t>
-class NetcacheDelRequestSeqCached : public DelRequestSeq<key_t> { // ophdr + shadowtype + seq
-	public: 
-		NetcacheDelRequestSeqCached(const char * data, uint32_t recv_size);
-};
-
-template<class key_t, class val_t>
-class NetcacheValueupdate : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr
-	public: 
-		NetcacheValueupdate(key_t key, val_t val, uint32_t seq, bool stat);
-};
-
-template<class key_t>
-class NetcacheValueupdateAck : public GetRequest<key_t> { // ophdr
-	public: 
-		NetcacheValueupdateAck(const char * data, uint32_t recv_size);
 };
 
 // For large value
@@ -843,20 +759,6 @@ class GetResponseLargevalueServer : public GetResponseLargevalue<key_t, val_t> {
 		GetResponseLargevalueServer(const char * data, uint32_t recv_size);
 
 		static size_t get_frag_hdrsize();
-};
-
-// NOTE: only used in end-hosts
-template<class key_t, class val_t>
-class NetcacheCachePopAckNLatest : public NetcacheCachePopAck<key_t, val_t> { // ophdr + default val (vallen=0) + seq + stat (not stat_hdr) + serveridx
-	public: 
-		NetcacheCachePopAckNLatest(key_t key, uint32_t seq, bool stat, uint16_t serveridx);
-		NetcacheCachePopAckNLatest(const char * data, uint32_t recv_size);
-};
-
-template<class key_t, class val_t>
-class NetcacheCachePopInswitchNLatest : public CachePopInswitch<key_t, val_t> { // ophdr + default val (vallen=0) + shadowtype + seq + inswitch_hdr + stat_hdr
-	public:
-		NetcacheCachePopInswitchNLatest(key_t key, uint32_t seq, uint16_t freeidx, bool stat);
 };
 
 // APIs
