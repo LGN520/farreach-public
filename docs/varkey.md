@@ -13,6 +13,21 @@
 		* NOTE: we assume that clients use bytewisecomparator to compare/sort keys -> we directly store original keybytes into rocksdb to use the default bytewisecomparator in rocksdb
 			- For other key comparison methods, it is just a client-level/application-level difference -> we can change VarKey::from/to_string_for_rocksdb to support them
 
+## Preliminary Milestone
+
++ [] Support variable-length key (hash + client-side metadata cache for in-switch cache w/ version check for hashed keys)
+	* Part 1: For nocache/distnocache/netcache/distcache/farreach/distfarreach
+		- [] Support hash-based key conversion and embed original key into payload of all requests as an individual field; update p4 code for pktlen udpate (9.5 - 9.12)
+	* Part 2: For netcache/distcache (9.13 - 9.15)
+		- [] Server embed original key into val for cache population (aka inswitch val has original key)
+			+ NOTE: farreach/distfarreach do NOT need to embed original key into inswitch val, as client can distinguish original key based on client-side metadata cache or version number instead of extracting it from inswitch val to compare
+		- [] For get response with cache hit, extract original key from inswitch val and compare -> if not matched, resend a speical get request ignoring inswitch cache to server; update p4 code for pkttype conversion and pktlen udpate
+	* For farreach/distfarreach
+		- [] Part 3: Support client-side metadata cache for in-switch cached keys (9.16 - 9.20)
+			+ NOTE: controller waits for ACKs from client for strong consistency
+		- [] (Trial) Part 4: For farreach/distfarreach, try to use version check for hashed keys to allow eventual consistency between clients and controller (9.21 - 9.29)
+			+ NOTE: as we have used most hardware resources, we may not be able to support version check for eventual consisntecy -> if so, we go back to the previous ACK-based implementation, and simply mention version-based solution in paper as an alternative
+
 ## Implementation of part 1
 
 - TODO: Part 1 of variable-length key
