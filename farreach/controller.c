@@ -510,7 +510,9 @@ void *run_controller_snapshotclient(void *param) {
 	bool is_timeout = false;
 	struct timespec snapshot_t1, snapshot_t2, snapshot_t3;
 	while (controller_running) {
+#ifndef SERVER_ROTATION
 		usleep(controller_snapshot_period * 1000); // ms -> us
+#endif
 
 		// TMPDEBUG
 		//printf("Type to send SNAPSHOT_START...\n");
@@ -686,6 +688,9 @@ void *run_controller_snapshotclient(void *param) {
 		
 		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databuf) for controller failure recovery
 		controller_update_snapshotid(databuf.array(), databuf.size());
+#ifdef SERVER_ROTATION
+		break;
+#endif
 	}
 
 	close(controller_snapshotclient_for_switchos_udpsock);

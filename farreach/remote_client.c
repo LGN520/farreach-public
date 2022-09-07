@@ -307,6 +307,14 @@ void run_benchmark() {
 	struct timespec total_t1, total_t2, total_t3;
 	running = true;
 
+#ifdef SERVER_ROTATION
+	if (client_physical_idx == 0) {
+		usleep(1000); // wait for 1000us to ensure that client.workers start to send packets
+		// trigger controller.snapshot to evaluate the limited influence on transaction phase performance
+		system("./preparefinish_client &");
+	}
+#endif
+
 	/* (3) collect persec statistics for static/dynamic workload */
 
 	CUR_TIME(total_t1);

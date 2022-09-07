@@ -12,10 +12,14 @@ DIRNAME="distnocache"
 bottleneck_serveridx=123
 server_total_logical_num_for_rotation=128
 
+# Change corresponding lines in configs/config.transaction1p or 2p
+configfile_line1=27
+configfile_line2=87
+configfile_line3=107
 echo "clear tmp files in remote clients/servers"
-ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; rm tmp0.out; rm tmp.out"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; rm tmp0.out; rm tmp.out"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; rm tmp.out"
+ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
+ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
+ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; rm tmp_serverrotation_part2*.out"
 
 echo "[part 1] run single bottleneck server thread"
 
@@ -40,16 +44,16 @@ echo "retrieve bottleneck partition back to the state after loading phase"
 
 echo "prepare and sync config.ini"
 cp configs/config.ini.rotation-transaction1p.dl16dl13 config.tmp
-sed -e '27s/bottleneck_serveridx_for_rotation=123/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}'/g' -e '91s/server_logical_idxes=123/server_logical_idxes='${bottleneck_serveridx}'/g' config.tmp > config.ini
+sed -e ''${configfile_line1}'s/bottleneck_serveridx_for_rotation=123/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}'/g' -e ''${configfile_line2}'s/server_logical_idxes=123/server_logical_idxes='${bottleneck_serveridx}'/g' config.tmp > config.ini
 rm config.tmp
 bash sync_file.sh config.ini
 
 echo "start servers"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp0.out 2>&1 &"
+ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp_serverrotation_part1_server.out 2>&1 &"
 sleep 5s
 
 echo "start clients"
-ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; nohup ./remote_client 1 >tmp0.out 2>&1 &"
+ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; nohup ./remote_client 1 >tmp_serverrotation_part1_client.out 2>&1 &"
 sleep 10s
 ./remote_client 0
 
@@ -98,17 +102,17 @@ do
 
 	echo "prepare and sync config.ini"
 	cp configs/config.ini.rotation-transaction2p.dl16dl13 config.tmp
-	sed -e '27s/bottleneck_serveridx_for_rotation=123/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}'/g' -e '91s/server_logical_idxes=123/server_logical_idxes='${bottleneck_serveridx}'/g' -e '111s/server_logical_idxes=0/server_logical_idxes='${rotateidx}'/g' config.tmp > config.ini
+	sed -e ''${configfile_line1}'s/bottleneck_serveridx_for_rotation=123/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}'/g' -e ''${configfile_line2}'s/server_logical_idxes=123/server_logical_idxes='${bottleneck_serveridx}'/g' -e ''${configfile_line3}'s/server_logical_idxes=0/server_logical_idxes='${rotateidx}'/g' config.tmp > config.ini
 	rm config.tmp
 	bash sync_file.sh config.ini
 
 	echo "start servers"
-	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >>tmp.out 2>&1 &"
-	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >>tmp.out 2>&1 &"
+	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >>tmp_serverrotation_part2_server.out 2>&1 &"
+	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >>tmp_serverrotation_part2_server.out 2>&1 &"
 	sleep 5s
 
 	echo "start clients"
-	ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; nohup ./remote_client 1 >>tmp.out 2>&1 &"
+	ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; nohup ./remote_client 1 >>tmp_serverrotation_part2_client.out 2>&1 &"
 	sleep 10s
 	./remote_client 0
 

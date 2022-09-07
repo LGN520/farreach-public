@@ -64,6 +64,13 @@
 ## Evaluation for static workload
 
 - Prepare phase
+	- NOTEs
+		+ Enable SERVER_ROTATION in helper.h and compile all
+		+ Update bottleneck partition in configs/config.ini.rotation-switch and remotescripts/test_server_rotation.sh
+			* global::bottleneck_serveridx_for_rotation
+			* server0::server_logical_idxes
+			* server1::server_logical_idxes
+			* bottleneck_serveridx in shell
 	+ Under main client (i.e., the first physical client dl11), enter directory of method/
 		+ `bash remotescripts/prepare_for_static.sh` to sync necessary files to another client and servers
 - Test phase

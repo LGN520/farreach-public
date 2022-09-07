@@ -887,8 +887,8 @@ void *run_client_worker(void *param) {
 	memset(tmpval_bytes, 0x11, 10240 * sizeof(char));
 	val_t *tmpval_ptr = NULL;
 	// small value
-	//if (local_client_logical_idx >= 0) { // all small packets
-	if (local_client_logical_idx >= 256) { // [0, x] small packets; [x+1, 512] all large packets
+	if (local_client_logical_idx >= 0) { // all small packets
+	//if (local_client_logical_idx >= 256) { // [0, x] small packets; [x+1, 512] all large packets
 	//if (local_client_logical_idx >= 512) { // all large packets
 		tmpval_ptr = new val_t(tmpval_bytes, 128);
 	}

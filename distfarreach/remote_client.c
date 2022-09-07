@@ -307,6 +307,14 @@ void run_benchmark() {
 	struct timespec total_t1, total_t2, total_t3;
 	running = true;
 
+#ifdef SERVER_ROTATION
+	if (client_physical_idx == 0) {
+		usleep(1000); // wait for 1000us to ensure that client.workers start to send packets
+		// trigger controller.snapshot to evaluate the limited influence on transaction phase performance
+		system("./preparefinish_client &");
+	}
+#endif
+
 	/* (3) collect persec statistics for static/dynamic workload */
 
 	CUR_TIME(total_t1);
@@ -887,8 +895,8 @@ void *run_client_worker(void *param) {
 	memset(tmpval_bytes, 0x11, 10240 * sizeof(char));
 	val_t *tmpval_ptr = NULL;
 	// small value
-	//if (local_client_logical_idx >= 0) { // all small packets
-	if (local_client_logical_idx >= 256) { // [0, x] small packets; [x+1, 512] all large packets
+	if (local_client_logical_idx >= 0) { // all small packets
+	//if (local_client_logical_idx >= 256) { // [0, x] small packets; [x+1, 512] all large packets
 	//if (local_client_logical_idx >= 512) { // all large packets
 		tmpval_ptr = new val_t(tmpval_bytes, 128);
 	}

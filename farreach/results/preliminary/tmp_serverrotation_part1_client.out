@@ -1,0 +1,186 @@
+workload_name: synthetic
+workload_mode: 0
+dynamic_periodnum: 7
+dynamic_periodinterval: 10
+dynamic_ruleprefix: dynamicrules/synthetic-hotin.out
+val_t::MAX_VALLEN: 128
+ParserIterator::load_batch_size: 10000
+client_physical_num: 2
+server_physical_num: 1
+client_total_logical_num: 128
+server_total_logical_num: 1
+server_total_logical_num_for_rotation: 128
+max_server_total_logical_num: 128
+
+client_rotationdataserver_port: 1025
+client_sendpktserver_port_start: 1026
+client_rulemapserver_port_start: 1036
+client_worker_port_start: 8888
+
+client_logical_nums[0]: 64
+client_ips[0]: 10.0.1.11
+client_macs[0]: 3c:fd:fe:bb:ca:79
+client_fpports[0]: 11/0
+client_pipeidxes[0]: 0
+client_logical_nums[1]: 64
+client_ips[1]: 10.0.1.15
+client_macs[1]: 3c:fd:fe:b5:28:59
+client_fpports[1]: 15/0
+client_pipeidxes[1]: 0
+
+server_load_factor: 5
+server_worker_port_start: 1152
+server_evictserver_port_start: 2222
+server_snapshotserver_port_start: 3333
+server_snapshotdataserver_port_start: 4444
+transaction_loadfinishserver_port: 8000
+
+server_worker_corenums[0]: 16
+server_total_corenums[0]: 24
+server_logical_idxes_list[0]: 123 
+server_ips[0]: 10.0.1.16
+server_macs[0]: 3c:fd:fe:b5:1f:e1
+server_fpports[0]: 16/0
+server_pipeidxes[0]: 0
+server_ip_for_controller_list[0]: 172.16.112.16
+
+controller ip for server: 172.16.112.16
+controller ip for switchos: 172.16.112.16
+controller_popserver_port_start: 5555
+controller_evictserver_port: 5002
+controller_snapshot_period: 10000
+controller_warmupfinishserver_port: 5010
+
+switch_partition_count: 32768
+switch_kv_bucket_num: 10000
+switch_pipeline_num: 2
+val_t::SWITCH_MAX_VALLEN: 128
+switchos_popserver_port: 5003
+switchos ip: 172.16.112.17
+switchos_sample_cnt: 10
+switchos_snapshotserver_port: 5004
+switchos_specialcaseserver_port: 5005
+switchos_ptf_popserver_port: 5006
+switchos_ptf_snapshotserver_port: 5007
+
+reflector ip for switchos: 172.16.112.16
+reflector_dp2cpserver_port: 5008
+reflector_cp2dpserver_port: 5009
+
+raw_load_workload_filename for loading phase: synthetic-load.out
+server_load_workload_dir for loading phase: synthetic-load-128
+raw_warmup_workload_filename for warmup phase: synthetic-warmup.out
+raw_run_workload_filename for transaction phase: synthetic-run.out
+client_workload_dir for transaction phase: synthetic-run-128
+perserver_keyrange: 512
+
+[client] prepare clients ...
+[client.sendpktserver] ready
+[client 1] Ready.
+[client 4] Ready.
+[client 0] Ready.
+[client 2] Ready.
+[client 6] Ready.
+[client 3] Ready.
+[client 8] Ready.
+[client 9] Ready.
+[client 5] Ready.
+[client 7] Ready.
+[client 11] Ready.
+[client 12] Ready.
+[client 14] Ready.
+[client 15] Ready.
+[client 17] Ready.
+[client 10] Ready.
+[client 13] Ready.
+[client 16] Ready.
+[client 19] Ready.
+[client 18] Ready.
+[client 21] Ready.
+[client 22] Ready.
+[client 26] Ready.
+[client 23] Ready.
+[client 27] Ready.
+[client 25] Ready.
+[client 24] Ready.
+[client 20] Ready.
+[client 28] Ready.
+[client 29] Ready.
+[client 32] Ready.
+[client 30] Ready.
+[client 33] Ready.
+[client 31] Ready.
+[client 36] Ready.
+[client 35] Ready.
+[client 34] Ready.
+[client 45] Ready.
+[client 37] Ready.
+[client 38] Ready.
+[client 44] Ready.
+[client 39] Ready.
+[client 41] Ready.
+[client 43] Ready.
+[client 40] Ready.
+[client 48] Ready.
+[client 50] Ready.
+[client 42] Ready.
+[client 46] Ready.
+[client 47] Ready.
+[client 49] Ready.
+[client 51] Ready.
+[client 53] Ready.
+[client 55] Ready.
+[client 52] Ready.
+[client 56] Ready.
+[client 58] Ready.
+[client 54] Ready.
+[client 57] Ready.
+[client 59] Ready.
+[client 60] Ready.
+[client 62] Ready.
+[client 61] Ready.
+[client 63] Ready.
+[client] all clients ready...
+wait to be able to send pkt if necessary
+start to send pkt
+[client] all clients finish!
+[client] processing statistics
+
+thpt interval: 1 s, seccnt: 5
+
+[sec 0]
+
+overall totalpktcnt: 607765, throughput (MOPS): 0.579610
+
+[sec 1]
+
+overall totalpktcnt: 538649, throughput (MOPS): 0.513696
+
+[sec 2]
+
+overall totalpktcnt: 522579, throughput (MOPS): 0.498370
+
+[sec 3]
+
+overall totalpktcnt: 514790, throughput (MOPS): 0.490942
+
+[sec 4]
+
+overall totalpktcnt: 512349, throughput (MOPS): 0.488614
+
+[Latency Statistics of total_latency_list ]
+| min | max | avg | 90th | 99th | largest | median | sum |
+| 11.459 | 14310 | 117.629 | 27.207 | 1505.82 | 14310 | 18.988 | 3.25884e+08 |
+[Latency Statistics of perclient_avgsend_latency_list ]
+| min | max | avg | 90th | 99th | largest | median | sum |
+| 4.85271 | 5.38016 | 5.05738 | 5.25154 | 5.38016 | 5.38016 | 5.05362 | 323.673 |
+[Latency Statistics of perclient_avgwait_latency_list ]
+| min | max | avg | 90th | 99th | largest | median | sum |
+| 0.62978 | 0.885465 | 0.740281 | 0.831331 | 0.885465 | 0.885465 | 0.732212 | 47.378 |
+total_unmatched_cnt: 0
+total_timeout_cnt: 0
+client-side total pktcnt: 2770441, total time: 5.200743 s, total thpt: 0.508023 MOPS
+cache hit pktcnt: 2572424
+per-server pktcnt: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 198015 0 0 0 0
+result for server rotation of client 1: 198015 2770441 0.508023 117.628801
+Finish dumping statistics!
