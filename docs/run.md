@@ -104,3 +104,19 @@
 		* NOTE: for all methods, you do NOT need to perform loading phase, if you have already backuped RocksDB files to avoid repeat loading phase
 			- Instead, you NEED to overwrite RocksDB files w/ backuped files before launching servers
 		* NOTE: for Farreach/DistFarreach, you NEED to perform the extra phase by `./preparefinish_client.sh` to notify controller and server to make snapshot for range query
+
+## Others
+
+- Utils scripts
+	- Help to update config.ini
+		+ gen_logical_idxes: generate server logical indexes from startidx to endidx
+	- Help to generate throughput result files
+		+ sum_tworows_for_bottleneckserver.py: sum over per-server pktcnts of two clients to find bottleneck partition
+		+ sum_twofiles.py: sum over per-server results to get aggregate statistics (NOTE: the two files must have the same content format)
+		+ Deprecated (covered by client0.rotationdataserver): gen_rotation_onerow_result.py: generate one row of rotation throughput result files by summing over per-client rotation result line 
+	- Analyze throughput result files: dynamic/static/rotation_calculate_thpt.py
+		+ static: used to calculate normalized throughput for normal runing
+		+ dynamic: used to calculate per-sec runtime throughput and normalized throughput for dynamic workload
+		+ rotation: used to calculate avg runtime throughput and latency for static workload with server rotation
+	- sync_file.sh: sync one file (filepath relateive to netreach-v4-lsm/) to all other machines
+	- ../sync.sh: sync entire netreach-v4-lsm directory to other machines (NOTE: old directory of other machines will be deleted first)
