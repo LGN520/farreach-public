@@ -92,7 +92,7 @@
 		* NOTE: you can check tmp.out (in main client), tmp_serverrotation_part1*.out, and tmp_serverrotation_part2*.out in clients and servers to see whether they are running correctly
 		* NOTE: you can check tmp_rotation.out in main client (i.e., the first physical client dl11) to see the aggregated server rotation result
 - Evaluation
-	+ Add the number of experiments (e.g., 128) as the first line of tmp_rotation.out (refer to results/rotation-result.template)
+	+ DEPRECATED: Add the number of experiments (e.g., 128) as the first line of tmp_rotation.out (refer to results/rotation-result.template)
 	+ Run `python rotation_calculate_thpt.py tmp_rotation.out` to calculate server rotation statistics
 
 ## Evaluation for dynamic workload
