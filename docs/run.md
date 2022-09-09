@@ -48,7 +48,7 @@
 		* TODO: `./bin/ycsb load method -P workload`
 	+ TODO: Backup RocksDB files to avoid repeat loading phase in each experiment
 		* NOTE: if you have backuped RocksDB files, you can directly overwrite RocksDB files w/ backuped files before launching servers
-- Warmup phase
+- Warmup phase ONLY for Farreach/DistFarreach/Netcache/Distcache
 	+ Under main client (i.e., the first physical client dl11), enter directory of method/
 		+ `./warmup_client.c` to pre-populate 10000 hot keys into switch(es) based on XXX-warmup.out
 		+ Under the terminal running `bash start_switch.sh` in each Tofino OS, use `pd-method` -> `pd cache_lookup_tbl get_entry_count` to check whether 10000 hot keys have already been populated into switch(es)
@@ -80,7 +80,8 @@
 	+ Perform all steps before transaction phase as in normal running
 		* NOTE: for all methods, you do NOT need to perform loading phase, if you have already backuped RocksDB files to avoid repeat loading phase
 			- Instead, you NEED to overwrite RocksDB files w/ backuped files before launching servers
-		* NOTE: for Farreach/DistFarreach, you do NOT need to perform the extra phase by `./preparefinish_client.sh`, as controller directly make a snapshot after being launched and hence server-side snapshot for range query (TODO)
+		* NOTE: for Farreach/DistFarreach, remote_client will automtically execute `./preparefinish_client.sh`
+		* NOTE: for nocache/distnocache, as they do NOT need warmup/extra phase, you can skip this step and directly perform automatic transaction phase
 	+ Automatic transaction phase
 		* `nohup bash remotescripts/test_server_rotation.sh >tmp.out 2>&1 &` to run 128 experiments under server rotation automatically
 			- TODO: For YCSB transaction clients of all methods, consider how to run with a fixed time to get average throughput
