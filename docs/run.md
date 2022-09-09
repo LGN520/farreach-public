@@ -82,14 +82,17 @@
 			- Instead, you NEED to overwrite RocksDB files w/ backuped files before launching servers
 		* NOTE: for Farreach/DistFarreach, you do NOT need to perform the extra phase by `./preparefinish_client.sh`, as controller directly make a snapshot after being launched and hence server-side snapshot for range query (TODO)
 	+ Automatic transaction phase
-		* `bash remotescripts/test_server_rotation.sh` to run 128 experiments under server rotation automatically
+		* `nohup bash remotescripts/test_server_rotation.sh >tmp.out 2>&1 &` to run 128 experiments under server rotation automatically
 			- TODO: For YCSB transaction clients of all methods, consider how to run with a fixed time to get average throughput
 			- NOTE: we close-and-restart servers in each experiment
 				+ TODO: Before launching servers in each experiment, we have to resume server-side RocksDB state to that after loading phase by overwriting RocksDB files
 			- NOTE: for Farreach/DistFarreach, we have to close-and-restart controller in each experiment
 				+ TODO: For Farreach/DistFarreach, consider how to introduce snapshot during server rotation to demonstrate its limited effect on write performance
-		* NOTE: you can check tmp0.out and tmp.out in clients and servers to see whether they are running correctly
+		* NOTE: you can check tmp.out (in main client), tmp_serverrotation_part1*.out, and tmp_serverrotation_part2*.out in clients and servers to see whether they are running correctly
 		* NOTE: you can check tmp_rotation.out in main client (i.e., the first physical client dl11) to see the aggregated server rotation result
+- Evaluation
+	+ Add the number of experiments (e.g., 128) as the first line of tmp_rotation.out (refer to results/rotation-result.template)
+	+ Run `python rotation_calculate_thpt.py tmp_rotation.out` to calculate server rotation statistics
 
 ## Evaluation for dynamic workload
 
@@ -104,6 +107,12 @@
 		* NOTE: for all methods, you do NOT need to perform loading phase, if you have already backuped RocksDB files to avoid repeat loading phase
 			- Instead, you NEED to overwrite RocksDB files w/ backuped files before launching servers
 		* NOTE: for Farreach/DistFarreach, you NEED to perform the extra phase by `./preparefinish_client.sh` to notify controller and server to make snapshot for range query
+- Evaluation	
+	+ Create two temporary files tmpa.out/tmpb.out for client0/client1 respectively
+	+ From the dumped statistics of each client, copy client-side total pktcnt, per-sec total throughput, and per-sec per-server throughput into each tmp file (refer to results/dynamic-result.template)
+	+ Run `python sum_twofiles.py tmpa.out tmpb.out tmpc.out` to aggregate dynamic results of two clients into tmpc.out
+	+ Add/update the number of methods (e.g., 1), each method name (e.g., farreach), and total time (i.e., 70s) in tmpc.out
+	+ Run `python dynamic_calculate_thpt.py tmpc.out` to calculate dynamic worload statistics
 
 ## Others
 

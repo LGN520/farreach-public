@@ -21,7 +21,7 @@ DeletedSet<key_t, seq_t>& DeletedSet<key_t, seq_t>::operator=(const DeletedSet& 
 
 template<class key_t, class seq_t>
 int DeletedSet<key_t, seq_t>::size() const {
-	INVARIANT(records_sorted_bykey.size() == records_sorted_byseq.size());
+	//INVARIANT(records_sorted_bykey.size() == records_sorted_byseq.size());
 	return records_sorted_bykey.size();
 }
 
@@ -40,7 +40,7 @@ void DeletedSet<key_t, seq_t>::add(key_t key, seq_t seq) {
 			iterator_byseq_t minseq_iter = records_sorted_byseq.begin();
 			key_t minseq_key = minseq_iter->second;
 			records_sorted_byseq.erase(minseq_iter);
-			INVARIANT(records_sorted_bykey.find(minseq_key) != records_sorted_bykey.end());
+			//INVARIANT(records_sorted_bykey.find(minseq_key) != records_sorted_bykey.end());
 			records_sorted_bykey.erase(minseq_key);
 		}
 	}
@@ -48,11 +48,11 @@ void DeletedSet<key_t, seq_t>::add(key_t key, seq_t seq) {
 		seq_t oldseq = res.first->second;
 		if (likely(oldseq < seq)) {
 			res.first->second = seq;
-			INVARIANT(records_sorted_byseq.find(oldseq) != records_sorted_byseq.end());
+			//INVARIANT(records_sorted_byseq.find(oldseq) != records_sorted_byseq.end());
 			records_sorted_byseq.erase(oldseq);
 			std::pair<iterator_byseq_t, bool> tmpres = records_sorted_byseq.insert(std::pair<seq_t, key_t>(seq, key));
 			UNUSED(tmpres);
-			INVARIANT(tmpres.second == true);
+			//INVARIANT(tmpres.second == true);
 		}
 	}
 
@@ -89,10 +89,10 @@ bool DeletedSet<key_t, seq_t>::check_and_remove(key_t key, seq_t seq, seq_t *del
 	if (deleted_seq_ptr != NULL) {
 		*deleted_seq_ptr = oldseq;
 	}
-	INVARIANT(oldseq != seq);
-	if (oldseq < seq) {
+	//INVARIANT(oldseq != seq);
+	if (oldseq <= seq) {
 		records_sorted_bykey.erase(iter);
-		INVARIANT(records_sorted_byseq.find(oldseq) != records_sorted_byseq.end());
+		//INVARIANT(records_sorted_byseq.find(oldseq) != records_sorted_byseq.end());
 		records_sorted_byseq.erase(oldseq);
 	}
 	else {

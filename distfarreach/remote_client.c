@@ -307,6 +307,10 @@ void run_benchmark() {
 	struct timespec total_t1, total_t2, total_t3;
 	running = true;
 
+	/* (3) collect persec statistics for static/dynamic workload */
+
+	CUR_TIME(total_t1);
+
 #ifdef SERVER_ROTATION
 	if (client_physical_idx == 0) {
 		usleep(1000); // wait for 1000us to ensure that client.workers start to send packets
@@ -315,9 +319,6 @@ void run_benchmark() {
 	}
 #endif
 
-	/* (3) collect persec statistics for static/dynamic workload */
-
-	CUR_TIME(total_t1);
 	if (workload_mode == 0) { // send all workloads in static mode
 		while (finish_threads < current_client_logical_num) {
 			CUR_TIME(total_t2);
@@ -347,10 +348,11 @@ void run_benchmark() {
 				persec_perclient_aggcachehitcnts.push_back(cursec_perclient_aggcachehitcnts);
 				persec_perclient_perserver_aggcachemisscnts.push_back(cursec_perclient_perserver_aggcachemisscnts);
 			}
-			// time limitation for debugging
-			/*if (persec_perclient_aggpktcnts.size() >= dynamic_periodnum * dynamic_periodinterval) {
+
+			// time limitation for static workload (either w/ or w/o server rotation)
+			if (persec_perclient_aggpktcnts.size() >= 10) { // 10s
 				break;
-			}*/
+			}
 
 			usleep(sleep_usecs);
 		}
@@ -971,7 +973,7 @@ void *run_client_worker(void *param) {
 	bool is_timeout = false;
 	bool isfirst_pkt = true;
 	uint32_t fragseq = 0; // for packet loss of large value to server
-
+	//srand(0); // for read-write mixed workload
 	while (running) {
 /*#ifndef SERVER_ROTATION
 		if (!iter->next()) {
@@ -999,6 +1001,8 @@ void *run_client_worker(void *param) {
 			}
 		}
 		tmptype = preload_types[preload_idx];
+		//tmptype = optype_t(packet_type_t::GETREQ); // read-only
+		//tmptype = (rand()%2==0)?optype_t(packet_type_t::GETREQ):optype_t(packet_type_t::PUTREQ); // 50% write
 		tmpkey = preload_keys[preload_idx];
 		//tmpval = preload_vals[preload_idx];
 		preload_idx += 1;
