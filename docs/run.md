@@ -52,10 +52,10 @@
 	+ Under main client (i.e., the first physical client dl11), enter directory of method/
 		+ `./warmup_client.c` to pre-populate 10000 hot keys into switch(es) based on XXX-warmup.out
 		+ Under the terminal running `bash start_switch.sh` in each Tofino OS, use `pd-method` -> `pd cache_lookup_tbl get_entry_count` to check whether 10000 hot keys have already been populated into switch(es)
-- Extra phase ONLY for Farreach/DistFarreach and Netcache/Distcache
+- Extra phase ONLY for Farreach/DistFarreach and Distcache
 	+ For Farreach/DistFarreach, under main client, enter directory of method/
 		+ `./preparefinish_client.sh` to notify controller to start periodic snapshot, and servers to make an initial snapshot for range query
-	+ For Netcache/Distcache, under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
+	+ For Distcache, under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
 		+ `bash set_all_latest.sh` to set all latest_reg = 1 to ensure the correctness of warmup phase (to fix Tofino hardware bug)
 - Transaction phase
 	+ TODO: Use YCSB transaction client to send different types of requests and receive corresponding responses based on specified workload
