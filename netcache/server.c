@@ -28,6 +28,12 @@
 
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
+#ifdef USE_YCSB
+#include "workloadparser/ycsb_parser.h"
+#elif defined USE_SYNTHETIC
+#include "workloadparser/synthetic_parser.h"
+#endif
+
 #include "common_impl.h"
 
 /* variables */
@@ -248,6 +254,7 @@ void transaction_main() {
 	system(command);
 
 #ifdef SERVER_ROTATION
+	std::vector<int> valid_global_server_logical_idxes;
 	for (int tmp_server_physical_idx = 0; tmp_server_physical_idx < server_physical_num; tmp_server_physical_idx++) {
 		for (int i = 0; i < server_logical_idxes_list[tmp_server_physical_idx].size(); i++) {
 			valid_global_server_logical_idxes.push_back(server_logical_idxes_list[tmp_server_physical_idx][i]);
@@ -275,12 +282,12 @@ void transaction_main() {
 				break;
 			}
 
-			INVARIANT(iter->type() == packet_type_t::PUTREQ);
+			INVARIANT(iter->type() == optype_t(packet_type_t::PUTREQ));
 			tmpkey = iter->key();
 #ifdef USE_HASH
-			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
+			uint32_t tmp_global_server_logical_idx = tmpkey.get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
 #elif defined(USE_RANGE)
-			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_rangepartition_idx(max_server_total_logical_num);
+			uint32_t tmp_global_server_logical_idx = tmpkey.get_rangepartition_idx(max_server_total_logical_num);
 #endif
 
 			if (tmp_global_server_logical_idx == server_logical_idxes_list[server_physical_idx][0]) {

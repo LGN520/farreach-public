@@ -35,6 +35,12 @@
 
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
+#ifdef USE_YCSB
+#include "workloadparser/ycsb_parser.h"
+#elif defined USE_SYNTHETIC
+#include "workloadparser/synthetic_parser.h"
+#endif
+
 #include "common_impl.h"
 
 /* variables */
@@ -287,7 +293,7 @@ void transaction_main() {
 				break;
 			}
 
-			INVARIANT(packet_type_t(iter->type()) == packet_type_t::PUTREQ);
+			INVARIANT(packet_type_t(iter->type()) == optype_t(packet_type_t::PUTREQ));
 			tmpkey = iter->key();
 #ifdef USE_HASH
 			uint32_t tmp_global_server_logical_idx = tmpkey.get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
