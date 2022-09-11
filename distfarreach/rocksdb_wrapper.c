@@ -229,14 +229,6 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
 		stat = true;
 	}
 
-	uint32_t deleted_seq = 0;
-	bool is_deleted = deleted_set.check_and_remove(key, seq, &deleted_seq);
-	if (is_deleted) {
-		INVARIANT(deleted_seq > seq);
-		seq = deleted_seq;
-		stat = false;
-	}
-
 	//mutexlock.unlock();
 	rwlock.unlock_shared();
 	return stat;
@@ -275,16 +267,24 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 		if (tmp_valstr != "") {
 			val_t tmp_val;
 			tmp_seq = tmp_val.from_string_for_rocksdb(tmp_valstr);
-			if (tmp_seq > seq) {
-				//s = txn->Commit();
-				INVARIANT(s.ok());
-				//delete txn;
-				//txn = NULL;
+		}
 
-				//mutexlock.unlock();
-				rwlock.unlock();
-				return true;
-			}
+		uint32_t deleted_seq = 0;
+		bool is_deleted = deleted_set.check_and_remove(key, tmp_seq, &deleted_seq);
+		if (is_deleted && deleted_seq > tmp_seq) {
+			//INVARIANT(deleted_seq > seq);
+			tmp_seq = deleted_seq;
+		}
+
+		if (tmp_seq > seq) {
+			//s = txn->Commit();
+			INVARIANT(s.ok());
+			//delete txn;
+			//txn = NULL;
+
+			//mutexlock.unlock();
+			rwlock.unlock();
+			return true;
 		}
 	}
 
@@ -351,16 +351,24 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 		if (tmp_valstr != "") {
 			val_t tmp_val;
 			tmp_seq = tmp_val.from_string_for_rocksdb(tmp_valstr);
-			if (tmp_seq > seq) {
-				//s = txn->Commit();
-				INVARIANT(s.ok());
-				//delete txn;
-				//txn = NULL;
+		}
 
-				//mutexlock.unlock();
-				rwlock.unlock();
-				return true;
-			}
+		uint32_t deleted_seq = 0;
+		bool is_deleted = deleted_set.check_and_remove(key, tmp_seq, &deleted_seq);
+		if (is_deleted && deleted_seq > tmp_seq) {
+			//INVARIANT(deleted_seq > seq);
+			tmp_seq = deleted_seq;
+		}
+
+		if (tmp_seq > seq) {
+			//s = txn->Commit();
+			INVARIANT(s.ok());
+			//delete txn;
+			//txn = NULL;
+
+			//mutexlock.unlock();
+			rwlock.unlock();
+			return true;
 		}
 	}
 

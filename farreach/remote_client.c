@@ -311,13 +311,13 @@ void run_benchmark() {
 
 	CUR_TIME(total_t1);
 
-#ifdef SERVER_ROTATION
-	if (client_physical_idx == 0) {
+//#ifdef SERVER_ROTATION
+	if (client_physical_idx == 0) { // automatic start snapshot for static/dynaimc workload
 		usleep(1000); // wait for 1000us to ensure that client.workers start to send packets
 		// trigger controller.snapshot to evaluate the limited influence on transaction phase performance
 		system("./preparefinish_client &");
 	}
-#endif
+//#endif
 
 	if (workload_mode == 0) { // send all workloads in static mode
 		while (finish_threads < current_client_logical_num) {

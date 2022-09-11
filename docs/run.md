@@ -52,11 +52,12 @@
 	+ Under main client (i.e., the first physical client dl11), enter directory of method/
 		+ `./warmup_client.c` to pre-populate 10000 hot keys into switch(es) based on XXX-warmup.out
 		+ Under the terminal running `bash start_switch.sh` in each Tofino OS, use `pd-method` -> `pd cache_lookup_tbl get_entry_count` to check whether 10000 hot keys have already been populated into switch(es)
-- Extra phase ONLY for Farreach/DistFarreach and Distcache
-	+ For Farreach/DistFarreach, under main client, enter directory of method/
-		+ `./preparefinish_client.sh` to notify controller to start periodic snapshot, and servers to make an initial snapshot for range query
+- Extra phase ONLY for Distcache
 	+ For Distcache, under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
 		+ `bash set_all_latest.sh` to set all latest_reg = 1 to ensure the correctness of warmup phase (to fix Tofino hardware bug)
+	+ DEPRECATED: for Farreach/DistFarreach, under main client, enter directory of method/
+		+ DEPRECATED: `./preparefinish_client.sh` to notify controller to start periodic snapshot, and servers to make an initial snapshot for range query
+		+ NOTE: now we automatically execute preparefinish_client to trigger snapshot in physical client 0
 - Transaction phase
 	+ TODO: Use YCSB transaction client to send different types of requests and receive corresponding responses based on specified workload
 		* TODO: `./bin/ycsb run method -P workload`
@@ -107,7 +108,7 @@
 	+ Perform all steps including transaction phase as in normal running
 		* NOTE: for all methods, you do NOT need to perform loading phase, if you have already backuped RocksDB files to avoid repeat loading phase
 			- Instead, you NEED to overwrite RocksDB files w/ backuped files before launching servers
-		* NOTE: for Farreach/DistFarreach, you NEED to perform the extra phase by `./preparefinish_client.sh` to notify controller and server to make snapshot for range query
+		* DEPRECATED: for Farreach/DistFarreach, you NEED to perform the extra phase by `./preparefinish_client.sh` to notify controller and server to make snapshot for range query
 - Evaluation	
 	+ Create two temporary files tmpa.out/tmpb.out for client0/client1 respectively
 	+ From the dumped statistics of each client, copy client-side total pktcnt, per-sec total throughput, and per-sec per-server throughput into each tmp file (refer to results/dynamic-result.template)
