@@ -340,7 +340,7 @@ void *run_server_worker(void * param) {
   struct timespec wait_t1, wait_t2, wait_t3, wait_beforerecv_t2, wait_beforerecv_t3;
   struct timespec udprecv_t1, udprecv_t2, udprecv_t3;
   struct timespec rocksdb_t1, rocksdb_t2, rocksdb_t3;
-  struct timespec statistic_t1, statistic_t2, statistic_t3;
+  //struct timespec statistic_t1, statistic_t2, statistic_t3;
 #endif
   bool is_first_pkt = true;
   bool is_timeout = false;
@@ -388,12 +388,21 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
+
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t1);
+#endif
+
 				get_request_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
+				
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t2);
+#endif
 
 				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
 					get_response_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
@@ -419,12 +428,21 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
+				
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t1);
+#endif
+
 				get_request_nlatest_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
+				
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t2);
+#endif
 
 				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
 					if (tmp_stat) { // key exists
@@ -565,12 +583,21 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
+				
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t1);
+#endif
+
 				get_request_pop_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
+				
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t2);
+#endif
 				
 				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
 					get_response_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);

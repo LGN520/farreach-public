@@ -1152,15 +1152,13 @@ void *run_switchos_snapshotserver(void *param) {
 				INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] == NULL && switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] == NULL);
 				INVARIANT(switchos_perpipeline_snapshot_values[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_seqs[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_stats[tmp_pipeidx] == NULL);
 			}
-			INVARIANT(is_stop_cachepop == false && popworker_know_stop_cachepop == false);
+			//INVARIANT(is_stop_cachepop == false && popworker_know_stop_cachepop == false);
+			//INVARIANT(is_snapshot == false && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false);*/
+			if(unlikely(!(is_stop_cachepop == false && popworker_know_stop_cachepop == false))) {
+				is_stop_cachepop = false;
+				popworker_know_stop_cachepop = false;
+			}
 			if (unlikely(!(is_snapshot == false && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false))) {
-				printf("[WARNING] verification fail!\n");
-				COUT_VAR(is_first_snapshot);
-				COUT_VAR(is_snapshot);
-				COUT_VAR(is_snapshot_end);
-				COUT_VAR(popworker_know_snapshot_end);
-				COUT_VAR(specialcaseserver_know_snapshot_end);
-
 				is_snapshot = false;
 				is_snapshot_end = false;
 				popworker_know_snapshot_end = false;
