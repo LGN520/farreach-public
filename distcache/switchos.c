@@ -812,7 +812,11 @@ void *run_switchos_popworker(void *param) {
 				}
 				else {
 					netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(ackbuf, ack_recvsize);
-					INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_netcache_cache_pop_finish.key());
+					//INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_netcache_cache_pop_finish.key());
+					if (unlikely(!(tmp_netcache_cache_pop_finish_ack.key() == tmp_netcache_cache_pop_finish.key()))) {
+						printf("Unmatched key of NETCACHE_CACHE_POP_FINISH_ACK\n");
+						continue;
+					}
 					break;
 				}
 			}

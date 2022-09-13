@@ -536,7 +536,8 @@ void *run_server_worker(void * param) {
 						int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
 						udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
 
-						int tmp_distcache_invalidate_ack_size = 0;
+						// NOTE: valueinvalidate overhead is too large under write-intensive workload, which is caused by NetCache/DistCache design (write-through policy + server-issued value invalidate) -> we skip timeout-and-retry mechanism here
+						/*int tmp_distcache_invalidate_ack_size = 0;
 						bool is_timeout = udprecvfrom(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, tmp_distcache_invalidate_ack_size, "server.worker.invalidateserver");
 						if (unlikely(is_timeout)) {
 							continue;
@@ -545,7 +546,8 @@ void *run_server_worker(void * param) {
 							distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
 							INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
 							break;
-						}
+						}*/
+						break; // skip timeout-and-retry
 					}
 
 					// Phase 2 of cache coherence: update in-switch value in background
@@ -701,7 +703,8 @@ void *run_server_worker(void * param) {
 						int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
 						udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
 
-						int tmp_distcache_invalidate_ack_size = 0;
+						// NOTE: valueinvalidate overhead is too large under write-intensive workload, which is caused by NetCache/DistCache design (write-through policy + server-issued value invalidate) -> we skip timeout-and-retry mechanism here
+						/*int tmp_distcache_invalidate_ack_size = 0;
 						bool is_timeout = udprecvfrom(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, tmp_distcache_invalidate_ack_size, "server.worker.invalidateserver");
 						if (unlikely(is_timeout)) {
 							continue;
@@ -710,7 +713,8 @@ void *run_server_worker(void * param) {
 							distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
 							INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
 							break;
-						}
+						}*/
+						break; // skip timeout-and-retry
 					}
 
 					// Phase 2 of cache coherence: update in-switch value in background
@@ -923,12 +927,15 @@ void *run_server_evictserver(void *param) {
 		server_mutex_for_keyset_list[local_server_logical_idx].lock();
 		// NETCACHE_CACHE_EVICT's key must in cached keyset
 		// consider duplicate NETCACHE_CACHE_EVICTs -> key may already be removed from cached/beingudpated keyset
-		printf("evcitidx: %d, evictkey %x\n", server_cached_keyidxmap_list[local_server_logical_idx][tmp_netcache_cache_evict.key()], tmp_netcache_cache_evict.key().keyhihi);
+		
+		// TMPDEBUG
+		/*printf("evcitidx: %d, evictkey %x\n", server_cached_keyidxmap_list[local_server_logical_idx][tmp_netcache_cache_evict.key()], tmp_netcache_cache_evict.key().keyhihi);
 		fflush(stdout);
 		if (!(server_cached_keyidxmap_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyidxmap_list[local_server_logical_idx].end())) {
 			printf("[server.evictserver %d-%d WARNING] evicted key %x is not in cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_cached_keyidxmap_list[local_server_logical_idx].size());
 			fflush(stdout);
-		}
+		}*/
+
 		// remove key from cached/beingupdated keyset
 		server_cached_keyidxmap_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
 		server_beingupdated_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
@@ -982,6 +989,7 @@ void *run_server_valueupdateserver(void *param) {
 				usleep(500 * 1000); 
 			}*/
 
+			// DEPRECATED: NOT use NETCACHE_VALUEUPDATE in DistCache due to Tofino bug
 			/*sendsize = tmp_netcache_valueupdate_ptr->serialize(sendbuf, MAX_BUFSIZE);
 			
 			while (true) {
@@ -1002,6 +1010,7 @@ void *run_server_valueupdateserver(void *param) {
 				}
 			}*/
 
+			// DEPRECATED: NOT use DISTCACHE/SPINE/LEAF_VALUEUPDATE_INSWITCH in DistCache due to Tofino bug
 			/*distcache_leaf_valueupdate_inswitch_t tmp_distcache_leaf_valueupdate_inswitch(tmp_distcache_spine_valueupdate_inswitch_ptr->spineswitchidx(), tmp_distcache_spine_valueupdate_inswitch_ptr->leafswitchidx(), tmp_distcache_spine_valueupdate_inswitch_ptr->key(), tmp_distcache_spine_valueupdate_inswitch_ptr->val(), tmp_distcache_spine_valueupdate_inswitch_ptr->seq(), tmp_distcache_spine_valueupdate_inswitch_ptr->stat(), tmp_distcache_spine_valueupdate_inswitch_ptr->kvidx());
 			sendsize_forspine = tmp_distcache_spine_valueupdate_inswitch_ptr->serialize(sendbuf_forspine, MAX_BUFSIZE);
 			sendsize_forleaf = tmp_distcache_leaf_valueupdate_inswitch.serialize(sendbuf_forleaf, MAX_BUFSIZE);

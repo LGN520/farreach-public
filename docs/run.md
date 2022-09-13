@@ -53,8 +53,9 @@
 		+ `./warmup_client.c` to pre-populate 10000 hot keys into switch(es) based on XXX-warmup.out
 		+ Under the terminal running `bash start_switch.sh` in each Tofino OS, use `pd-method` -> `pd cache_lookup_tbl get_entry_count` to check whether 10000 hot keys have already been populated into switch(es)
 - Extra phase ONLY for Distcache
-	+ For Distcache, under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
-		+ `bash set_all_latest.sh` to set all latest_reg = 1 to ensure the correctness of warmup phase (to fix Tofino hardware bug)
+	+ DEPRECATED: For Distcache, under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
+		+ DEPRECATED: `bash set_all_latest.sh` to set all latest_reg = 1 to ensure the correctness of warmup phase (to fix Tofino hardware bug)
+		+ NOTE: now we use a trick to directly set latest=1 for CACHE_POP_INSWITCH to fix the Tofino hardware bug without undermining perf
 	+ DEPRECATED: for Farreach/DistFarreach, under main client, enter directory of method/
 		+ DEPRECATED: `./preparefinish_client.sh` to notify controller to start periodic snapshot, and servers to make an initial snapshot for range query
 		+ NOTE: now we automatically execute preparefinish_client to trigger snapshot in physical client 0
@@ -83,6 +84,7 @@
 			- Instead, you NEED to overwrite RocksDB files w/ backuped files before launching servers
 		* NOTE: for Farreach/DistFarreach, remote_client will automtically execute `./preparefinish_client.sh`
 		* NOTE: for nocache/distnocache, as they do NOT need warmup/extra phase, you can skip this step and directly perform automatic transaction phase
+		* NOTE: for DistCache, NOT need to run `bash set_all_latest.sh` now
 	+ Automatic transaction phase
 		* `nohup bash remotescripts/test_server_rotation.sh >tmp.out 2>&1 &` to run 128 experiments under server rotation automatically
 			- TODO: For YCSB transaction clients of all methods, consider how to run with a fixed time to get average throughput
