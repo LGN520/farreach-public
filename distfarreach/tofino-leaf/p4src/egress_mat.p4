@@ -18,7 +18,7 @@ table is_hot_tbl {
 		meta.cm1_predicate: exact;
 		meta.cm2_predicate: exact;
 		meta.cm3_predicate: exact;
-		//meta.cm4_predicate: exact;
+		meta.cm4_predicate: exact;
 	}
 	actions {
 		set_is_hot;

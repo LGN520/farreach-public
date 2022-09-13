@@ -86,7 +86,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.register_reset_all_cm1_reg(self.sess_hdl, self.dev_tgt)
             self.client.register_reset_all_cm2_reg(self.sess_hdl, self.dev_tgt)
             self.client.register_reset_all_cm3_reg(self.sess_hdl, self.dev_tgt)
-            #self.client.register_reset_all_cm4_reg(self.sess_hdl, self.dev_tgt)
+            self.client.register_reset_all_cm4_reg(self.sess_hdl, self.dev_tgt)
 
             #print "Start to reset all cache frequency reg"
             self.client.register_reset_all_cache_frequency_reg(self.sess_hdl, self.dev_tgt)

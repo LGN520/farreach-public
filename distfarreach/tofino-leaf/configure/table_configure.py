@@ -814,8 +814,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 0
 
             # Table: access_cmi_tbl (default: initialize_cmi_predicate; size: 2)
-            #cm_hashnum = 4
-            cm_hashnum = 3
+            cm_hashnum = 4
+            #cm_hashnum = 3
             for i in range(1, cm_hashnum+1):
                 print "Configuring access_cm{}_tbl".format(i)
                 for tmpoptype in [GETREQ_INSWITCH, PUTREQ_SEQ_INSWITCH]:
@@ -905,8 +905,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = distfarreachleaf_is_hot_tbl_match_spec_t(\
                     meta_cm1_predicate = 2,
                     meta_cm2_predicate = 2,
-                    meta_cm3_predicate = 2)
-                    #meta_cm4_predicate = 2)
+                    meta_cm3_predicate = 2,
+                    meta_cm4_predicate = 2)
             self.client.is_hot_tbl_table_add_with_set_is_hot(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 

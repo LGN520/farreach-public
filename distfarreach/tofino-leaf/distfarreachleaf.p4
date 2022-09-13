@@ -311,7 +311,7 @@ control egress {
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
-	//apply(access_cm4_tbl); // reduce cm4 to fix Tofino limitation of power budget -> OK, as we clean CM every 1 second which does NOT have too many false positives, and it is due to Tofino limitation itself (SYNCed from distcache for fair comparison)
+	apply(access_cm4_tbl); // reduce cm4 to fix Tofino limitation of power budget -> OK, as we clean CM every 1 second which does NOT have too many false positives, and it is due to Tofino limitation itself (SYNCed from distcache for fair comparison)
 
 	// Stage 1
 	apply(is_hot_tbl);
