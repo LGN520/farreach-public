@@ -1181,8 +1181,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_cmi_tbl (default: initialize_cmi_predicate; size: 3)
-            #cm_hashnum = 4
-            cm_hashnum = 3
+            cm_hashnum = 4
+            #cm_hashnum = 3
             for i in range(1, cm_hashnum+1):
                 print "Configuring access_cm{}_tbl".format(i)
                 for tmpoptype in [GETREQ_INSWITCH]:
@@ -1206,8 +1206,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = distcacheleaf_is_hot_tbl_match_spec_t(\
                     meta_cm1_predicate = 2,
                     meta_cm2_predicate = 2,
-                    meta_cm3_predicate = 2)
-                    #meta_cm4_predicate = 2)
+                    meta_cm3_predicate = 2,
+                    meta_cm4_predicate = 2)
             self.client.is_hot_tbl_table_add_with_set_is_hot(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -1375,7 +1375,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 for tmpoptype in [GETREQ_INSWITCH]:
                     matchspec0 = eval("distcacheleaf_access_bf{}_tbl_match_spec_t".format(i))(\
                             op_hdr_optype = tmpoptype,
-                            meta_is_hot = 1)
+                            #meta_is_hot = 1)
+                            meta_cm1_predicate = 2,
+                            meta_cm2_predicate = 2,
+                            meta_cm3_predicate = 2,
+                            meta_cm4_predicate = 2)
                     eval("self.client.access_bf{}_tbl_table_add_with_update_bf{}".format(i, i))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 

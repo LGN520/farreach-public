@@ -96,7 +96,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             #print "Start to reset all bf regs"
             self.client.register_reset_all_bf1_reg(self.sess_hdl, self.dev_tgt)
             self.client.register_reset_all_bf2_reg(self.sess_hdl, self.dev_tgt)
-            self.client.register_reset_all_bf3_reg(self.sess_hdl, self.dev_tgt)
+            #self.client.register_reset_all_bf3_reg(self.sess_hdl, self.dev_tgt)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
             #print "Finish to reset all cm regs"

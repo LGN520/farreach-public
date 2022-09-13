@@ -36,7 +36,7 @@ action reset_cache_frequency() {
 	reset_cache_frequency_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-@pragma stage 2
+@pragma stage 3
 table access_cache_frequency_tbl {
 	reads {
 		op_hdr.optype: exact;

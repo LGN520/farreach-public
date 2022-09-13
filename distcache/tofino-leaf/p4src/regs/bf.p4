@@ -24,7 +24,11 @@ action reset_is_report1() {
 table access_bf1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.is_hot: exact;
+		//meta.is_hot: exact;
+		meta.cm1_predicate: exact;
+		meta.cm2_predicate: exact;
+		meta.cm3_predicate: exact;
+		meta.cm4_predicate: exact;
 	}
 	actions {
 		update_bf1;
@@ -60,7 +64,11 @@ action reset_is_report2() {
 table access_bf2_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.is_hot: exact;
+		//meta.is_hot: exact;
+		meta.cm1_predicate: exact;
+		meta.cm2_predicate: exact;
+		meta.cm3_predicate: exact;
+		meta.cm4_predicate: exact;
 	}
 	actions {
 		update_bf2;
@@ -96,7 +104,11 @@ action reset_is_report3() {
 table access_bf3_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.is_hot: exact;
+		//meta.is_hot: exact;
+		meta.cm1_predicate: exact;
+		meta.cm2_predicate: exact;
+		meta.cm3_predicate: exact;
+		meta.cm4_predicate: exact;
 	}
 	actions {
 		update_bf3;

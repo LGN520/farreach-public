@@ -70,7 +70,7 @@ table process_scanreq_split_tbl {
 }
 #endif
 
-// Stage 2
+// Stage 3
 
 action set_is_hot() {
 	modify_field(meta.is_hot, 1);
@@ -82,13 +82,13 @@ action reset_is_hot() {
 	//modify_field(debug_hdr.is_hot, 0);
 }
 
-@pragma stage 2
+@pragma stage 3
 table is_hot_tbl {
 	reads {
 		meta.cm1_predicate: exact;
 		meta.cm2_predicate: exact;
 		meta.cm3_predicate: exact;
-		//meta.cm4_predicate: exact;
+		meta.cm4_predicate: exact;
 	}
 	actions {
 		set_is_hot;
@@ -98,7 +98,7 @@ table is_hot_tbl {
 	size: 1;
 }
 
-// Stage 3
+// Stage 4
 
 action set_server_sid_udpport_and_save_client_info(server_sid) {
 	modify_field(clone_hdr.server_sid, server_sid);
@@ -121,7 +121,7 @@ counter prepare_for_cachepop_and_save_client_info_counter {
 }
 #endif
 
-@pragma stage 3
+@pragma stage 4
 table prepare_for_cachepop_and_save_client_info_tbl {
 	reads {
 		op_hdr.optype: exact;
