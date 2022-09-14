@@ -100,8 +100,10 @@ int switchos_snapshotserver_snapshotclient_for_ptf_udpsock = -1;
 int switchos_snapshotserver_snapshotclient_for_reflector_udpsock = -1;
 
 // prepare to backup cache metadata for snapshot case2 with atomicity
-bool volatile is_stop_cachepop = false;
-bool volatile popworker_know_stop_cachepop = false; // ensure current cache population/eviction is finished before metadata backup
+//bool volatile is_stop_cachepop = false;
+std::atomic<bool> is_stop_cachepop(false);
+//bool volatile popworker_know_stop_cachepop = false; // ensure current cache population/eviction is finished before metadata backup
+std::atomic<bool> popworker_know_stop_cachepop(false); // ensure current cache population/eviction is finished before metadata backup
 // NOTE: not need specialcaseserver_know_stop_cachepop as switchos_specialcases has been cleared in the previous snapshot period
 
 // backuped cache metadata (set/reset by snapshotserver, read by popoworker/specialcaseserver)
@@ -110,7 +112,8 @@ uint16_t ** volatile switchos_perpipeline_cached_serveridxarray_backup = NULL; /
 uint32_t * volatile switchos_perpipeline_cached_empty_index_backup = 0; // [empty index, kv_bucket_num-1] is empty (not used)
 
 // collect special cases during snapshot
-bool volatile is_snapshot = false;
+//bool volatile is_snapshot = false;
+std::atomic<bool> is_snapshot(false);
 // specialcaseserver socket
 int switchos_specialcaseserver_udpsock = -1;
 // special cases updated by specialcaseserver and popworker
@@ -119,9 +122,12 @@ std::mutex switchos_mutex_for_specialcases;
 concurrent_specialcase_map_t ** volatile switchos_perpipeline_specialcases_ptr = NULL;
 
 // rollback after collecting all special cases
-bool volatile is_snapshot_end = false;
-bool volatile popworker_know_snapshot_end = false; // ensure current case2 is reported before rollback
-bool volatile specialcaseserver_know_snapshot_end = false; // ensure current case1s are reported before rollback
+//bool volatile is_snapshot_end = false;
+std::atomic<bool> is_snapshot_end(false);
+//bool volatile popworker_know_snapshot_end = false; // ensure current case2 is reported before rollback
+std::atomic<bool> popworker_know_snapshot_end(false); // ensure current case2 is reported before rollback
+//bool volatile specialcaseserver_know_snapshot_end = false; // ensure current case1s are reported before rollback
+std::atomic<bool> specialcaseserver_know_snapshot_end(false); // ensure current case1s are reported before rollback
 
 void prepare_switchos();
 void recover();

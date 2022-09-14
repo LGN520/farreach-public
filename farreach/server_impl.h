@@ -266,7 +266,7 @@ void send_cachepop(const int &sockfd, const char *buf, const int &buflen, const 
 			return;
 		}
 #else
-		break
+		break;
 #endif
 	}
 }
@@ -624,8 +624,8 @@ void *run_server_worker(void * param) {
 							
 							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 							rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-#ifdef WAIT_CACHE_POP_ACK
 							send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+#ifdef WAIT_CACHE_POP_ACK
 							cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
 							INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 #endif
@@ -680,8 +680,8 @@ void *run_server_worker(void * param) {
 						
 						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), tmp_stat, global_server_logical_idx);
 						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-#ifdef WAIT_CACHE_POP_ACK
 						send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+#ifdef WAIT_CACHE_POP_ACK
 						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
 						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 #endif
@@ -778,8 +778,8 @@ void *run_server_worker(void * param) {
 						
 						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), tmp_stat, global_server_logical_idx);
 						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-#ifdef WAIT_CACHE_POP_ACK
 						send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+#ifdef WAIT_CACHE_POP_ACK
 						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
 						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 #endif
@@ -847,8 +847,8 @@ void *run_server_worker(void * param) {
 					}
 					cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 					rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-#ifdef WAIT_CACHE_POP_ACK
 					send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+#ifdef WAIT_CACHE_POP_ACK
 					cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
 					INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 #endif
