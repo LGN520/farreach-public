@@ -83,6 +83,7 @@ int main(int argc, char **argv) {
 
   /* (2) transaction phase */
   printf("[main] transaction phase start\n");
+  fflush(stdout);
 
   //prepare_reflector();
   prepare_server();

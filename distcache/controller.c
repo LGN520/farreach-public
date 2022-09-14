@@ -132,6 +132,7 @@ int main(int argc, char **argv) {
 
 	while (controller_ready_threads < controller_expected_ready_threads) sleep(1);
 	printf("[controller] all threads ready\n");
+	fflush(stdout);
 
 	controller_running = true;
 
