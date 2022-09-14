@@ -48,7 +48,7 @@ sleep 1s
 # TODO: retrieve dl16.bottleneckserver to the state just after loading phase
 echo "retrieve bottleneck partition back to the state after loading phase"
 ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/worker*snapshot*; rm -r /tmp/${DIRNAME}/controller*snapshot*" # retrieve bottleneckserver/controller.snapshotid = 0
-#ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/worker*snapshot*; rm -r /tmp/${DIRNAME}/controller*snapshot*"
+ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/worker*snapshot*; rm -r /tmp/${DIRNAME}/controller*snapshot*"
 #ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/*"
 #ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/*"
 
@@ -119,7 +119,7 @@ do
 	# TODO: retrieve dl16.bottleneckserver to the state just after loading phase
 	echo "retrieve bottleneck partition back to the state after loading phase"
 	ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/worker*snapshot*; rm -r /tmp/${DIRNAME}/controller*snapshot*" # retrieve bottleneckserver/controller.snapshotid = 0
-	#ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/worker*snapshot*; rm -r /tmp/${DIRNAME}/controller*snapshot*"
+	ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/worker*snapshot*; rm -r /tmp/${DIRNAME}/controller*snapshot*"
 	#ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/*"
 	#ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/*"
 

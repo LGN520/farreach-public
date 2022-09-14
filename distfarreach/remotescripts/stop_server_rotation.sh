@@ -1,5 +1,7 @@
 #!/use/bin/env bash
 
+DIRNAME="distfarreach"
+
 echo "kill test_server_rotation.sh"
 clientpids=( "$(ps -aux | grep "./test_server_rotation" | grep -v "grep" | awk '{print $2}')" )
 
