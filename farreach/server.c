@@ -280,6 +280,7 @@ void transaction_main() {
 
 	transaction_running = true;
 	COUT_THIS("[transaction.main] all threads ready");
+	fflush(stdout);
 
 	signal(SIGTERM, kill); // Set for main thread (kill -15)
 
