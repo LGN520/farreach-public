@@ -119,6 +119,13 @@ action update_getreq_inswitch_to_getreq_spine() {
 	remove_header(inswitch_hdr);
 }
 
+action update_getreq_inswitch_to_getreq_beingevicted() {
+	modify_field(op_hdr.optype, GETREQ_BEINGEVICTED);
+
+	remove_header(shadowtype_hdr);
+	remove_header(inswitch_hdr);
+}
+
 action update_getreq_inswitch_to_getreq_nlatest() {
 	modify_field(op_hdr.optype, GETREQ_NLATEST);
 
@@ -295,6 +302,14 @@ action update_putreq_inswitch_to_putreq_seq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
+action update_putreq_inswitch_to_putreq_seq_beingevicted() {
+	modify_field(op_hdr.optype, PUTREQ_SEQ_BEINGEVICTED);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_BEINGEVICTED);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+}
+
 action update_putreq_inswitch_to_putreq_pop_seq() {
 	modify_field(op_hdr.optype, PUTREQ_POP_SEQ);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_POP_SEQ);
@@ -389,6 +404,14 @@ action update_delreq_inswitch_to_delreq_seq() {
 	add_header(seq_hdr);
 
 	//modify_field(eg_intr_md.egress_port, eport);
+}
+
+action update_delreq_inswitch_to_delreq_seq_beingevicted() {
+	modify_field(op_hdr.optype, DELREQ_SEQ_BEINGEVICTED);
+	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_BEINGEVICTED);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
 }
 
 action update_delreq_inswitch_to_delres_by_mirroring(client_sid, server_port) {
@@ -575,6 +598,7 @@ table eg_port_forward_tbl {
 	}
 	actions {
 		update_getreq_inswitch_to_getreq_spine;
+		update_getreq_inswitch_to_getreq_beingevicted;
 		update_getreq_inswitch_to_getreq_nlatest;
 		update_getreq_inswitch_to_getres_by_mirroring;
 		update_getres_latest_seq_to_getres; // GETRES_LATEST_SEQ must be cloned from ingress to egress
@@ -592,11 +616,13 @@ table eg_port_forward_tbl {
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
 		//forward_cache_pop_inswitch_ack; // last clone of CACHE_POP_INSWITCH_ACK
 		update_putreq_inswitch_to_putreq_seq;
+		update_putreq_inswitch_to_putreq_seq_beingevicted;
 		update_putreq_inswitch_to_putres_by_mirroring;
 		update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
 		forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
 		update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
 		update_delreq_inswitch_to_delreq_seq;
+		update_delreq_inswitch_to_delreq_seq_beingevicted;
 		update_delreq_inswitch_to_delres_by_mirroring;
 		update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
 		forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
@@ -687,7 +713,7 @@ action update_val_seq_inswitch_stat_clone_pktlen(aligned_vallen) {
 	add(ipv4_hdr.totalLen, aligned_vallen, 90);
 }
 
-// PUTREQ_SEQ
+// PUTREQ_SEQ, PUTREQ_SEQ_BEINGEVICTED
 action update_val_seq_pktlen(aligned_vallen) {
 	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq)
 	add(udp_hdr.hdrlen, aligned_vallen, 36);
@@ -701,7 +727,7 @@ action update_stat_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 54);
 }
 
-// DELREQ_SEQ
+// DELREQ_SEQ, DELREQ_SEQ_BEINGEVICTED
 action update_seq_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(shadowtype) + 4(seq)
 	modify_field(udp_hdr.hdrlen, 34);

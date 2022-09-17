@@ -86,7 +86,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         entrynum = self.client.need_recirculate_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
         if entrynum > 0:
             for iport in self.unmatched_devports:
-                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_SEQ]:
+                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED]:
                     matchspec0 = distfarreachspine_need_recirculate_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             ig_intr_md_ingress_port = iport)
@@ -95,7 +95,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Reset snapshot_flag=0 for all ingress pipelines"
         entrynum = self.client.snapshot_flag_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
         if entrynum > 0:
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED]:
                 matchspec0 = distfarreachspine_snapshot_flag_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 0)
@@ -107,7 +107,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def enable_singlepath(self):
         print "Set need_recirculate=1 for iports in different ingress pipelines"
         for iport in self.unmatched_devports:
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_SEQ]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED]:
                 matchspec0 = distfarreachspine_need_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = iport)
@@ -116,7 +116,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def set_snapshot_flag(self):
         print "Set snapshot_flag=1 for all ingress pipelines"
-        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ]:
+        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED]:
             matchspec0 = distfarreachspine_snapshot_flag_tbl_match_spec_t(\
                     op_hdr_optype = tmpoptype,
                     meta_need_recirculate = 0)
@@ -128,7 +128,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def disable_singlepath(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
         for iport in self.unmatched_devports:
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_SEQ]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED]:
                 matchspec0 = distfarreachspine_need_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = iport)
@@ -189,7 +189,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def reset_snapshot_flag_and_reg(self):
         print "Reset snapshot_flag=0 for all ingress pipelines"
-        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ]:
+        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED]:
             matchspec0 = distfarreachspine_snapshot_flag_tbl_match_spec_t(\
                     op_hdr_optype = tmpoptype,
                     meta_need_recirculate = 0)

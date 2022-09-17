@@ -479,6 +479,26 @@ action update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+action update_putreq_seq_beingevicted_to_putreq_seq_beingevicted_spine() {
+	modify_field(op_hdr.optype, PUTREQ_SEQ_BEINGEVICTED_SPINE);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_BEINGEVICTED_SPINE);
+}
+
+action update_putreq_seq_beingevicted_to_putreq_seq_case3_beingevicted_spine() {
+	modify_field(op_hdr.optype, PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE);
+}
+
+action update_delreq_seq_beingevicted_to_delreq_seq_beingevicted_spine() {
+	modify_field(op_hdr.optype, DELREQ_SEQ_BEINGEVICTED_SPINE);
+	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_BEINGEVICTED_SPINE);
+}
+
+action update_delreq_seq_beingevicted_to_delreq_seq_case3_beingevicted_spine() {
+	modify_field(op_hdr.optype, DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE);
+	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter ig_port_forward_counter {
@@ -491,6 +511,7 @@ counter ig_port_forward_counter {
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
+		inswitch_hdr.snapshot_flag: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {
@@ -510,8 +531,12 @@ table ig_port_forward_tbl {
 		update_getres_deleted_seq_server_to_getres_deleted_seq_server_inswitch;
 		update_putreq_largevalue_to_putreq_largevalue_inswitch;
 		update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch;
+		update_putreq_seq_beingevicted_to_putreq_seq_beingevicted_spine;
+		update_putreq_seq_beingevicted_to_putreq_seq_case3_beingevicted_spine;
+		update_delreq_seq_beingevicted_to_delreq_seq_beingevicted_spine;
+		update_delreq_seq_beingevicted_to_delreq_seq_case3_beingevicted_spine;
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 64;
 }

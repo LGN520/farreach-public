@@ -396,9 +396,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: recirculate_tbl (default: nop; size: 5)
+            # Table: recirculate_tbl (default: nop; size: 7)
             print "Configuring recirculate_tbl"
-            for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ]:
+            for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_LARGEVALUE_SEQ, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED]:
                 matchspec0 = distfarreachleaf_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
@@ -410,11 +410,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             if RANGE_SUPPORT == False:
-                ## Table: hash_for_partition_tbl (default: nop; size: 19)
+                ## Table: hash_for_partition_tbl (default: nop; size: 26)
                 # Table: hash_for_partition_tbl (default: hash_for_partition(); size: 1)
                 # NOTE: although we set meta.hashval_for_partition for all packets, hash_partition_tbl ONLY uses hashval_for_partition for specific optypes if need_recirculate=0
                 print "Configuring hash_for_partition_tbl"
-                #for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH]:
+                #for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH, GETREQ_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED_SPINE, PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE, DELREQ_SEQ_BEINGEVICTED_SPINE, DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE]:
                 #    matchspec0 = distfarreachleaf_hash_for_partition_tbl_match_spec_t(\
                 #            op_hdr_optype = convert_u16_to_i16(tmpoptype),
                 #            meta_need_recirculate = 0)
@@ -454,12 +454,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 2
 
             if RANGE_SUPPORT == True:
-                # Table: range_partition_tbl (default: nop; size <= 20 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 27 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_server = pow(2, 16) / server_total_logical_num
                 key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
                 servernum_per_leafswitch = server_total_logical_num / leafswitch_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH, GETREQ_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED_SPINE, PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE, DELREQ_SEQ_BEINGEVICTED_SPINE, DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE]:
                     valid_serveridx_start = 0 # [0, server_total_logical_num-1]
                     valid_key_start = 0 # [0, 2^16-1]
                     for i in range(leafswitch_total_logical_num):
@@ -525,10 +525,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         valid_serveridx_start = valid_serveridx_end + 1
                         valid_key_start = valid_key_end + 1
             else:
-                # Table: hash_partition_tbl (default: nop; size <= 19 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 26 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = switch_partition_count / server_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH, GETREQ_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED_SPINE, PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE, DELREQ_SEQ_BEINGEVICTED_SPINE, DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE]:
                     hash_start = 0 # [0, partition_count-1]
                     for global_server_logical_idx in range(server_total_logical_num):
                         if global_server_logical_idx == server_total_logical_num - 1:
@@ -635,12 +635,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: 10)
+            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: 16)
             print "Configuring snapshot_flag_tbl"
             # See ptf_snapshotserver/table_configure.py for details, where we set snapshot_flag for PUT/DELREQ and GETRES_LATEST/GETRES_DELETED_SEQ_SERVER
             # NOTE: we explicitly invoke nop() for these pkts to avoid from overwriting inswitch_hdr.snapshot_flag set by spine switch
-            # NOTE: update initial_entrynum_for_snapshot_flag in ptf_snapshotserver accordingly
-            for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, PUTREQ_LARGEVALUE_SEQ_INSWITCH]:
+            # NOTE: update initial_entrynum_for_snapshot_flag = 9 in ptf_snapshotserver accordingly
+            # NOTE: we can read snapshot flag for XXX_BEINGEVICTED_SPINE, which do NOT match the snapshot flag in ig_port_forward_tbl
+            for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, PUTREQ_LARGEVALUE_SEQ_INSWITCH, PUTREQ_SEQ_BEINGEVICTED_SPINE, PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE, DELREQ_SEQ_BEINGEVICTED_SPINE, DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE]:
                 matchspec0 = distfarreachleaf_snapshot_flag_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 0)
@@ -721,93 +722,149 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #            self.sess_hdl, self.dev_tgt, matchspec0)
 
 
-            # Table: ig_port_forward_tbl (default: nop; size: 17)
+            # Table: ig_port_forward_tbl (default: nop; size: 44)
             print "Configuring ig_port_forward_tbl"
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETREQ_SPINE,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getreq_spine_to_getreq_inswitch(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_LATEST_SEQ_SERVER,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_server_to_getres_latest_seq_inswitch(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_DELETED_SEQ_SERVER,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_to_getres_deleted_seq_inswitch(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ_SEQ,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_putreq_seq_to_putreq_seq_inswitch(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = DELREQ_SEQ,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_delreq_seq_to_delreq_seq_inswitch(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_SERVER,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getres_server_to_getres(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = SCANRES_SPLIT_SERVER,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_scanres_split_server_to_scanres_split(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = PUTRES_SERVER,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_putres_server_to_putres(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = DELRES_SERVER,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_delres_server_to_delres(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = WARMUPREQ_SPINE,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_warmupreq_spine_to_warmupreq(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = LOADREQ_SPINE,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_loadreq_spine_to_loadreq(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = WARMUPACK_SERVER,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_warmupack_server_to_warmupack(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = LOADACK_SERVER,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_loadack_server_to_loadack(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_LATEST_SEQ_SERVER_INSWITCH,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_server_inswitch_to_getres_latest_seq_inswitch(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_DELETED_SEQ_SERVER_INSWITCH,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ_LARGEVALUE_SEQ,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_LARGEVALUE_SERVER,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getres_largevalue_server_to_getres_largevalue(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            for snapshot_flag in snapshot_flag_list:
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = GETREQ_SPINE,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_getreq_spine_to_getreq_inswitch(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = GETRES_LATEST_SEQ_SERVER,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_server_to_getres_latest_seq_inswitch(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = GETRES_DELETED_SEQ_SERVER,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_to_getres_deleted_seq_inswitch(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = PUTREQ_SEQ,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_putreq_seq_to_putreq_seq_inswitch(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = DELREQ_SEQ,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_delreq_seq_to_delreq_seq_inswitch(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = GETRES_SERVER,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_getres_server_to_getres(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = SCANRES_SPLIT_SERVER,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_scanres_split_server_to_scanres_split(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = PUTRES_SERVER,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_putres_server_to_putres(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = DELRES_SERVER,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_delres_server_to_delres(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = WARMUPREQ_SPINE,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_warmupreq_spine_to_warmupreq(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = LOADREQ_SPINE,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_loadreq_spine_to_loadreq(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = WARMUPACK_SERVER,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_warmupack_server_to_warmupack(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = LOADACK_SERVER,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_loadack_server_to_loadack(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = GETRES_LATEST_SEQ_SERVER_INSWITCH,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_server_inswitch_to_getres_latest_seq_inswitch(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = GETRES_DELETED_SEQ_SERVER_INSWITCH,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = PUTREQ_LARGEVALUE_SEQ,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = GETRES_LARGEVALUE_SERVER,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_getres_largevalue_server_to_getres_largevalue(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = PUTREQ_SEQ_BEINGEVICTED,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                if snapshot_flag == 1:
+                    self.client.ig_port_forward_tbl_table_add_with_update_putreq_seq_beingevicted_to_putreq_seq_case3_beingevicted(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = DELREQ_SEQ_BEINGEVICTED,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                if snapshot_flag == 1:
+                    self.client.ig_port_forward_tbl_table_add_with_update_delreq_seq_beingevicted_to_delreq_seq_case3_beingevicted(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = PUTREQ_SEQ_BEINGEVICTED_SPINE,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_putreq_seq_beingevicted_spine_to_putreq_seq_beingevicted(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_putreq_seq_case3_beingevicted_spine_to_putreq_seq_case3_beingevicted(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = DELREQ_SEQ_BEINGEVICTED_SPINE,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_delreq_seq_beingevicted_spine_to_delreq_seq_beingevicted(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_delreq_seq_case3_beingevicted_spine_to_delreq_seq_case3_beingevicted(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline
 
@@ -1415,6 +1472,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     actnspec0 = distfarreachleaf_update_pktlen_action_spec_t(val_seq_inswitch_stat_clone_udplen, val_seq_inswitch_stat_clone_iplen)
                     self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                # NOTE: NOT need to update pktlen for PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED_SPINE, PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE
                 for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3]:
                     matchspec0 = distfarreachleaf_update_pktlen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
@@ -1462,6 +1520,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = distfarreachleaf_update_pktlen_action_spec_t(stat_udplen, stat_iplen)
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            # NOTE: NOT need to update pktlen for DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED_SPINE, DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE
             for tmpoptype in [DELREQ_SEQ, DELREQ_SEQ_CASE3]:
                 matchspec0 = distfarreachleaf_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
@@ -1492,7 +1551,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
-            # Table: update_ipmac_srcport_tbl (default: nop; 6*client_physical_num+12*server_physical_num+7=43 < 18*8+7=151 < 256)
+            # Table: update_ipmac_srcport_tbl (default: nop; 6*client_physical_num+16*server_physical_num+7=51 < 22*8+7=183 < 256)
             # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
             # NOTE: update_ipmac_srcport_tbl focues on src/dst ip/mac and udp.srcport
             print "Configuring update_ipmac_srcport_tbl"
@@ -1521,7 +1580,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = distfarreachleaf_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CASE3]:
+                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CASE3, GETREQ_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED]:
                     matchspec0 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
@@ -1551,12 +1610,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec2)
 
-            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*17=289)
+            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*19=323)
             print "Configuring add_and_remove_value_header_tbl"
             # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_SEQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
             #LOADREQ, 
-            for tmpoptype in [PUTREQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+            for tmpoptype in [PUTREQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                     if i == 0:
                         vallen_start = 0
@@ -1911,9 +1970,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     elif validvalue == 3:
                                                         if is_latest == 0:
-                                                            # Update GETREQ_INSWITCH as GETREQ to server
-                                                            #actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                            # Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         else:
                                                             # Update GETREQ_INSWITCH as GETRES to client by mirroring
@@ -2006,7 +2064,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                 elif is_cached == 1:
-                                                    if validvalue == 0 or validvalue == 3:
+                                                    if validvalue == 0:
                                                         if snapshot_flag == 1:
                                                             # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ_CASE3 to server
                                                             self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq_case3(\
@@ -2014,6 +2072,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         elif snapshot_flag == 0:
                                                             # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
                                                             self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    elif validvalue == 3:
+                                                        if snapshot_flag == 1:
+                                                            # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ_CASE3_BEINGEVICTED to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq_case3_beingevicted(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                        elif snapshot_flag == 0:
+                                                            # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ_BEINGEVICTED to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq_beingevicted(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                     elif validvalue == 1:
                                                         if snapshot_flag == 1 and is_case1 == 0:
@@ -2081,7 +2148,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                 elif is_cached == 1:
-                                                    if validvalue == 0 or validvalue == 3:
+                                                    if validvalue == 0:
                                                         if snapshot_flag == 1:
                                                             # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ_CASE3 to server
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq_case3(\
@@ -2089,6 +2156,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         elif snapshot_flag == 0:
                                                             # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ to server
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    elif validvalue == 3:
+                                                        if snapshot_flag == 1:
+                                                            # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ_CASE3_BEINGEVICTED to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq_case3_beingevicted(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                        elif snapshot_flag == 0:
+                                                            # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ_BEINGEVICTED to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq_beingevicted(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                     elif validvalue == 1:
                                                         if snapshot_flag == 1 and is_case1 == 0:
@@ -2390,9 +2466,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                             elif validvalue == 3:
                                                                 if is_latest == 0:
-                                                                    # Update GETREQ_INSWITCH as GETREQ to server
-                                                                    #actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                                    # Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED to server
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 else:
                                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring
@@ -2494,7 +2569,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                         elif is_cached == 1:
-                                                            if validvalue == 0 or validvalue == 3:
+                                                            if validvalue == 0:
                                                                 if snapshot_flag == 1:
                                                                     # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ_CASE3 to server
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq_case3(\
@@ -2502,6 +2577,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 elif snapshot_flag == 0:
                                                                     # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
+                                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            elif validvalue == 3:
+                                                                if snapshot_flag == 1:
+                                                                    # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ_CASE3_BEINGEVICTED to server
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq_case3_beingevicted(\
+                                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                                elif snapshot_flag == 0:
+                                                                    # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ_BEINGEVICTED to server
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq_beingevicted(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                             elif validvalue == 1:
                                                                 if snapshot_flag == 1 and is_case1 == 0:
@@ -2575,7 +2659,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                                         elif is_cached == 1:
-                                                            if validvalue == 0 or validvalue == 3:
+                                                            if validvalue == 0:
                                                                 if snapshot_flag == 1:
                                                                     # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ_CASE3 to server
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq_case3(\
@@ -2583,6 +2667,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 elif snapshot_flag == 0:
                                                                     # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ to server
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
+                                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            elif validvalue == 3:
+                                                                if snapshot_flag == 1:
+                                                                    # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ_CASE3_BEINGEVICTED to server
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq_case3_beingevicted(\
+                                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                                elif snapshot_flag == 0:
+                                                                    # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ_BEINGEVICTED to server
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq_beingevicted(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                             elif validvalue == 1:
                                                                 if snapshot_flag == 1 and is_case1 == 0:
