@@ -2374,6 +2374,90 @@ size_t GetResponseLargevalueServer<key_t, val_t>::get_frag_hdrsize() {
 	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t); // op_hdr
 }
 
+// For key being evicted
+
+// GetRequestBeingevicted
+
+template<class key_t>
+GetRequestBeingevicted<key_t>::GetRequestBeingevicted(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETREQ_BEINGEVICTED);
+}
+
+template<class key_t>
+uint32_t GetRequestBeingevicted<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for GetRequestBeingevicted");
+}
+
+// PutRequestSeqBeingevicted (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestSeqBeingevicted<key_t, val_t>::PutRequestSeqBeingevicted(const char * data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_SEQ_BEINGEVICTED);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestSeqBeingevicted<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestSeqBeingevicted");
+}
+
+// PutRequestLargevalueSeqBeingevicted (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqBeingevicted<key_t, val_t>::PutRequestLargevalueSeqBeingevicted(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
+	: PutRequestLargevalueSeq<key_t, val_t>(key, val, seq, client_logical_idx, fragseq)
+{	
+	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqBeingevicted<key_t, val_t>::PutRequestLargevalueSeqBeingevicted(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+size_t PutRequestLargevalueSeqBeingevicted<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+}
+
+// PutRequestLargevalueSeqCase3Beingevicted (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::PutRequestLargevalueSeqCase3Beingevicted(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
+	: PutRequestLargevalueSeq<key_t, val_t>(key, val, seq, client_logical_idx, fragseq)
+{	
+	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::PutRequestLargevalueSeqCase3Beingevicted(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+size_t PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+}
+
+
+
+
+
+
+
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
 	INVARIANT(maxsize >= sizeof(optype_t));
@@ -2437,8 +2521,8 @@ static netreach_key_t get_packet_key(const char * data, uint32_t recvsize) {
 }
 
 static bool is_same_optype(packet_type_t type1, packet_type_t type2) {
-	if (type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
-		if (type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
+	if (type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || type1 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
+		if (type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || type2 == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
 			return true;
 		}
 	}
@@ -2461,6 +2545,12 @@ static size_t get_frag_hdrsize(packet_type_t type) {
 	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
 		frag_hdrsize = PutRequestLargevalueSeqCase3<netreach_key_t, val_t>::get_frag_hdrsize();
 	}
+	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED) {
+		frag_hdrsize = PutRequestLargevalueSeqBeingevicted<netreach_key_t, val_t>::get_frag_hdrsize();
+	}
+	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
+		frag_hdrsize = PutRequestLargevalueSeqCase3Beingevicted<netreach_key_t, val_t>::get_frag_hdrsize();
+	}
 	else if (type == packet_type_t::GETRES_LARGEVALUE) {
 		frag_hdrsize = GetResponseLargevalue<netreach_key_t, val_t>::get_frag_hdrsize();
 	}
@@ -2476,7 +2566,7 @@ static size_t get_frag_hdrsize(packet_type_t type) {
 // NOTE: frag_maxsize = frag_hdrsize of sent type + fragidx&fragnum + payload
 // NOTE: frag_totalsize = frag_hdrsize of received type + fragidx&fragnum + payload = frag_hdrsize of sent type + extra packet headers added by switch + fragidx&fragnum + payload
 static size_t get_frag_totalsize(packet_type_t type, size_t frag_maxsize) {
-	if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
+	if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
 		int sent_frag_hdrsize = int(get_frag_hdrsize(packet_type_t::PUTREQ_LARGEVALUE));
 		int received_frag_hdrsize = int(get_frag_hdrsize(packet_type_t::PUTREQ_LARGEVALUE_SEQ));
 		int extra_frag_hdrsize = received_frag_hdrsize - sent_frag_hdrsize; // NOTE: may be negative
@@ -2494,7 +2584,7 @@ static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize
 	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE) {
 		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(netreach_key_t); // op_hdr
 	}
-	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
+	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
 		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(optype_t) + sizeof(uint32_t); // op_hdr + shadowtype + seq
 	}
 	else if (tmp_optype == packet_type_t::LOADREQ) {
@@ -2518,7 +2608,7 @@ static uint32_t get_packet_fragseq(const char * data, uint32_t recvsize) {
 	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE) {
 		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(uint16_t); // op_hdr + client_logical_idx
 	}
-	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
+	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
 		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t); // op_hdr + shadowtype + seq + client_logical_idx
 	}
 	else if (tmp_optype == packet_type_t::LOADREQ) {

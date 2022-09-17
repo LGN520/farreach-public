@@ -302,6 +302,8 @@ parser parse_seq {
 		PUTREQ_LARGEVALUE_SEQ: parse_fraginfo;
 		PUTREQ_LARGEVALUE_SEQ_CACHED: parse_fraginfo;
 		PUTREQ_LARGEVALUE_SEQ_CASE3: parse_fraginfo;
+		PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED: parse_fraginfo;
+		PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED: parse_fraginfo;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
 		default: ingress;
