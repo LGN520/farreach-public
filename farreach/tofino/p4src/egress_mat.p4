@@ -875,6 +875,24 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3() {
 	add_header(seq_hdr);
 }
 
+action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_beingevcited() {
+	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+}
+
+action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3_beingevicted() {
+	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -950,6 +968,8 @@ table eg_port_forward_tbl {
 		//forward_setvalid_inswitch_ack;
 		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq;
 		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3;
+		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_beingevicted;
+		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3_beingevicted;
 		nop;
 	}
 	default_action: nop();
