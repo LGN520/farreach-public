@@ -42,7 +42,7 @@ int * server_worker_lwpid_list = NULL;
 pkt_ring_buffer_t * server_worker_pkt_ring_buffer_list = NULL;
 
 // For read-blocking under rare case of cache eviction
-struct block_info_t *server_blockinfo_for_readblocking_list = NULL;
+struct blockinfo_t *server_blockinfo_for_readblocking_list = NULL;
 
 // Per-server popclient <-> one popserver in controller
 int * server_popclient_udpsock_list = NULL;
@@ -292,6 +292,57 @@ void send_cachepop(const int &sockfd, const char *buf, const int &buflen, const 
 	}
 }
 
+// For read-blocking under rare case of cache eviction
+void clear_blocklist(const int &sockfd, blockinfo_t &tmp_blockinfo, const val_t &tmp_val, const bool &tmp_stat, const uint16_t &global_server_logical_idx) {
+	char buf[MAX_BUFSIZE];
+	dynamic_array_t dynamicbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
+
+	// prepare read response
+	bool is_largevalue = false;
+	int rsp_size = 0;
+	if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
+		get_response_server_t rsp(tmp_blockinfo._blockedkey, tmp_val, tmp_stat, global_server_logical_idx);
+		rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+		is_largevalue = false;
+#ifdef DUMP_BUF
+		dump_buf(buf, rsp_size);
+#endif
+	}
+	else {
+		get_response_largevalue_server_t rsp(tmp_blockinfo._blockedkey, tmp_val, tmp_stat, global_server_logical_idx);
+		dynamicbuf.clear();
+		rsp_size = rsp.dynamic_serialize(dynamicbuf);
+		is_largevalue = true;
+#ifdef DUMP_BUF
+		dump_buf(dynamicbuf.array(), rsp_size);
+#endif
+	}
+
+	// NOTE: now we send back read responses in server.worker sequentially, as read blocking is very rare
+	// TODO: if read-blocking overhead is large, we can resort server.blockserver to send back read responses in the background
+	// -> NOTE: we should reserve UDP ports for all blockservers
+	// -> NOTE: we should deep copy the read response and client addrs to server.blockserver
+	uint32_t tmp_size = tmp_blockinfo._blockedreq_list.size();
+	printf("[WARNING] clear the blocklist of size %d for key %x\n", tmp_size, tmp_blockinfo._blockedkey.keyhihi);
+	fflush(stdout);
+	INVARIANT(tmp_size == tmp_blockinfo._blockedaddr_list.size());
+	INVARIANT(tmp_size == tmp_blockinfo._blockedaddrlen_list.size());
+	for (uint32_t i = 0; i < tmp_size; i++) {
+		INVARIANT(tmp_blockinfo._blockedreq_list[i].key() == tmp_blockinfo._blockedkey);
+		if (!is_largevalue) {
+			udpsendto(sockfd, buf, rsp_size, 0, &tmp_blockinfo._blockedaddr_list[i], tmp_blockinfo._blockedaddrlen_list[i], "server.worker");
+		}
+		else {
+			udpsendlarge_ipfrag(sockfd, dynamicbuf.array(), rsp_size, 0, &tmp_blockinfo._blockedaddr_list[i], tmp_blockinfo._blockedaddrlen_list[i], "server.worker", get_response_largevalue_server_t::get_frag_hdrsize());
+		}
+	}
+
+	// resize blocklist as 0
+	tmp_blockinfo._blockedreq_list.resize(0);
+	tmp_blockinfo._blockedaddr_list.resize(0);
+	tmp_blockinfo._blockedaddrlen_list.resize(0);
+}
+
 /*
  * Worker for server-side processing 
  */
@@ -367,7 +418,7 @@ void *run_server_worker(void * param) {
   struct timespec wait_t1, wait_t2, wait_t3, wait_beforerecv_t2, wait_beforerecv_t3;
   struct timespec udprecv_t1, udprecv_t2, udprecv_t3;
   struct timespec rocksdb_t1, rocksdb_t2, rocksdb_t3;
-  struct timespec statistic_t1, statistic_t2, statistic_t3;
+  //struct timespec statistic_t1, statistic_t2, statistic_t3;
 #endif
   bool is_first_pkt = true;
   bool is_timeout = false;
@@ -869,6 +920,82 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
+				break;
+			}
+		// For read-blocking under rare case of cache eviction
+		case packet_type_t::GETREQ_BEINGEVICTED: 
+			{
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), recv_size);
+#endif
+				get_request_beingevicted_t req(dynamicbuf.array(), recv_size);
+				//COUT_THIS("[server] key = " << req.key().to_string())
+				
+				blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
+				tmp_blockinfo._mutex.lock();
+				if (likely(tmp_blockinfo._blockedkey == req.key())) {
+					if (unlikely(tmp_blockinfo._isblocked == true)) { // with blocking (subsequent GETREQ_BEINGEVICTED)
+						printf("[WARNING] GETREQ_BEINGEVICTED blocked for key %x\n", req.key().keyhihi);
+						fflush(stdout);
+
+						// add req and client addr into blocklist
+						tmp_blockinfo._blockedreq_list.push_back(req);
+						tmp_blockinfo._blockedaddr_list.push_back(client_addr);
+						tmp_blockinfo._blockedaddrlen_list.push_back(client_addrlen);
+					}
+					else { // no blocking
+						// access server-side key-value store
+						val_t tmp_val;
+						uint32_t tmp_seq = 0;
+						bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
+						//COUT_THIS("[server] val = " << tmp_val.to_string())
+
+						// send back read response
+						if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
+							get_response_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+							udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+							dump_buf(buf, rsp_size);
+#endif
+						}
+						else {
+							get_response_largevalue_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+							dynamicbuf.clear();
+							rsp_size = rsp.dynamic_serialize(dynamicbuf);
+							udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_server_t::get_frag_hdrsize());
+#ifdef DUMP_BUF
+							dump_buf(dynamicbuf.array(), rsp_size);
+#endif
+						}
+					}
+				}
+				else { // with blocking (first GETREQ_BEINGEVICTED)
+					printf("[WARNING] GETREQ_BEINGEVICTED blocked for key %x, prevkey %x\n", req.key().keyhihi, tmp_blockinfo._blockedkey.keyhihi);
+					fflush(stdout);
+
+					// clear blocklist if necessary
+					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
+						printf("[WARNING] GETREQ_BEINGEVICTED: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
+						fflush(stdout);
+
+						// answer the blocklist and resize as 0
+						val_t tmp_val;
+						uint32_t tmp_seq = 0;
+						bool tmp_stat = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val, tmp_seq);
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val, tmp_stat, global_server_logical_idx);
+					}
+
+					// update blockinfo
+					tmp_blockinfo._blockedkey = req.key();
+					tmp_blockinfo._isblocked = true;
+					// add req and client addr into blocklist
+					tmp_blockinfo._blockedreq_list.push_back(req);
+					tmp_blockinfo._blockedaddr_list.push_back(client_addr);
+					tmp_blockinfo._blockedaddrlen_list.push_back(client_addrlen);
+				}
+				tmp_blockinfo._mutex.unlock();
+			
 				break;
 			}
 		default:
