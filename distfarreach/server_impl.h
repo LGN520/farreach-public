@@ -8,6 +8,9 @@
 #include "key.h"
 #include "val.h"
 
+// For read-blocking under rare case of cache eviction
+#include "blockinfo.h"
+
 #include "snapshot_record.h"
 #include "concurrent_map_impl.h"
 #include "concurrent_set_impl.h"
@@ -37,6 +40,9 @@ RocksdbWrapper *db_wrappers = NULL;
 int * server_worker_udpsock_list = NULL;
 int * server_worker_lwpid_list = NULL;
 pkt_ring_buffer_t * server_worker_pkt_ring_buffer_list = NULL;
+
+// For read-blocking under rare case of cache eviction
+struct block_info_t *server_blockinfo_for_readblocking_list = NULL;
 
 // Per-server popclient <-> one popserver in controller
 int * server_popclient_udpsock_list = NULL;
@@ -107,6 +113,16 @@ void prepare_server() {
 		server_worker_pkt_ring_buffer_list[tmp_local_server_logical_idx].init(PKT_RING_BUFFER_SIZE);
 	}
 
+	// For read-blocking under rare case of cache eviction
+	server_blockinfo_for_readblocking_list = new blockinfo_t[current_server_logical_num];
+	for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
+		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedkey = netreac_key_t::min();
+		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._isblocked = false;
+		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedreq_list.resize(0);
+		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedaddr_list.resize(0);
+		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedaddrlen_list.resize(0);
+	}
+
 	// Prepare for cache population
 	server_popclient_udpsock_list = new int[current_server_logical_num];
 	server_cached_keyset_list = new concurrent_set_t[current_server_logical_num];
@@ -166,6 +182,11 @@ void close_server() {
 	if (server_worker_pkt_ring_buffer_list != NULL) {
 		delete [] server_worker_pkt_ring_buffer_list;
 		server_worker_pkt_ring_buffer_list = NULL;
+	}
+	// For read-blocking under rare case of cache eviction
+	if (server_blockinfo_for_readblocking_list != NULL) {
+		delete [] server_blockinfo_for_readblocking_list;
+		server_blockinfo_for_readblocking_list = NULL;
 	}
 	if (server_popclient_udpsock_list != NULL) {
 		delete [] server_popclient_udpsock_list;

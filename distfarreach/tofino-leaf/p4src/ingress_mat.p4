@@ -618,7 +618,7 @@ action update_putreq_largevalue_seq_beingevicted_spine_to_putreq_largevalue_seq_
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
 }
 
-action update_putreq_seq_case3_beingevicted_spine_to_putreq_seq_case3_beingevicted() {
+action update_putreq_largevalue_seq_case3_beingevicted_spine_to_putreq_largevalue_seq_case3_beingevicted() {
 	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
 }
@@ -658,7 +658,7 @@ table ig_port_forward_tbl {
 		update_getres_largevalue_server_to_getres_largevalue;
 		update_putreq_seq_beingevicted_to_putreq_seq_case3_beingevicted;
 		update_delreq_seq_beingevicted_to_delreq_seq_case3_beingevicted;
-		update_putreq_largevalue_seq_beingevicted_to_putreq_largevalue_seq_case3_being_evicted;
+		update_putreq_largevalue_seq_beingevicted_to_putreq_largevalue_seq_case3_beingevicted;
 		update_putreq_seq_beingevicted_spine_to_putreq_seq_beingevicted;
 		update_putreq_seq_case3_beingevicted_spine_to_putreq_seq_case3_beingevicted;
 		update_delreq_seq_beingevicted_spine_to_delreq_seq_beingevicted;

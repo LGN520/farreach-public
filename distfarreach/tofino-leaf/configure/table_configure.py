@@ -1708,7 +1708,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     (self.sess_hdl, self.dev_tgt, entry.match_spec)
 
     def configure_another_eg_port_forward_tbl(self):
-        # Table: another_eg_port_forward_tbl (default: nop; size: 112)
+        # Table: another_eg_port_forward_tbl (default: nop; size: 144)
         tmp_client_sids = [0, self.spineswitch_sid]
         for is_cached in cached_list:
             for is_hot in hot_list:
@@ -1924,6 +1924,40 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                     # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                     pass
+                                            # is_hot (cm_predicate=1), is_deleted, tmp_client_sid=0, is_lastclone_for_pktloss, is_case1 should be 0 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
+                                            # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for PUTREQ_LARGEVALUE_SEQ_INSWITCH)
+                                            # NOTE: validvalue can be 0/1/3 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
+                                            # size: 32
+                                            if is_hot == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0:
+                                                matchspec0 = distfarreachleaf_another_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = PUTREQ_LARGEVALUE_SEQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    validvalue_hdr_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    inswitch_hdr_client_sid = tmp_client_sid,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                if is_cached == 1 and validvalue == 3:
+                                                    if snapshot_flag == 0:
+                                                        # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED to server
+                                                        self.client.another_eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_beingevicted(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    elif snapshot_flag == 1:
+                                                        # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED to server
+                                                        self.client.another_eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_case3_beingevicted(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                else:
+                                                    if snapshot_flag == 0:
+                                                        # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server
+                                                        self.client.another_eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    elif snapshot_flag == 1:
+                                                        # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CASE3 to server
+                                                        self.client.another_eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_case3(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_eg_port_forward_tbl(self):
         # Table: eg_port_forward_tbl (default: nop; size: 19+340*spine_physical_num=359 < 2048)
@@ -2390,40 +2424,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                 pass
-                                            # is_hot (cm_predicate=1), is_deleted, tmp_client_sid=0, is_lastclone_for_pktloss, is_case1 should be 0 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
-                                            # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for PUTREQ_LARGEVALUE_SEQ_INSWITCH)
-                                            # NOTE: validvalue can be 0/1/3 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
-                                            # size: 32
-                                            if is_hot == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0:
-                                                matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                    op_hdr_optype = PUTREQ_LARGEVALUE_SEQ_INSWITCH,
-                                                    inswitch_hdr_is_cached = is_cached,
-                                                    meta_is_hot = is_hot,
-                                                    validvalue_hdr_validvalue = validvalue,
-                                                    meta_is_latest = is_latest,
-                                                    meta_is_deleted = is_deleted,
-                                                    inswitch_hdr_client_sid = tmp_client_sid,
-                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                    meta_is_case1 = is_case1)
-                                                if is_cached == 1 and validvalue == 3:
-                                                    if snapshot_flag == 0:
-                                                        # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED to server
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_beingevicted(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                    elif snapshot_flag == 1:
-                                                        # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED to server
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_case3_beingevicted(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                else:
-                                                    if snapshot_flag == 0:
-                                                        # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                    elif snapshot_flag == 1:
-                                                        # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CASE3 to server
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_case3(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_eg_port_forward_tbl_with_range(self):
         # Table: eg_port_forward_tbl (default: nop; size: 19+340*spine_physical_num+2*server_physical_num=363 < 2048)
@@ -2955,40 +2955,3 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                         # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                         pass
-                                                    # is_hot (cm_predicate=1), is_deleted, tmp_client_sid=0, is_lastclone_for_pktloss, is_case1, is_last_scansplit, tmp_server_sid should be 0 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
-                                                    # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for PUTREQ_LARGEVALUE_SEQ_INSWITCH)
-                                                    # NOTE: validvalue can be 0/1/3 for PUTREQ_LARGEVALUE_SEQ_INSWITCH
-                                                    # size: 32
-                                                    if is_hot == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
-                                                        matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                            op_hdr_optype = PUTREQ_LARGEVALUE_SEQ_INSWITCH,
-                                                            inswitch_hdr_is_cached = is_cached,
-                                                            meta_is_hot = is_hot,
-                                                            validvalue_hdr_validvalue = validvalue,
-                                                            meta_is_latest = is_latest,
-                                                            meta_is_deleted = is_deleted,
-                                                            inswitch_hdr_client_sid = tmp_client_sid,
-                                                            meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                            inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                            meta_is_case1 = is_case1,
-                                                            meta_is_last_scansplit = is_last_scansplit,
-                                                            meta_server_sid = tmp_server_sid)
-                                                        if is_cached == 1 and validvalue == 3:
-                                                            if snapshot_flag == 0:
-                                                                # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_beingevicted(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            elif snapshot_flag == 1:
-                                                                # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_case3_beingevicted(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                        else:
-                                                            if snapshot_flag == 0:
-                                                                # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            elif snapshot_flag == 1:
-                                                                # Update PUTREQ_LARGEVALUE_SEQ_INSWITCH as PUTREQ_LARGEVALUE_SEQ_CASE3 to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_inswitch_to_putreq_largevalue_seq_case3(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-
