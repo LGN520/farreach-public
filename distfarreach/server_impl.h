@@ -931,11 +931,12 @@ void *run_server_worker(void * param) {
 				get_request_beingevicted_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				
+				// For read-blocking
 				blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
 				tmp_blockinfo._mutex.lock();
 				if (likely(tmp_blockinfo._blockedkey == req.key())) {
 					if (unlikely(tmp_blockinfo._isblocked == true)) { // with blocking (subsequent GETREQ_BEINGEVICTED)
-						printf("[WARNING] GETREQ_BEINGEVICTED blocked for key %x\n", req.key().keyhihi);
+						printf("[WARNING] subsequent GETREQ_BEINGEVICTED blocked for key %x\n", req.key().keyhihi);
 						fflush(stdout);
 
 						// add req and client addr into blocklist
@@ -971,19 +972,19 @@ void *run_server_worker(void * param) {
 					}
 				}
 				else { // with blocking (first GETREQ_BEINGEVICTED)
-					printf("[WARNING] GETREQ_BEINGEVICTED blocked for key %x, prevkey %x\n", req.key().keyhihi, tmp_blockinfo._blockedkey.keyhihi);
+					printf("[WARNING] first GETREQ_BEINGEVICTED blocked for key %x, prevkey %x\n", req.key().keyhihi, tmp_blockinfo._blockedkey.keyhihi);
 					fflush(stdout);
 
 					// clear blocklist if necessary
 					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-						printf("[WARNING] GETREQ_BEINGEVICTED: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
+						printf("[WARNING] first GETREQ_BEINGEVICTED: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
 						fflush(stdout);
 
 						// answer the blocklist and resize as 0
-						val_t tmp_val;
-						uint32_t tmp_seq = 0;
-						bool tmp_stat = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val, tmp_seq);
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val, tmp_stat, global_server_logical_idx);
+						val_t tmp_val_for_blockedkey;
+						uint32_t tmp_seq_for_blockedkey = 0;
+						bool tmp_stat_for_blockedkey = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val_for_blockedkey, tmp_seq_for_blockedkey);
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
 					}
 
 					// update blockinfo
@@ -996,6 +997,140 @@ void *run_server_worker(void * param) {
 				}
 				tmp_blockinfo._mutex.unlock();
 			
+				break;
+			}
+		case packet_type_t::PUTREQ_SEQ_BEINGEVICTED:
+		case packet_type_t::PUTREQ_SEQ_CASE3_BEINGEVICTED:
+		case packet_type_t::DELREQ_SEQ_BEINGEVICTED:
+		case packet_type_t::DELREQ_SEQ_CASE3_BEINGEVICTED:
+		case packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED:
+		case packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED:
+			{
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), recv_size);
+#endif
+
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t1);
+#endif
+
+				netreach_key_t tmp_key;
+				val_t tmp_val();
+				uint32_t tmp_seq;
+				bool tmp_iscase3 = false;
+				bool tmp_isdelete = false;
+				if (pkt_type == packet_type_t::PUTREQ_SEQ_BEINGEVICTED) {
+					put_request_seq_beingevicted_t req(dynamicbuf.array(), recv_size);
+					tmp_key = req.key();
+					tmp_val = req.val();
+					tmp_seq = req.seq();
+					tmp_iscase3 = false;
+					tmp_isdelete = false;
+				}
+				else if (pkt_type == packet_type_t::PUTREQ_SEQ_CASE3_BEINGEVICTED) {
+					put_request_seq_case3_beingevicted_t req(dynamicbuf.array(), recv_size);
+					tmp_key = req.key();
+					tmp_val = req.val();
+					tmp_seq = req.seq();
+					tmp_iscase3 = true;
+					tmp_isdelete = false;
+				}
+				else if (pkt_type == packet_type_t::DELREQ_SEQ_BEINGEVICTED) {
+					del_request_seq_beingevicted_t req(dynamicbuf.array(), recv_size);
+					tmp_key = req.key();
+					tmp_seq = req.seq();
+					tmp_iscase3 = false;
+					tmp_isdelete = true;
+				}
+				else if (pkt_type == packet_type_t::DELREQ_SEQ_CASE3_BEINGEVICTED) {
+					del_request_seq_case3_beingevicted_t req(dynamicbuf.array(), recv_size);
+					tmp_key = req.key();
+					tmp_seq = req.seq();
+					tmp_iscase3 = true;
+					tmp_isdelete = true;
+				}
+				else if (pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED) {
+					put_request_largevalue_seq_beingevicted_t req(dynamicbuf.array(), recv_size);
+					tmp_key = req.key();
+					tmp_val = req.val();
+					tmp_seq = req.seq();
+					tmp_iscase3 = false;
+					tmp_isdelete = false;
+				}
+				else { // PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED
+					put_request_largevalue_seq_case3_beingevicted_t req(dynamicbuf.array(), recv_size);
+					tmp_key = req.key();
+					tmp_val = req.val();
+					tmp_seq = req.seq();
+					tmp_iscase3 = true;
+					tmp_isdelete = false;
+				}
+
+				// process as usual
+				if (tmp_iscase3 && !server_issnapshot_list[local_server_logical_idx]) {
+					db_wrappers[local_server_logical_idx].make_snapshot();
+				}
+				if (!tmp_isdelete) {
+					db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq);
+#ifdef DEBUG_SERVER
+					CUR_TIME(rocksdb_t2);
+#endif
+					// send back put response
+					put_response_server_t rsp(tmp_key, true, global_server_logical_idx);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+					dump_buf(buf, rsp_size);
+#endif
+				}
+				else {
+					db_wrappers[local_server_logical_idx].remove(tmp_key, tmp_seq);
+#ifdef DEBUG_SERVER
+					CUR_TIME(rocksdb_t2);
+#endif
+					// send back delete response
+					del_response_server_t rsp(tmp_key, true, global_server_logical_idx);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+					dump_buf(buf, rsp_size);
+#endif
+				}
+
+				// For read-blocking
+				blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
+				tmp_blockinfo._mutex.lock();
+				if (tmp_blockinfo._blockedkey == tmp_key) { // subsequent write_BEINGEVICTED
+					tmp_blockinfo._isblocked = false;
+
+					// clear blocklist if necessary
+					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
+						printf("[WARNING] subsequent PUTREQ_SEQ/_CASE3_BEINGEVICTED: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
+						fflush(stdout);
+
+						// answer the blocklist and resize as 0
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val, !tmp_isdelete, global_server_logical_idx);
+					}
+				}
+				else { // first write_BEINGEVICTED
+					// clear blocklist if necessary
+					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
+						printf("[WARNING] first PUTREQ_SEQ/_CASE3_BEINGEVICTED: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
+						fflush(stdout);
+
+						// answer the blocklist and resize as 0
+						val_t tmp_val_for_blockedkey;
+						uint32_t tmp_seq_for_blockedkey = 0;
+						bool tmp_stat_for_blockedkey = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val_for_blockedkey, tmp_seq_for_blockedkey);
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
+					}
+
+					// update blockinfo
+					tmp_blockinfo._blockedkey = tmp_key;
+					tmp_blockinfo._isblocked = false;
+					// keep blocklist size as 0
+				}
+				tmp_blockinfo._mutex.unlock();
 				break;
 			}
 		default:
@@ -1089,7 +1224,7 @@ void *run_server_evictserver(void *param) {
 		// remove from cached keyset
 		server_cached_keyset_list[local_server_logical_idx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
 
-		// update in-memory KVS if necessary
+		// update server-side KVS if necessary
 		// NOTE: we need to check seq to avoid from overwriting normal data
 		if (tmp_cache_evict_ptr->stat()) { // put
 			db_wrappers[local_server_logical_idx].put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq(), true);
@@ -1104,6 +1239,46 @@ void *run_server_evictserver(void *param) {
 		//printf("send CACHE_EVICT_ACK to controller\n");
 		//dump_buf(sendbuf, sendsize);
 		udpsendto(server_evictserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &controller_evictclient_addr, controller_evictclient_addrlen, "server.evictserver");
+
+		// For read-blocking
+		blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
+		tmp_blockinfo._mutex.lock();
+		if (tmp_blockinfo._blockedkey == tmp_cache_evict_ptr->key()) { // CACHE_EVICT w/ XXX_BEINGEVICTED before
+			tmp_blockinfo._isblocked = false;
+
+			// clear blocklist if necessary
+			if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
+				printf("[WARNING] CACHE_EVICT w/ XXX_BEINGEVICTED before: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
+				fflush(stdout);
+
+				// answer the blocklist and resize as 0
+				if (tmp_cache_evict_ptr->stat()) { // put
+					clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_cache_evict_ptr->val(), true, global_server_logical_idx);
+				}
+				else { // delete
+					clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, val_t(), false, global_server_logical_idx);
+				}
+			}
+		}
+		else { // CACHE_EVICT w/o XXX_BEINGEVICTED before
+			// clear blocklist if necessary
+			if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
+				printf("[WARNING] CACHE_EVICT w/o XXX_BEINGEVICTED before: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
+				fflush(stdout);
+
+				// answer the blocklist and resize as 0
+				val_t tmp_val_for_blockedkey;
+				uint32_t tmp_seq_for_blockedkey = 0;
+				bool tmp_stat_for_blockedkey = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val_for_blockedkey, tmp_seq_for_blockedkey);
+				clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
+			}
+
+			// update blockinfo
+			tmp_blockinfo._blockedkey = tmp_cache_evict_ptr->key();
+			tmp_blockinfo._isblocked = false;
+			// keep blocklist size as 0
+		}
+		tmp_blockinfo._mutex.unlock();
 
 		// free CACHE_EVIT
 		delete tmp_cache_evict_ptr;
