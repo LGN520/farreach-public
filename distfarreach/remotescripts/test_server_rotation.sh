@@ -58,6 +58,10 @@ sed -e ''${configfile_line1}'s/bottleneck_serveridx_for_rotation=123/bottleneck_
 rm config.tmp
 bash sync_file.sh config.ini
 
+#echo "clear system cache"
+#ssh -t ssy@dl16 "echo 123456 | sudo -S sh -c 'echo 3 > /proc/sys/vm/drop_caches'; echo 123456 | sudo -S sh -c 'echo 4 > /proc/sys/vm/drop_caches'"
+#ssh -t ssy@dl13 "echo 123456 | sudo -S sh -c 'echo 3 > /proc/sys/vm/drop_caches'; echo 123456 | sudo -S sh -c 'echo 4 > /proc/sys/vm/drop_caches'"
+
 echo "start servers"
 ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp_serverrotation_part1_server.out 2>&1 &"
 echo "start controller"
@@ -128,6 +132,10 @@ do
 	sed -e ''${configfile_line1}'s/bottleneck_serveridx_for_rotation=123/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}'/g' -e ''${configfile_line2}'s/server_logical_idxes=123/server_logical_idxes='${bottleneck_serveridx}'/g' -e ''${configfile_line3}'s/server_logical_idxes=0/server_logical_idxes='${rotateidx}'/g' config.tmp > config.ini
 	rm config.tmp
 	bash sync_file.sh config.ini
+
+	#echo "clear system cache"
+	#ssh -t ssy@dl16 "echo 123456 | sudo -S sh -c 'echo 3 > /proc/sys/vm/drop_caches'; echo 123456 | sudo -S sh -c 'echo 4 > /proc/sys/vm/drop_caches'"
+	#ssh -t ssy@dl13 "echo 123456 | sudo -S sh -c 'echo 3 > /proc/sys/vm/drop_caches'; echo 123456 | sudo -S sh -c 'echo 4 > /proc/sys/vm/drop_caches'"
 
 	echo "start servers"
 	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >>tmp_serverrotation_part2_server.out 2>&1 &"

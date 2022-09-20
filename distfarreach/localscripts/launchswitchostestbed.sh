@@ -18,6 +18,10 @@ rm tmp_popserver.out
 rm tmp_snapshotserver.out
 rm tmp_cleaner.out
 
+#echo "clear system cache"
+#sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+#sudo sh -c 'echo 4 > /proc/sys/vm/drop_caches'
+
 echo "configure data plane"
 bash tofino-${role}/configure.sh
 

@@ -315,7 +315,7 @@ void run_benchmark() {
 	if (client_physical_idx == 0) { // automatic start snapshot for static/dynaimc workload
 		usleep(1000); // wait for 1000us to ensure that client.workers start to send packets
 		// trigger controller.snapshot to evaluate the limited influence on transaction phase performance
-		system("./preparefinish_client &");
+		system("./preparefinish_client");
 	}
 //#endif
 
