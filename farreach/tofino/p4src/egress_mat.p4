@@ -218,6 +218,42 @@ action forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(switchos_sid)
 //action forward_getres_deleted_seq_inswitch_case1() {
 //}
 
+action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq() {
+	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+}
+
+action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3() {
+	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CASE3 w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+}
+
+action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_beingevicted() {
+	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+}
+
+action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3_beingevicted() {
+	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
+	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter another_eg_port_forward_counter {
@@ -251,6 +287,10 @@ table another_eg_port_forward_tbl {
 		//drop_getres_deleted_seq_inswitch; // original packet of GETRES_DELETED_SEQ
 		forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss; // not last clone of GETRES_DELETED_SEQ_INSWITCH_CASE1
 		//forward_getres_deleted_seq_inswitch_case1; // last clone of GETRES_DELETED_SEQ_INSWITCH_CASE1
+		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq;
+		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3;
+		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_beingevicted;
+		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3_beingevicted;
 		nop;
 	}
 	default_action: nop();
@@ -857,42 +897,6 @@ action update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(switchos
 //action forward_setvalid_inswitch_ack() {
 //}
 
-action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq() {
-	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
-	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ);
-	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ);
-
-	remove_header(inswitch_hdr);
-	add_header(seq_hdr);
-}
-
-action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3() {
-	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CASE3 w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
-	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3);
-	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3);
-
-	remove_header(inswitch_hdr);
-	add_header(seq_hdr);
-}
-
-action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_beingevcited() {
-	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
-	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
-	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
-
-	remove_header(inswitch_hdr);
-	add_header(seq_hdr);
-}
-
-action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3_beingevicted() {
-	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
-	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
-	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
-
-	remove_header(inswitch_hdr);
-	add_header(seq_hdr);
-}
-
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -966,10 +970,6 @@ table eg_port_forward_tbl {
 		//forward_loadsnapshotdata_inswitch_ack;
 		update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
 		//forward_setvalid_inswitch_ack;
-		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq;
-		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3;
-		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_beingevicted;
-		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3_beingevicted;
 		nop;
 	}
 	default_action: nop();
