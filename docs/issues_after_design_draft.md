@@ -59,6 +59,122 @@
 
 ### Read blocking for read-after-write consistency (availability)
 
+- [IMPORTANT] Read blocking for the rare cases of cache eviction for availability (or read-after-write consistency)
+	+ Blocking subsequent read requests until receiving a write request from data plane or controller for strong availability -> SYNC to farreach/distfarreach
+		* Design NOTE: reasonable reasons
+			- Only blocking read requests if with packet loss
+				+ For read requests after write requests without packet loss, they will be processed by server without blocking
+				+ For read requests before any write request, they will be processed by the programmable switch
+			- Limited blocking time: RTT-level bound
+			- Not too many read requests as we evict a less frequent key
+			- Not affect write performance
+		* Implementation NOTEs
+			- NOTE: if cached=0, the key must be evicted by controller -> server must receive the victim record from controller -> NOT need blocking -> we ONLY consider cached=1
+			- NOTE: if XXX_BEINGEVICTED is sent to leaf, spine MUST have a cache hit -> spine/leaf does NOT need inswitchhdr to access the in-switch cache in the egress pipeline
+		* In switch
+			- Add optypes including implementation of GETREQ_BEINGEVICTED, PUTREQ_SEQ/_CASE3_BEINGEVICTED, DELREQ_SEQ/_CASE3_BEINGEVICTED, and PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED -> SYNC optypes to ALL (files: tofino*/main.p4, tofino*/common.py, packet_format.h; packet_format_impl.h, common_impl.h)
+				+ NOTE: parse_fraginfo for PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED -> ONLY for farreach/distfarreach (files: tofino*/p4src/parser.p4)
+				+ NOTE: for PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED, update optype_for_udprecvlarge_ipfrag_list, optype_with_clientlogicalidx_list, and related util funcs -> ONLY for farreach/distfarerach (files: packet_format.*)
+			- Add optypes of PUT/DELREQ_SEQ/_CASE3_BEINGEVICTED_SPINE and PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED_SPINE -> SYNC to ALL (files: tofino*/main.p4, tofino*/common.py, packet_format.h)
+				+ NOTE: parse_fraginfo for PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED_SPINE -> ONLY for farreach/distfarreach (files: tofino*/p4src/parser.p4)
+				+ NOTE: NOT need to add PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED_SPINE into optype_for_udprecvlarge_ipfrag_list, optype_with_clientlogicalidx_list, and related util funcs, as end-hosts will NOT process them
+			- For GET
+				+ In distfarreach.spine
+					* For GETREQ, if cached=1, valid=3 (i.e., beingevicted=1), and latest=0, convert GETREQ_INSWITCH to GETREQ_BEINGEVICTED (files: tofino-spine/p4src/egress_mat.p4, tofino-spine/configure/table_configure.py)
+				+ In distfarreach.leaf
+					* For GETREQ_SPINE, if cached=1, valid=3 (i.e., beingevicted=1), and latest=0, convert GETREQ_INSWITCH to GETREQ_BEINGEVICTED, and update ip/mac as client2server (files: tofino-leaf/p4src/egress_mat.p4, tofino-leaf/configure/table_configure.py)
+					* For GETREQ_BEINGEVICTED, forward it to storage server by partition_tbl, and update ip/mac as client2server (files: tofino-leaf/configure/table_configure.py)
+						- NOTE: NOT hash_for_cm and sample; NOT update CM, frequency; NOT access valid, latest, deleted, vallen, and val
+						- NOTE NOT prepare for cache hit; NOT save_client_info
+				+ In farreach.switch
+					*  For GETREQ, if cached=1, valid=3 (i.e., beingevicted=1), and latest=0, convert GETREQ_INSWITCH to GETREQ_BEINGEVICTED (files: tofino/p4src/egress_mat,p4, tofino/configure/table_configure.py)
+			- For PUT/DEL
+				+ In distfarreach.spine
+					* For PUT/DELREQ, if cached=1 and valid=3, convert PUT/DELREQ_INSWITCH to PUT/DELREQ_SEQ_BEINGEVICTED, add valheader, and update pktlen (tofino-spine/p4src/egrses_mat.p4, tofino-spine/configure/table_configure.p4)
+					* For PUT/DELREQ_SEQ_BEINGEVICTED from leaf during single pipeline mode, forward them to leaf by partition_tbl, convert them as PUT/DELREQ_SEQ/_CASE3_BEINGEVICTED_SPINE in ig_port_forward_tbl based on inswitchhdr.is_snapshot (NOT need to update pktlen), add valheader (files: tofino-spine/p4src/ingress_mat.p4, tofino-spine/configure/table_configure.py)
+						- Access need_recirculate_tbl, recirculate_tbl, snapshot_flag_tbl (files: tofino-spine/ptf_snapshot/table_configure.py, tofino-spine/configure/table_configure.py)
+						- NOTE: For PUT/DELREQ_SEQ from leaf during single pipeline mode, spine MUST have a cache miss -> NOT need to consider BEINGEVICTED. directly send PUT/DELREQ_SEQ_INSWITCH to leaf as usual
+				+ In distfarreach.leaf
+					* For PUT/DELREQ_SEQ, if cached=1 and valid=3, convert PUT/DELREQ_SEQ_INSWITCH to PUT/DELREQ_SEQ_/CASE3_BEINGEVICTED,, add valheader, and update ip/mac as client2server (NOT need to update pktlen) (files: tofino-leaf/p4src/egress_mat.p4, tofino-leaf/configure/table_configure.py)
+					* For PUT/DELREQ_SEQ_BEINGEVICTED
+						- Access need_recirculate_tbl, recirculate_tbl, snapshot_flag_tbl (files: tofino-leaf/ptf_snapshot/table_configure.py, tofino-leaf/configure/table_configure.py)
+						- If need_recirculate=0, forward to storage server by partition_tbl, convert them into PUT/DELREQ_SEQ/_CASE3_BEINGEVICTED based on inswitchhdr.is_snapshot in ig_port_forward_tbl, add valheader, and update ip/mac as client2server (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+							+ NOTE: NOT hash_for_cm and sample; NOT update CM, frequency; NOT access valid, latest, deleted, vallen, and val, savedseq, case1
+							+ NOTE NOT prepare for cache hit; NOT save_client_info
+						- If need_recirculate=1, forward it to the spine switch
+					* For PUT/DELREQ_SEQ_/_CASE3_BEINGEVICTED_SPINE (need_recirculate MUST = 0), forward them to storage server by partition_tbl, convert them as PUT/DELREQ_SEQ_/_CASE3_BEINGEVICTED by ig_port_forward_tbl, add valheader, and update ip/mac as client2server (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+						- NOTE: NOT hash_for_cm and sample; NOT update CM, frequency; NOT access valid, latest, deleted, vallen, and val, savedseq, case1
+						- NOTE NOT prepare for cache hit; NOT save_client_info
+				+ In farreach.switch
+					* For PUT/DELREQ, if cached=1 and valid=3, convert PUT/DELREQ_INSWITCH to PUT/DELREQ_SEQ/_CASE3_BEINGEVICTED, update pktlen, add valheader, and update ip/mac as client2server (files: tofino/p4src/egress_mat.p4, tofino/configure/table_configure.py)
+			- For PUT with large value
+				+ NOTE: NOT need to add valheader for PUT with large value
+				+ In distfarreach.spine
+					* For PUTREQ_LARGEVALUE, if cached=1 and valid=3, convert PUTREQ_LARGEVALUE_INSWITCH to PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, and update pktlen (NOTE: NO valheader, NOT update ip/mac) (files: tofino-spine/p4src/egress_mat.p4, tofino-spine/configure/table_configure.py)
+						- NOTE: as spine does NOT send CASE3 for PUTREQ_LARGEVALUE, NOT access need_recirculate_tbl, recirculate_tbl, and snapshot_flag_tbl
+					* For PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED from leaf during single pipeline mode, forward to leaf by partition_tbl, convert it as PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED_SPINE in ig_port_forward_tbl based on inswitchhdr.is_snapshot (NO valheader, NOT need to update pktlen) (files: tofino-spine/p4src/ingress_mat.p4, tofino-spine/configure/table_configure.py)
+						- Access need_recirculate_tbl, recirculate_tbl, snapshot_flag_tbl (files: tofino-spine/ptf_snapshot/table_configure.py, tofino-spine/configure/table_configure.py)
+						- NOTE: For PUTREQ_LARGEVALUE_SEQ from leaf during single pipeline mode, spine MUST have a cache miss or a cache hit yet NOT being evicted -> NOT need to consider BEINGEVICTED. directly send PUT/DELREQ_SEQ_INSWITCH to leaf as usual
+				+ In distfarreach.leaf
+					* For PUTREQ_LARGEVALUE_SEQ, if cached=1 and valid=3, convert PUTREQ_LARGEVALUE_SEQ_INSWITCH to PUTREQ_LARGEVALUE_SEQ_/_CASE3_BEINGEVICTED, and update ip/mac (NOTE: NO valheader, NOT update pktlen) (files: tofino-leaf/p4src/egress_mat.p4, tofino-leaf/configure/table_configure.py)
+					* For PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED (NOTE: NO valheader, NOT update pktlen)
+						- Access need_recirculate_tbl, recirculate_tbl, snapshot_flag_tbl (files: tofino-leaf/ptf_snapshot/table_configure.py, tofino-leaf/configure/table_configure.py)
+						- If need_recirculate=0, forward it to server by partition_tbl, convert it as PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED based on inswitchhdr.is_snapshot in ig_port_forward_tbl, and update ip/mac as client2server (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+						- If need_recirculate=1, forward it to the spine switch (files: tofino-leaf/configure/table_configure.py)
+					* For PUTREQ_LARGEVALUE_SEQ_/_CASE3_BEINGEVICTED_SPINE (need_recirculate MUST = 0), forward them to storage server by partition_tbl, convert them as PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED by ig_port_forward_tbl, and update ip/mac as client2server (NO valheader, NOT update pktlen) (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+				+ In farreach.switch
+					* For PUTREQ_LARGEVALUE, if cached=1 and valid=3, convert PUTREQ_LARGEVALUE_INSWITCH to PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED, update pktlen, and update ip/mac as client2server (NOTE: NO valheader) (files: tofino/p4src/egress_mat.p4, tofino/configure/table_configure.py)
+		* In storage server -> SYNC to farreach/distfarreach
+			- Data structure (files: server_impl.h, blockinfo.h)
+				+ Use per-server mutex lock to guarantee the atomicity of read blocking
+				+ Maintain per-server key blockedkey + bool isblocked + a blocklist of GETREQ_BEINGEVICTEDs and clientaddrs
+			- For GETREQ_BEINGEVICTED (files: server_impl.h)
+				+ If req.key=blockedkey (likely)
+					* If isblocked=true (unlikely), add GETREQ_BEINGEVICTED and clientaddr into the blocklist
+					* Otherwise, process it as usual without blocking
+				+ If req.key!=blockedkey (unlikely)
+					* If the blocklist is not empty (unlikely; propose a WARNING), answer the blocklist, and resize blocklist as 0 
+					* Set blockedkey=req.key, set isblocked=true, add GETREQ_BEINGEVICTED and clientaddr into the blocklist
+			- For PUT/DELREQ_SEQ/_CASE3_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED, or CACHE_EVICT
+				+ Process it as usual
+				+ If req.key=blockedkey
+					* Set isblocked=false, answer the blocklist if not empty (unlikely), and resize blocklist as 0
+				+ If req.key!=blockedkey
+					* If the blocklist is not empty (unlikely; propose a WARNING), answer the blocklist, and resize blocklist as 0 
+					* Set blockedkey=req.key, set isblocked=false
+			- To answer the GETREQ_BEINGEVICTEDs in the blocklist, server.worker sends back responses to the clients
+				+ NOTE: as read blocking is rare, it is OK to resort server.worker to clear the blocklist 
+				+ TODOTODO: Notify server.blockserver to send back responses for the GETREQ_BEINGEVICTEDs in the blocklist to the clients
+					* NOTE: we MUST reserve UDP ports for all blockservers in P4 parser, similar as valueupdateserver in netcache/distcache
+	+ Compile and debug distfarreach
+		+ Test distfarreach for GET/PUT/DELREQ and PUTREQ_LARGEVALUE of the key being evicted in spine
+			* Pass set valid=3 manually; pass cache eviction
+		+ Test distfarreach for GET/PUT/DELREQ and PUTREQ_LARGEVALUE of the key being evicted in leaf
+			* Pass set valid=3 manually; pass cache eviction
+		+ Test distfarreach for GET/PUT/DELREQ and PUTREQ_LARGEVALUE of the key being evicted in spine with snapshot
+		+ Test distfarreach for GET/PUT/DELREQ and PUTREQ_LARGEVALUE of the key being evicted in leaf with snapshot
+			* Issue: one duplicate XXX_BEINGEVICTED due to client-side timeout
+				- Reason: server's NIC returns an ICMP w/ unreachable destination, which triggers a timeout error of client's UDP socket 
+				- Reason: UDP bug??? -> observation: always the first request with a timeout quickly (not achieve timeout threshold)
+		+ Test distfarreach for GET/PUT/DELREQ and PUTREQ_LARGEVALUE of the key being evicted in spine with snapshot=true and single path
+		+ Test distfarreach for GET/PUT/DELREQ and PUTREQ_LARGEVALUE of the key being evicted in leaf with snapshot=true and single path
+		+ Test distfarreach for GET/PUT/DELREQ and PUTREQ_LARGEVALUE of the key being evicted in spine with snapshot=false and single path
+		+ Test distfarreach for GET/PUT/DELREQ and PUTREQ_LARGEVALUE of the key being evicted in leaf with snapshot=false and single path
+		+ Test distfarreach under dynamic mixed workload w/ 50% write
+			* NOTE: as we have sufficient cache size for distfarreach, we do NOT have XXX_BEINGEVICTED and hence no read-blocking
+			* Issue: very low performance
+				- Reason: set /proc/sys/vm/drop_caches as 3, which cannot recover automatically
+				- [DEPRECATED] Solution: set /proc/sys/vm/drop_caches back to 4 after setting it as 3 to clear caches
+					- NOTE: set /proc/sys/vm/drop_caches back to 0 will trigger an IO error
+				- Solution: NOT set drop_caches as 3 in scripts!
+	+ Compile and debug farreach (range -> hash)
+		+ Test farreach for GET/PUT/DEQREQ and PUTREQ_LARGEVALUE of the key being evicted
+			* Pass set valid=3 manually; pass cache eviction
+		+ Test farreach for GET/PUT/DEQREQ and PUTREQ_LARGEVALUE of the key being evicted with snapshot
+		+ Test farreach for GET/PUT/DEQREQ and PUTREQ_LARGEVALUE of the key being evicted with snapshot as true and single path
+		+ Test farreach for GET/PUT/DEQREQ and PUTREQ_LARGEVALUE of the key being evicted with snapshot as false and single path
+		+ Test farreach under dynamic mixed workload w/ 50% write
+
 ### hardware/software-link-based recirculation for single pipeline mode
 
 ## About open issues
