@@ -2410,7 +2410,7 @@ PutRequestLargevalueSeqBeingevicted<key_t, val_t>::PutRequestLargevalueSeqBeinge
 
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqBeingevicted<key_t, val_t>::get_frag_hdrsize() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
 }
 
 // PutRequestLargevalueSeqCase3Beingevicted (value must > 128B)
@@ -2432,7 +2432,7 @@ PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::PutRequestLargevalueSeqC
 
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::get_frag_hdrsize() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
 }
 
 

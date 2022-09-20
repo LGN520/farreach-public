@@ -1220,7 +1220,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             else:
                 self.configure_eg_port_forward_tbl_with_range()
 
-            # Table: update_pktlen_tbl (default: nop; 233)
+            # Table: update_pktlen_tbl (default: nop; 13*17+14=235)
             print "Configuring update_pktlen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1255,7 +1255,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = netbufferv4_update_pktlen_action_spec_t(val_stat_udplen, val_stat_iplen)
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED]:
+                for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
                     matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
@@ -1358,7 +1358,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.update_pktlen_tbl_table_add_with_add_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
-            # Table: update_ipmac_srcport_tbl (default: nop; 6*client_physical_num+18*server_physical_num+7=55 < 24*8+7=199 < 256)
+            # Table: update_ipmac_srcport_tbl (default: nop; 6*client_physical_num+19*server_physical_num+7=57 < 25*8+7=207 < 256)
             # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
             # NOTE: update_ipmac_srcport_tbl focues on src/dst ip/mac and udp.srcport
             print "Configuring update_ipmac_srcport_tbl"
@@ -1390,7 +1390,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = netbufferv4_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CASE3, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED]:
+                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CASE3, GETREQ_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED]:
                     matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)

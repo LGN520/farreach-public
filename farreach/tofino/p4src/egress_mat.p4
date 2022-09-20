@@ -1150,7 +1150,7 @@ table update_pktlen_tbl {
 		nop;
 	}
 	default_action: nop(); // not change udp_hdr.hdrlen (GETREQ/GETREQ_POP/GETREQ_NLATEST)
-	size: 256;
+	size: 512;
 }
 
 action add_only_vallen() {

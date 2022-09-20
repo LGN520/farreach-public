@@ -957,8 +957,8 @@ void *run_server_worker(void * param) {
 				get_request_beingevicted_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				
-				printf("Receive GETREQ_BEINGEVICTED\n");
-				fflush(stdout);
+				//printf("Receive GETREQ_BEINGEVICTED\n");
+				//fflush(stdout);
 				
 				// For read-blocking
 				blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
@@ -1039,8 +1039,8 @@ void *run_server_worker(void * param) {
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
 				
-				printf("Receive write_BEINGEVICTED of type %x\n", optype_t(pkt_type));
-				fflush(stdout);
+				//printf("Receive write_BEINGEVICTED of type %x\n", optype_t(pkt_type));
+				//fflush(stdout);
 
 #ifdef DEBUG_SERVER
 				CUR_TIME(rocksdb_t1);
@@ -1273,8 +1273,8 @@ void *run_server_evictserver(void *param) {
 		udpsendto(server_evictserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &controller_evictclient_addr, controller_evictclient_addrlen, "server.evictserver");
 
 		// For read-blocking
-		printf("Receive CACHE_EVICT for read-blocking\n");
-		fflush(stdout);
+		//printf("Receive CACHE_EVICT for read-blocking\n");
+		//fflush(stdout);
 		blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
 		tmp_blockinfo._mutex.lock();
 		if (tmp_blockinfo._blockedkey == tmp_cache_evict_ptr->key()) { // CACHE_EVICT w/ XXX_BEINGEVICTED before
