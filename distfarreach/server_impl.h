@@ -42,7 +42,7 @@ int * server_worker_lwpid_list = NULL;
 pkt_ring_buffer_t * server_worker_pkt_ring_buffer_list = NULL;
 
 // For read-blocking under rare case of cache eviction
-struct blockinfo_t *server_blockinfo_for_readblocking_list = NULL;
+blockinfo_t *server_blockinfo_for_readblocking_list = NULL;
 
 // Per-server popclient <-> one popserver in controller
 int * server_popclient_udpsock_list = NULL;
@@ -116,7 +116,7 @@ void prepare_server() {
 	// For read-blocking under rare case of cache eviction
 	server_blockinfo_for_readblocking_list = new blockinfo_t[current_server_logical_num];
 	for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
-		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedkey = netreac_key_t::min();
+		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedkey = netreach_key_t::min();
 		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._isblocked = false;
 		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedreq_list.resize(0);
 		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedaddr_list.resize(0);
@@ -931,6 +931,9 @@ void *run_server_worker(void * param) {
 				get_request_beingevicted_t req(dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				
+				printf("Receive GETREQ_BEINGEVICTED\n");
+				fflush(stdout);
+				
 				// For read-blocking
 				blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
 				tmp_blockinfo._mutex.lock();
@@ -1009,13 +1012,16 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
+				
+				printf("Receive write_BEINGEVICTED of type %x\n", optype_t(pkt_type));
+				fflush(stdout);
 
 #ifdef DEBUG_SERVER
 				CUR_TIME(rocksdb_t1);
 #endif
 
 				netreach_key_t tmp_key;
-				val_t tmp_val();
+				val_t tmp_val;
 				uint32_t tmp_seq;
 				bool tmp_iscase3 = false;
 				bool tmp_isdelete = false;
@@ -1241,6 +1247,8 @@ void *run_server_evictserver(void *param) {
 		udpsendto(server_evictserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &controller_evictclient_addr, controller_evictclient_addrlen, "server.evictserver");
 
 		// For read-blocking
+		printf("Receive CACHE_EVICT for read-blocking\n");
+		fflush(stdout);
 		blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
 		tmp_blockinfo._mutex.lock();
 		if (tmp_blockinfo._blockedkey == tmp_cache_evict_ptr->key()) { // CACHE_EVICT w/ XXX_BEINGEVICTED before

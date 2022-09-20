@@ -536,92 +536,92 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             for snapshot_flag in snapshot_flag_list:
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = GETREQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = GETRES_LATEST_SEQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres_latest_seq_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = GETRES_DELETED_SEQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres_deleted_seq_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = PUTREQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_putreq_to_putreq_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = DELREQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_delreq_to_delreq_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 if RANGE_SUPPORT:
                     matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                             op_hdr_optype = SCANREQ,
-                            inswitch_hdr.snapshot_flag = snapshot_flag,
+                            inswitch_hdr_snapshot_flag = snapshot_flag,
                             meta_need_recirculate = 0)
                     self.client.ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_split(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = WARMUPREQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_warmupreq_to_warmupreq_spine(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = LOADREQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_loadreq_to_loadreq_spine(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = PUTREQ_SEQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_putreq_seq_to_putreq_seq_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = DELREQ_SEQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_delreq_seq_to_delreq_seq_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = GETRES_LATEST_SEQ_SERVER,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_server_to_getres_latest_seq_server_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = GETRES_DELETED_SEQ_SERVER,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_to_getres_deleted_seq_server_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = PUTREQ_LARGEVALUE,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_to_putreq_largevalue_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = PUTREQ_LARGEVALUE_SEQ,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = PUTREQ_SEQ_BEINGEVICTED,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 if snapshot_flag == 0:
                     self.client.ig_port_forward_tbl_table_add_with_update_putreq_seq_beingevicted_to_putreq_seq_beingevicted_spine(\
@@ -631,7 +631,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = DELREQ_SEQ_BEINGEVICTED,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 if snapshot_flag == 0:
                     self.client.ig_port_forward_tbl_table_add_with_update_delreq_seq_beingevicted_to_delreq_seq_beingevicted_spine(\
@@ -641,7 +641,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
                 matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED,
-                        inswitch_hdr.snapshot_flag = snapshot_flag,
+                        inswitch_hdr_snapshot_flag = snapshot_flag,
                         meta_need_recirculate = 0)
                 if snapshot_flag == 0:
                     self.client.ig_port_forward_tbl_table_add_with_update_putreq_largevalue_seq_beingevicted_to_putreq_largevalue_seq_beingevicted_spine(\
@@ -1697,7 +1697,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
-                                                elif validvalue = 3:
+                                                elif validvalue == 3:
                                                     # Update PUTREQ_INSWITCH as PUTREQ_SEQ_BEINGEVICTED to server
                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_beingevicted(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)

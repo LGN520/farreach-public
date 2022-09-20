@@ -2307,6 +2307,12 @@ size_t GetResponseLargevalueServer<key_t, val_t>::get_frag_hdrsize() {
 // GetRequestBeingevicted
 
 template<class key_t>
+GetRequestBeingevicted<key_t>::GetRequestBeingevicted()
+	: GetRequest<key_t>()
+{
+}
+
+template<class key_t>
 GetRequestBeingevicted<key_t>::GetRequestBeingevicted(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
@@ -2334,6 +2340,55 @@ template<class key_t, class val_t>
 uint32_t PutRequestSeqBeingevicted<key_t, val_t>::serialize(char * const data, uint32_t max_size)
 {
 	COUT_N_EXIT("Invalid invoke of serialize for PutRequestSeqBeingevicted");
+}
+
+// PutRequestSeqCase3Beingevicted (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestSeqCase3Beingevicted<key_t, val_t>::PutRequestSeqCase3Beingevicted(const char * data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_SEQ_CASE3_BEINGEVICTED);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestSeqCase3Beingevicted<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestSeqCase3Beingevicted");
+}
+
+// DelRequestSeqBeingevicted
+
+template<class key_t>
+DelRequestSeqBeingevicted<key_t>::DelRequestSeqBeingevicted(const char * data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DELREQ_SEQ_BEINGEVICTED);
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t>
+uint32_t DelRequestSeqBeingevicted<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for DelRequestSeqBeingevicted");
+}
+
+// DelRequestSeqCase3Beingevicted
+
+template<class key_t>
+DelRequestSeqCase3Beingevicted<key_t>::DelRequestSeqCase3Beingevicted(const char * data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DELREQ_SEQ_CASE3_BEINGEVICTED);
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t>
+uint32_t DelRequestSeqCase3Beingevicted<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for DelRequestSeqCase3Beingevicted");
 }
 
 // PutRequestLargevalueSeqBeingevicted (value must > 128B)

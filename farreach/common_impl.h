@@ -74,6 +74,8 @@ typedef PutRequestLargevalueSeqCase3<netreach_key_t, val_t> put_request_largeval
 typedef GetRequestBeingevicted<netreach_key_t> get_request_beingevicted_t;
 typedef PutRequestSeqBeingevicted<netreach_key_t, val_t> put_request_seq_beingevicted_t;
 typedef PutRequestSeqCase3Beingevicted<netreach_key_t, val_t> put_request_seq_case3_beingevicted_t;
+typedef DelRequestSeqBeingevicted<netreach_key_t> del_request_seq_beingevicted_t;
+typedef DelRequestSeqCase3Beingevicted<netreach_key_t> del_request_seq_case3_beingevicted_t;
 typedef PutRequestLargevalueSeqBeingevicted<netreach_key_t, val_t> put_request_largevalue_seq_beingevicted_t;
 typedef PutRequestLargevalueSeqCase3Beingevicted<netreach_key_t, val_t> put_request_largevalue_seq_case3_beingevicted_t;
 

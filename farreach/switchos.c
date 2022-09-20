@@ -649,6 +649,12 @@ void *run_switchos_popworker(void *param) {
 						INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
 						break;
 					}
+
+					printf("after set valid = 3 for read-blocking test\n");
+					fflush(stdout);
+					sleep(10);
+					printf("after sleep\n");
+					fflush(stdout);
 					
 					// load evicted data of victim from data plane and set valid=3 at the same time for availability of latest value
 					while (true) {

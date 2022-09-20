@@ -740,6 +740,7 @@ class GetResponseLargevalueServer : public GetResponseLargevalue<key_t, val_t> {
 template<class key_t>
 class GetRequestBeingevicted : public GetRequest<key_t> { // ophdr
 	public: 
+		GetRequestBeingevicted();
 		GetRequestBeingevicted(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -757,6 +758,22 @@ template<class key_t, class val_t>
 class PutRequestSeqCase3Beingevicted : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
 	public: 
 		PutRequestSeqCase3Beingevicted(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t>
+class DelRequestSeqBeingevicted : public DelRequestSeq<key_t> { // ophdr + shadowtype + seq
+	public: 
+		DelRequestSeqBeingevicted(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t>
+class DelRequestSeqCase3Beingevicted : public DelRequestSeq<key_t> { // ophdr + shadowtype + seq
+	public: 
+		DelRequestSeqCase3Beingevicted(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
