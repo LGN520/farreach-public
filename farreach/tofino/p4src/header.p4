@@ -173,6 +173,7 @@ header_type metadata_t {
 		remain_scannum: 16;
 		is_last_scansplit: 1;
 #endif
+		//udp_hdrlen: 16;
 	}
 }
 
@@ -188,7 +189,19 @@ header_type metadata_t {
 // Header instances
 
 header ethernet_t ethernet_hdr;
+/*@pragma pa_no_overlay ingress ipv4_hdr.srcAddr
+@pragma pa_no_overlay egress ipv4_hdr.srcAddr
+@pragma pa_no_overlay ingress ipv4_hdr.dstAddr
+@pragma pa_no_overlay egress ipv4_hdr.dstAddr
+@pragma pa_no_overlay ingress ipv4_hdr.protocol
+@pragma pa_no_overlay egress ipv4_hdr.protocol*/
 header ipv4_t ipv4_hdr;
+/*@pragma pa_no_overlay ingress udp_hdr.srcPort
+@pragma pa_no_overlay egress udp_hdr.srcPort
+@pragma pa_no_overlay ingress udp_hdr.dstPort
+@pragma pa_no_overlay egress udp_hdr.dstPort
+@pragma pa_no_overlay ingress udp_hdr.hdrlen
+@pragma pa_no_overlay egress udp_hdr.hdrlen*/
 header udp_t udp_hdr;
 header op_t op_hdr;
 #ifdef RANGE_SUPPORT
@@ -214,6 +227,8 @@ header val_t val15_hdr;
 header val_t val16_hdr;
 header shadowtype_t shadowtype_hdr;
 header seq_t seq_hdr;
+//@pragma pa_no_overlay ingress inswitch_hdr.idx
+//@pragma pa_no_overlay egress inswitch_hdr.idx
 header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
 header clone_t clone_hdr;
@@ -228,6 +243,8 @@ header validvalue_t validvalue_hdr;
 @pragma pa_no_overlay ingress fraginfo_hdr.max_fragnum
 @pragma pa_no_overlay egress fraginfo_hdr.max_fragnum
 header fraginfo_t fraginfo_hdr;
+//@pragma pa_no_overlay ingress meta.udp_hdrlen
+//@pragma pa_no_overlay egress meta.udp_hdrlen
 metadata metadata_t meta;
 
 //header debug_t debug_hdr;

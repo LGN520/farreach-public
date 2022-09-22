@@ -24,7 +24,7 @@
 	+ Under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
 		* `bash compile.sh` (NOTE: if we have already compiled for all methods, we do NOT need to run this command unless we change in-switch implementation)
 	+ Under each physical client, enter directory of ycsb/
-		* For each method, `mvn -pl site.ycsb:method-binding -am clean package`
+		* `bash compile.sh` to compile java code of all methods
 
 ## Normal running
 

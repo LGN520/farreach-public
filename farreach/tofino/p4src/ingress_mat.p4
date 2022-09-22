@@ -534,3 +534,16 @@ table ig_port_forward_tbl {
 	default_action: nop();
 	size: 8;
 }
+
+/*action copy_udplen_for_checksum() {
+	modify_field(meta.udp_hdrlen, udp_hdr.hdrlen);
+}
+
+@pragma stage 7
+table ig_copy_udplen_for_checksum_tbl {
+	actions {
+		copy_udplen_for_checksum;
+	}
+	default_action: copy_udplen_for_checksum();
+	size: 1;
+}*/

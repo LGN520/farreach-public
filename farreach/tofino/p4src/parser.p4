@@ -416,3 +416,28 @@ field_list_calculation ipv4_chksum_calc {
 calculated_field ipv4_hdr.hdrChecksum {
     update ipv4_chksum_calc;
 }
+
+/*field_list udp_checksum_list {
+    ipv4_hdr.srcAddr;
+    ipv4_hdr.dstAddr;
+    8'0;
+    ipv4_hdr.protocol;
+    //udp_hdr.hdrlen;
+	meta.udp_hdrlen;
+    udp_hdr.srcPort;
+    udp_hdr.dstPort;
+    udp_hdr.hdrlen;
+    payload;
+}
+
+field_list_calculation udp_checksum_calc {
+    input {
+        udp_checksum_list;
+    }
+    algorithm : csum16;
+    output_width : 16;
+}
+
+calculated_field udp_hdr.checksum {
+    update udp_checksum_calc;
+}*/

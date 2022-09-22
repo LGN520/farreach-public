@@ -1,5 +1,16 @@
 /* Ingress Processing (Normal Operation) */
 
+// Stage 0
+
+/*@pragma stage 0
+table eg_copy_udplen_for_checksum_tbl {
+	actions {
+		copy_udplen_for_checksum;
+	}
+	default_action: copy_udplen_for_checksum();
+	size: 1;
+}*/
+
 // Stage 1
 
 action set_is_hot() {
@@ -1125,11 +1136,13 @@ action add_shadowtypehdr_seqhdr_pktlen() {
 action update_pktlen(udplen, iplen) {
 	modify_field(udp_hdr.hdrlen, udplen);
 	modify_field(ipv4_hdr.totalLen, iplen);
+	//modify_field(meta.udp_hdrlen, udplen);
 }
 
 action add_pktlen(udplen_delta, iplen_delta) {
 	add_to_field(udp_hdr.hdrlen, udplen_delta);
 	add_to_field(ipv4_hdr.totalLen, iplen_delta);
+	//add_to_field(meta.udp_hdrlen, udplen_delta);
 }
 
 @pragma stage 11

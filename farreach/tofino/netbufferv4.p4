@@ -278,6 +278,9 @@ control ingress {
 	// Stage 6
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
 	apply(ig_port_forward_tbl); // update op_hdr.optype
+
+	// Stage 7
+	//apply(ig_copy_udplen_for_checksum_tbl);
 }
 
 /* Egress Processing */
@@ -285,6 +288,7 @@ control ingress {
 control egress {
 
 	// Stage 0
+	//apply(eg_copy_udplen_for_checksum_tbl);
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
