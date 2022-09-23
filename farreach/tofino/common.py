@@ -42,14 +42,6 @@ for i in range(client_physical_num):
     client_macs.append(str(config.get("client{}".format(i), "client_mac")))
     client_fpports.append(str(config.get("client{}".format(i), "client_fpport")))
     client_pipeidxes.append(int(config.get("client{}".format(i), "client_pipeidx")))
-pipeline_recirports = [None, None] # NOTE: our Tofino has at most two pipelines
-for i in range(client_physical_num):
-    if client_pipeidxes[i] != client_pipeidxes[0]:
-        if client_pipeidxes[i] > 1:
-            print "Please assign more elements for pipeline_recirports in tofino/common.py!"
-            exit(-1)
-        if pipeline_recirports[client_pipeidxes[i]] is None:
-            pipeline_recirports[client_pipeidxes[i]] = str(config.get("client{}".format(i), "client_recirport"))
 server_ips = []
 server_macs = []
 server_fpports = []
@@ -67,6 +59,19 @@ for i in range(server_physical_num):
     for j in range(len(server_logical_idxes)):
         server_logical_idxes[j] = int(server_logical_idxes[j])
     server_logical_idxes_list.append(server_logical_idxes)
+
+
+# force to recirculate to ingress pipeline of the first physical client fpport
+single_ingress_pipeidx = client_pipeidxes[0]
+
+# NOTE: our Tofino has at most two pipelines
+pipelinenum = 2
+pipeline_recirports_tosingle = [None] * pipelinenum
+pipeline_recirports_fromsingle = [None] * pipelinenum
+for i in range(pipelinenum):
+    if i != single_ingress_pipeidx:
+        pipeline_recirports_tosingle[i] = str(config.get("switch", "switch_recirport_pipeline{}to{}".format(i, single_ingress_pipeidx)))
+        pipeline_recirports_fromsingle[i] = str(config.get("switch", "switch_recirport_pipeline{}to{}".format(single_ingress_pipeidx, i)))
 
 control_config = ConfigParser.ConfigParser()
 with open(os.path.join(os.path.dirname(this_dir), "control_type.ini"), "r") as f:

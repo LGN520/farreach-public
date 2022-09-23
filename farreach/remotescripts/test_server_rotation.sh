@@ -14,8 +14,8 @@ server_total_logical_num_for_rotation=128
 
 # Change corresponding lines in configs/config.transaction1p or 2p
 configfile_line1=27
-configfile_line2=89
-configfile_line3=109
+configfile_line2=87
+configfile_line3=107
 
 # NOTE: we can trigger snapshot in client0 during transaction phase
 #client_ready_time=13 # wait X seconds to trigger snapshot

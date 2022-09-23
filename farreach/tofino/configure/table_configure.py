@@ -182,6 +182,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         self.dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
         self.client_devports = []
         self.server_devports = []
+        self.recir_devports = []
 
         self.platform_type = "mavericks"
         board_type = self.pltfm_pm.pltfm_pm_board_type_get()
@@ -200,7 +201,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
             self.server_devports.append(devport)
 
-        self.recirPorts = [64, 192]
+        # get the device ports from pipeline_recirports_to/fromsingle
+        for recirport_tosingle in pipeline_recirports_tosingle:
+            if recirport_tosingle is not None:
+                port, chnl = recirport_tosingle.split("/")
+                devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+                self.recir_devports.append(devport)
+        for recirport_fromsingle in pipeline_recirports_fromsingle:
+            if recirport_fromsingle is not None:
+                port, chnl = recirport_fromsingle.split("/")
+                devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+                self.recir_devports.append(devport)
+
+        #self.recirPorts = [64, 192]
 
         # NOTE: in each pipeline, 64-67 are recir/cpu ports, 68-71 are recir/pktgen ports
         #self.cpuPorts = [64, 192] # CPU port is 100G
@@ -246,8 +259,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     pass
 
             # Enable recirculation before add special ports
-            for i in self.recirPorts:
-                self.conn_mgr.recirculation_enable(self.sess_hdl, 0, i);
+            #for i in self.recirPorts:
+            #    self.conn_mgr.recirculation_enable(self.sess_hdl, 0, i);
 
             # Add and enable the platform ports
             for i in self.client_devports:
@@ -260,6 +273,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                      pal_port_speed_t.BF_SPEED_40G,
                                      pal_fec_type_t.BF_FEC_TYP_NONE)
                self.pal.pal_port_enable(0, i)
+            for i in self.recir_devports:
+               self.pal.pal_port_add(0, i,
+                                     pal_port_speed_t.BF_SPEED_40G,
+                                     pal_fec_type_t.BF_FEC_TYP_NONE)
+               self.pal.pal_port_enable(0, i)
 
             # Add special ports
             speed_10g = 2
@@ -268,8 +286,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             speed_40g_nb = 16
             speed_50g = 32
             speed_100g = 64
-            for i in self.recirPorts:
-               self.devport_mgr.devport_mgr_add_port(0, i, speed_100g, 0)
+            #for i in self.recirPorts:
+            #   self.devport_mgr.devport_mgr_add_port(0, i, speed_100g, 0)
             #for i in self.cpuPorts:
             #    self.devport_mgr.devport_mgr_set_copy_to_cpu(0, True, i)
 

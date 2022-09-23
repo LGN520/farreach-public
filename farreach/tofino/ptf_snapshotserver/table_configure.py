@@ -68,9 +68,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         elif re.search("0x2234|0x3234", hex(board_type)):
             self.platform_type = "montara"
 
-        # force to recirculate to ingress pipeline of the first physical client fpport
-        single_ingress_pipeidx = client_pipeidxes[0]
-
         self.unmatched_devports = []
         self.recirports_for_unmatched_devports = []
         for client_physical_idx in range(client_physical_num):
@@ -79,10 +76,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 port, chnl = client_fpports[client_physical_idx].split("/")
                 tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
                 self.unmatched_devports.append(tmp_devport)
-                if pipeline_recirports[client_pipeidxes[client_physical_idx]] is None:
-                    print "[ERROR] pipeline_recirports[{}] is None!".format(client_pipeidxes[client_physical_idx])
+                if pipeline_recirports_tosingle[client_pipeidxes[client_physical_idx]] is None:
+                    print "[ERROR] pipeline_recirports_tosingle[{}] is None!".format(client_pipeidxes[client_physical_idx])
                     exit(-1)
-                self.recirports_for_unmatched_devports.append(pipeline_recirports[client_pipeidxes[client_physical_idx]])
+                self.recirports_for_unmatched_devports.append(pipeline_recirports_tosingle[client_pipeidxes[client_physical_idx]])
         # GETRES_LATEST/DELETED_SEQ may also incur CASE1s (need to read snapshot flag)
         for server_physical_idx in range(server_physical_num):
             if server_pipeidxes[server_physical_idx] != single_ingress_pipeidx:
@@ -90,10 +87,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 port, chnl = server_fpports[server_physical_idx].split("/")
                 tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
                 self.unmatched_devports.append(tmp_devport)
-                if pipeline_recirports[server_pipeidxes[server_physical_idx]] is None:
-                    print "[ERROR] pipeline_recirports[{}] is None!".format(client_pipeidxes[client_physical_idx])
+                if pipeline_recirports_tosingle[server_pipeidxes[server_physical_idx]] is None:
+                    print "[ERROR] pipeline_recirports_tosingle[{}] is None!".format(server_pipeidxes[server_physical_idx])
                     exit(-1)
-                self.recirports_for_unmatched_devports.append(pipeline_recirports[server_pipeidxes[server_physical_idx]])
+                self.recirports_for_unmatched_devports.append(pipeline_recirports_tosingle[server_pipeidxes[server_physical_idx]])
 
     def cleanup(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
