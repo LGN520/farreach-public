@@ -174,6 +174,7 @@ header_type metadata_t {
 		is_last_scansplit: 1;
 #endif
 		//udp_hdrlen: 16;
+		recirport: 16;
 	}
 }
 

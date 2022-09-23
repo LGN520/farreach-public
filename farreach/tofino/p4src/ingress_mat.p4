@@ -67,8 +67,9 @@ table l2l3_forward_tbl {
 	size: 16;
 }
 
-action set_need_recirculate() {
+action set_need_recirculate(eport) {
 	modify_field(meta.need_recirculate, 1);
+	modify_field(meta.recirport, eport);
 }
 
 action reset_need_recirculate() {
@@ -104,8 +105,14 @@ table set_hot_threshold_tbl {
 
 // Stage 1 (need_recirculate = 1)
 
-action recirculate_pkt(port) {
-	recirculate(port);
+//action recirculate_pkt(port) {
+//	recirculate(port);
+//}
+
+// NOTE: as our Tofino does not support cross-ingress-pipeline recirculation, we use hardware link to simluate it
+action recirculate_pkt() {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, meta.recirport);
+	bypass_egress();
 }
 
 @pragma stage 1

@@ -347,15 +347,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             
             # Table: need_recirculate_tbl (default: reset_need_recirculate; size: <=8)
-            #print "Configuring need_recirculate_tbl"
-            #for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
-            #    for iport in self.devPorts:
-            #        matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
-            #                op_hdr_optype = tmpoptype,
-            #                ig_intr_md_ingress_port = iport)
-            #        if (tmpoptype == GETREQ) or (iport in pipeidx_ports_map[ingress_pipeidx]):
-            #            self.client.need_recirculate_tbl_table_add_with_reset_need_recirculate(\
-            #                    self.sess_hdl, self.dev_tgt, matchspec0)
+            # NOTE: we set it in tofino/ptf_snapshotserver/table_configure.py
 
             # Table: set_hot_threshold_tbl (default: set_hot_threshold; size: 1)
             print "Configuring set_hot_threshold_tbl"
@@ -372,9 +364,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
                 # recirculate to the pipeline of the first physical client for atomicity of setting snapshot flag
-                actnspec0 = netbufferv4_recirculate_pkt_action_spec_t(self.recirPorts[client_pipeidxes[0]])
+                #actnspec0 = netbufferv4_recirculate_pkt_action_spec_t(self.recirPorts[client_pipeidxes[0]])
                 self.client.recirculate_tbl_table_add_with_recirculate_pkt(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 1
 

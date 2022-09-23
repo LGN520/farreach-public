@@ -72,12 +72,17 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         single_ingress_pipeidx = client_pipeidxes[0]
 
         self.unmatched_devports = []
+        self.recirports_for_unmatched_devports = []
         for client_physical_idx in range(client_physical_num):
             if client_pipeidxes[client_physical_idx] != single_ingress_pipeidx:
                 # get devport fro front panel port
                 port, chnl = client_fpports[client_physical_idx].split("/")
                 tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
                 self.unmatched_devports.append(tmp_devport)
+                if pipeline_recirports[client_pipeidxes[client_physical_idx]] is None:
+                    print "[ERROR] pipeline_recirports[{}] is None!".format(client_pipeidxes[client_physical_idx])
+                    exit(-1)
+                self.recirports_for_unmatched_devports.append(pipeline_recirports[client_pipeidxes[client_physical_idx]])
         # GETRES_LATEST/DELETED_SEQ may also incur CASE1s (need to read snapshot flag)
         for server_physical_idx in range(server_physical_num):
             if server_pipeidxes[server_physical_idx] != single_ingress_pipeidx:
@@ -85,13 +90,18 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 port, chnl = server_fpports[server_physical_idx].split("/")
                 tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
                 self.unmatched_devports.append(tmp_devport)
+                if pipeline_recirports[server_pipeidxes[server_physical_idx]] is None:
+                    print "[ERROR] pipeline_recirports[{}] is None!".format(client_pipeidxes[client_physical_idx])
+                    exit(-1)
+                self.recirports_for_unmatched_devports.append(pipeline_recirports[server_pipeidxes[server_physical_idx]])
 
     def cleanup(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
         # get entry count
         entrynum = self.client.need_recirculate_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
         if entrynum > 0:
-            for iport in self.unmatched_devports:
+            for i in len(self.unmatched_devports):
+                iport = self.unmatched_devports[i]
                 for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
                     matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
@@ -112,13 +122,16 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def enable_singlepath(self):
         print "Set need_recirculate=1 for iports in different ingress pipelines"
-        for iport in self.unmatched_devports:
+        for i in len(self.unmatched_devports):
+            iport = self.unmatched_devports[i]
+            recirport = self.recirports_for_unmatched_devports[i]
             for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
                 matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = iport)
+                actnspec0 = netbufferv4_set_need_recirculate_action_spec_t(recirport)
                 self.client.need_recirculate_tbl_table_add_with_set_need_recirculate(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
     def set_snapshot_flag(self):
         print "Set snapshot_flag=1 for all ingress pipelines"
@@ -133,7 +146,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def disable_singlepath(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
-        for iport in self.unmatched_devports:
+        for i in len(self.unmatched_devports):
+            iport = self.unmatched_devports[i]
             for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
                 matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,

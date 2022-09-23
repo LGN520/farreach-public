@@ -42,6 +42,14 @@ for i in range(client_physical_num):
     client_macs.append(str(config.get("client{}".format(i), "client_mac")))
     client_fpports.append(str(config.get("client{}".format(i), "client_fpport")))
     client_pipeidxes.append(int(config.get("client{}".format(i), "client_pipeidx")))
+pipeline_recirports = [None, None] # NOTE: our Tofino has at most two pipelines
+for i in range(client_physical_num):
+    if client_pipeidxes[i] != client_pipeidxes[0]:
+        if client_pipeidxes[i] > 1:
+            print "Please assign more elements for pipeline_recirports in tofino/common.py!"
+            exit(-1)
+        if pipeline_recirports[client_pipeidxes[i]] is None:
+            pipeline_recirports[client_pipeidxes[i]] = str(config.get("client{}".format(i), "client_recirport"))
 server_ips = []
 server_macs = []
 server_fpports = []
