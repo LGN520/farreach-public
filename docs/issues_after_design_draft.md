@@ -177,6 +177,36 @@
 
 ### hardware/software-link-based recirculation for single pipeline mode
 
+- Single pipeline mode for atomic snapshot flag setting
+	+ Update configuration under farreach and distfarreach -> SYNC to ALL (files: config.ini, configs/\*)
+	+ Solution: hardware link
+		* Alternative solution: software link simulated by another client corresponding to the specific pipeline
+		* [IMPORTANT NOTE] farreach/distfarreach match srcip to set inswitchdr.clientsid for PUT/DELREQ and match key to set eport for GETRES_LATEST/DELETED_SEQ, which does NOT rely on ingress port
+			- NOTE: even if we use software link, as long as the srcip/srcport is the correct one of the client (set by raw socket), the clientsid will be set correctly by the ingress pipeline -> the ip/mac/dstport of the cloned response will be correctly set by the egress pipeline based on the eport
+	+ Implement single pipeline mode in FarReach by hardware link
+		* Add configuration for recirport of 2nd pipeline (files: config.ini, configs/*, remotescript/test_server_rotation.sh, tofino.common.py)
+		* For all requests and special responses in 2nd pipeline, forward to the 1st pipeline and bypass egress (files: tofino/p4src/ingress_mat.p4, tofino/p4src/header.p4, tofino/ptf_snapshotserver/table_configure.py, tofino/configure/table_configure.py)
+			- NOTE: we MUST bypass egress explicitly to avoid converting GETRES_LATEST/DELETED_SEQ as GETRES, and removing valheader of PUTREQ, GETRES_LATEST/DELETED_SEQ/_SERVER
+			+ TODOTODO: If bypass egress NOT work, we should convert GETRES_LATEST/DELETED_SEQ as GETRES_LATEST/DELETED_SEQ_RECIR
+				* NOTE: farreach.egress will NOT convert PUT/DELREQ and PUTREQ_LARGEVALUE, BUT convert GETRES_LATEST/DELETED_SEQ as GETRES
+				* NOTE: spine.egress will NOT convert PUT/DELREQ, PUTREQ_LARGEVALUE, PUT/DELREQ_SEQ, PUTREQ_LARGEVALUE_SEQ, and GETRES_LATEST/DELETED_SEQ_SERVER, BUT convert GETRES_LATEST/DELETED_SEQ as GETRES
+			+ TODOTODO: If bypass egress NOT work, we should add valheader for PUTREQ and GETRES_LATEST/DELETED_SEQ_RECIR
+				* NOTE: update_pktlen_tbl will remove all valheader by default
+	+ Compile and debug FarReach
+		* Dynamic workload without snapshot
+		* snapshot = true
+			* Cache hit of GET/PUT/DELREQ and PUTREQ_LARGEVALUE under single pipeline mode
+			* Cache hit of GET/PUT/DELREQ and PUTREQ_LARGEVALUE with being evicted under single pipeline mode
+			* Cache miss of GET/PUT/DELREQ under single pipeline mode
+			* GETRES_LATEST/_DELETED_SEQ under single pipeline mode
+		* snapshot = false
+			* Cache hit of GET/PUT/DELREQ and PUTREQ_LARGEVALUE under single pipeline mode
+			* Cache hit of GET/PUT/DELREQ and PUTREQ_LARGEVALUE with being evicted under single pipeline mode
+			* Cache miss of GET/PUT/DELREQ under single pipeline mode
+			* GETRES_LATEST/_DELETED_SEQ under single pipeline mode
+		* Dynamic workload with snapshot
+	+ Add comment for single pipeline mode under distfarreach
+
 ## About open issues
 
 - Adaptiveness
