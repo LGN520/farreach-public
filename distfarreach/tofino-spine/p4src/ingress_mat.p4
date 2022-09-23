@@ -105,6 +105,8 @@ table set_hot_threshold_tbl {
 // Stage 1 (need_recirculate = 1)
 
 action recirculate_pkt(port) {
+	// NOTE: due to lack of devices (only one physical leaf switch), we use recirculate here to simulate recirculation overhead
+	// If you have multiple leaf switches in different pipelines, you can use recirculate or hardware link to perform cross-ingress-pipeline switching
 	recirculate(port);
 }
 

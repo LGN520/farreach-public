@@ -1000,9 +1000,9 @@ void *run_client_worker(void *param) {
 				break;
 			}
 		}
-		//tmptype = preload_types[preload_idx];
+		tmptype = preload_types[preload_idx];
 		//tmptype = optype_t(packet_type_t::GETREQ); // read-only
-		tmptype = (rand()%2==0)?optype_t(packet_type_t::GETREQ):optype_t(packet_type_t::PUTREQ); // 50% write
+		//tmptype = (rand()%2==0)?optype_t(packet_type_t::GETREQ):optype_t(packet_type_t::PUTREQ); // 50% write
 		tmpkey = preload_keys[preload_idx];
 		//tmpval = preload_vals[preload_idx];
 		preload_idx += 1;
