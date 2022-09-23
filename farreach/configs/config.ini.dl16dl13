@@ -54,8 +54,8 @@ client_logical_num=512
 ; dl15 -> bf1 (dpdk interface)
 client_ip=10.0.1.15
 client_mac=3c:fd:fe:b5:28:59
-client_fpport=15/0
-client_pipeidx=0
+client_fpport=1/0
+client_pipeidx=1
 client_ip_for_client0=172.16.112.15
 
 ; common configuration of all physical servers
