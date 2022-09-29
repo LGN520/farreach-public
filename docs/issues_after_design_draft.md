@@ -219,7 +219,9 @@
 			- LOADDATA_INSWITCH reads serverstatus for victim report and snapshot
 				+ NOTE: only if serverstatus=0, controller sends the victim report
 					* If no PUT/DELREQ of the victim arrives at the server, server updates server-side record with the victim report
+					* NOTE: not need deleted set now
 				+ NOTE: controller only sends the snapshot records with serverstatus=0 to server
+					* NOTE: for special case1 and case2 of the same key, we must order them based on time instead of sequence
 					* For range query, in-switch snapshot results directly overwrite server-side snapshot results for the same keys
 			- GETREQ reads serverstatus if cached=1 and valid=3
 		* Only if cached=1, valid=3 (aka being evicted), latest=0 (aka out-of-date), and serverstatus=0 (aka stale), GETREQ trigggers read blocking
