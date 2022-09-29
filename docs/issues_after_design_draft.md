@@ -207,6 +207,29 @@
 		* Dynamic workload with snapshot
 	+ Add comment for single pipeline mode under distfarreach
 
+## Implementation tricks under Tofino limitation
+
+- TODOTODO: Remove seq/savedseq for farreach/distfarreach/netcache/distcache
+- TODOTODO: Introduce serverstatus for read blocking
+	+ From design, the in-switch cache can judge whether the server-side record is latest or stale
+		* CACHEPOP_INSWITCH sets serverstatus=1 (aka latest) after cache admission
+		* PUT/DELREQ sets serverstatus=0 (aka stale) after write requests if cached=1 and valid=1
+		* LOADDATA_INSWITCH reads serverstatus for victim report
+			- NOTE: only if serverstatus=0, controller sends the victim report
+			- If no PUT/DELREQ of the victim arrives at the server, server updates server-side record with the victim report
+		* GETREQ reads serverstatus if cached=1 and valid=3
+		* Only if cached=1, valid=3 (aka being evicted), latest=0 (aka out-of-date), and serverstatus=0 (aka stale), GETREQ trigggers read blocking
+	+ However, due to Tofino limitation, we do not have sufficient hardware resources to support serverstatus
+		* TRICK
+			- Only if valid=3 (aka being evicted) and latest=0 (aka out-of-date), GETREQ trigggers read blocking
+			- Use in-switch seq mechanism to determine whether we should replace the server-side record with the victim report
+		* -> still limited read blocking!
+			- The in-switch record is more likely latest=1 due to lightweight cache update
+				+ So only if the PUTREQ sets latest=0 yet with a packet loss, then the GETREQ will be blocked
+			- If the in-switch record is latest=0 -> the key must be a cold key
+				+ Very limited # of GETREQs during cache eviction
+			- Limited time of read blocking: stop after a write request or a victim report
+
 ## About open issues
 
 - Adaptiveness

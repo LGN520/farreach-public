@@ -307,6 +307,12 @@ control egress {
 	apply(access_latest_tbl);
 	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
 
+	// NOTE: we do NOT need seq and savedseq now if using serverstatus
+	// CACHEPOP_INSWITCH always sets it as 1, while PUT/DELREQ set it as 0 if cached=1 and valid=1
+	// LOADDATA_INSWITCH always read it, while GETREQ reads it if cached=1 and valid=3
+	// Only if cached=1, valid=3, and serverstatus=0, GETREQ will try to trigger read blocking
+	// TODO: apply(serverstatus_tbl);
+
 	// Stage 3
 	apply(access_deleted_tbl);
 	apply(update_vallen_tbl);

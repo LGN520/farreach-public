@@ -10,23 +10,25 @@
 - 9.22
 	+ Implement socket helper based on JNI
 		* Remove redundancy of RemoteDB; use short for UDP port; 
-		* TODO: Use custom pair for SCANRES_SPLIT
 		* Move Key/Value from farreach into core module
-		* TODO: Try JNI-based socket in InswitchCacheClient -> test and evaluation overhead of JNI-based socket
 		* Calculate cache hit rate of keydump file
-		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN of FarreachClient
 
 - 9.23
 	+ Implement DyanmicRulemap for dynamic workload
 
 - 9.24
 	+ Re-organize YCSB client code
+
+- 9.27
+	+ TODO: Decouple inswitch-cache-related lib as an individual module in YCSB
 	+ TODO: Debug keydump module to get keydump results
 		* TODO: Use core.Key/Value in farreach and keydump
-		* TODO: Use JNI-based socket for farreach
+		* TODO: Use JNI-based socket for farreach -> test and evaluate overhead
 		* TODO: Implement rulmapclient in TerminatorThread to notify rulemap switching during each period
 		* TODO: Send back SendPktRcvAck from sendpktserver to sendpktclient
 		* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
+		* TODO: Use custom pair for SCANRES_SPLIT
+		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN of FarreachClient
 
 - TODO
 	+ TODO: Re-generate hot-in, random, and hot-out dynamic patterns
