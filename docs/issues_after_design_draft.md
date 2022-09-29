@@ -217,21 +217,35 @@
 			- PUT/DELREQ sets serverstatus=0 (aka stale) after write requests if cached=1 and valid=1
 		* Read serverstatus
 			- LOADDATA_INSWITCH reads serverstatus for victim report and snapshot
-				+ NOTE: only if serverstatus=0, controller sends the victim report
-					* If no PUT/DELREQ of the victim arrives at the server, server updates server-side record with the victim report
-					* NOTE: not need deleted set now
-				+ NOTE: controller only sends the snapshot records with serverstatus=0 to server
-					* NOTE: for special case1 and case2 of the same key, we must order them based on time instead of sequence
-					* For range query, in-switch snapshot results directly overwrite server-side snapshot results for the same keys
 			- GETREQ reads serverstatus if cached=1 and valid=3
-		* Only if cached=1, valid=3 (aka being evicted), latest=0 (aka out-of-date), and serverstatus=0 (aka stale), GETREQ trigggers read blocking
+		* Cache eviction
+			- Read blocking
+				+ Only if cached=1, valid=3 (aka being evicted), latest=0 (aka out-of-date), and serverstatus=0 (aka stale), GETREQ trigggers read blocking
+			- Victim report
+				+ Only if serverstatus=0, controller sends the victim report
+					* If no PUT/DELREQ of the victim arrives at the server, server updates server-side record with the victim report
+				+ NOTE: not need deleted set now
+		* Snapshot
+			- Snapshot data
+				+ NOTE: controller only sends the snapshot records with serverstatus=0 to server
+				+ NOTE: for special case1 and case2 of the same key (NOT need seq)
+					* We can store them individually
+					* If the key is cached at the crash point, rollback case1 of the cached key if any, ignore case2
+					* If the key is not cached at the crash point (must w/ case2 of the cached key)
+						- If no case1 of the cached key (e.g., case1 of the uncached key), rollback case2 of the cached key
+						- Otherwise, rollback case1 of the cached key
+			- Range query
+				+ For range query, in-switch snapshot results directly overwrite server-side snapshot results for the same keys
 	+ However, due to Tofino limitation, we do not have sufficient hardware resources to support serverstatus
 		* TRICK
-			- Only if valid=3 (aka being evicted) and latest=0 (aka out-of-date), GETREQ trigggers read blocking
-			- Controller always sends victim report
-				+ Compare seq to determine whether we should replace the server-side record with the victim report
-			- Controller sends all snapshot records to server
-				+ Compare seq to determine whether we should use in-switch snapshot results or server-side snapshot results for the same keys under range query
+			- Cache eviction
+				+ Read blocking: only if valid=3 (aka being evicted) and latest=0 (aka out-of-date), GETREQ trigggers read blocking
+				+ Victim repot: controller always sends victim report
+					+ Compare seq to determine whether we should replace the server-side record with the victim report
+			- Snapshot
+				+ Snapshot data: controller sends all snapshot records to server
+					+ Compare seq to determine whether we should rollback case1 and case2
+				+ Ragne query: compare seq to determine whether we should use in-switch snapshot results or server-side snapshot results for the same keys under range query
 		* -> still limited read blocking!
 			- The in-switch record is more likely latest=1 due to lightweight cache update
 				+ So only if the PUTREQ sets latest=0 yet with a packet loss, then the GETREQ will be blocked
