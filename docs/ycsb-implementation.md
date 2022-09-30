@@ -20,9 +20,9 @@
 	+ Re-organize YCSB client code
 
 - 9.27
-	+ TODO: Decouple inswitch-cache-related lib as an individual module in YCSB
+	+ Decouple inswitch-cache-related lib as an individual module in YCSB
 	+ TODO: Debug keydump module to get keydump results
-		* TODO: Use core.Key/Value in farreach and keydump
+		* TODO: Use inswitchcachecore.Key/Value in farreach and keydump
 		* TODO: Use JNI-based socket for farreach -> test and evaluate overhead
 		* TODO: Implement rulmapclient in TerminatorThread to notify rulemap switching during each period
 		* TODO: Send back SendPktRcvAck from sendpktserver to sendpktclient

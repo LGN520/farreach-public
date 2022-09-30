@@ -21,7 +21,7 @@
 
 ## Directory
 
-### Deprecated history
+### Deprecated history (see deprecated/)
 
 - xindex
 	+ Original xindex (single node mode)
@@ -64,6 +64,15 @@
 	+ Deprecated: Xindex with tofino-based netbuffer (DPDK) + LSM-based KVS (rocksdb) + variable length value w/ snapshot + YCSB + control-plane-based cache update (copy from netreach-v4-xindex)
 		* NOTE: netreach-v4-lsm should have the same in-switch implementation as in netreach-v4-xindex, which only changes server-side implementation
 
+### Failed trials (see failedtrials)
+
+- [distfarreachlimit](./distfarreachlimit.md)
+	+ Simulate multiple switches with counter-based rate limit
+- resubmit-trial
+	+ Try resubmit for recirculation
+- trace-replay
+	+ Analysis of twitter trace
+
 ### Latest implementation
 
 - [netreach-v4-lsm](./netreach-v4-lsm.md) (latest farreach code) -> rename as farreach
@@ -78,6 +87,12 @@
 - Other implementation logs
 	+ [run.md](./run.md) (guideline for running commands)
 	+ [largekv.md](./largekv.md) (support >128B variable-length value and variable-length key)
+	+ [issues_after_design_draft.md](./issues_after_design_drafg.md) (read blocking + single pipeline mode + serverstatus w/o sequence)
+
+### Future trials (see futuretrials)
+
+- varkey-files
+	+ Files partially modified for variable-length keys
 
 ## Global Configuration
 
