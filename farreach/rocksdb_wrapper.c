@@ -591,7 +591,7 @@ void RocksdbWrapper::init_snapshot() {
 		INVARIANT(snapshotdb_ptr == NULL); // checkpointdb must be null after loading phase
 
 		// snapshot of deleted set must be empty after loading phase
-		INVARIANT(deleted_set.size() == 0);
+		//INVARIANT(deleted_set.size() == 0);
 		INVARIANT(snapshot_deleted_set.size() == 0);
 
 		// in-switch snapshot must be empty after loading phase
