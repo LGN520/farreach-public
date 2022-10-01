@@ -1,0 +1,983 @@
+workload_name: synthetic
+workload_mode: 1
+dynamic_periodnum: 7
+dynamic_periodinterval: 10
+dynamic_ruleprefix: dynamicrules/synthetic-hotin.out
+val_t::MAX_VALLEN: 128
+ParserIterator::load_batch_size: 10000
+client_physical_num: 2
+server_physical_num: 2
+client_total_logical_num: 1024
+server_total_logical_num: 8
+server_total_logical_num_for_rotation: 128
+max_server_total_logical_num: 8
+
+client_rotationdataserver_port: 1025
+client_sendpktserver_port_start: 1026
+client_rulemapserver_port_start: 1036
+client_worker_port_start: 8888
+
+client_logical_nums[0]: 512
+client_ips[0]: 10.0.1.11
+client_macs[0]: 3c:fd:fe:bb:ca:79
+client_fpports[0]: 11/0
+client_pipeidxes[0]: 0
+client_logical_nums[1]: 512
+client_ips[1]: 10.0.1.15
+client_macs[1]: 3c:fd:fe:b5:28:59
+client_fpports[1]: 1/0
+client_pipeidxes[1]: 1
+
+server_load_factor: 5
+server_worker_port_start: 1152
+server_evictserver_port_start: 2222
+server_popserver_port_start: 3333
+server_valueupdateserver_port_start: 4224
+transaction_loadfinishserver_port: 8000
+
+server_worker_corenums[0]: 16
+server_total_corenums[0]: 24
+server_logical_idxes_list[0]: 0 1 2 3 
+server_ips[0]: 10.0.1.16
+server_macs[0]: 3c:fd:fe:b5:1f:e1
+server_fpports[0]: 16/0
+server_pipeidxes[0]: 0
+server_ip_for_controller_list[0]: 172.16.112.16
+server_worker_corenums[1]: 16
+server_total_corenums[1]: 48
+server_logical_idxes_list[1]: 4 5 6 7 
+server_ips[1]: 10.0.1.13
+server_macs[1]: 3c:fd:fe:bb:c9:c8
+server_fpports[1]: 13/0
+server_pipeidxes[1]: 0
+server_ip_for_controller_list[1]: 172.16.112.13
+
+controller ip for server: 172.16.112.16
+controller ip for switchos: 172.16.112.16
+controller_popserver_port_start: 5555
+controller_evictserver_port: 5002
+controller_snapshot_period: 10000
+controller_warmupfinishserver_port: 5010
+
+switch_partition_count: 32768
+switch_kv_bucket_num: 10000
+switch_pipeline_num: 2
+val_t::SWITCH_MAX_VALLEN: 128
+switchos_popserver_port: 5003
+switchos ip: 172.16.112.17
+switchos_sample_cnt: 10
+switchos_snapshotserver_port: 5004
+switchos_specialcaseserver_port: 5005
+switchos_ptf_popserver_port: 5006
+switchos_ptf_snapshotserver_port: 5007
+
+reflector ip for switchos: 172.16.112.16
+reflector_dp2cpserver_port: 5008
+reflector_cp2dpserver_port: 5009
+
+raw_load_workload_filename for loading phase: synthetic-load.out
+server_load_workload_dir for loading phase: synthetic-load-8
+raw_warmup_workload_filename for warmup phase: synthetic-warmup.out
+raw_run_workload_filename for transaction phase: synthetic-run.out
+client_workload_dir for transaction phase: synthetic-run-1024
+perserver_keyrange: 8192
+
+[client.sendpktserver] ready
+[client] prepare clients ...
+[client.rulemapserver] ready
+[client 1] Ready.
+[client 0] Ready.
+[client 7] Ready.
+[client 4] Ready.
+[client 8] Ready.
+[client 3] Ready.
+[client 9] Ready.
+[client 2] Ready.
+[client 6] Ready.
+[client 5] Ready.
+[client 13] Ready.
+[client 10] Ready.
+[client 11] Ready.
+[client 12] Ready.
+[client 17] Ready.
+[client 14] Ready.
+[client 15] Ready.
+[client 16] Ready.
+[client 19] Ready.
+[client 18] Ready.
+[client 22] Ready.
+[client 24] Ready.
+[client 26] Ready.
+[client 28] Ready.
+[client 27] Ready.
+[client 25] Ready.
+[client 33] Ready.
+[client 30] Ready.
+[client 23] Ready.
+[client 31] Ready.
+[client 35] Ready.
+[client 32] Ready.
+[client 29] Ready.
+[client 38] Ready.
+[client 34] Ready.
+[client 36] Ready.
+[client 40] Ready.
+[client 37] Ready.
+[client 39] Ready.
+[client 45] Ready.
+[client 46] Ready.
+[client 52] Ready.
+[client 47] Ready.
+[client 43] Ready.
+[client 48] Ready.
+[client 49] Ready.
+[client 51] Ready.
+[client 56] Ready.
+[client 50] Ready.
+[client 53] Ready.
+[client 57] Ready.
+[client 55] Ready.
+[client 58] Ready.
+[client 81] Ready.
+[client 85] Ready.
+[client 72] Ready.
+[client 86] Ready.
+[client 89] Ready.
+[client 84] Ready.
+[client 87] Ready.
+[client 83] Ready.
+[client 93] Ready.
+[client 88] Ready.
+[client 96] Ready.
+[client 92] Ready.
+[client 91] Ready.
+[client 74] Ready.
+[client 95] Ready.
+[client 75] Ready.
+[client 90] Ready.
+[client 77] Ready.
+[client 99] Ready.
+[client 97] Ready.
+[client 103] Ready.
+[client 100] Ready.
+[client 98] Ready.
+[client 105] Ready.
+[client 94] Ready.
+[client 102] Ready.
+[client 101] Ready.
+[client 117] Ready.
+[client 115] Ready.
+[client 118] Ready.
+[client 120] Ready.
+[client 119] Ready.
+[client 121] Ready.
+[client 126] Ready.
+[client 123] Ready.
+[client 127] Ready.
+[client 124] Ready.
+[client 122] Ready.
+[client 125] Ready.
+[client 128] Ready.
+[client 130] Ready.
+[client 511] Ready.
+[client 142] Ready.
+[client 138] Ready.
+[client 143] Ready.
+[client 145] Ready.
+[client 144] Ready.
+[client 147] Ready.
+[client 148] Ready.
+[client 146] Ready.
+[client 151] Ready.
+[client 178] Ready.
+[client 149] Ready.
+[client 177] Ready.
+[client 182] Ready.
+[client 187] Ready.
+[client 179] Ready.
+[client 184] Ready.
+[client 181] Ready.
+[client 183] Ready.
+[client 188] Ready.
+[client 185] Ready.
+[client 163] Ready.
+[client 186] Ready.
+[client 196] Ready.
+[client 169] Ready.
+[client 165] Ready.
+[client 168] Ready.
+[client 189] Ready.
+[client 162] Ready.
+[client 195] Ready.
+[client 199] Ready.
+[client 167] Ready.
+[client 171] Ready.
+[client 166] Ready.
+[client 193] Ready.
+[client 170] Ready.
+[client 202] Ready.
+[client 173] Ready.
+[client 204] Ready.
+[client 180] Ready.
+[client 174] Ready.
+[client 198] Ready.
+[client 172] Ready.
+[client 201] Ready.
+[client 206] Ready.
+[client 197] Ready.
+[client 176] Ready.
+[client 210] Ready.
+[client 203] Ready.
+[client 200] Ready.
+[client 205] Ready.
+[client 209] Ready.
+[client 216] Ready.
+[client 207] Ready.
+[client 208] Ready.
+[client 214] Ready.
+[client 215] Ready.
+[client 211] Ready.
+[client 212] Ready.
+[client 213] Ready.
+[client 217] Ready.
+[client 228] Ready.
+[client 229] Ready.
+[client 227] Ready.
+[client 230] Ready.
+[client 226] Ready.
+[client 232] Ready.
+[client 234] Ready.
+[client 235] Ready.
+[client 231] Ready.
+[client 233] Ready.
+[client 237] Ready.
+[client 241] Ready.
+[client 238] Ready.
+[client 236] Ready.
+[client 301] Ready.
+[client 243] Ready.
+[client 302] Ready.
+[client 240] Ready.
+[client 304] Ready.
+[client 239] Ready.
+[client 299] Ready.
+[client 300] Ready.
+[client 248] Ready.
+[client 305] Ready.
+[client 303] Ready.
+[client 306] Ready.
+[client 247] Ready.
+[client 246] Ready.
+[client 309] Ready.
+[client 252] Ready.
+[client 249] Ready.
+[client 307] Ready.
+[client 308] Ready.
+[client 254] Ready.
+[client 317] Ready.
+[client 253] Ready.
+[client 256] Ready.
+[client 251] Ready.
+[client 269] Ready.
+[client 318] Ready.
+[client 255] Ready.
+[client 321] Ready.
+[client 21] Ready.
+[client 319] Ready.
+[client 324] Ready.
+[client 320] Ready.
+[client 322] Ready.
+[client 267] Ready.
+[client 265] Ready.
+[client 266] Ready.
+[client 264] Ready.
+[client 268] Ready.
+[client 323] Ready.
+[client 325] Ready.
+[client 270] Ready.
+[client 327] Ready.
+[client 272] Ready.
+[client 271] Ready.
+[client 273] Ready.
+[client 276] Ready.
+[client 339] Ready.
+[client 326] Ready.
+[client 331] Ready.
+[client 277] Ready.
+[client 275] Ready.
+[client 356] Ready.
+[client 278] Ready.
+[client 279] Ready.
+[client 281] Ready.
+[client 283] Ready.
+[client 340] Ready.
+[client 341] Ready.
+[client 338] Ready.
+[client 351] Ready.
+[client 336] Ready.
+[client 285] Ready.
+[client 337] Ready.
+[client 41] Ready.
+[client 284] Ready.
+[client 282] Ready.
+[client 346] Ready.
+[client 342] Ready.
+[client 287] Ready.
+[client 44] Ready.
+[client 344] Ready.
+[client 348] Ready.
+[client 343] Ready.
+[client 345] Ready.
+[client 350] Ready.
+[client 349] Ready.
+[client 352] Ready.
+[client 347] Ready.
+[client 355] Ready.
+[client 298] Ready.
+[client 59] Ready.
+[client 357] Ready.
+[client 359] Ready.
+[client 360] Ready.
+[client 361] Ready.
+[client 354] Ready.
+[client 358] Ready.
+[client 353] Ready.
+[client 362] Ready.
+[client 42] Ready.
+[client 371] Ready.
+[client 370] Ready.
+[client 67] Ready.
+[client 372] Ready.
+[client 20] Ready.
+[client 108] Ready.
+[client 64] Ready.
+[client 61] Ready.
+[client 78] Ready.
+[client 82] Ready.
+[client 107] Ready.
+[client 73] Ready.
+[client 109] Ready.
+[client 104] Ready.
+[client 133] Ready.
+[client 69] Ready.
+[client 79] Ready.
+[client 62] Ready.
+[client 65] Ready.
+[client 76] Ready.
+[client 54] Ready.
+[client 66] Ready.
+[client 156] Ready.
+[client 113] Ready.
+[client 136] Ready.
+[client 157] Ready.
+[client 112] Ready.
+[client 106] Ready.
+[client 80] Ready.
+[client 129] Ready.
+[client 116] Ready.
+[client 68] Ready.
+[client 70] Ready.
+[client 132] Ready.
+[client 110] Ready.
+[client 63] Ready.
+[client 114] Ready.
+[client 135] Ready.
+[client 137] Ready.
+[client 139] Ready.
+[client 141] Ready.
+[client 60] Ready.
+[client 134] Ready.
+[client 154] Ready.
+[client 71] Ready.
+[client 158] Ready.
+[client 150] Ready.
+[client 111] Ready.
+[client 161] Ready.
+[client 131] Ready.
+[client 140] Ready.
+[client 164] Ready.
+[client 160] Ready.
+[client 159] Ready.
+[client 175] Ready.
+[client 222] Ready.
+[client 223] Ready.
+[client 224] Ready.
+[client 250] Ready.
+[client 225] Ready.
+[client 221] Ready.
+[client 262] Ready.
+[client 288] Ready.
+[client 257] Ready.
+[client 219] Ready.
+[client 261] Ready.
+[client 218] Ready.
+[client 274] Ready.
+[client 259] Ready.
+[client 258] Ready.
+[client 152] Ready.
+[client 263] Ready.
+[client 155] Ready.
+[client 153] Ready.
+[client 292] Ready.
+[client 190] Ready.
+[client 194] Ready.
+[client 192] Ready.
+[client 242] Ready.
+[client 244] Ready.
+[client 220] Ready.
+[client 286] Ready.
+[client 333] Ready.
+[client 191] Ready.
+[client 297] Ready.
+[client 295] Ready.
+[client 314] Ready.
+[client 313] Ready.
+[client 293] Ready.
+[client 330] Ready.
+[client 245] Ready.
+[client 328] Ready.
+[client 335] Ready.
+[client 311] Ready.
+[client 291] Ready.
+[client 289] Ready.
+[client 296] Ready.
+[client 316] Ready.
+[client 294] Ready.
+[client 367] Ready.
+[client 315] Ready.
+[client 312] Ready.
+[client 363] Ready.
+[client 280] Ready.
+[client 310] Ready.
+[client 290] Ready.
+[client 364] Ready.
+[client 365] Ready.
+[client 334] Ready.
+[client 366] Ready.
+[client 373] Ready.
+[client 329] Ready.
+[client 424] Ready.
+[client 465] Ready.
+[client 374] Ready.
+[client 417] Ready.
+[client 415] Ready.
+[client 377] Ready.
+[client 426] Ready.
+[client 429] Ready.
+[client 418] Ready.
+[client 428] Ready.
+[client 406] Ready.
+[client 416] Ready.
+[client 463] Ready.
+[client 405] Ready.
+[client 414] Ready.
+[client 464] Ready.
+[client 332] Ready.
+[client 423] Ready.
+[client 419] Ready.
+[client 260] Ready.
+[client 421] Ready.
+[client 379] Ready.
+[client 369] Ready.
+[client 462] Ready.
+[client 403] Ready.
+[client 402] Ready.
+[client 455] Ready.
+[client 427] Ready.
+[client 460] Ready.
+[client 459] Ready.
+[client 425] Ready.
+[client 381] Ready.
+[client 404] Ready.
+[client 451] Ready.
+[client 456] Ready.
+[client 410] Ready.
+[client 510] Ready.
+[client 457] Ready.
+[client 378] Ready.
+[client 458] Ready.
+[client 440] Ready.
+[client 422] Ready.
+[client 453] Ready.
+[client 376] Ready.
+[client 444] Ready.
+[client 400] Ready.
+[client 390] Ready.
+[client 443] Ready.
+[client 452] Ready.
+[client 430] Ready.
+[client 409] Ready.
+[client 407] Ready.
+[client 488] Ready.
+[client 441] Ready.
+[client 461] Ready.
+[client 396] Ready.
+[client 487] Ready.
+[client 442] Ready.
+[client 420] Ready.
+[client 486] Ready.
+[client 394] Ready.
+[client 483] Ready.
+[client 445] Ready.
+[client 401] Ready.
+[client 485] Ready.
+[client 489] Ready.
+[client 393] Ready.
+[client 411] Ready.
+[client 482] Ready.
+[client 413] Ready.
+[client 481] Ready.
+[client 439] Ready.
+[client 480] Ready.
+[client 484] Ready.
+[client 398] Ready.
+[client 446] Ready.
+[client 395] Ready.
+[client 397] Ready.
+[client 478] Ready.
+[client 412] Ready.
+[client 450] Ready.
+[client 479] Ready.
+[client 505] Ready.
+[client 499] Ready.
+[client 508] Ready.
+[client 509] Ready.
+[client 435] Ready.
+[client 502] Ready.
+[client 504] Ready.
+[client 447] Ready.
+[client 506] Ready.
+[client 501] Ready.
+[client 408] Ready.
+[client 500] Ready.
+[client 507] Ready.
+[client 449] Ready.
+[client 490] Ready.
+[client 503] Ready.
+[client 494] Ready.
+[client 476] Ready.
+[client 434] Ready.
+[client 436] Ready.
+[client 399] Ready.
+[client 437] Ready.
+[client 448] Ready.
+[client 475] Ready.
+[client 473] Ready.
+[client 438] Ready.
+[client 498] Ready.
+[client 493] Ready.
+[client 431] Ready.
+[client 432] Ready.
+[client 496] Ready.
+[client 433] Ready.
+[client 474] Ready.
+[client 470] Ready.
+[client 491] Ready.
+[client 391] Ready.
+[client 392] Ready.
+[client 467] Ready.
+[client 471] Ready.
+[client 454] Ready.
+[client 468] Ready.
+[client 469] Ready.
+[client 386] Ready.
+[client 495] Ready.
+[client 388] Ready.
+[client 492] Ready.
+[client 389] Ready.
+[client 384] Ready.
+[client 368] Ready.
+[client 387] Ready.
+[client 472] Ready.
+[client 375] Ready.
+[client 382] Ready.
+[client 383] Ready.
+[client 477] Ready.
+[client 497] Ready.
+[client 385] Ready.
+[client 380] Ready.
+[client 466] Ready.
+[client] all clients ready...
+wait to be able to send pkt if necessary
+start to send pkt
+switch dynamic rulemap from period 0 to 1
+switch dynamic rulemap from period 1 to 2
+switch dynamic rulemap from period 2 to 3
+switch dynamic rulemap from period 3 to 4
+switch dynamic rulemap from period 4 to 5
+switch dynamic rulemap from period 5 to 6
+[client] all clients finish!
+[client] processing statistics
+
+thpt interval: 1 s, seccnt: 70
+
+[sec 0]
+
+overall totalpktcnt: 220527, throughput (MOPS): 0.210311
+
+[sec 1]
+
+overall totalpktcnt: 212863, throughput (MOPS): 0.203002
+
+[sec 2]
+
+overall totalpktcnt: 209474, throughput (MOPS): 0.199770
+
+[sec 3]
+
+overall totalpktcnt: 207454, throughput (MOPS): 0.197844
+
+[sec 4]
+
+overall totalpktcnt: 202979, throughput (MOPS): 0.193576
+
+[sec 5]
+
+overall totalpktcnt: 209883, throughput (MOPS): 0.200160
+
+[sec 6]
+
+overall totalpktcnt: 217465, throughput (MOPS): 0.207391
+
+[sec 7]
+
+overall totalpktcnt: 213927, throughput (MOPS): 0.204017
+
+[sec 8]
+
+overall totalpktcnt: 213019, throughput (MOPS): 0.203151
+
+[sec 9]
+
+overall totalpktcnt: 207791, throughput (MOPS): 0.198165
+
+[sec 10]
+
+overall totalpktcnt: 227507, throughput (MOPS): 0.216968
+
+[sec 11]
+
+overall totalpktcnt: 238382, throughput (MOPS): 0.227339
+
+[sec 12]
+
+overall totalpktcnt: 236352, throughput (MOPS): 0.225403
+
+[sec 13]
+
+overall totalpktcnt: 233259, throughput (MOPS): 0.222453
+
+[sec 14]
+
+overall totalpktcnt: 230572, throughput (MOPS): 0.219891
+
+[sec 15]
+
+overall totalpktcnt: 229903, throughput (MOPS): 0.219253
+
+[sec 16]
+
+overall totalpktcnt: 237688, throughput (MOPS): 0.226677
+
+[sec 17]
+
+overall totalpktcnt: 235430, throughput (MOPS): 0.224524
+
+[sec 18]
+
+overall totalpktcnt: 233438, throughput (MOPS): 0.222624
+
+[sec 19]
+
+overall totalpktcnt: 230614, throughput (MOPS): 0.219931
+
+[sec 20]
+
+overall totalpktcnt: 218315, throughput (MOPS): 0.208201
+
+[sec 21]
+
+overall totalpktcnt: 213044, throughput (MOPS): 0.203175
+
+[sec 22]
+
+overall totalpktcnt: 211025, throughput (MOPS): 0.201249
+
+[sec 23]
+
+overall totalpktcnt: 211071, throughput (MOPS): 0.201293
+
+[sec 24]
+
+overall totalpktcnt: 208683, throughput (MOPS): 0.199016
+
+[sec 25]
+
+overall totalpktcnt: 208230, throughput (MOPS): 0.198584
+
+[sec 26]
+
+overall totalpktcnt: 220963, throughput (MOPS): 0.210727
+
+[sec 27]
+
+overall totalpktcnt: 213424, throughput (MOPS): 0.203537
+
+[sec 28]
+
+overall totalpktcnt: 212707, throughput (MOPS): 0.202853
+
+[sec 29]
+
+overall totalpktcnt: 213131, throughput (MOPS): 0.203258
+
+[sec 30]
+
+overall totalpktcnt: 233334, throughput (MOPS): 0.222525
+
+[sec 31]
+
+overall totalpktcnt: 223624, throughput (MOPS): 0.213264
+
+[sec 32]
+
+overall totalpktcnt: 222870, throughput (MOPS): 0.212545
+
+[sec 33]
+
+overall totalpktcnt: 220733, throughput (MOPS): 0.210507
+
+[sec 34]
+
+overall totalpktcnt: 229733, throughput (MOPS): 0.219090
+
+[sec 35]
+
+overall totalpktcnt: 241424, throughput (MOPS): 0.230240
+
+[sec 36]
+
+overall totalpktcnt: 236562, throughput (MOPS): 0.225603
+
+[sec 37]
+
+overall totalpktcnt: 233887, throughput (MOPS): 0.223052
+
+[sec 38]
+
+overall totalpktcnt: 233575, throughput (MOPS): 0.222754
+
+[sec 39]
+
+overall totalpktcnt: 235674, throughput (MOPS): 0.224756
+
+[sec 40]
+
+overall totalpktcnt: 222740, throughput (MOPS): 0.212421
+
+[sec 41]
+
+overall totalpktcnt: 217506, throughput (MOPS): 0.207430
+
+[sec 42]
+
+overall totalpktcnt: 233960, throughput (MOPS): 0.223122
+
+[sec 43]
+
+overall totalpktcnt: 232909, throughput (MOPS): 0.222119
+
+[sec 44]
+
+overall totalpktcnt: 231677, throughput (MOPS): 0.220944
+
+[sec 45]
+
+overall totalpktcnt: 228984, throughput (MOPS): 0.218376
+
+[sec 46]
+
+overall totalpktcnt: 226823, throughput (MOPS): 0.216315
+
+[sec 47]
+
+overall totalpktcnt: 234223, throughput (MOPS): 0.223372
+
+[sec 48]
+
+overall totalpktcnt: 234421, throughput (MOPS): 0.223561
+
+[sec 49]
+
+overall totalpktcnt: 229324, throughput (MOPS): 0.218700
+
+[sec 50]
+
+overall totalpktcnt: 209259, throughput (MOPS): 0.199565
+
+[sec 51]
+
+overall totalpktcnt: 210848, throughput (MOPS): 0.201080
+
+[sec 52]
+
+overall totalpktcnt: 210733, throughput (MOPS): 0.200971
+
+[sec 53]
+
+overall totalpktcnt: 207752, throughput (MOPS): 0.198128
+
+[sec 54]
+
+overall totalpktcnt: 207388, throughput (MOPS): 0.197781
+
+[sec 55]
+
+overall totalpktcnt: 201752, throughput (MOPS): 0.192406
+
+[sec 56]
+
+overall totalpktcnt: 201949, throughput (MOPS): 0.192594
+
+[sec 57]
+
+overall totalpktcnt: 215262, throughput (MOPS): 0.205290
+
+[sec 58]
+
+overall totalpktcnt: 215656, throughput (MOPS): 0.205666
+
+[sec 59]
+
+overall totalpktcnt: 205914, throughput (MOPS): 0.196375
+
+[sec 60]
+
+overall totalpktcnt: 222084, throughput (MOPS): 0.211796
+
+[sec 61]
+
+overall totalpktcnt: 222906, throughput (MOPS): 0.212580
+
+[sec 62]
+
+overall totalpktcnt: 220810, throughput (MOPS): 0.210581
+
+[sec 63]
+
+overall totalpktcnt: 218394, throughput (MOPS): 0.208277
+
+[sec 64]
+
+overall totalpktcnt: 219864, throughput (MOPS): 0.209679
+
+[sec 65]
+
+overall totalpktcnt: 219437, throughput (MOPS): 0.209271
+
+[sec 66]
+
+overall totalpktcnt: 210486, throughput (MOPS): 0.200735
+
+[sec 67]
+
+overall totalpktcnt: 220901, throughput (MOPS): 0.210668
+
+[sec 68]
+
+overall totalpktcnt: 225324, throughput (MOPS): 0.214886
+
+[sec 69]
+
+overall totalpktcnt: 226188, throughput (MOPS): 0.215710
+
+[Latency Statistics of total_latency_list ]
+| min | max | avg | 90th | 99th | largest | median | sum |
+| 31.794 | 61306.9 | 2319.28 | 13461.6 | 15377.5 | 61306.9 | 109.225 | 3.58935e+10 |
+[Latency Statistics of perclient_avgsend_latency_list ]
+| min | max | avg | 90th | 99th | largest | median | sum |
+| 5.0017 | 5.2537 | 5.12282 | 5.19661 | 5.22745 | 5.2537 | 5.12431 | 2622.88 |
+[Latency Statistics of perclient_avgwait_latency_list ]
+| min | max | avg | 90th | 99th | largest | median | sum |
+| 0.868349 | 1.09077 | 0.935429 | 0.988316 | 1.04973 | 1.09077 | 0.926795 | 478.94 |
+total_unmatched_cnt: 0
+total_timeout_cnt: 0
+client-side total pktcnt: 15476110, total time: 70.116478 s, total thpt: 0.210495 MOPS
+cache hit pktcnt: 0
+per-server pktcnt: 1874628 2059066 1897542 1896767 1819161 1792483 2020421 2116042
+
+per-sec total throughput:
+220434 212864 209481 207438 202980 209875 217440 213931 213046 207786 227518 238359 236374 233272 230541 229918 237677 235427 233433 230620 218310 213040 211069 211041 208694 208217 221006 213397 212716 213136 233283 223646 222908 220680 229767 241442 236515 233871 233629 235637 222753 217544 233913 232887 231712 228987 226850 234181 234451 229296 209288 210837 210778 207744 207358 201748 201943 215253 215684 205885 222090 222919 220775 218421 219846 219463 210451 220927 225331 226048
+
+per-sec per-server throughput:
+26856 27686 29794 26198 24050 25492 25915 34443
+25992 26515 28604 25152 23514 24695 25000 33392
+25471 26295 27950 24783 23286 24369 24229 33098
+25142 25625 27480 24676 22859 24236 24382 33038
+24454 25380 27044 23934 22431 23427 24078 32232
+25102 26221 28105 24824 23111 24491 24753 33268
+26214 27333 29022 26147 24053 25127 25482 34062
+25941 26691 28675 25542 23545 24715 24977 33845
+25776 26790 28615 25104 23456 24697 25023 33585
+25175 25664 27744 24610 22955 24159 24571 32908
+27768 28177 30274 27685 24712 26587 26605 35710
+29370 29615 31565 28733 25951 27695 27830 37600
+29168 29546 31362 28386 25673 27556 27697 36986
+28407 29070 30996 28104 25323 27363 27358 36651
+27849 28590 30837 27923 25218 26897 27007 36220
+28037 28776 30705 27744 25147 26486 27051 35972
+29319 29737 31463 28651 25636 27713 27791 37367
+28808 29289 31099 28348 25526 27608 27641 37108
+28677 29071 31116 28001 25182 27287 27341 36758
+28085 28891 30108 27924 25374 26821 26949 36468
+25274 34347 24030 25094 29132 26149 26595 27689
+24744 33748 23638 24491 28504 25577 25603 26735
+24740 33277 23409 24194 27950 25091 25568 26840
+24629 33272 23301 24247 28547 24994 25683 26368
+24115 32932 23051 24161 28096 24891 25194 26254
+24095 32849 23016 24045 27762 24746 25537 26167
+25553 34898 24469 25366 29648 26433 26999 27640
+24519 34046 23452 24813 28463 25344 25814 26946
+24796 33665 23388 24454 28386 25372 25978 26677
+24641 33514 23886 24466 28509 25164 26196 26760
+28363 29787 31305 28000 24991 27495 27668 35674
+27010 27929 29577 26821 23753 26714 26645 35197
+26810 28103 29579 26587 24109 26494 26613 34613
+26655 27831 29299 26030 23901 26190 26098 34676
+28162 28905 30499 27215 24996 27165 27321 35504
+29302 30482 31994 28821 26077 28266 28671 37829
+28736 29513 31581 28299 25331 27864 28068 37123
+28256 29236 30874 28150 25387 27672 27711 36585
+28428 29118 30812 27896 25205 28021 27871 36278
+28660 29408 31139 28348 25404 27721 28273 36684
+27693 27159 26528 29810 25718 24532 34799 26514
+27433 26204 25734 29075 25300 23884 34533 25381
+29401 28347 27838 31330 27296 25622 37047 27032
+29106 28341 27528 31322 27062 25764 36592 27172
+29122 27940 27280 31097 27011 25603 36489 27170
+28560 27888 27192 30267 26799 25453 36137 26691
+28284 27638 26845 30263 26433 24901 35854 26632
+29327 28459 27780 30856 27289 25923 37182 27365
+29165 28415 28051 31569 27040 26001 36795 27415
+28738 27950 27162 30545 26674 25460 35996 26771
+24452 32853 23307 24176 28171 24701 25635 25993
+24361 33736 23437 24125 27969 24884 25621 26704
+24492 33536 23170 24173 28252 24901 25626 26628
+24111 33047 23013 23974 27831 24612 25093 26063
+24136 32774 22904 23974 27739 24885 24900 26046
+23199 32376 22158 23383 27015 24069 24388 25160
+23466 32187 22231 23433 26868 23962 24321 25475
+25045 34312 23737 24732 28554 25689 26137 27047
+24813 34137 23695 25062 28560 25829 26130 27458
+24034 33136 22569 23723 27431 24456 25069 25467
+27833 27207 26140 29853 25583 24539 35215 25720
+27881 27123 26413 29776 25257 24654 35511 26304
+27782 26791 25808 29830 25159 25279 34721 25405
+27222 26412 25646 29303 24918 24552 34748 25620
+27631 26413 26118 29314 25350 24450 34990 25580
+27602 26579 25992 29584 25251 24150 34869 25436
+26491 25309 24698 28307 24253 24012 33487 23894
+27689 26573 26079 29381 25369 24520 35106 26210
+28144 26929 27011 30279 26092 25051 35548 26277
+28274 27427 26582 30239 25731 25320 36044 26431
+Finish dumping statistics!
