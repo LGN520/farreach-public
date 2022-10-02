@@ -1,0 +1,533 @@
+workload_name: synthetic
+workload_mode: 1
+dynamic_periodnum: 7
+dynamic_periodinterval: 10
+dynamic_ruleprefix: dynamicrules/synthetic-hotin.out
+val_t::MAX_VALLEN: 128
+ParserIterator::load_batch_size: 10000
+client_physical_num: 2
+server_physical_num: 2
+client_total_logical_num: 128
+server_total_logical_num: 2
+server_total_logical_num_for_rotation: 128
+max_server_total_logical_num: 2
+
+client_rotationdataserver_port: 1025
+client_sendpktserver_port_start: 1026
+client_rulemapserver_port_start: 1036
+client_worker_port_start: 8888
+
+client_logical_nums[0]: 64
+client_ips[0]: 10.0.1.11
+client_macs[0]: 3c:fd:fe:bb:ca:79
+client_fpports[0]: 11/0
+client_pipeidxes[0]: 0
+client_logical_nums[1]: 64
+client_ips[1]: 10.0.1.15
+client_macs[1]: 3c:fd:fe:b5:28:59
+client_fpports[1]: 1/0
+client_pipeidxes[1]: 1
+
+server_load_factor: 5
+server_worker_port_start: 1152
+server_evictserver_port_start: 2222
+server_snapshotserver_port_start: 3333
+server_snapshotdataserver_port_start: 4444
+transaction_loadfinishserver_port: 8000
+
+server_worker_corenums[0]: 16
+server_total_corenums[0]: 24
+server_logical_idxes_list[0]: 0 
+server_ips[0]: 10.0.1.16
+server_macs[0]: 3c:fd:fe:b5:1f:e1
+server_fpports[0]: 16/0
+server_pipeidxes[0]: 0
+server_ip_for_controller_list[0]: 172.16.112.16
+server_worker_corenums[1]: 16
+server_total_corenums[1]: 48
+server_logical_idxes_list[1]: 1 
+server_ips[1]: 10.0.1.13
+server_macs[1]: 3c:fd:fe:bb:c9:c8
+server_fpports[1]: 13/0
+server_pipeidxes[1]: 0
+server_ip_for_controller_list[1]: 172.16.112.13
+
+controller ip for server: 172.16.112.16
+controller ip for switchos: 172.16.112.16
+controller_popserver_port_start: 5555
+controller_evictserver_port: 5002
+controller_snapshot_period: 10000
+controller_warmupfinishserver_port: 5010
+
+switch_partition_count: 32768
+switch_kv_bucket_num: 10000
+switch_pipeline_num: 2
+val_t::SWITCH_MAX_VALLEN: 128
+switchos_popserver_port: 5003
+switchos ip: 172.16.112.17
+switchos_sample_cnt: 10
+switchos_snapshotserver_port: 5004
+switchos_specialcaseserver_port: 5005
+switchos_ptf_popserver_port: 5006
+switchos_ptf_snapshotserver_port: 5007
+
+reflector ip for switchos: 172.16.112.16
+reflector_dp2cpserver_port: 5008
+reflector_cp2dpserver_port: 5009
+
+raw_load_workload_filename for loading phase: synthetic-load.out
+server_load_workload_dir for loading phase: synthetic-load-2
+raw_warmup_workload_filename for warmup phase: synthetic-warmup.out
+raw_run_workload_filename for transaction phase: synthetic-run.out
+client_workload_dir for transaction phase: synthetic-run-128
+perserver_keyrange: 32768
+
+[client] prepare clients ...
+[client 17] Ready.
+[client 3] Ready.
+[client 11] Ready.
+[client 0] Ready.
+[client 35] Ready.
+[client 8] Ready.
+[client 25] Ready.
+[client 12] Ready.
+[client 13] Ready.
+[client 24] Ready.
+[client 36] Ready.
+[client 20] Ready.
+[client 28] Ready.
+[client 42] Ready.
+[client 9] Ready.
+[client 27] Ready.
+[client 5] Ready.
+[client 4] Ready.
+[client 14] Ready.
+[client 1] Ready.
+[client 30] Ready.
+[client 32] Ready.
+[client 7] Ready.
+[client 21] Ready.
+[client 47] Ready.
+[client 43] Ready.
+[client 19] Ready.
+[client 37] Ready.
+[client 10] Ready.
+[client 23] Ready.
+[client 38] Ready.
+[client 22] Ready.
+[client 46] Ready.
+[client 16] Ready.
+[client 45] Ready.
+[client 15] Ready.
+[client 34] Ready.
+[client 33] Ready.
+[client 56] Ready.
+[client 18] Ready.
+[client 52] Ready.
+[client 54] Ready.
+[client 53] Ready.
+[client 29] Ready.
+[client 6] Ready.
+[client 26] Ready.
+[client 49] Ready.
+[client 50] Ready.
+[client 48] Ready.
+[client 2] Ready.
+[client 44] Ready.
+[client 31] Ready.
+[client 63] Ready.
+[client 40] Ready.
+[client 39] Ready.
+[client 57] Ready.
+[client 41] Ready.
+[client 61] Ready.
+[client 55] Ready.
+[client 58] Ready.
+[client 51] Ready.
+[client 59] Ready.
+[client 60] Ready.
+[client 62] Ready.
+[client] all clients ready...
+start to send pkt
+timeout key 2e960007 from client 0 to server 1
+switch dynamic rulemap from period 0 to 1
+switch dynamic rulemap from period 1 to 2
+switch dynamic rulemap from period 2 to 3
+switch dynamic rulemap from period 3 to 4
+switch dynamic rulemap from period 4 to 5
+switch dynamic rulemap from period 5 to 6
+[client] all clients finish!
+[client] processing statistics
+
+thpt interval: 1 s, seccnt: 70
+
+[sec 0]
+
+overall totalpktcnt: 123669, throughput (MOPS): 0.117940
+
+[sec 1]
+
+overall totalpktcnt: 110331, throughput (MOPS): 0.105220
+
+[sec 2]
+
+overall totalpktcnt: 113089, throughput (MOPS): 0.107850
+
+[sec 3]
+
+overall totalpktcnt: 118378, throughput (MOPS): 0.112894
+
+[sec 4]
+
+overall totalpktcnt: 116019, throughput (MOPS): 0.110644
+
+[sec 5]
+
+overall totalpktcnt: 120592, throughput (MOPS): 0.115005
+
+[sec 6]
+
+overall totalpktcnt: 119918, throughput (MOPS): 0.114363
+
+[sec 7]
+
+overall totalpktcnt: 119968, throughput (MOPS): 0.114410
+
+[sec 8]
+
+overall totalpktcnt: 121635, throughput (MOPS): 0.116000
+
+[sec 9]
+
+overall totalpktcnt: 122411, throughput (MOPS): 0.116740
+
+[sec 10]
+
+overall totalpktcnt: 104988, throughput (MOPS): 0.100124
+
+[sec 11]
+
+overall totalpktcnt: 117195, throughput (MOPS): 0.111766
+
+[sec 12]
+
+overall totalpktcnt: 119755, throughput (MOPS): 0.114207
+
+[sec 13]
+
+overall totalpktcnt: 114447, throughput (MOPS): 0.109145
+
+[sec 14]
+
+overall totalpktcnt: 115652, throughput (MOPS): 0.110294
+
+[sec 15]
+
+overall totalpktcnt: 116369, throughput (MOPS): 0.110978
+
+[sec 16]
+
+overall totalpktcnt: 114960, throughput (MOPS): 0.109634
+
+[sec 17]
+
+overall totalpktcnt: 114370, throughput (MOPS): 0.109072
+
+[sec 18]
+
+overall totalpktcnt: 115278, throughput (MOPS): 0.109938
+
+[sec 19]
+
+overall totalpktcnt: 112215, throughput (MOPS): 0.107017
+
+[sec 20]
+
+overall totalpktcnt: 103396, throughput (MOPS): 0.098606
+
+[sec 21]
+
+overall totalpktcnt: 110040, throughput (MOPS): 0.104942
+
+[sec 22]
+
+overall totalpktcnt: 115148, throughput (MOPS): 0.109814
+
+[sec 23]
+
+overall totalpktcnt: 116166, throughput (MOPS): 0.110785
+
+[sec 24]
+
+overall totalpktcnt: 115789, throughput (MOPS): 0.110425
+
+[sec 25]
+
+overall totalpktcnt: 113693, throughput (MOPS): 0.108426
+
+[sec 26]
+
+overall totalpktcnt: 111279, throughput (MOPS): 0.106124
+
+[sec 27]
+
+overall totalpktcnt: 113284, throughput (MOPS): 0.108036
+
+[sec 28]
+
+overall totalpktcnt: 110832, throughput (MOPS): 0.105698
+
+[sec 29]
+
+overall totalpktcnt: 110784, throughput (MOPS): 0.105652
+
+[sec 30]
+
+overall totalpktcnt: 99395, throughput (MOPS): 0.094790
+
+[sec 31]
+
+overall totalpktcnt: 107982, throughput (MOPS): 0.102980
+
+[sec 32]
+
+overall totalpktcnt: 110503, throughput (MOPS): 0.105384
+
+[sec 33]
+
+overall totalpktcnt: 110158, throughput (MOPS): 0.105055
+
+[sec 34]
+
+overall totalpktcnt: 110863, throughput (MOPS): 0.105727
+
+[sec 35]
+
+overall totalpktcnt: 111619, throughput (MOPS): 0.106448
+
+[sec 36]
+
+overall totalpktcnt: 108338, throughput (MOPS): 0.103319
+
+[sec 37]
+
+overall totalpktcnt: 106878, throughput (MOPS): 0.101927
+
+[sec 38]
+
+overall totalpktcnt: 106717, throughput (MOPS): 0.101773
+
+[sec 39]
+
+overall totalpktcnt: 106485, throughput (MOPS): 0.101552
+
+[sec 40]
+
+overall totalpktcnt: 94230, throughput (MOPS): 0.089865
+
+[sec 41]
+
+overall totalpktcnt: 95886, throughput (MOPS): 0.091444
+
+[sec 42]
+
+overall totalpktcnt: 97837, throughput (MOPS): 0.093305
+
+[sec 43]
+
+overall totalpktcnt: 97847, throughput (MOPS): 0.093314
+
+[sec 44]
+
+overall totalpktcnt: 97873, throughput (MOPS): 0.093339
+
+[sec 45]
+
+overall totalpktcnt: 100040, throughput (MOPS): 0.095406
+
+[sec 46]
+
+overall totalpktcnt: 101001, throughput (MOPS): 0.096322
+
+[sec 47]
+
+overall totalpktcnt: 99513, throughput (MOPS): 0.094903
+
+[sec 48]
+
+overall totalpktcnt: 105237, throughput (MOPS): 0.100362
+
+[sec 49]
+
+overall totalpktcnt: 102574, throughput (MOPS): 0.097822
+
+[sec 50]
+
+overall totalpktcnt: 90353, throughput (MOPS): 0.086167
+
+[sec 51]
+
+overall totalpktcnt: 96177, throughput (MOPS): 0.091722
+
+[sec 52]
+
+overall totalpktcnt: 98588, throughput (MOPS): 0.094021
+
+[sec 53]
+
+overall totalpktcnt: 99421, throughput (MOPS): 0.094815
+
+[sec 54]
+
+overall totalpktcnt: 95995, throughput (MOPS): 0.091548
+
+[sec 55]
+
+overall totalpktcnt: 97755, throughput (MOPS): 0.093226
+
+[sec 56]
+
+overall totalpktcnt: 97155, throughput (MOPS): 0.092654
+
+[sec 57]
+
+overall totalpktcnt: 100152, throughput (MOPS): 0.095512
+
+[sec 58]
+
+overall totalpktcnt: 99416, throughput (MOPS): 0.094810
+
+[sec 59]
+
+overall totalpktcnt: 100046, throughput (MOPS): 0.095411
+
+[sec 60]
+
+overall totalpktcnt: 91931, throughput (MOPS): 0.087672
+
+[sec 61]
+
+overall totalpktcnt: 93157, throughput (MOPS): 0.088841
+
+[sec 62]
+
+overall totalpktcnt: 94477, throughput (MOPS): 0.090100
+
+[sec 63]
+
+overall totalpktcnt: 92106, throughput (MOPS): 0.087839
+
+[sec 64]
+
+overall totalpktcnt: 92001, throughput (MOPS): 0.087739
+
+[sec 65]
+
+overall totalpktcnt: 91473, throughput (MOPS): 0.087235
+
+[sec 66]
+
+overall totalpktcnt: 93911, throughput (MOPS): 0.089561
+
+[sec 67]
+
+overall totalpktcnt: 95714, throughput (MOPS): 0.091280
+
+[sec 68]
+
+overall totalpktcnt: 94348, throughput (MOPS): 0.089977
+
+[sec 69]
+
+overall totalpktcnt: 121876, throughput (MOPS): 0.116230
+
+[Latency Statistics of total_latency_list ]
+| min | max | avg | 90th | 99th | largest | median | sum |
+| 11.22 | 138227 | 602.808 | 1934.89 | 2241.35 | 138227 | 96.485 | 4.49616e+09 |
+[Latency Statistics of perclient_avgsend_latency_list ]
+| min | max | avg | 90th | 99th | largest | median | sum |
+| 4.06926 | 4.35021 | 4.21367 | 4.26327 | 4.35021 | 4.35021 | 4.21899 | 269.675 |
+[Latency Statistics of perclient_avgwait_latency_list ]
+| min | max | avg | 90th | 99th | largest | median | sum |
+| 1.17123 | 2.40048 | 2.07097 | 2.3455 | 2.40048 | 2.40048 | 2.15042 | 132.542 |
+total_unmatched_cnt: 1
+total_timeout_cnt: 1
+client-side total pktcnt: 7458685, total time: 70.321463 s, total thpt: 0.101152 MOPS
+cache hit pktcnt: 3188147
+per-server pktcnt: 2145267 2125271
+
+per-sec total throughput:
+123666 110333 113088 118378 116019 120592 119919 119968 121633 122412 104987 117193 119757 114448 115652 116367 114960 114373 115276 112216 103396 110041 115146 116164 115792 113691 111273 113290 110833 110785 99391 107984 110504 110159 110862 111621 108336 106878 106718 106484 94230 95882 97842 97845 97876 100040 101001 99514 105235 102575 90352 96176 98585 99422 95999 97753 97154 100152 99419 100043 91933 93159 94476 92106 92000 91472 93909 95716 94347 121875
+
+per-sec per-server throughput:
+32230 32394
+28035 28350
+28990 28703
+29881 30209
+29614 29564
+30909 30489
+30422 30807
+30537 30427
+31019 30986
+31084 31072
+32920 32861
+33818 34041
+33941 33852
+32791 32369
+32703 32637
+32908 32766
+32632 32263
+32058 32344
+32472 32231
+31746 31408
+32818 32691
+31762 31838
+32910 33133
+33103 33287
+32790 33011
+32233 32609
+31630 31390
+31929 32119
+31390 31360
+31260 31386
+31820 32279
+31274 31299
+31547 31950
+31666 31454
+31638 31636
+31748 31558
+30746 30693
+30589 30454
+30520 30335
+30382 30214
+31115 30298
+30415 28216
+30975 28296
+30926 28500
+30900 28306
+30614 28857
+29454 29094
+28904 28804
+30320 30584
+29694 29562
+29577 29543
+28407 28569
+28840 28679
+28860 29047
+27416 28094
+28337 28230
+28020 28242
+28709 28811
+28621 28650
+28775 28627
+29635 29865
+28795 27633
+29029 27587
+28687 26831
+28614 26941
+28425 26660
+27370 27366
+27948 28042
+27791 27494
+35625 35371
+Finish dumping statistics!

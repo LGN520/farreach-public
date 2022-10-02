@@ -3,8 +3,10 @@ WORKLOADNAME="synthetic"
 
 # NOTE: NOT required by YCSB clients
 echo "sync workload files to another client"
-ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; rm -r ${WORKLOADNAME}-run-1024"
-scp -r ${WORKLOADNAME}-run-1024/ ssy@dl15:~/projects/NetBuffer/${DIRNAME}/ >/dev/null
+#ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; rm -r ${WORKLOADNAME}-run-1024"
+#scp -r ${WORKLOADNAME}-run-1024/ ssy@dl15:~/projects/NetBuffer/${DIRNAME}/ >/dev/null
+ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; rm -r ${WORKLOADNAME}-run-128"
+scp -r ${WORKLOADNAME}-run-128/ ssy@dl15:~/projects/NetBuffer/${DIRNAME}/ >/dev/null
 
 echo "sync dynamic rulemaps to another client"
 ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; rm -r dynamicrules"
