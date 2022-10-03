@@ -182,6 +182,14 @@ bool YcsbParserIterator::next_batch() {
 			}
 			_maxidx += 1;
 		}
+		else if (strncmp(line, "WARMUP", 6) == 0) {
+			_types[_maxidx+1] = int8_t(packet_type_t::WARMUPREQ);
+			if (!parsekey(line, linelen)) {
+				printf("No key after DELETE: %s\n", line);
+				exit(-1);
+			}
+			_maxidx += 1;
+		}
 
 		// switch to next line
 		_fileoffset += linelen;
@@ -275,9 +283,9 @@ bool YcsbParserIterator::parsekey(const char* line, int linelen) {
 	const char* key_begin = nullptr;
 	const char* key_end = nullptr;
 
-	key_begin = strstr(line, "user");
-	if (unlikely(key_begin == nullptr)) return false;
-	key_begin += 4; // Skip the first usertable
+	//key_begin = strstr(line, "user");
+	//if (unlikely(key_begin == nullptr)) return false;
+	//key_begin += 4; // Skip the first usertable
 	key_begin = strstr(key_begin, "user");
 	if (unlikely(key_begin == nullptr)) return false;
 	key_begin += 4; // At the first character of key

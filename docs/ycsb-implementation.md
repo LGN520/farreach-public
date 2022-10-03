@@ -21,12 +21,22 @@
 
 - 9.27
 	+ Decouple inswitch-cache-related lib as an individual module in YCSB
+
+- 10.3
+	+ Code for dynamic workload
+		* Update warmup_client.c
+		* TODO: Implement rulemape generation for hot-in workload
+		* TODO: Add large value in JNI
+	+ Fix tiny issues
+		* Remove -cf and -threads from command-line parameters
+		* Place all command-line parameters related with InswitchCache into GlobalConfig -> only use GlobalConfig in subthreads
 	+ TODO: Debug keydump module to get keydump results
-		* TODO: Use inswitchcachecore.Key/Value in farreach and keydump
-		* TODO: Use JNI-based socket for farreach -> test and evaluate overhead
-		* TODO: Implement rulmapclient in TerminatorThread to notify rulemap switching during each period
-		* TODO: Send back SendPktRcvAck from sendpktserver to sendpktclient
+		* Use JNI-based socket for farreach -> test and evaluate overhead
 		* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
+			- TODO: Remove -df from command-line parameters
+		* TODO: Use inswitchcachecore.Key/Value in farreach and keydump
+		* TODO: Implement rulemapclient in TerminatorThread to notify rulemap switching during each period
+		* TODO: Send back SendPktRcvAck from sendpktserver to sendpktclient
 		* TODO: Use custom pair for SCANRES_SPLIT
 		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN of FarreachClient
 

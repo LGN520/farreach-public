@@ -12,7 +12,7 @@
 #define HELPER_H
 
 #define WARMUP_RAW_WORKLOAD(buf, workload) \
-	sprintf(buf, "%s-warmup.out", workload)
+	sprintf(buf, "../ycsb/%s-hotest.out", workload)
 
 #define LOAD_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "%s-load.out", workload)
