@@ -76,7 +76,7 @@ void run_warmuper() {
 		}
 
 		tmpkey = iter->key();
-		if (iter->type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
+		if (iter->type() == uint8_t(packet_type_t::WARMUPREQ)) { // update or insert
 			//tmpval = iter->val();
 			//INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
 			//warmup_request_t req(tmpkey, tmpval);

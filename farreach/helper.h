@@ -43,8 +43,8 @@
 
 /***** Workload *****/
 
-//#define USE_YCSB
-#define USE_SYNTHETIC
+#define USE_YCSB
+//#define USE_SYNTHETIC
 //#define USE_TPCC
 
 /***** Workload *****/

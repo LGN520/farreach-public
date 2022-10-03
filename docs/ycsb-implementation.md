@@ -24,12 +24,15 @@
 
 - 10.3
 	+ Code for dynamic workload
-		* Update warmup_client.c
+		* Update helper.h, warmup_client.c, and ycsb_parser.c for new filepath and new file format -> SYNC to ALL
 		* TODO: Implement rulemape generation for hot-in workload
 		* TODO: Add large value in JNI
 	+ Fix tiny issues
 		* Remove -cf and -threads from command-line parameters
 		* Place all command-line parameters related with InswitchCache into GlobalConfig -> only use GlobalConfig in subthreads
+	+ Set seed = 0 for random generator in YCSB -> TODO: test
+
+- 10.4
 	+ TODO: Debug keydump module to get keydump results
 		* Use JNI-based socket for farreach -> test and evaluate overhead
 		* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
