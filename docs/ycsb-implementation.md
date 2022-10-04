@@ -22,27 +22,30 @@
 - 9.27
 	+ Decouple inswitch-cache-related lib as an individual module in YCSB
 
-- 10.3
+- 10.3 - 10.4
 	+ Code for dynamic workload
 		* Update helper.h, warmup_client.c, and ycsb_parser.c for new filepath and new file format -> SYNC to ALL
-		* TODO: Implement rulemape generation for hot-in workload
-		* TODO: Add large value in JNI
+		* Add large value in JNI -> update header file after fixing java compilation errors
+		* Implement rulemap generation for hot-in, random, and hot-out workload
 	+ Fix tiny issues
 		* Remove -cf and -threads from command-line parameters
 		* Place all command-line parameters related with InswitchCache into GlobalConfig -> only use GlobalConfig in subthreads
-	+ Set seed = 0 for random generator in YCSB -> TODO: test
+	+ Set seed = threadid in random generator for each logical client in YCSB -> test keydump results
+	+ Huancheng
+		* TODO: Use inswitchcachecore.Key/Value in farreach and keydump
+		* TODO: Re-implement sendpkt client/server and rulemap client/server
+		* TODO: Implement rulemapclient in TerminatorThread to notify rulemap switching during each period
+		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN of FarreachClient (NOT need InetAddress of ip and svraddr of udprecvfrom)
+	+ TODO: Try individual jar
 
-- 10.4
-	+ TODO: Debug keydump module to get keydump results
-		* Use JNI-based socket for farreach -> test and evaluate overhead
+- 10.5
+	+ TODO: Add preparefinish_client in prebenchmark of farreach
+	+ Debug keydump module to get keydump results
+		* Use JNI-based socket for farreach -> TODO: test and evaluate overhead
 		* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
 			- TODO: Remove -df from command-line parameters
-		* TODO: Use inswitchcachecore.Key/Value in farreach and keydump
-		* TODO: Implement rulemapclient in TerminatorThread to notify rulemap switching during each period
 		* TODO: Send back SendPktRcvAck from sendpktserver to sendpktclient
 		* TODO: Use custom pair for SCANRES_SPLIT
-		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN of FarreachClient
 
 - TODO
-	+ TODO: Re-generate hot-in, random, and hot-out dynamic patterns
-	+ TODO: Support large value in socket helper, and update packet
+	+ TODO: Add udprecvlarge_ipfrag_dist in JNI-based socket

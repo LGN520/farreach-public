@@ -11,8 +11,19 @@
 #if !defined(HELPER_H)
 #define HELPER_H
 
+/***** Workload *****/
+
+#define USE_YCSB
+//#define USE_SYNTHETIC
+//#define USE_TPCC
+
+#ifdef USE_YCSB
 #define WARMUP_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "../ycsb/%s-hotest.out", workload)
+#elif defined(USE_SYNTHETIC)
+#define WARMUP_RAW_WORKLOAD(buf, workload) \
+	sprintf(buf, "%s-warmup.out", workload)
+#endif
 
 #define LOAD_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "%s-load.out", workload)
@@ -40,12 +51,6 @@
 
 #define GET_ROOT(buf, workload_name)  \
 	sprintf(buf, "%s-root.out", workload_name)
-
-/***** Workload *****/
-
-#define USE_YCSB
-//#define USE_SYNTHETIC
-//#define USE_TPCC
 
 /***** Workload *****/
 
