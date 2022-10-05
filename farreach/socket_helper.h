@@ -8,9 +8,9 @@
 //#include <sys/ioctl.h> // ioctl
 #include <netpacket/packet.h> // sockaddr_ll
 
-#include "helper.h"
-#include "dynamic_array.h"
-#include "key.h"
+#include "../common/helper.h"
+#include "../common/dynamic_array.h"
+#include "../common/key.h"
 #include "packet_format_impl.h"
 #include "pkt_ring_buffer.h"
 

@@ -15,12 +15,12 @@
 #include <arpa/inet.h> // inetaddr conversion
 //#include <sys/time.h> // struct timeval
 
-#include "helper.h"
+#include "../common/helper.h"
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
-#include "key.h"
-#include "val.h"
-#include "iniparser/iniparser_wrapper.h"
+#include "../common/key.h"
+#include "../common/val.h"
+#include "../common/iniparser/iniparser_wrapper.h"
 
 struct alignas(CACHELINE_SIZE) FGParam;
 

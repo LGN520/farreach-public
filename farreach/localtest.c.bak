@@ -11,15 +11,15 @@
 #include <fstream>
 #include <sys/time.h> // struct timeval
 
-#include "helper.h"
-#include "key.h"
-#include "iniparser/iniparser_wrapper.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/iniparser/iniparser_wrapper.h"
 
 #ifdef ORIGINAL_XINDEX
 #include "original_xindex/xindex.h"
 #include "original_xindex/xindex_impl.h"
 #else
-#include "val.h"
+#include "../common/val.h"
 #ifdef DYNAMIC_MEMORY
 #ifdef SEQ_MECHANISM
 #include "extended_xindex_dynamic_seq/xindex.h"

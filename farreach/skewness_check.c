@@ -17,10 +17,10 @@
 #include <unistd.h>
 //#include <sys/time.h> // struct timeval
 
-#include "helper.h"
-#include "key.h"
-#include "val.h"
-#include "iniparser/iniparser_wrapper.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
+#include "../common/iniparser/iniparser_wrapper.h"
 
 #ifdef USE_YCSB
 #include "workloadparser/ycsb_parser.h"

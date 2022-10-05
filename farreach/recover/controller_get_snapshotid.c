@@ -1,4 +1,4 @@
-#include "../helper.h"
+#include "../../common/helper.h"
 #include "../io_helper.h"
 
 int main(int argc, char **argv) {

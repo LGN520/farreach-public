@@ -14,11 +14,11 @@
 #include "rocksdb/utilities/transaction_db.h"
 #include "rocksdb/utilities/checkpoint.h"
 
-#include "helper.h"
-#include "key.h"
-#include "val.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
 #include "deleted_set_impl.h"
-#include "snapshot_record.h"
+#include "../common/snapshot_record.h"
 #include "io_helper.h"
 #include "seq_cache.h"
 

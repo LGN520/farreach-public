@@ -12,9 +12,9 @@
 #include <map>
 #include <sys/time.h> // struct timeval
 
-#include "helper.h"
+#include "../common/helper.h"
 #include "rocksdb_wrapper.h"
-#include "snapshot_record.h"
+#include "../common/snapshot_record.h"
 
 #include "common_impl.h"
 

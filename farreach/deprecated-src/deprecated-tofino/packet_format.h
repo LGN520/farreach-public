@@ -5,7 +5,7 @@
 #include <cstring>
 #include <vector>
 
-#include "helper.h"
+#include "../common/helper.h"
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
 	GET_RES, PUT_RES, DEL_RES, SCAN_RES, 

@@ -4,9 +4,9 @@
 #include <map>
 #include <stdint.h>
 
-#include "helper.h"
-#include "key.h"
-#include "val.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
 
 class BackupData {
 	public:

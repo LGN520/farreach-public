@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "helper.h"
+#include "../common/helper.h"
 
 void get_server_db_path(std::string &db_path, uint16_t workerid);
 void get_server_deletedset_path(std::string &deletedset_path, uint16_t workerid);

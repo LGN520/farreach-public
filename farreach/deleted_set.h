@@ -4,8 +4,8 @@
 #include <map>
 #include <mutex>
 
-#include "helper.h"
-#include "snapshot_record.h"
+#include "../common/helper.h"
+#include "../common/snapshot_record.h"
 #include "io_helper.h"
 
 #define CAPACITY_FACTOR 10

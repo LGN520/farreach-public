@@ -4,8 +4,8 @@
 #include "packet_format.h"
 #include <arpa/inet.h>
 
-#include "key.h"
-#include "val.h"
+#include "../common/key.h"
+#include "../common/val.h"
 
 // Packet
 template<class key_t>

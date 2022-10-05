@@ -19,18 +19,18 @@
 #include <map>
 #include <mutex>
 
-#include "helper.h"
+#include "../common/helper.h"
 #include "io_helper.h"
-#include "key.h"
-#include "val.h"
+#include "../common/key.h"
+#include "../common/val.h"
 
 #include "socket_helper.h"
-#include "special_case.h"
-#include "iniparser/iniparser_wrapper.h"
+#include "../common/special_case.h"
+#include "../common/iniparser/iniparser_wrapper.h"
 #include "message_queue_impl.h"
 #include "packet_format_impl.h"
 #include "concurrent_map_impl.h"
-#include "dynamic_array.h"
+#include "../common/dynamic_array.h"
 
 #include "common_impl.h"
 

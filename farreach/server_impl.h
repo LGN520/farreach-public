@@ -4,19 +4,19 @@
 // Transaction phase for ycsb_server
 
 #include <vector>
-#include "helper.h"
-#include "key.h"
-#include "val.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
 
 // For read-blocking under rare case of cache eviction
 #include "blockinfo.h"
 
-#include "snapshot_record.h"
+#include "../common/snapshot_record.h"
 #include "concurrent_map_impl.h"
 #include "concurrent_set_impl.h"
 #include "message_queue_impl.h"
 #include "rocksdb_wrapper.h"
-#include "dynamic_array.h"
+#include "../common/dynamic_array.h"
 #include "pkt_ring_buffer.h"
 
 //#define DUMP_BUF

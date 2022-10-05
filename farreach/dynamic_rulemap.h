@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <atomic>
 
-#include "key.h"
-#include "helper.h"
+#include "../common/key.h"
+#include "../common/helper.h"
 
 #ifdef USE_YCSB
 #include "workloadparser/ycsb_parser.h"

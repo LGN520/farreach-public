@@ -17,10 +17,10 @@
 #include <string.h>
 #include <map>
 
-#include "helper.h"
+#include "../common/helper.h"
 
 #include "common_impl.h"
-#include "latency_helper.h"
+#include "../common/latency_helper.h"
 
 size_t pktcnt = 10000;
 std::vector<double> wait_latency_list;

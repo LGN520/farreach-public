@@ -15,11 +15,11 @@
 #include <unistd.h>
 //#include <sys/time.h> // struct timeval
 
-#include "key.h"
-#include "val.h"
+#include "../common/key.h"
+#include "../common/val.h"
 
 #include "common_impl.h"
-#include "latency_helper.h"
+#include "../common/latency_helper.h"
 #include "socket_helper.h"
 
 size_t pktcnt = 10000;

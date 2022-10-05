@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <string>
 
-#include "../helper.h"
-#include "../key.h"
-#include "../val.h"
+#include "../../common/helper.h"
+#include "../../common/key.h"
+#include "../../common/val.h"
 #include "../packet_format.h"
 
 #define MINIMUM_WORKLOAD_FILESIZE

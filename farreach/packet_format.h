@@ -5,9 +5,9 @@
 #include <cstring>
 #include <vector>
 
-#include "helper.h"
-#include "snapshot_record.h"
-#include "dynamic_array.h"
+#include "../common/helper.h"
+#include "../common/snapshot_record.h"
+#include "../common/dynamic_array.h"
 
 // mask for other_hdr
 //#define VALID_MASK 0x01

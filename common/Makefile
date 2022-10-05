@@ -58,9 +58,9 @@ UTILS_OBJECTS += latency_helper.o
 #CLEAN += dynamic_rulemap.o
 #UTILS_OBJECTS += dynamic_rulemap.o
 
-DEPS += pkt_ring_buffer.d
-CLEAN += pkt_ring_buffer.o
-UTILS_OBJECTS += pkt_ring_buffer.o
+#DEPS += pkt_ring_buffer.d
+#CLEAN += pkt_ring_buffer.o
+#UTILS_OBJECTS += pkt_ring_buffer.o
 
 
 
