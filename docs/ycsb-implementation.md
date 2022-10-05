@@ -32,15 +32,31 @@
 		* Place all command-line parameters related with InswitchCache into GlobalConfig -> only use GlobalConfig in subthreads
 	+ Set seed = threadid in random generator for each logical client in YCSB -> test keydump results
 	+ Huancheng
-		* TODO: Re-implement sendpkt client/server and rulemap client/server
-		* TODO: Implement rulemapclient in TerminatorThread to notify rulemap switching during each period
+		* Re-implement sendpkt client/server and rulemap client/server
+		* Implement rulemapclient in TerminatorThread to notify rulemap switching during each period
 	+ Try individual jar
 
-- 10.5
+- 10.5 - 10.6
+	+ Disaggregate C-based lib for remote_client.c and server for ALL methods
+		* Place the same modules into common/ (including crc32, key, value, dynamic_array, dynamic_rulemap, helper, latency_helper, pkt_ring_buffer, snapshot_record, special_case, workloadparser/\*, iniparser/\*)
+			- TODO: Merge ALL packet_format\.* as a single file with methodid as a parameter, and place it into common/
+			- TODO: Introduce methodid into io_helper, socket_helper, pkt_ring_buffer, and dynamic_rulemap
+		* Compile common/ as libcommon.a for benchmark/ and method/
+			- Update Makefile and includes; TODO: update usage of packet_format and io_helper -> TODO SYNC to ALL
+			- TODO: Update jnisrc to use libcommon.a
+		* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
+	+ TODO: Update the changes as a README in root file
+	+ TODO: Write down NOTEs in benchmark
+		- NOTE: we must sync method/\*.c to jnisrc/\* and inswitchcache-c-lib/\*
+		- NOTE: including packet_format.\*, socket_helper.\*, key/value.\*, dynamic_array.\*
 	+ Huancheng
+		* TODO: Re-organize ycsb as benchmark
 		* TODO: Disaggregate JAVA-based lib for YCSB
-		* TODO: Use inswitchcachecore.Key/Value in farreach and keydump
+		* TODO: Use inswitchcache.core.Key/Value in farreach and keydump
 		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN of FarreachClient (NOT need InetAddress of ip and svraddr of udprecvfrom)
+		* TODO: Update inswitchcache.core.PacketFormat as common/
+
+- TODO
 	+ TODO: Add preparefinish_client in prebenchmark of farreach
 	+ Debug keydump module to get keydump results
 		* Use JNI-based socket for farreach -> TODO: test and evaluate overhead
@@ -51,3 +67,4 @@
 
 - TODO
 	+ TODO: Add udprecvlarge_ipfrag_dist in JNI-based socket
+	+ TODO: Add udprecvlarge_ipfrag_multisrc and udprecvlarge_ipfrag_multisrc_dist in JNI-based socket

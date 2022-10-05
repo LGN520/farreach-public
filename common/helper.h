@@ -11,6 +11,16 @@
 #if !defined(HELPER_H)
 #define HELPER_H
 
+/***** Method IDs *****/
+
+#define INVALID_ID 0
+#define FARREACH_ID 1
+#define NOCACHE_ID 2
+#define NETCACHE_ID 3
+#define DISTFARREACH_ID 4
+#define DISTNOCACHE_ID 5
+#define DISTCACHE_ID 6
+
 /***** Workload *****/
 
 #define USE_YCSB
