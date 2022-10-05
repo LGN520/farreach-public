@@ -1,3 +1,6 @@
 ycsb.iml
 *.tgz
 *.zst
+*.d
+*.o
+*.a
