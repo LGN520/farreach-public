@@ -21,6 +21,18 @@
 #define DISTNOCACHE_ID 5
 #define DISTCACHE_ID 6
 
+typedef int method_t;
+
+static const char *methodname_list[] = {"invalid", "farreach", "nocache", "netcache", "distfarreach", "distnocache", "distcache"};
+
+static const char *get_methodname_byid(method_t methodid) {
+	if (methodid == INVALID_ID || methodid > DISTCACHE_ID) {
+		printf("[ERROR][get_methodname_byid] Invalid methodid %d!\n", methodid);
+		exit(-1);
+	}
+	return methodname_list[methodid];
+}
+
 /***** Workload *****/
 
 #define USE_YCSB

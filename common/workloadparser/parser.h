@@ -7,6 +7,7 @@
 #include "../helper.h"
 #include "../key.h"
 #include "../val.h"
+#include "../packet_format.h"
 
 #define MINIMUM_WORKLOAD_FILESIZE
 

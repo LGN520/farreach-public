@@ -56,7 +56,6 @@ static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_udprec
 static const uint32_t optype_with_clientlogicalidx_num = 7;
 static const packet_type_t optype_with_clientlogicalidx_list[optype_with_clientlogicalidx_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3, packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED, packet_type_t::LOADREQ};
 
-typedef int method_t;
 typedef uint16_t optype_t;
 typedef uint16_t switchidx_t;
 
@@ -90,7 +89,7 @@ class Packet { // ophdr
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size) = 0;
 	protected:
-		method_t _methodid;
+		method_t _methodid = INVALID_ID;
 		// for single switch (optype + key)
 		optype_t _type;
 		key_t _key;
@@ -256,7 +255,7 @@ class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 template<class key_t>
 class DelResponseServer : public DelResponse<key_t> { // ophdr + shadowtype + stat_hdr
 	public:
-		DelResponseServer(key_t key, bool stat, uint16_t nodeidx_foreval);
+		DelResponseServer(method_t methodid, key_t key, bool stat, uint16_t nodeidx_foreval);
 };
 
 template<class key_t, class val_t>
@@ -428,7 +427,7 @@ class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_
 template<class key_t, class val_t>
 class PutRequestSeqCase3 : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
 	public: 
-		PutRequestSeqCase3(const char * data, uint32_t recv_size);
+		PutRequestSeqCase3(method_t methodid, const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
@@ -612,7 +611,7 @@ class LoadRequest : public Packet<key_t> { // ophdr + client_logical_idx + frags
 		LoadRequest(method_t methodid, key_t key, val_t val, uint16_t client_logical_idx, uint32_t fragseq);
 		LoadRequest(method_t methodid, const char * data, uint32_t recv_size);
 
-		static size_t get_frag_hdrsize();
+		static size_t get_frag_hdrsize(method_t methodid);
 		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
 
 		uint16_t client_logical_idx() const; // parsed into frag_hdr.padding by switch
@@ -955,7 +954,7 @@ class DistcacheLeafValueupdateInswitchAck : public WarmupRequest<key_t> { // oph
 template<class key_t, class val_t>
 class DistcacheValueupdateInswitch : public DistcacheSpineValueupdateInswitch<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr.idx + stat_hdr
 	public: 
-		DistcacheValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
+		DistcacheValueupdateInswitch(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
 };
 
 template<class key_t>

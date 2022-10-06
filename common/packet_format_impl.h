@@ -593,7 +593,7 @@ uint32_t GetResponse<key_t, val_t>::leafload() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() { // unused
-	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 	if (this->_methodid == DISTCACHE_ID) {
 		size += (sizeof(uint32_t) + sizeof(uint32_t));
 	}
@@ -616,7 +616,7 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
-	begin += STAT_PADDING_BYTES;
+	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 	if (this->_methodid == DISTCACHE_ID) {
 		uint32_t bigendian_spineload = htonl(this->_spineload);
 		memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
@@ -643,7 +643,7 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
 	begin += sizeof(uint16_t);
-	begin += STAT_PADDING_BYTES;
+	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 	if (this->_methodid == DISTCACHE_ID) {
 		memcpy(&this->_spineload, begin, sizeof(uint32_t));
 		this->_spineload = ntohl(this->_spineload);
@@ -665,7 +665,7 @@ GetResponseServer<key_t, val_t>::GetResponseServer(method_t methodid, key_t key,
 }
 
 template<class key_t, class val_t>
-GetResponseServer<key_t, val_t>::GetResponseServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload) 
+GetResponseServer<key_t, val_t>::GetResponseServer(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload) 
 	: GetResponse<key_t, val_t>(methodid, key, val, stat, nodeidx_foreval)
 {	
 	this->_type = optype_t(packet_type_t::GETRES_SERVER);
@@ -703,7 +703,7 @@ uint16_t PutResponse<key_t>::nodeidx_foreval() const {
 
 template<class key_t>
 uint32_t PutResponse<key_t>::size() {
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 }
 
 template<class key_t>
@@ -720,7 +720,7 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
-	begin += STAT_PADDING_BYTES;
+	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 	return uint32_t(begin - data);
 }
 
@@ -737,7 +737,7 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
 	begin += sizeof(uint16_t);
-	begin += STAT_PADDING_BYTES;
+	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 }
 
 // PutResponseServer
@@ -777,7 +777,7 @@ uint16_t DelResponse<key_t>::nodeidx_foreval() const {
 
 template<class key_t>
 uint32_t DelResponse<key_t>::size() {
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 }
 
 template<class key_t>
@@ -794,7 +794,7 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
-	begin += STAT_PADDING_BYTES;
+	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 	return uint32_t(begin - data);
 }
 
@@ -811,7 +811,7 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
 	begin += sizeof(uint16_t);
-	begin += STAT_PADDING_BYTES;
+	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 }
 
 // DelResponseServer
@@ -827,10 +827,9 @@ DelResponseServer<key_t>::DelResponseServer(method_t methodid, key_t key, bool s
 // ScanResponseSplit
 
 template<class key_t, class val_t>
-ScanResponseSplit<key_t, val_t>::ScanResponseSplit(method_t methodid, key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t cur_scanswitchidx, uint16_t max_scanswitchnum, uint16_t nodeidx_foreval, int snapshotid, int32_t pairnum, std::vector<std::pair<key_t, snapshot_record_t>> pairs) 
-	: ScanRequestSplit<key_t>(methodid, key, endkey, cur_scanidx, max_scannum, cur_scanswitchidx, max_scanswitchnum), _nodeidx_foreval(nodeidx_foreval), _snapshotid(snapshotid), _pairnum(pairnum)
+ScanResponseSplit<key_t, val_t>::ScanResponseSplit(method_t methodid, key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t pairnum, std::vector<std::pair<key_t, snapshot_record_t>> pairs) 
+	: ScanRequestSplit<key_t>(methodid, key, endkey, cur_scanidx, max_scannum), _nodeidx_foreval(nodeidx_foreval), _snapshotid(snapshotid), _pairnum(pairnum)
 {	
-	INVARIANT(Packet<key_t>::is_singleswitch(methodid));
 	this->_type = static_cast<optype_t>(PacketType::SCANRES_SPLIT);
 	INVARIANT(snapshotid >= 0);
 	INVARIANT(pairnum == int32_t(pairs.size()));
@@ -841,7 +840,6 @@ template<class key_t, class val_t>
 ScanResponseSplit<key_t, val_t>::ScanResponseSplit(method_t methodid, key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t cur_scanswitchidx, uint16_t max_scanswitchnum, uint16_t nodeidx_foreval, int snapshotid, int32_t pairnum, std::vector<std::pair<key_t, snapshot_record_t>> pairs) 
 	: ScanRequestSplit<key_t>(methodid, key, endkey, cur_scanidx, max_scannum, cur_scanswitchidx, max_scanswitchnum), _nodeidx_foreval(nodeidx_foreval), _snapshotid(snapshotid), _pairnum(pairnum)
 {	
-	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
 	this->_type = static_cast<optype_t>(PacketType::SCANRES_SPLIT);
 	INVARIANT(snapshotid >= 0);
 	INVARIANT(pairnum == int32_t(pairs.size()));
@@ -897,7 +895,7 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 	//memcpy(begin, (void *)&this->_num, sizeof(uint32_t));
 	//begin += sizeof(uint32_t);
 	int tmp_split_prev_bytes = Packet<key_t>::get_split_prev_bytes(this->_methodid);
-	memset(begin, 0, tmp_split_prev_bytes;
+	memset(begin, 0, tmp_split_prev_bytes);
 	begin += tmp_split_prev_bytes;
 	uint16_t bigendian_cur_scanidx = htons(uint16_t(this->_cur_scanidx));
 	memcpy(begin, (void *)&bigendian_cur_scanidx, sizeof(uint16_t));
@@ -1211,8 +1209,8 @@ void GetResponseLatestSeq<key_t, val_t>::deserialize(const char * data, uint32_t
 // GetResponseLatestSeqServer (value must <= 128B)
 
 template<class key_t, class val_t>
-GetResponseLatestSeqServer<key_t, val_t>::GetResponseLatestSeqServer(switchidx_t switchidx, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
-	: GetResponseLatestSeq<key_t, val_t>(method_t methodid, key, val, seq, nodeidx_foreval)
+GetResponseLatestSeqServer<key_t, val_t>::GetResponseLatestSeqServer(method_t methodid, switchidx_t switchidx, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
+	: GetResponseLatestSeq<key_t, val_t>(methodid, key, val, seq, nodeidx_foreval)
 {
 	INVARIANT(methodid == DISTFARREACH_ID);
 	this->_type = optype_t(packet_type_t::GETRES_LATEST_SEQ_SERVER);
@@ -1323,8 +1321,8 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 // GetResponseDeletedSeq (value must = 0B)
 
 template<class key_t, class val_t>
-GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
-	: GetResponseLatestSeq<key_t, val_t>(method_t methodid, key, val, seq, nodeidx_foreval)
+GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
+	: GetResponseLatestSeq<key_t, val_t>(methodid, key, val, seq, nodeidx_foreval)
 {
 	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
 	this->_stat = false;
@@ -1821,7 +1819,7 @@ uint32_t CachePopInswitch<key_t, val_t>::serialize(char * const data, uint32_t m
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - uint32_t(begin - data);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - uint32_t(begin - data));
 	begin += tmp_valsize;
 	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - uint32_t(begin - data)); // shadowtype
 	begin += tmp_shadowtypesize;
@@ -2112,8 +2110,8 @@ uint32_t LoadRequest<key_t, val_t>::size() { // not used
 }
 
 template<class key_t, class val_t>
-size_t LoadRequest<key_t, val_t>::get_frag_hdrsize() {
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + client_logical_idx + fragseq
+size_t LoadRequest<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + client_logical_idx + fragseq
 }
 
 template<class key_t, class val_t>
@@ -2565,7 +2563,7 @@ NetcacheGetRequestPop<key_t>::NetcacheGetRequestPop(method_t methodid, const cha
 template<class key_t>
 uint32_t NetcacheGetRequestPop<key_t>::size() {
 	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + Packet<key_t>::get_clone_bytes(this->_methodid);
-	if (methodid == DISTCACHE_ID) {
+	if (this->_methodid == DISTCACHE_ID) {
 		size += (sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint32_t));
 	}
 	return size;
@@ -2924,7 +2922,7 @@ WarmupAckServer<key_t>::WarmupAckServer(method_t methodid, key_t key)
 // LoadAckServer
 
 template<class key_t>
-LoadAckServer<key_t>::LoadAckServer(methodid, key_t key) 
+LoadAckServer<key_t>::LoadAckServer(method_t methodid, key_t key) 
 	: LoadAck<key_t>(methodid, key)
 {
 	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
@@ -3211,7 +3209,7 @@ PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue()
 
 template<class key_t, class val_t>
 PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue(method_t methodid, key_t key, val_t val, uint16_t client_logical_idx, uint32_t fragseq) 
-	: Packet<key_t>(method_t methodid, PacketType::PUTREQ_LARGEVALUE, 0, 0, key), _val(val), _client_logical_idx(client_logical_idx), _fragseq(fragseq)
+	: Packet<key_t>(methodid, PacketType::PUTREQ_LARGEVALUE, 0, 0, key), _val(val), _client_logical_idx(client_logical_idx), _fragseq(fragseq)
 {	
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }

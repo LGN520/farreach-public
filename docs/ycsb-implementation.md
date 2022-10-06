@@ -40,9 +40,10 @@
 	+ Disaggregate C-based lib for remote_client.c and server for ALL methods
 		* Place the same modules into common/ (including crc32, key, value, dynamic_array, dynamic_rulemap, helper, latency_helper, pkt_ring_buffer, snapshot_record, special_case, workloadparser/\*, iniparser/\*)
 			- Merge ALL packet_format\.* as a single file with methodid as a parameter, and place it into common/
-			- TODO: Introduce methodid into io_helper, socket_helper, pkt_ring_buffer, and dynamic_rulemap
+			- Introduce methodid into io_helper, socket_helper
+				+ NOTE: pkt_ring_buffer and dynamic_rulemap ONLY need packet_type_t -> NOT introduce methodid as parameter
 		* Compile common/ as libcommon.a for benchmark/ and method/
-			- TODO: Update usage of packet_format, io_helper, socket_helper, pkt_ring_buffer, and dynamic_rulemap -> TODO SYNC to ALL
+			- TODO: Update usage of packet_format, io_helper, socket_helper -> TODO SYNC to ALL
 			- Update Makefile and includes -> TODO SYNC to ALL
 			- TODO: Update jnisrc to use libcommon.a
 		* TODO: Re-organize ycsb as benchmark
