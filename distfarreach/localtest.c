@@ -59,6 +59,9 @@ int main(int argc, char **argv) {
 
   db_wrappers = new RocksdbWrapper[server_total_logical_num];
   INVARIANT(db_wrappers != NULL);
+	for (int i = 0; i < server_total_logical_num; i++) {
+		db_wrappers[i].init(CURMETHOD_ID);
+	}
 
   load();
 

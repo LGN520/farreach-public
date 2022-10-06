@@ -1,4 +1,4 @@
-#include "rocksdb_wrapper.h"
+#include "../common/rocksdb_wrapper.h"
 
 rocksdb::Options RocksdbWrapper::rocksdb_options = rocksdb::Options();
 

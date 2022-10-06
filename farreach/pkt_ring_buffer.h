@@ -9,7 +9,7 @@
 
 #include "../common/helper.h"
 #include "../common/key.h"
-#include "packet_format_impl.h"
+#include "../common/packet_format_impl.h"
 #include "../common/dynamic_array.h"
 
 // at most one packet from each logical client ideally

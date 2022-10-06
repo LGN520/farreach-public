@@ -78,6 +78,9 @@ void prepare_server() {
 
 	db_wrappers = new RocksdbWrapper[current_server_logical_num];
 	INVARIANT(db_wrappers != NULL);
+	for (int i = 0; i < current_server_logical_num; i++) {
+		db_wrappers[i].init(CURMETHOD_ID);
+	}
 
 	server_worker_udpsock_list = new int[current_server_logical_num];
 	server_worker_invalidateserver_udpsock_list = new int[current_server_logical_num];

@@ -10,9 +10,9 @@
 #include "../common/helper.h"
 
 #ifdef USE_YCSB
-#include "workloadparser/ycsb_parser.h"
+#include "../common/workloadparser/ycsb_parser.h"
 #elif defined USE_SYNTHETIC
-#include "workloadparser/synthetic_parser.h"
+#include "../common/workloadparser/synthetic_parser.h"
 #endif
 
 class DynamicRulemap {

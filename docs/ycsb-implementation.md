@@ -38,20 +38,19 @@
 
 - 10.5 - 10.6
 	+ Disaggregate C-based lib for remote_client.c and server for ALL methods
+		* [IMPORTANT] NOTE: the first commit for libcommon is b18b0a3e10f0b3fe76e7006fdfc1d0f38925507d with message of "add common module for benchmarks and servers"
 		* Place the same modules into common/ (including crc32, key, value, dynamic_array, dynamic_rulemap, helper, latency_helper, pkt_ring_buffer, snapshot_record, special_case, workloadparser/\*, iniparser/\*)
 			- Merge ALL packet_format\.* as a single file with methodid as a parameter, and place it into common/
-			- Introduce methodid into io_helper, socket_helper
+			- Introduce methodid into socket_helper, rocksdb_wrapper, io_helper
 				+ NOTE: pkt_ring_buffer and dynamic_rulemap ONLY need packet_type_t -> NOT introduce methodid as parameter
 		* Compile common/ as libcommon.a for benchmark/ and method/
-			- TODO: Update usage of packet_format, io_helper, socket_helper -> TODO SYNC to ALL
-			- Update Makefile and includes -> TODO SYNC to ALL
+			- Update usage of packet_format, socket_helper, rocksdb_wrapper, io_helper (files: loader.c, localtest.c, remote_client.c, server_impl.h, switchos.c, controller.c, recover/\*) -> TODO SYNC to ALL
+			- Update Makefile and includes by running replace.sh -> TODO SYNC to ALL
 			- TODO: Update jnisrc to use libcommon.a
 		* TODO: Re-organize ycsb as benchmark
 		* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 	+ TODO: Update the changes as a README in root file
-	+ TODO: Write down NOTEs in benchmark
-		- NOTE: we must sync method/\*.c to jnisrc/\* and inswitchcache-c-lib/\*
-		- NOTE: including packet_format.\*, socket_helper.\*, key/value.\*, dynamic_array.\*
+		* Make rocksdb and common -> each method
 	+ Huancheng
 		* TODO: Disaggregate JAVA-based lib for YCSB
 		* TODO: Use inswitchcache.core.Key/Value in farreach and keydump

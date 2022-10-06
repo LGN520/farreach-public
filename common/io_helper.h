@@ -15,17 +15,18 @@
 
 #include "helper.h"
 
-void get_server_db_path(std::string &db_path, uint16_t workerid);
-void get_server_deletedset_path(std::string &deletedset_path, uint16_t workerid);
-void get_server_snapshotid_path(std::string &snapshotid_path, uint16_t workerid);
-void get_server_snapshotdb_path(std::string &snapshotdb_path, uint16_t workerid); // at most one snapshotdb for server-side recovery
-void get_server_snapshotdbseq_path(std::string &snapshotdbseq_path, uint16_t workerid, uint32_t snapshotid);
-void get_server_snapshotdeletedset_path(std::string &snapshotdeletedset_path, uint16_t workerid, uint32_t snapshotid);
-void get_server_inswitchsnapshot_path(std::string &inswitchsnapshot_path, uint16_t workerid, uint32_t snapshotid);
+void get_server_db_path(method_t methodid, std::string &db_path, uint16_t workerid);
+void get_server_deletedset_path(method_t methodid, std::string &deletedset_path, uint16_t workerid);
+void get_server_snapshotid_path(method_t methodid, std::string &snapshotid_path, uint16_t workerid);
+void get_server_snapshotdb_path(method_t methodid, std::string &snapshotdb_path, uint16_t workerid); // at most one snapshotdb for server-side recovery
+void get_server_snapshotdbseq_path(method_t methodid, std::string &snapshotdbseq_path, uint16_t workerid, uint32_t snapshotid);
+void get_server_snapshotdeletedset_path(method_t methodid, std::string &snapshotdeletedset_path, uint16_t workerid, uint32_t snapshotid);
+void get_server_inswitchsnapshot_path(method_t methodid, std::string &inswitchsnapshot_path, uint16_t workerid, uint32_t snapshotid);
 
-void get_controller_snapshotid_path(std::string &snapshotid_path);
-void get_controller_spinesnapshotdata_path(std::string &snapshotdata_path, int snapshotid);
-void get_controller_leafsnapshotdata_path(std::string &snapshotdata_path, int snapshotid);
+void get_controller_snapshotid_path(method_t methodid, std::string &snapshotid_path);
+void get_controller_snapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid);
+void get_controller_spinesnapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid);
+void get_controller_leafsnapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid);
 
 bool isexist(std::string path);
 uint32_t get_filesize(std::string path);

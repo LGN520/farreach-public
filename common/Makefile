@@ -17,6 +17,17 @@ CFLAGS_SHARED += $(CFLAGS) -fPIC
 INCDIR += -I/usr/include
 
 ##############################################################################
+# RocksDB configuration
+
+ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
+
+DEPS += rocksdb_wrapper.d
+CLEAN += rocksdb_wrapper.o
+ROCKSDB_OBJECTS += rocksdb_wrapper.o
+
+INCDIR += $(ROCKSDB_INCDIR)
+
+##############################################################################
 
 # Utils
 
@@ -70,10 +81,6 @@ DEPS += socket_helper.d
 CLEAN += socket_helper.o
 UTILS_OBJECTS += socket_helper.o
 
-#DEPS += checksum_helper.d
-#CLEAN += checksum_helper.o
-#UTILS_OBJECTS += checksum_helper.o
-
 ##############################################################################
 
 CPPFLAGS += $(INCDIR)
@@ -83,7 +90,7 @@ CPPFLAGS += $(EXTRA_CPPFLAGS)
 
 TARGETS := libcommon.a
 
-libcommon.a: $(UTILS_OBJECTS)
+libcommon.a: $(UTILS_OBJECTS) $(ROCKSDB_OBJECTS)
 	ar -rcs $@ $^
 
 all: $(TARGETS)

@@ -28,7 +28,7 @@
 #include <pthread.h>
 
 #include "../common/helper.h"
-#include "io_helper.h"
+#include "../common/io_helper.h"
 
 #include "common_impl.h"
 
@@ -235,7 +235,7 @@ void prepare_controller() {
 
 void controller_load_snapshotid() {
 	std::string snapshotid_path;
-	get_controller_snapshotid_path(snapshotid_path);
+	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path);
 	if (isexist(snapshotid_path)) {
 		load_snapshotid(controller_snapshotid, snapshotid_path);
 		controller_snapshotid += 1;
@@ -249,17 +249,17 @@ void controller_load_snapshotid() {
 void controller_update_snapshotid(char *buf, int bufsize) {
 	// TODO: store inswitch snapshot data for switch failure
 	std::string snapshotdata_path;
-	get_controller_snapshotdata_path(snapshotdata_path, controller_snapshotid);
+	get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, controller_snapshotid);
 	store_buf(buf, bufsize, snapshotdata_path);
 	// store latest snapshot id for controller failure 
 	std::string snapshotid_path;
-	get_controller_snapshotid_path(snapshotid_path);
+	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path);
 	store_snapshotid(controller_snapshotid, snapshotid_path);
 	// remove old-enough snapshot data
 	int old_snapshotid = controller_snapshotid - 1;
 	if (old_snapshotid > 0) {
 		std::string old_snapshotdata_path;
-		get_controller_snapshotdata_path(old_snapshotdata_path, old_snapshotid);
+		get_controller_snapshotdata_path(CURMETHOD_ID, old_snapshotdata_path, old_snapshotid);
 		rmfiles(old_snapshotdata_path.c_str());
 	}
 
@@ -300,7 +300,7 @@ void *run_controller_popserver(void *param) {
 
 		//printf("receive CACHE_POP from server and send it to switchos\n");
 		//dump_buf(buf, recvsize);
-		cache_pop_t tmp_cache_pop(buf, recvsize);
+		cache_pop_t tmp_cache_pop(CURMETHOD_ID, buf, recvsize);
 
 		// send CACHE_POP to switch os
 		udpsendto(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &switchos_popserver_addr, switchos_popserver_addrlen, "controller.popserver.popclient");
@@ -309,7 +309,7 @@ void *run_controller_popserver(void *param) {
 		bool is_timeout = udprecvfrom(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient");
 		if (!is_timeout) {
 			// send CACHE_POP_ACK to server.popclient immediately to avoid timeout
-			cache_pop_ack_t tmp_cache_pop_ack(buf, recvsize);
+			cache_pop_ack_t tmp_cache_pop_ack(CURMETHOD_ID, buf, recvsize);
 			INVARIANT(tmp_cache_pop_ack.key() == tmp_cache_pop.key());
 			udpsendto(controller_popserver_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &server_popclient_addr, server_popclient_addrlen, "controller.popserver");
 		}
@@ -362,10 +362,10 @@ void *run_controller_evictserver(void *param) {
 		cache_evict_t *tmp_cache_evict_ptr;
 		packet_type_t optype = get_packet_type(buf, recvsize);
 		if (optype == packet_type_t::CACHE_EVICT) {
-			tmp_cache_evict_ptr = new cache_evict_t(buf, recvsize);
+			tmp_cache_evict_ptr = new cache_evict_t(CURMETHOD_ID, buf, recvsize);
 		}
 		else if (optype == packet_type_t::CACHE_EVICT_CASE2) {
-			tmp_cache_evict_ptr = new cache_evict_case2_t(buf, recvsize);
+			tmp_cache_evict_ptr = new cache_evict_case2_t(CURMETHOD_ID, buf, recvsize);
 		}
 		uint16_t tmp_global_server_logical_idx = tmp_cache_evict_ptr->serveridx();
 		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < max_server_total_logical_num);
@@ -615,7 +615,7 @@ void *run_controller_snapshotclient(void *param) {
 			udpsendto(controller_snapshotclient_for_switchos_udpsock, sendbuf, 2*sizeof(int), 0, &switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controller.snapshotclient");
 
 			databuf.clear();
-			is_timeout = udprecvlarge_udpfrag(controller_snapshotclient_for_switchos_udpsock, databuf, 0, NULL, NULL, "controller.snapshotclient");
+			is_timeout = udprecvlarge_udpfrag(CURMETHOD_ID, controller_snapshotclient_for_switchos_udpsock, databuf, 0, NULL, NULL, "controller.snapshotclient");
 			if (is_timeout) {
 				continue;
 			}

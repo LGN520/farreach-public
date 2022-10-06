@@ -13,7 +13,7 @@
 #include <sys/time.h> // struct timeval
 
 #include "../common/helper.h"
-#include "rocksdb_wrapper.h"
+#include "../common/rocksdb_wrapper.h"
 #include "../common/snapshot_record.h"
 
 #include "common_impl.h"
@@ -58,6 +58,9 @@ int main(int argc, char **argv) {
   RocksdbWrapper::prepare_rocksdb();
 
   db_wrappers = new RocksdbWrapper[server_total_logical_num];
+  for (int i = 0; i < server_total_logical_num; i++) {
+	  db_wrappers[i].init(CURMETHOD_ID);
+  }
   INVARIANT(db_wrappers != NULL);
 
   load();
@@ -340,7 +343,7 @@ void *run_sfg(void * param) {
 		  curkey = non_exist_keys[curkeyidx - op_exist_keys_size];
 	  }
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << curkey.to_string_for_print());
-	  bool tmp_stat = db_wrappers[thread_id].get(curkey, tmp_val, tmp_seq);
+	  bool tmp_stat = db_wrappers[thread_id].get(curkey, tmp_val, &tmp_seq);
 	  UNUSED(tmp_stat);
       query_i++;
       if (unlikely(query_i == op_keys_size / 2)) {

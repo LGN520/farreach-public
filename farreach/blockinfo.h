@@ -7,7 +7,7 @@
 
 #include "../common/key.h"
 #include "../common/val.h"
-#include "packet_format.h"
+#include "../common/packet_format.h"
 
 typedef GetRequestBeingevicted<netreach_key_t> get_request_beingevicted_t;
 

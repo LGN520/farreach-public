@@ -20,12 +20,12 @@
 #include "../common/val.h"
 #include "../common/iniparser/iniparser_wrapper.h"
 #include "../common/latency_helper.h"
-#include "socket_helper.h"
+#include "../common/socket_helper.h"
 
 #ifdef USE_YCSB
-#include "workloadparser/ycsb_parser.h"
+#include "../common/workloadparser/ycsb_parser.h"
 #elif defined USE_SYNTHETIC
-#include "workloadparser/synthetic_parser.h"
+#include "../common/workloadparser/synthetic_parser.h"
 #endif
 
 #include "common_impl.h"
@@ -80,7 +80,7 @@ void run_warmuper() {
 			//INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
 			//warmup_request_t req(tmpkey, tmpval);
 
-			warmup_request_t req(tmpkey);
+			warmup_request_t req(CURMETHOD_ID, tmpkey);
 
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
@@ -95,7 +95,7 @@ void run_warmuper() {
 			dump_buf(buf, recv_size);
 #endif
 
-			warmup_ack_t rsp(buf, recv_size);
+			warmup_ack_t rsp(CURMETHOD_ID, buf, recv_size);
 			UNUSED(rsp);
 		}
 		else {

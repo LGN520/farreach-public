@@ -17,9 +17,9 @@
 #include "../common/helper.h"
 #include "../common/key.h"
 #include "../common/val.h"
-#include "deleted_set_impl.h"
+#include "../common/deleted_set_impl.h"
 #include "../common/snapshot_record.h"
-#include "io_helper.h"
+#include "../common/io_helper.h"
 #include "seq_cache.h"
 
 // Default configuration of rocksdb

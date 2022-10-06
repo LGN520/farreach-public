@@ -7,11 +7,11 @@
 
 #include "../common/key.h"
 #include "../common/val.h"
-#include "packet_format_impl.h"
-#include "socket_helper.h"
+#include "../common/packet_format_impl.h"
+#include "../common/socket_helper.h"
 #include "message_queue_impl.h"
 #include "../common/iniparser/iniparser_wrapper.h"
-#include "workloadparser/parser.h"
+#include "../common/workloadparser/parser.h"
 
 /*
  * Class and alias

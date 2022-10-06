@@ -1,4 +1,4 @@
-#include "pkt_ring_buffer.h"
+#include "../common/pkt_ring_buffer.h"
 
 PktRingBuffer::PktRingBuffer() {
 }

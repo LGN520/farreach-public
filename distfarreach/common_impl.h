@@ -17,6 +17,8 @@
  * Class and alias
  */
 
+#define CURMETHOD_ID DISTFARREACH_ID
+
 typedef GetRequest<netreach_key_t> get_request_t;
 typedef PutRequest<netreach_key_t, val_t> put_request_t;
 typedef DelRequest<netreach_key_t> del_request_t;

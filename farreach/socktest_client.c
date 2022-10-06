@@ -20,7 +20,7 @@
 
 #include "common_impl.h"
 #include "../common/latency_helper.h"
-#include "socket_helper.h"
+#include "../common/socket_helper.h"
 
 size_t pktcnt = 10000;
 std::vector<double> req_latency_list;

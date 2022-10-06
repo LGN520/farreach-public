@@ -52,6 +52,12 @@ void get_controller_snapshotid_path(method_t methodid, std::string &snapshotid_p
 	return;
 }
 
+void get_controller_snapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid) {
+	const char *methodname = get_methodname_byid(methodid);
+	GET_STRING(snapshotdata_path, "/tmp/" << std::string(methodname) << "/controller.snapshotdata" << snapshotid);
+	return;
+}
+
 void get_controller_spinesnapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid) {
 	const char *methodname = get_methodname_byid(methodid);
 	GET_STRING(snapshotdata_path, "/tmp/" << std::string(methodname) << "/controller.spinesnapshotdata" << snapshotid);

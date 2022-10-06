@@ -85,6 +85,7 @@ void DynamicArray::dynamic_reserve(int off, int len) {
 		// NOTE: _curcapability < off + len <= _maxcapability
 		INVARIANT(_curcapability < _maxcapability);
 
+		INVARIANT(_curcapability > 0);
 		int newcapability = 2*_curcapability;
 		while (newcapability < off + len) {
 			newcapability = 2*newcapability;

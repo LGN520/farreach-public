@@ -12,7 +12,7 @@
 #include "concurrent_map_impl.h"
 #include "concurrent_set_impl.h"
 #include "message_queue_impl.h"
-#include "rocksdb_wrapper.h"
+#include "../common/rocksdb_wrapper.h"
 
 //#define DUMP_BUF
 

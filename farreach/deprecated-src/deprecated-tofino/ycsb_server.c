@@ -20,7 +20,7 @@
 #include "xindex.h"
 #include "xindex_impl.h"
 #include "xindex_util.h"
-#include "packet_format_impl.h"
+#include "../common/packet_format_impl.h"
 #include "dpdk_helper.h"
 #include "../common/key.h"
 #include "../common/val.h"

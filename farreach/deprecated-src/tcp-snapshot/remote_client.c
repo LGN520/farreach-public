@@ -22,13 +22,13 @@
 #include "../common/iniparser/iniparser_wrapper.h"
 #include "crc32.h"
 #include "../common/latency_helper.h"
-#include "socket_helper.h"
-#include "dynamic_rulemap.h"
+#include "../common/socket_helper.h"
+#include "../common/dynamic_rulemap.h"
 
 #ifdef USE_YCSB
-#include "workloadparser/ycsb_parser.h"
+#include "../common/workloadparser/ycsb_parser.h"
 #elif defined USE_SYNTHETIC
-#include "workloadparser/synthetic_parser.h"
+#include "../common/workloadparser/synthetic_parser.h"
 #endif
 
 #include "common_impl.h"

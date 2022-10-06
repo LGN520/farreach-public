@@ -3,49 +3,54 @@
 // server
 
 void get_server_db_path(std::string &db_path, uint16_t workerid) {
-	GET_STRING(db_path, "/tmp/farreach/worker" << workerid << ".db");
+	GET_STRING(db_path, "/tmp/distfarreach/worker" << workerid << ".db");
 	return;
 }
 
 void get_server_deletedset_path(std::string &deletedset_path, uint16_t workerid) {
-	GET_STRING(deletedset_path, "/tmp/farreach/worker" << workerid << ".deletedset");
+	GET_STRING(deletedset_path, "/tmp/distfarreach/worker" << workerid << ".deletedset");
 	return;
 }
 
 void get_server_snapshotid_path(std::string &snapshotid_path, uint16_t workerid) {
-	GET_STRING(snapshotid_path, "/tmp/farreach/worker" << workerid << ".snapshotid");
+	GET_STRING(snapshotid_path, "/tmp/distfarreach/worker" << workerid << ".snapshotid");
 	return;
 }
 
 void get_server_snapshotdb_path(std::string &snapshotdb_path, uint16_t workerid) {
-	GET_STRING(snapshotdb_path, "/tmp/farreach/worker" << workerid << ".snapshotdb");
+	GET_STRING(snapshotdb_path, "/tmp/distfarreach/worker" << workerid << ".snapshotdb");
 	return;
 }
 
 void get_server_snapshotdbseq_path(std::string &snapshotdbseq_path, uint16_t workerid, uint32_t snapshotid) {
-	GET_STRING(snapshotdbseq_path, "/tmp/farreach/worker" << workerid << ".snapshotdbseq" << snapshotid);
+	GET_STRING(snapshotdbseq_path, "/tmp/distfarreach/worker" << workerid << ".snapshotdbseq" << snapshotid);
 	return;
 }
 
 void get_server_inswitchsnapshot_path(std::string &inswitchsnapshot_path, uint16_t workerid, uint32_t snapshotid) {
-	GET_STRING(inswitchsnapshot_path, "/tmp/farreach/worker" << workerid << ".inswitchsnapshot" << snapshotid);
+	GET_STRING(inswitchsnapshot_path, "/tmp/distfarreach/worker" << workerid << ".inswitchsnapshot" << snapshotid);
 	return;
 }
 
 void get_server_snapshotdeletedset_path(std::string &snapshotdeletedset_path, uint16_t workerid, uint32_t snapshotid) {
-	GET_STRING(snapshotdeletedset_path, "/tmp/farreach/worker" << workerid << ".snapshotdeletedset" << snapshotid);
+	GET_STRING(snapshotdeletedset_path, "/tmp/distfarreach/worker" << workerid << ".snapshotdeletedset" << snapshotid);
 	return;
 }
 
 // controller
 
 void get_controller_snapshotid_path(std::string &snapshotid_path) {
-	GET_STRING(snapshotid_path, "/tmp/farreach/controller.snapshotid");
+	GET_STRING(snapshotid_path, "/tmp/distfarreach/controller.snapshotid");
 	return;
 }
 
-void get_controller_snapshotdata_path(std::string &snapshotdata_path, int snapshotid) {
-	GET_STRING(snapshotdata_path, "/tmp/farreach/controller.snapshotdata" << snapshotid);
+void get_controller_spinesnapshotdata_path(std::string &snapshotdata_path, int snapshotid) {
+	GET_STRING(snapshotdata_path, "/tmp/distfarreach/controller.spinesnapshotdata" << snapshotid);
+	return;
+}
+
+void get_controller_leafsnapshotdata_path(std::string &snapshotdata_path, int snapshotid) {
+	GET_STRING(snapshotdata_path, "/tmp/distfarreach/controller.leafsnapshotdata" << snapshotid);
 	return;
 }
 

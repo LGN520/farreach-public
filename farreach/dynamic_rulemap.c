@@ -1,4 +1,4 @@
-#include "dynamic_rulemap.h"
+#include "../common/dynamic_rulemap.h"
 
 DynamicRulemap::DynamicRulemap(int periodnum, const char * ruleprefix) {
 	INVARIANT(ruleprefix != NULL);

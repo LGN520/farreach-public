@@ -24,7 +24,7 @@
 
 #include "../common/helper.h"
 #include "../common/latency_helper.h"
-#include "socket_helper.h"
+#include "../common/socket_helper.h"
 
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 

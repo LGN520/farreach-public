@@ -21,6 +21,20 @@ LDDIR += -L/usr/lib/x86_64-linux-gnu -L../common
 INCDIR += -I/usr/include
 
 ##############################################################################
+# RocksDB configuration
+
+ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
+ROCKSDB_LDDIR += -L../rocksdb-6.22.1
+# V2: Bourbon
+#ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
+#ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
+
+ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz -ldl
+
+INCDIR += $(ROCKSDB_INCDIR)
+LDDIR += $(ROCKSDB_LDDIR)
+
+##############################################################################
 # DPDK configuration
 
 # Prefix for dpdk
@@ -62,24 +76,6 @@ INCDIR += $(DPDK_INCDIR)
 LDDIR += $(DPDK_LDDIR)
 
 ##############################################################################
-# RocksDB configuration
-
-ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
-ROCKSDB_LDDIR += -L../rocksdb-6.22.1
-# V2: Bourbon
-#ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
-#ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
-
-ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz -ldl
-
-DEPS += rocksdb_wrapper.d
-CLEAN += rocksdb_wrapper.o
-ROCKSDB_OBJECTS += rocksdb_wrapper.o
-
-INCDIR += $(ROCKSDB_INCDIR)
-LDDIR += $(ROCKSDB_LDDIR)
-
-##############################################################################
 
 # MKL configuration
 MKL_INCDIR += -I/opt/intel/mkl/include
@@ -95,25 +91,9 @@ LDDIR += $(MKL_LDDIR)
 
 UTILS_OBJECTS :=
 
-DEPS += socket_helper.d checksum_helper.d
-CLEAN += socket_helper.o checksum_helper.o
-UTILS_OBJECTS += socket_helper.o checksum_helper.o
-
-DEPS += workloadparser/parser.d workloadparser/ycsb_parser.d workloadparser/synthetic_parser.d
-CLEAN += workloadparser/parser.o workloadparser/ycsb_parser.o workloadparser/synthetic_parser.o
-UTILS_OBJECTS += workloadparser/parser.o workloadparser/ycsb_parser.o workloadparser/synthetic_parser.o
-
-DEPS += io_helper.d
-CLEAN += io_helper.o
-UTILS_OBJECTS += io_helper.o
-
-DEPS += dynamic_rulemap.d
-CLEAN += dynamic_rulemap.o
-UTILS_OBJECTS += dynamic_rulemap.o
-
-DEPS += pkt_ring_buffer.d
-CLEAN += pkt_ring_buffer.o
-UTILS_OBJECTS += pkt_ring_buffer.o
+#DEPS += checksum_helper.d
+#CLEAN += checksum_helper.o
+#UTILS_OBJECTS += checksum_helper.o
 
 #DEPS += seq_cache.d
 #CLEAN += seq_cache.o

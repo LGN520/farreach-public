@@ -2,8 +2,8 @@
 #define PARSER_H
 
 #include <stdio.h>
-#include "../helper.h"
-#include "../key.h"
+#include "../../common/helper.h"
+#include "../../common/key.h"
 #include "../val.h"
 #include "../packet_format.h"
 
