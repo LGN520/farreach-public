@@ -1158,7 +1158,7 @@ template<class key_t, class val_t>
 GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
 	: PutRequestSeq<key_t, val_t>(methodid, key, val, seq), _stat(true), _nodeidx_foreval(nodeidx_foreval)
 {
-	//INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID); // NOTE: we do NOT check methodid here due to CACHE_EVICT/NETCACHE_VALUEUPDATE inheriting from GETRES_LATEST_SEQ
+	//INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID); // NOTE: we do NOT check methodid here due to CACHE_EVICT/NETCACHE_VALUEUPDATE/DISTCACHE_SPINE_VALUEUPDATE_INSWITCH inheriting from GETRES_LATEST_SEQ
 	this->_type = optype_t(packet_type_t::GETRES_LATEST_SEQ);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
@@ -2914,18 +2914,20 @@ NetcacheValueupdateAck<key_t>::NetcacheValueupdateAck(method_t methodid, const c
 
 // TODO: END HERE
 template<class key_t>
-WarmupAckServer<key_t>::WarmupAckServer(key_t key) 
-	: WarmupAck<key_t>(key)
+WarmupAckServer<key_t>::WarmupAckServer(method_t methodid, key_t key) 
+	: WarmupAck<key_t>(methodid, key)
 {
+	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
 	this->_type = static_cast<optype_t>(PacketType::WARMUPACK_SERVER);
 }
 
 // LoadAckServer
 
 template<class key_t>
-LoadAckServer<key_t>::LoadAckServer(key_t key) 
-	: LoadAck<key_t>(key)
+LoadAckServer<key_t>::LoadAckServer(methodid, key_t key) 
+	: LoadAck<key_t>(methodid, key)
 {
+	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
 	this->_type = static_cast<optype_t>(PacketType::LOADACK_SERVER);
 }
 
@@ -2938,20 +2940,23 @@ DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim()
 }
 
 template<class key_t>
-DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim(key_t key, key_t victimkey, uint16_t victimidx)
+DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim(method_t methodid, key_t key, key_t victimkey, uint16_t victimidx)
 	: Packet<key_t>(packet_type_t::DISTCACHE_CACHE_EVICT_VICTIM, 0, 0, key), _victimkey(victimkey), _victimidx(victimidx)
 {
+	INVARIANT(methodid == DISTCACHE_ID);
 }
 
 template<class key_t>
-DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim(const char * data, uint32_t recv_size) {
+DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTCACHE_ID);
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::DISTCACHE_CACHE_EVICT_VICTIM);
 }
 
 template<class key_t>
 uint32_t DistcacheCacheEvictVictim<key_t>::size() {
-	return Packet<key_t>::get_ophdrsize() + sizeof(key_t) + sizeof(uint16_t);
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(key_t) + sizeof(uint16_t);
 }
 
 template<class key_t>
@@ -2971,11 +2976,11 @@ uint32_t DistcacheCacheEvictVictim<key_t>::serialize(char * const data, uint32_t
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_victimkeysize = this->_victimkey.serialize(begin, max_size - tmp_ophdrsize);
+	uint32_t tmp_victimkeysize = this->_victimkey.serialize(begin, max_size - uint32_t(begin - data));
 	begin += tmp_victimkeysize;
 	memcpy(begin, (void *)&this->_victimidx, sizeof(uint16_t)); // only used by end-hosts
 	begin += sizeof(uint16_t);
-	return tmp_ophdrsize + tmp_victimkeysize + sizeof(uint16_t);
+	return uint32_t(begin - data);
 }
 
 template<class key_t>
@@ -2985,7 +2990,7 @@ void DistcacheCacheEvictVictim<key_t>::deserialize(const char * data, uint32_t r
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_victimkeysize = this->_victimkey.deserialize(begin, recv_size - tmp_ophdrsize);
+	uint32_t tmp_victimkeysize = this->_victimkey.deserialize(begin, recv_size - uint32_t(begin - data));
 	begin += tmp_victimkeysize;
 	memcpy(&this->_victimidx, begin, sizeof(uint16_t)); // only used by end-hosts
 	begin += sizeof(uint16_t);
@@ -2994,14 +2999,17 @@ void DistcacheCacheEvictVictim<key_t>::deserialize(const char * data, uint32_t r
 // DistcacheCacheEvictVictimAck
 
 template<class key_t>
-DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(key_t key) 
-	: WarmupRequest<key_t>(key) // DISTCACHE_CACHE_EVICT_VICTIM_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(method_t methodid, key_t key) 
+	: WarmupRequest<key_t>(methodid, key) // DISTCACHE_CACHE_EVICT_VICTIM_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
+	INVARIANT(methodid == DISTCACHE_ID);
 	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_CACHE_EVICT_VICTIM_ACK);
 }
 
 template<class key_t>
-DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(const char * data, uint32_t recv_size) {
+DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTCACHE_ID);
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_CACHE_EVICT_VICTIM_ACK);
 }
@@ -3009,16 +3017,19 @@ DistcacheCacheEvictVictimAck<key_t>::DistcacheCacheEvictVictimAck(const char * d
 // DistcacheInvalidate
 
 template<class key_t>
-DistcacheInvalidate<key_t>::DistcacheInvalidate(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key) 
-	: WarmupRequest<key_t>(key) // DISTCACHE_INVALIDATE does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+DistcacheInvalidate<key_t>::DistcacheInvalidate(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key) 
+	: WarmupRequest<key_t>(methodid, key) // DISTCACHE_INVALIDATE does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
+	INVARIANT(methodid == DISTCACHE_ID);
 	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE);
 	this->_spineswitchidx = spineswitchidx;
 	this->_leafswitchidx = leafswitchidx;
 }
 
 template<class key_t>
-DistcacheInvalidate<key_t>::DistcacheInvalidate(const char * data, uint32_t recv_size) {
+DistcacheInvalidate<key_t>::DistcacheInvalidate(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTCACHE_ID);
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_INVALIDATE);
 }
@@ -3026,14 +3037,17 @@ DistcacheInvalidate<key_t>::DistcacheInvalidate(const char * data, uint32_t recv
 // DistcacheInvalidateAck
 
 template<class key_t>
-DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(key_t key) 
-	: WarmupRequest<key_t>(key) // DISTCACHE_INVALIDATE_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
+DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(method_t methodid, key_t key) 
+	: WarmupRequest<key_t>(methodid, key) // DISTCACHE_INVALIDATE_ACK does NOT need spine/leafswitchidx for power-of-two-choices which is ONLY for GETREQ
 {
+	INVARIANT(methodid == DISTCACHE_ID);
 	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_INVALIDATE_ACK);
 }
 
 template<class key_t>
-DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(const char * data, uint32_t recv_size) {
+DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTCACHE_ID);
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_INVALIDATE_ACK);
 }
@@ -3041,8 +3055,8 @@ DistcacheInvalidateAck<key_t>::DistcacheInvalidateAck(const char * data, uint32_
 // DistcacheUpdateTrafficload
 
 template<class key_t>
-DistcacheUpdateTrafficload<key_t>::DistcacheUpdateTrafficload(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint32_t spineload, uint32_t leafload) 
-	: GetRequest<key_t>(spineswitchidx, leafswitchidx, key)
+DistcacheUpdateTrafficload<key_t>::DistcacheUpdateTrafficload(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint32_t spineload, uint32_t leafload) 
+	: GetRequest<key_t>(methodid, spineswitchidx, leafswitchidx, key)
 {
 	this->_type = static_cast<optype_t>(PacketType::DISTCACHE_UPDATE_TRAFFICLOAD);
 	this->_spineload = spineload;
@@ -3057,9 +3071,10 @@ DistcacheSpineValueupdateInswitch<key_t, val_t>::DistcacheSpineValueupdateInswit
 {}
 
 template<class key_t, class val_t>
-DistcacheSpineValueupdateInswitch<key_t, val_t>::DistcacheSpineValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx)
-	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, 0), _kvidx(kvidx)
+DistcacheSpineValueupdateInswitch<key_t, val_t>::DistcacheSpineValueupdateInswitch(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx)
+	: GetResponseLatestSeq<key_t, val_t>(methodid, key, val, seq, 0), _kvidx(kvidx)
 {
+	INVARIANT(methodid == DISTCACHE_ID);
 	this->_type = optype_t(packet_type_t::DISTCACHE_SPINE_VALUEUPDATE_INSWITCH);
 	this->_spineswitchidx = spineswitchidx;
 	this->_leafswitchidx = leafswitchidx;
@@ -3074,15 +3089,16 @@ uint32_t DistcacheSpineValueupdateInswitch<key_t, val_t>::serialize(char * const
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_ophdrsize);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - uint32_t(begin - data));
 	begin += tmp_valsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - uint32_t(begin - data)); // shadowtype
 	begin += tmp_shadowtypesize;
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	begin += sizeof(uint32_t);
-	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
-	begin += INSWITCH_PREV_BYTES;
+	int tmp_inswitch_prev_bytes = Packet<key_t>::get_inswitch_prev_bytes(this->_methodid);
+	memset(begin, 0, tmp_inswitch_prev_bytes); // the first bytes of inswitch_hdr
+	begin += tmp_inswitch_prev_bytes;
 	uint16_t bigendian_kvidx = htons(this->_kvidx);
 	memcpy(begin, &bigendian_kvidx, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
@@ -3091,8 +3107,8 @@ uint32_t DistcacheSpineValueupdateInswitch<key_t, val_t>::serialize(char * const
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
-	begin += STAT_PADDING_BYTES;
-	return tmp_ophdrsize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	return uint32_t(begin - data);
 }
 
 template<class key_t, class val_t>
@@ -3102,14 +3118,14 @@ uint16_t DistcacheSpineValueupdateInswitch<key_t, val_t>::kvidx() const {
 
 template<class key_t, class val_t>
 uint32_t DistcacheSpineValueupdateInswitch<key_t, val_t>::size() { // unused
-	return Packet<key_t>::get_ophdrsize() + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 }
 
 // DistcacheLeafValueupdateInswitch (value must <= 128B)
 
 template<class key_t, class val_t>
-DistcacheLeafValueupdateInswitch<key_t, val_t>::DistcacheLeafValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx)
-	: DistcacheSpineValueupdateInswitch<key_t, val_t>(spineswitchidx, leafswitchidx, key, val, seq, stat, kvidx)
+DistcacheLeafValueupdateInswitch<key_t, val_t>::DistcacheLeafValueupdateInswitch(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx)
+	: DistcacheSpineValueupdateInswitch<key_t, val_t>(methodid, spineswitchidx, leafswitchidx, key, val, seq, stat, kvidx)
 {
 	this->_type = optype_t(packet_type_t::DISTCACHE_LEAF_VALUEUPDATE_INSWITCH);
 }
@@ -3124,7 +3140,9 @@ DistcacheSpineValueupdateInswitchAck<key_t>::DistcacheSpineValueupdateInswitchAc
 }*/
 
 template<class key_t>
-DistcacheSpineValueupdateInswitchAck<key_t>::DistcacheSpineValueupdateInswitchAck(const char * data, uint32_t recv_size) {
+DistcacheSpineValueupdateInswitchAck<key_t>::DistcacheSpineValueupdateInswitchAck(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTCACHE_ID);
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK);
 }
@@ -3139,7 +3157,9 @@ DistcacheLeafValueupdateInswitchAck<key_t>::DistcacheLeafValueupdateInswitchAck(
 }*/
 
 template<class key_t>
-DistcacheLeafValueupdateInswitchAck<key_t>::DistcacheLeafValueupdateInswitchAck(const char * data, uint32_t recv_size) {
+DistcacheLeafValueupdateInswitchAck<key_t>::DistcacheLeafValueupdateInswitchAck(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTCACHE_ID);
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK);
 }
@@ -3147,8 +3167,8 @@ DistcacheLeafValueupdateInswitchAck<key_t>::DistcacheLeafValueupdateInswitchAck(
 // DistcacheValueupdateInswitch (value must <= 128B)
 
 template<class key_t, class val_t>
-DistcacheValueupdateInswitch<key_t, val_t>::DistcacheValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx)
-	: DistcacheSpineValueupdateInswitch<key_t, val_t>(spineswitchidx, leafswitchidx, key, val, seq, stat, kvidx)
+DistcacheValueupdateInswitch<key_t, val_t>::DistcacheValueupdateInswitch(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx)
+	: DistcacheSpineValueupdateInswitch<key_t, val_t>(methodid, spineswitchidx, leafswitchidx, key, val, seq, stat, kvidx)
 {
 	this->_type = optype_t(packet_type_t::DISTCACHE_VALUEUPDATE_INSWITCH);
 }
@@ -3156,7 +3176,9 @@ DistcacheValueupdateInswitch<key_t, val_t>::DistcacheValueupdateInswitch(switchi
 // DistcacheValueupdateInswitchAck
 
 template<class key_t>
-DistcacheValueupdateInswitchAck<key_t>::DistcacheValueupdateInswitchAck(const char * data, uint32_t recv_size) {
+DistcacheValueupdateInswitchAck<key_t>::DistcacheValueupdateInswitchAck(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTCACHE_ID);
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::DISTCACHE_VALUEUPDATE_INSWITCH_ACK);
 }
@@ -3170,13 +3192,13 @@ void DistcacheValueupdateInswitchAck<key_t>::deserialize(const char * data, uint
 	begin += tmp_ophdrsize;
 	begin += sizeof(optype_t); // shadowtype
 	// inswitch_hdr
-	begin += INSWITCH_PREV_BYTES;
+	begin += Packet<key_t>::get_inswitch_prev_bytes(this->_methodid);
 	begin += sizeof(uint16_t); // inswitch_hdr.idx
 }
 
 template<class key_t>
 uint32_t DistcacheValueupdateInswitchAck<key_t>::size() {
-	return Packet<key_t>::get_ophdrsize() + INSWITCH_PREV_BYTES + sizeof(uint16_t);
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t);
 }
 
 // PutRequestLargevalue (value must > 128B)
@@ -3188,14 +3210,15 @@ PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue()
 }
 
 template<class key_t, class val_t>
-PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue(key_t key, val_t val, uint16_t client_logical_idx, uint32_t fragseq) 
-	: Packet<key_t>(PacketType::PUTREQ_LARGEVALUE, 0, 0, key), _val(val), _client_logical_idx(client_logical_idx), _fragseq(fragseq)
+PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue(method_t methodid, key_t key, val_t val, uint16_t client_logical_idx, uint32_t fragseq) 
+	: Packet<key_t>(method_t methodid, PacketType::PUTREQ_LARGEVALUE, 0, 0, key), _val(val), _client_logical_idx(client_logical_idx), _fragseq(fragseq)
 {	
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
-PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue(const char * data, uint32_t recv_size) {
+PutRequestLargevalue<key_t, val_t>::PutRequestLargevalue(method_t methodid, const char * data, uint32_t recv_size) {
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
@@ -3218,12 +3241,12 @@ uint32_t PutRequestLargevalue<key_t, val_t>::fragseq() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequestLargevalue<key_t, val_t>::size() { // not used
-	return Packet<key_t>::get_ophdrsize() + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN;
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN;
 }
 
 template<class key_t, class val_t>
-size_t PutRequestLargevalue<key_t, val_t>::get_frag_hdrsize() {
-	return Packet<key_t>::get_ophdrsize() + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + client_logical_idx + fragseq
+size_t PutRequestLargevalue<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + client_logical_idx + fragseq
 }
 
 template<class key_t, class val_t>
@@ -3239,7 +3262,7 @@ uint32_t PutRequestLargevalue<key_t, val_t>::dynamic_serialize(dynamic_array_t &
 	tmpoff += sizeof(uint32_t);
 	uint32_t tmp_valsize = this->_val.dynamic_serialize_large(dynamic_data, tmpoff);
 	tmpoff += tmp_valsize;
-	return tmp_ophdrsize + sizeof(uint16_t) + sizeof(uint32_t) + tmp_valsize;
+	return tmpoff;
 }
 
 template<class key_t, class val_t>
@@ -3255,9 +3278,9 @@ uint32_t PutRequestLargevalue<key_t, val_t>::serialize(char * const data, uint32
 	uint32_t bigendian_fragseq = htonl(this->_fragseq);
 	memcpy(begin, &bigendian_fragseq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize - sizeof(uint16_t) - sizeof(uint32_t));
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - uint32_t(begin - data));
 	begin += tmp_valsize;
-	return tmp_ophdrsize + sizeof(uint16_t) + sizeof(uint32_t) + tmp_valsize;
+	return uint32_t(begin - data);
 }
 
 template<class key_t, class val_t>
@@ -3273,8 +3296,7 @@ void PutRequestLargevalue<key_t, val_t>::deserialize(const char * data, uint32_t
 	memcpy(&this->_fragseq, begin, sizeof(uint32_t));
 	this->_fragseq = ntohs(this->_fragseq);
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_ophdrsize - sizeof(uint16_t) - sizeof(uint32_t));
-	UNUSED(tmp_valsize);
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - uint32_t(begin - data));
 	begin += tmp_valsize;
 }
 
@@ -3287,15 +3309,16 @@ PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq()
 }
 
 template<class key_t, class val_t>
-PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
-	: PutRequestLargevalue<key_t, val_t>(key, val, client_logical_idx, fragseq), _seq(seq)
+PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
+	: PutRequestLargevalue<key_t, val_t>(methodid, key, val, client_logical_idx, fragseq), _seq(seq)
 {	
 	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
-PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq(const char * data, uint32_t recv_size) {
+PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq(method_t methodid, const char * data, uint32_t recv_size) {
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
@@ -3308,12 +3331,12 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::seq() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequestLargevalueSeq<key_t, val_t>::size() { // not used
-	return Packet<key_t>::get_ophdrsize() + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN;
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN;
 }
 
 template<class key_t, class val_t>
-size_t PutRequestLargevalueSeq<key_t, val_t>::get_frag_hdrsize() {
-	return Packet<key_t>::get_ophdrsize() + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+size_t PutRequestLargevalueSeq<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
 }
 
 template<class key_t, class val_t>
@@ -3323,7 +3346,7 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::serialize(char * const data, uin
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - uint32_t(begin - data)); // shadowtype
 	begin += tmp_shadowtypesize;
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, &bigendian_seq, sizeof(uint32_t));
@@ -3334,9 +3357,9 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::serialize(char * const data, uin
 	uint32_t bigendian_fragseq = htonl(this->_fragseq);
 	memcpy(begin, &bigendian_fragseq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - tmp_ophdrsize - tmp_shadowtypesize - sizeof(uint32_t) - sizeof(uint16_t) - sizeof(uint32_t));
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - uint32_t(begin - data));
 	begin += tmp_valsize;
-	return tmp_ophdrsize + tmp_shadowtypesize + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t) + tmp_valsize;
+	return uint32_t(begin - data);
 }
 
 template<class key_t, class val_t>
@@ -3356,53 +3379,58 @@ void PutRequestLargevalueSeq<key_t, val_t>::deserialize(const char * data, uint3
 	memcpy(&this->_fragseq, begin, sizeof(uint32_t));
 	this->_fragseq = ntohs(this->_fragseq);
 	begin += sizeof(uint32_t);
-	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_ophdrsize - sizeof(optype_t) - sizeof(uint32_t) - sizeof(uint16_t) - sizeof(uint32_t));
-	UNUSED(tmp_valsize);
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - uint32_t(begin - data));
 	begin += tmp_valsize;
 }
 
 // PutRequestLargevalueSeqCached (value must > 128B)
 
 template<class key_t, class val_t>
-PutRequestLargevalueSeqCached<key_t, val_t>::PutRequestLargevalueSeqCached(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
-	: PutRequestLargevalueSeq<key_t, val_t>(key, val, seq, client_logical_idx, fragseq)
+PutRequestLargevalueSeqCached<key_t, val_t>::PutRequestLargevalueSeqCached(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
+	: PutRequestLargevalueSeq<key_t, val_t>(methodid, key, val, seq, client_logical_idx, fragseq)
 {	
+	INVARIANT(methodid == NETCACHE_ID || methodid == DISTCACHE_ID);
 	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
-PutRequestLargevalueSeqCached<key_t, val_t>::PutRequestLargevalueSeqCached(const char * data, uint32_t recv_size) {
+PutRequestLargevalueSeqCached<key_t, val_t>::PutRequestLargevalueSeqCached(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == NETCACHE_ID || methodid == DISTCACHE_ID);
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ_CACHED);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
-size_t PutRequestLargevalueSeqCached<key_t, val_t>::get_frag_hdrsize() {
-	return Packet<key_t>::get_ophdrsize() + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+size_t PutRequestLargevalueSeqCached<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
 }
 
 // PutRequestLargevalueSeqCase3 (value must > 128B)
 
 template<class key_t, class val_t>
-PutRequestLargevalueSeqCase3<key_t, val_t>::PutRequestLargevalueSeqCase3(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
-	: PutRequestLargevalueSeq<key_t, val_t>(key, val, seq, client_logical_idx, fragseq)
+PutRequestLargevalueSeqCase3<key_t, val_t>::PutRequestLargevalueSeqCase3(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
+	: PutRequestLargevalueSeq<key_t, val_t>(methodid, key, val, seq, client_logical_idx, fragseq)
 {	
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
 	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
-PutRequestLargevalueSeqCase3<key_t, val_t>::PutRequestLargevalueSeqCase3(const char * data, uint32_t recv_size) {
+PutRequestLargevalueSeqCase3<key_t, val_t>::PutRequestLargevalueSeqCase3(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ_CASE3);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
-size_t PutRequestLargevalueSeqCase3<key_t, val_t>::get_frag_hdrsize() {
-	return Packet<key_t>::get_ophdrsize() + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+size_t PutRequestLargevalueSeqCase3<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
 }
 
 // GetResponseLargevalue (value must > 128B)
@@ -3414,14 +3442,15 @@ GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue()
 }
 
 template<class key_t, class val_t>
-GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
-	: Packet<key_t>(PacketType::GETRES_LARGEVALUE, 0, 0, key), _val(val), _stat(stat), _nodeidx_foreval(nodeidx_foreval), _spineload(0), _leafload(0)
+GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue(method_t methodid, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
+	: Packet<key_t>(methodid, PacketType::GETRES_LARGEVALUE, 0, 0, key), _val(val), _stat(stat), _nodeidx_foreval(nodeidx_foreval), _spineload(0), _leafload(0)
 {	
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
-GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue(const char * data, uint32_t recv_size) {
+GetResponseLargevalue<key_t, val_t>::GetResponseLargevalue(method_t methodid, const char * data, uint32_t recv_size) {
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_LARGEVALUE);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
@@ -3454,12 +3483,12 @@ uint32_t GetResponseLargevalue<key_t, val_t>::leafload() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLargevalue<key_t, val_t>::size() { // unused
-	return Packet<key_t>::get_ophdrsize() + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES + sizeof(uint32_t) + sizeof(uint32_t);
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid) + sizeof(uint32_t) + sizeof(uint32_t);
 }
 
 template<class key_t, class val_t>
-size_t GetResponseLargevalue<key_t, val_t>::get_frag_hdrsize() {
-	return Packet<key_t>::get_ophdrsize(); // op_hdr
+size_t GetResponseLargevalue<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid); // op_hdr
 }
 
 template<class key_t, class val_t>
@@ -3474,14 +3503,14 @@ uint32_t GetResponseLargevalue<key_t, val_t>::dynamic_serialize(dynamic_array_t 
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	dynamic_data.dynamic_memcpy(tmpoff, (char*)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	tmpoff += sizeof(uint16_t);
-	tmpoff += STAT_PADDING_BYTES;
+	tmpoff += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 	uint32_t bigendian_spineload = htonl(this->_spineload);
 	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_spineload, sizeof(uint32_t));
 	tmpoff += sizeof(uint32_t);
 	uint32_t bigendian_leafload = htonl(this->_leafload);
 	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_leafload, sizeof(uint32_t));
 	tmpoff += sizeof(uint32_t);
-	return tmp_ophdrsize + tmp_valsize + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES + sizeof(uint32_t) + sizeof(uint32_t);
+	return tmpoff;
 }
 
 template<class key_t, class val_t>
@@ -3491,21 +3520,21 @@ uint32_t GetResponseLargevalue<key_t, val_t>::serialize(char * const data, uint3
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size-tmp_ophdrsize);
+	uint32_t tmp_valsize = this->_val.serialize_large(begin, max_size - uint32_t(begin - data));
 	begin += tmp_valsize;
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
-	begin += STAT_PADDING_BYTES;
+	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 	uint32_t bigendian_spineload = htonl(this->_spineload);
 	memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
 	uint32_t bigendian_leafload = htonl(this->_leafload);
 	memcpy(begin, (void *)&bigendian_leafload, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
-	return tmp_ophdrsize + tmp_valsize + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES + sizeof(uint32_t) + sizeof(uint32_t);
+	return uint32_t(begin - data);
 }
 
 template<class key_t, class val_t>
@@ -3515,14 +3544,14 @@ void GetResponseLargevalue<key_t, val_t>::deserialize(const char * data, uint32_
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - tmp_ophdrsize);
+	uint32_t tmp_valsize = this->_val.deserialize_large(begin, recv_size - uint32_t(begin - data));
 	begin += tmp_valsize;
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 	begin += sizeof(bool);
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
 	begin += sizeof(uint16_t);
-	begin += STAT_PADDING_BYTES;
+	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
 	memcpy(&this->_spineload, begin, sizeof(uint32_t));
 	this->_spineload = ntohl(this->_spineload);
 	begin += sizeof(uint32_t);
@@ -3534,9 +3563,10 @@ void GetResponseLargevalue<key_t, val_t>::deserialize(const char * data, uint32_
 // GetResponseLargevalueServer (value must > 128B)
 
 template<class key_t, class val_t>
-GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload) 
-	: GetResponseLargevalue<key_t, val_t>(key, val, stat, nodeidx_foreval)
+GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload) 
+	: GetResponseLargevalue<key_t, val_t>(methodid, key, val, stat, nodeidx_foreval)
 {	
+	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
 	this->_type = static_cast<optype_t>(packet_type_t::GETRES_LARGEVALUE_SERVER);
 	this->_spineswitchidx = spineswitchidx;
 	this->_leafswitchidx = leafswitchidx;
@@ -3545,15 +3575,203 @@ GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(switchidx
 }
 
 template<class key_t, class val_t>
-GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(const char * data, uint32_t recv_size) {
+GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
+	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_LARGEVALUE_SERVER);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
-size_t GetResponseLargevalueServer<key_t, val_t>::get_frag_hdrsize() {
-	return Packet<key_t>::get_ophdrsize(); // op_hdr
+size_t GetResponseLargevalueServer<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid); // op_hdr
+}
+
+// For key being evicted
+
+// GetRequestBeingevicted
+
+template<class key_t>
+GetRequestBeingevicted<key_t>::GetRequestBeingevicted()
+	: GetRequest<key_t>()
+{
+}
+
+template<class key_t>
+GetRequestBeingevicted<key_t>::GetRequestBeingevicted(method_t methodid, const char *data, uint32_t recv_size)
+{
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETREQ_BEINGEVICTED);
+}
+
+template<class key_t>
+uint32_t GetRequestBeingevicted<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for GetRequestBeingevicted");
+}
+
+// PutRequestSeqBeingevicted (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestSeqBeingevicted<key_t, val_t>::PutRequestSeqBeingevicted(method_t methodid, const char * data, uint32_t recv_size)
+{
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_SEQ_BEINGEVICTED);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestSeqBeingevicted<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestSeqBeingevicted");
+}
+
+// PutRequestSeqCase3Beingevicted (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestSeqCase3Beingevicted<key_t, val_t>::PutRequestSeqCase3Beingevicted(method_t methodid, const char * data, uint32_t recv_size)
+{
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_SEQ_CASE3_BEINGEVICTED);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestSeqCase3Beingevicted<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestSeqCase3Beingevicted");
+}
+
+// DelRequestSeqBeingevicted
+
+template<class key_t>
+DelRequestSeqBeingevicted<key_t>::DelRequestSeqBeingevicted(method_t methodid, const char * data, uint32_t recv_size)
+{
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DELREQ_SEQ_BEINGEVICTED);
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t>
+uint32_t DelRequestSeqBeingevicted<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for DelRequestSeqBeingevicted");
+}
+
+// DelRequestSeqCase3Beingevicted
+
+template<class key_t>
+DelRequestSeqCase3Beingevicted<key_t>::DelRequestSeqCase3Beingevicted(method_t methodid, const char * data, uint32_t recv_size)
+{
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DELREQ_SEQ_CASE3_BEINGEVICTED);
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t>
+uint32_t DelRequestSeqCase3Beingevicted<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for DelRequestSeqCase3Beingevicted");
+}
+
+// PutRequestLargevalueSeqBeingevicted (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqBeingevicted<key_t, val_t>::PutRequestLargevalueSeqBeingevicted(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
+	: PutRequestLargevalueSeq<key_t, val_t>(methodid, key, val, seq, client_logical_idx, fragseq)
+{	
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqBeingevicted<key_t, val_t>::PutRequestLargevalueSeqBeingevicted(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+size_t PutRequestLargevalueSeqBeingevicted<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+}
+
+// PutRequestLargevalueSeqCase3Beingevicted (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::PutRequestLargevalueSeqCase3Beingevicted(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
+	: PutRequestLargevalueSeq<key_t, val_t>(methodid, key, val, seq, client_logical_idx, fragseq)
+{	
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::PutRequestLargevalueSeqCase3Beingevicted(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+size_t PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+}
+
+// NetcacheCachePopAckNLatest (default value length must = 0B; only used in end-hosts)
+
+template<class key_t, class val_t>
+NetcacheCachePopAckNLatest<key_t, val_t>::NetcacheCachePopAckNLatest(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t serveridx)
+	: NetcacheCachePopAck<key_t, val_t>(methodid, key, val_t(), seq, stat, serveridx)
+{
+	INVARIANT(methodid == NETCACHE_ID);
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_ACK_NLATEST);
+	INVARIANT(this->_val.val_length == 0);
+	INVARIANT(seq >= 0);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t, class val_t>
+NetcacheCachePopAckNLatest<key_t, val_t>::NetcacheCachePopAckNLatest(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == NETCACHE_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP_ACK_NLATEST);
+	INVARIANT(this->_val.val_length == 0);
+	INVARIANT(this->_seq >= 0);
+	INVARIANT(this->_serveridx >= 0);
+}
+
+// NetcacheCachePopInswitchNLatest (default value length must = 0B)
+
+template<class key_t, class val_t>
+NetcacheCachePopInswitchNLatest<key_t, val_t>::NetcacheCachePopInswitchNLatest(method_t methodid, key_t key, uint32_t seq, uint16_t freeidx, bool stat)
+	: CachePopInswitch<key_t, val_t>(methodid, key, val_t(), seq, freeidx, stat)
+{
+	INVARIANT(methodid == NETCACHE_ID);
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_INSWITCH_NLATEST);
+	INVARIANT(this->_val.val_length == 0);
+	INVARIANT(seq >= 0);
+	INVARIANT(freeidx >= 0);
 }
 
 // APIs
@@ -3611,10 +3829,11 @@ static uint32_t deserialize_switchidx(switchidx_t &switchidx, const char * data,
 
 
 
-static netreach_key_t get_packet_key(const char * data, uint32_t recvsize) {
+static netreach_key_t get_packet_key(method_t methodid, const char * data, uint32_t recvsize) {
 	netreach_key_t tmpkey;
-	const char *begin = data + sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t);
-	tmpkey.deserialize(begin, recvsize - sizeof(optype_t) - sizeof(switchidx_t) - sizeof(switchidx_t));
+	int tmp_keyoff = Packet<key_t>::get_ophdrsize(methodid) - sizeof(netreach_key_t);
+	const char *begin = data + tmp_keyoff;
+	tmpkey.deserialize(begin, recvsize - tmp_keyoff);
 	return tmpkey;
 }
 
@@ -3629,31 +3848,31 @@ static bool is_same_optype(packet_type_t type1, packet_type_t type2) {
 
 // Util APIs for large value
 
-static size_t get_frag_hdrsize(packet_type_t type) {
+static size_t get_frag_hdrsize(method_t methodid, packet_type_t type) {
 	size_t frag_hdrsize = 0;
 	if (type == packet_type_t::PUTREQ_LARGEVALUE) {
-		frag_hdrsize = PutRequestLargevalue<netreach_key_t, val_t>::get_frag_hdrsize();
+		frag_hdrsize = PutRequestLargevalue<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
 	}
 	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
-		frag_hdrsize = PutRequestLargevalueSeq<netreach_key_t, val_t>::get_frag_hdrsize();
+		frag_hdrsize = PutRequestLargevalueSeq<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
 	}
 	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
-		frag_hdrsize = PutRequestLargevalueSeqCached<netreach_key_t, val_t>::get_frag_hdrsize();
+		frag_hdrsize = PutRequestLargevalueSeqCached<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
 	}
 	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3) {
-		frag_hdrsize = PutRequestLargevalueSeqCase3<netreach_key_t, val_t>::get_frag_hdrsize();
+		frag_hdrsize = PutRequestLargevalueSeqCase3<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
 	}
 	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED) {
-		frag_hdrsize = PutRequestLargevalueSeqBeingevicted<netreach_key_t, val_t>::get_frag_hdrsize();
+		frag_hdrsize = PutRequestLargevalueSeqBeingevicted<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
 	}
 	else if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
-		frag_hdrsize = PutRequestLargevalueSeqCase3Beingevicted<netreach_key_t, val_t>::get_frag_hdrsize();
+		frag_hdrsize = PutRequestLargevalueSeqCase3Beingevicted<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
 	}
 	else if (type == packet_type_t::GETRES_LARGEVALUE) {
-		frag_hdrsize = GetResponseLargevalue<netreach_key_t, val_t>::get_frag_hdrsize();
+		frag_hdrsize = GetResponseLargevalue<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
 	}
 	else if (type == packet_type_t::LOADREQ) {
-		frag_hdrsize = LoadRequest<netreach_key_t, val_t>::get_frag_hdrsize();
+		frag_hdrsize = LoadRequest<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
 	}
 	else {
 		printf("[WARNING] get_frag_hdrsize: no matched optype: %x\n", type);
@@ -3663,10 +3882,10 @@ static size_t get_frag_hdrsize(packet_type_t type) {
 
 // NOTE: frag_maxsize = frag_hdrsize of sent type + fragidx&fragnum + payload
 // NOTE: frag_totalsize = frag_hdrsize of received type + fragidx&fragnum + payload = frag_hdrsize of sent type + extra packet headers added by switch + fragidx&fragnum + payload
-static size_t get_frag_totalsize(packet_type_t type, size_t frag_maxsize) {
+static size_t get_frag_totalsize(method_t methodid, packet_type_t type, size_t frag_maxsize) {
 	if (type == packet_type_t::PUTREQ_LARGEVALUE_SEQ || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
-		int sent_frag_hdrsize = int(get_frag_hdrsize(packet_type_t::PUTREQ_LARGEVALUE));
-		int received_frag_hdrsize = int(get_frag_hdrsize(packet_type_t::PUTREQ_LARGEVALUE_SEQ));
+		int sent_frag_hdrsize = int(get_frag_hdrsize(methodid, packet_type_t::PUTREQ_LARGEVALUE));
+		int received_frag_hdrsize = int(get_frag_hdrsize(methodid, packet_type_t::PUTREQ_LARGEVALUE_SEQ));
 		int extra_frag_hdrsize = received_frag_hdrsize - sent_frag_hdrsize; // NOTE: may be negative
 
 		int result = int(frag_maxsize) + extra_frag_hdrsize;
@@ -3676,17 +3895,18 @@ static size_t get_frag_totalsize(packet_type_t type, size_t frag_maxsize) {
 	return frag_maxsize;
 }
 
-static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize) {
+static uint16_t get_packet_clientlogicalidx(method_t methodid, const char * data, uint32_t recvsize) {
 	packet_type_t tmp_optype = get_packet_type(data, recvsize);
+	size_t tmp_ophdrsize = Packet<key_t>::get_ophdrsize(methodid);
 	uint32_t prevbytes = 0;
 	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE) {
-		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t) + sizeof(netreach_key_t); // op_hdr
+		prevbytes = tmp_ophdrsize; // op_hdr
 	}
 	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
-		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(optype_t) + sizeof(uint32_t); // op_hdr + shadowtype + seq
+		prevbytes = tmp_ophdrsize + sizeof(optype_t) + sizeof(uint32_t); // op_hdr + shadowtype + seq
 	}
 	else if (tmp_optype == packet_type_t::LOADREQ) {
-		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t) + sizeof(netreach_key_t); // op_hdr
+		prevbytes = tmp_ophdrsize; // op_hdr
 	}
 	else {
 		printf("[ERROR] invalid packet type for get_packet_clientlogicalidx: %x\n", optype_t(tmp_optype));
@@ -3700,17 +3920,18 @@ static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize
 	return tmp_clientlogicalidx;
 }
 
-static uint32_t get_packet_fragseq(const char * data, uint32_t recvsize) {
+static uint32_t get_packet_fragseq(method_t methodid, const char * data, uint32_t recvsize) {
 	packet_type_t tmp_optype = get_packet_type(data, recvsize);
+	size_t tmp_ophdrsize = Packet<key_t>::get_ophdrsize(methodid);
 	uint32_t prevbytes = 0;
 	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE) {
-		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(uint16_t); // op_hdr + client_logical_idx
+		prevbytes = tmp_ophdrsize + sizeof(uint16_t); // op_hdr + client_logical_idx
 	}
 	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
-		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t); // op_hdr + shadowtype + seq + client_logical_idx
+		prevbytes = tmp_ophdrsize + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t); // op_hdr + shadowtype + seq + client_logical_idx
 	}
 	else if (tmp_optype == packet_type_t::LOADREQ) {
-		prevbytes = sizeof(optype_t) + sizeof(switchidx_t) + sizeof(switchidx_t) + sizeof(netreach_key_t) + sizeof(uint16_t); // op_hdr + client_logical_idx
+		prevbytes = tmp_ophdrsize + sizeof(uint16_t); // op_hdr + client_logical_idx
 	}
 	else {
 		printf("[ERROR] invalid packet type for get_packet_clientlogicalidx: %x\n", optype_t(tmp_optype));

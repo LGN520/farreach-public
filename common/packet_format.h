@@ -864,13 +864,13 @@ class NetcacheValueupdateAck : public WarmupRequest<key_t> { // ophdr
 template<class key_t>
 class WarmupAckServer : public WarmupAck<key_t> { // ophdr
 	public: 
-		WarmupAckServer(key_t key);
+		WarmupAckServer(method_t methodid, key_t key);
 };
 
 template<class key_t>
 class LoadAckServer : public LoadAck<key_t> { // ophdr
 	public: 
-		LoadAckServer(key_t key);
+		LoadAckServer(method_t methodid, key_t key);
 };
 
 // only used by end-hosts
@@ -878,8 +878,8 @@ template<class key_t>
 class DistcacheCacheEvictVictim : public Packet<key_t> { // ophdr + victimkey + victimidx
 	public: 
 		DistcacheCacheEvictVictim();
-		DistcacheCacheEvictVictim(key_t key, key_t victimkey, uint16_t victimidx);
-		DistcacheCacheEvictVictim(const char * data, uint32_t recv_size);
+		DistcacheCacheEvictVictim(method_t methodid, key_t key, key_t victimkey, uint16_t victimidx);
+		DistcacheCacheEvictVictim(method_t methodid, const char * data, uint32_t recv_size);
 		virtual ~DistcacheCacheEvictVictim(){}
 
 		key_t victimkey() const;
@@ -896,35 +896,35 @@ class DistcacheCacheEvictVictim : public Packet<key_t> { // ophdr + victimkey + 
 template<class key_t>
 class DistcacheCacheEvictVictimAck : public WarmupRequest<key_t> { // ophdr
 	public: 
-		DistcacheCacheEvictVictimAck(key_t key);
-		DistcacheCacheEvictVictimAck(const char * data, uint32_t recv_size);
+		DistcacheCacheEvictVictimAck(method_t methodid, key_t key);
+		DistcacheCacheEvictVictimAck(method_t methodid, const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
 class DistcacheInvalidate : public WarmupRequest<key_t> { // ophdr
 	public: 
-		DistcacheInvalidate(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key);
-		DistcacheInvalidate(const char * data, uint32_t recv_size);
+		DistcacheInvalidate(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key);
+		DistcacheInvalidate(method_t methodid, const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
 class DistcacheInvalidateAck : public WarmupRequest<key_t> { // ophdr
 	public: 
-		DistcacheInvalidateAck(key_t key);
-		DistcacheInvalidateAck(const char * data, uint32_t recv_size);
+		DistcacheInvalidateAck(method_t methodid, key_t key);
+		DistcacheInvalidateAck(method_t methodid, const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
 class DistcacheUpdateTrafficload : public GetRequest<key_t> { // ophdr + shadowtypehdr + switchloadhdr
 	public: 
-		DistcacheUpdateTrafficload(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint32_t spineload, uint32_t leafload);
+		DistcacheUpdateTrafficload(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, uint32_t spineload, uint32_t leafload);
 };
 
 template<class key_t, class val_t>
 class DistcacheSpineValueupdateInswitch : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr.idx + stat_hdr
 	public: 
 		DistcacheSpineValueupdateInswitch();
-		DistcacheSpineValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
+		DistcacheSpineValueupdateInswitch(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -937,19 +937,19 @@ class DistcacheSpineValueupdateInswitch : public GetResponseLatestSeq<key_t, val
 template<class key_t, class val_t>
 class DistcacheLeafValueupdateInswitch : public DistcacheSpineValueupdateInswitch<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr.idx + stat_hdr
 	public: 
-		DistcacheLeafValueupdateInswitch(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
+		DistcacheLeafValueupdateInswitch(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t kvidx);
 };
 
 template<class key_t>
 class DistcacheSpineValueupdateInswitchAck : public WarmupRequest<key_t> { // ophdr
 	public: 
-		DistcacheSpineValueupdateInswitchAck(const char * data, uint32_t recv_size);
+		DistcacheSpineValueupdateInswitchAck(method_t methodid, const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
 class DistcacheLeafValueupdateInswitchAck : public WarmupRequest<key_t> { // ophdr
 	public: 
-		DistcacheLeafValueupdateInswitchAck(const char * data, uint32_t recv_size);
+		DistcacheLeafValueupdateInswitchAck(method_t methodid, const char * data, uint32_t recv_size);
 };
 
 template<class key_t, class val_t>
@@ -961,7 +961,7 @@ class DistcacheValueupdateInswitch : public DistcacheSpineValueupdateInswitch<ke
 template<class key_t>
 class DistcacheValueupdateInswitchAck : public WarmupRequest<key_t> { // ophdr + shadowtype + inswitch_hdr
 	public: 
-		DistcacheValueupdateInswitchAck(const char * data, uint32_t recv_size);
+		DistcacheValueupdateInswitchAck(method_t methodid, const char * data, uint32_t recv_size);
 
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
@@ -973,10 +973,10 @@ template<class key_t, class val_t>
 class PutRequestLargevalue : public Packet<key_t> { // ophdr + client_logical_idx + fragseq + val in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
 	public:
 		PutRequestLargevalue();
-		PutRequestLargevalue(key_t key, val_t val, uint16_t client_logical_idx, uint32_t fragseq);
-		PutRequestLargevalue(const char * data, uint32_t recv_size);
+		PutRequestLargevalue(method_t methodid, key_t key, val_t val, uint16_t client_logical_idx, uint32_t fragseq);
+		PutRequestLargevalue(method_t methodid, const char * data, uint32_t recv_size);
 
-		static size_t get_frag_hdrsize();
+		static size_t get_frag_hdrsize(method_t methodid);
 		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
 
 		uint16_t client_logical_idx() const; // parsed into frag_hdr.padding by switch
@@ -996,10 +996,10 @@ template<class key_t, class val_t>
 class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + fragseq + val in payload (NOT parsed by switch)
 	public:
 		PutRequestLargevalueSeq();
-		PutRequestLargevalueSeq(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
-		PutRequestLargevalueSeq(const char * data, uint32_t recv_size);
+		PutRequestLargevalueSeq(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
+		PutRequestLargevalueSeq(method_t methodid, const char * data, uint32_t recv_size);
 
-		static size_t get_frag_hdrsize();
+		static size_t get_frag_hdrsize(method_t methodid);
 
 		uint32_t seq() const;
 
@@ -1013,29 +1013,29 @@ class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // o
 template<class key_t, class val_t>
 class PutRequestLargevalueSeqCached : public PutRequestLargevalueSeq<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + fragseq + val in payload (NOT parsed by switch)
 	public:
-		PutRequestLargevalueSeqCached(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
-		PutRequestLargevalueSeqCached(const char * data, uint32_t recv_size);
+		PutRequestLargevalueSeqCached(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
+		PutRequestLargevalueSeqCached(method_t methodid, const char * data, uint32_t recv_size);
 
-		static size_t get_frag_hdrsize();
+		static size_t get_frag_hdrsize(method_t methodid);
 };
 
 template<class key_t, class val_t>
 class PutRequestLargevalueSeqCase3 : public PutRequestLargevalueSeq<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + fragseq + val in payload (NOT parsed by switch)
 	public:
-		PutRequestLargevalueSeqCase3(key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
-		PutRequestLargevalueSeqCase3(const char * data, uint32_t recv_size);
+		PutRequestLargevalueSeqCase3(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
+		PutRequestLargevalueSeqCase3(method_t methodid, const char * data, uint32_t recv_size);
 
-		static size_t get_frag_hdrsize();
+		static size_t get_frag_hdrsize(method_t methodid);
 };
 
 template<class key_t, class val_t>
 class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr&switchload_hdr in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
 	public:
 		GetResponseLargevalue();
-		GetResponseLargevalue(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval); // NOTE: DistCache will NOT serialize GETRES_LARGEVALUE
-		GetResponseLargevalue(const char * data, uint32_t recv_size);
+		GetResponseLargevalue(method_t methodid, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval); // NOTE: DistCache will NOT serialize GETRES_LARGEVALUE
+		GetResponseLargevalue(method_t methodid, const char * data, uint32_t recv_size);
 
-		static size_t get_frag_hdrsize();
+		static size_t get_frag_hdrsize(method_t methodid);
 		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
 
 		val_t val() const;
@@ -1058,10 +1058,87 @@ class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr&swi
 template<class key_t, class val_t>
 class GetResponseLargevalueServer : public GetResponseLargevalue<key_t, val_t> { // ophdr + val&stat_hdr in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
 	public:
-		GetResponseLargevalueServer(switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload);
-		GetResponseLargevalueServer(const char * data, uint32_t recv_size);
+		GetResponseLargevalueServer(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload);
+		GetResponseLargevalueServer(method_t methodid, const char * data, uint32_t recv_size);
 
-		static size_t get_frag_hdrsize();
+		static size_t get_frag_hdrsize(method_t methodid);
+};
+
+// For key being evicted
+
+template<class key_t>
+class GetRequestBeingevicted : public GetRequest<key_t> { // ophdr
+	public: 
+		GetRequestBeingevicted();
+		GetRequestBeingevicted(method_t methodid, const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestSeqBeingevicted : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
+	public: 
+		PutRequestSeqBeingevicted(method_t methodid, const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestSeqCase3Beingevicted : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
+	public: 
+		PutRequestSeqCase3Beingevicted(method_t methodid, const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t>
+class DelRequestSeqBeingevicted : public DelRequestSeq<key_t> { // ophdr + shadowtype + seq
+	public: 
+		DelRequestSeqBeingevicted(method_t methodid, const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t>
+class DelRequestSeqCase3Beingevicted : public DelRequestSeq<key_t> { // ophdr + shadowtype + seq
+	public: 
+		DelRequestSeqCase3Beingevicted(method_t methodid, const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestLargevalueSeqBeingevicted : public PutRequestLargevalueSeq<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + fragseq + val in payload (NOT parsed by switch)
+	public:
+		PutRequestLargevalueSeqBeingevicted(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
+		PutRequestLargevalueSeqBeingevicted(method_t methodid, const char * data, uint32_t recv_size);
+
+		static size_t get_frag_hdrsize(method_t methodid);
+};
+
+template<class key_t, class val_t>
+class PutRequestLargevalueSeqCase3Beingevicted : public PutRequestLargevalueSeq<key_t, val_t> { // ophdr + shadowtype + seq + client_logical_idx + fragseq + val in payload (NOT parsed by switch)
+	public:
+		PutRequestLargevalueSeqCase3Beingevicted(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq);
+		PutRequestLargevalueSeqCase3Beingevicted(method_t methodid, const char * data, uint32_t recv_size);
+
+		static size_t get_frag_hdrsize(method_t methodid);
+};
+
+// Fix Tofino bugs for NetCache
+
+// NOTE: only used in end-hosts
+template<class key_t, class val_t>
+class NetcacheCachePopAckNLatest : public NetcacheCachePopAck<key_t, val_t> { // ophdr + default val (vallen=0) + seq + stat (not stat_hdr) + serveridx
+	public: 
+		NetcacheCachePopAckNLatest(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t serveridx);
+		NetcacheCachePopAckNLatest(method_t methodid, const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class NetcacheCachePopInswitchNLatest : public CachePopInswitch<key_t, val_t> { // ophdr + default val (vallen=0) + shadowtype + seq + inswitch_hdr + stat_hdr
+	public:
+		NetcacheCachePopInswitchNLatest(method_t methodid, key_t key, uint32_t seq, uint16_t freeidx, bool stat);
 };
 
 // APIs
@@ -1073,13 +1150,13 @@ static uint32_t serialize_switchidx(switchidx_t switchidx, char *data, uint32_t 
 static uint32_t dynamic_serialize_switchidx(switchidx_t switchidx, dynamic_array_t &dynamic_data, int off);
 static uint32_t deserialize_switchidx(switchidx_t &switchidx, const char *data, uint32_t recvsize);
 
-static netreach_key_t get_packet_key(const char * data, uint32_t recvsize);
+static netreach_key_t get_packet_key(method_t methodid, const char * data, uint32_t recvsize);
 static bool is_same_optype(packet_type_t type1, packet_type_t type2);
 // Util APIs for large value
-static size_t get_frag_hdrsize(packet_type_t type);
-static size_t get_frag_totalsize(packet_type_t type, size_t frag_maxsize);
-static uint16_t get_packet_clientlogicalidx(const char * data, uint32_t recvsize);
-static uint32_t get_packet_fragseq(const char * data, uint32_t recvsize);
+static size_t get_frag_hdrsize(method_t methodid, packet_type_t type);
+static size_t get_frag_totalsize(method_t methodid, packet_type_t type, size_t frag_maxsize);
+static uint16_t get_packet_clientlogicalidx(method_t methodid, const char * data, uint32_t recvsize);
+static uint32_t get_packet_fragseq(method_t methodid, const char * data, uint32_t recvsize);
 static bool is_packet_with_largevalue(packet_type_t type); // whether the packet is large to be processed by udprecvlarge_ipfrag
 static bool is_packet_with_clientlogicalidx(packet_type_t type); // whether the large packet is sent to server
 
