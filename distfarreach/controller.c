@@ -27,8 +27,8 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "helper.h"
-#include "io_helper.h"
+#include "../common/helper.h"
+#include "../common/io_helper.h"
 
 #include "common_impl.h"
 
@@ -246,7 +246,7 @@ void prepare_controller() {
 
 void controller_load_snapshotid() {
 	std::string snapshotid_path;
-	get_controller_snapshotid_path(snapshotid_path);
+	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path);
 	if (isexist(snapshotid_path)) {
 		load_snapshotid(controller_snapshotid, snapshotid_path);
 		controller_snapshotid += 1;
@@ -260,23 +260,23 @@ void controller_load_snapshotid() {
 void controller_update_snapshotid(char *spinebuf, int spinebufsize, char *leafbuf, int leafbufsize) {
 	// TODO: store inswitch snapshot data for switch failure
 	std::string spinesnapshotdata_path;
-	get_controller_spinesnapshotdata_path(spinesnapshotdata_path, controller_snapshotid);
+	get_controller_spinesnapshotdata_path(CURMETHOD_ID, spinesnapshotdata_path, controller_snapshotid);
 	store_buf(spinebuf, spinebufsize, spinesnapshotdata_path);
 	std::string leafsnapshotdata_path;
-	get_controller_leafsnapshotdata_path(leafsnapshotdata_path, controller_snapshotid);
+	get_controller_leafsnapshotdata_path(CURMETHOD_ID, leafsnapshotdata_path, controller_snapshotid);
 	store_buf(leafbuf, leafbufsize, leafsnapshotdata_path);
 	// store latest snapshot id for controller failure 
 	std::string snapshotid_path;
-	get_controller_snapshotid_path(snapshotid_path);
+	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path);
 	store_snapshotid(controller_snapshotid, snapshotid_path);
 	// remove old-enough snapshot data
 	int old_snapshotid = controller_snapshotid - 1;
 	if (old_snapshotid > 0) {
 		std::string old_spinesnapshotdata_path;
-		get_controller_spinesnapshotdata_path(old_spinesnapshotdata_path, old_snapshotid);
+		get_controller_spinesnapshotdata_path(CURMETHOD_ID, old_spinesnapshotdata_path, old_snapshotid);
 		rmfiles(old_spinesnapshotdata_path.c_str());
 		std::string old_leafsnapshotdata_path;
-		get_controller_leafsnapshotdata_path(old_leafsnapshotdata_path, old_snapshotid);
+		get_controller_leafsnapshotdata_path(CURMETHOD_ID, old_leafsnapshotdata_path, old_snapshotid);
 		rmfiles(old_leafsnapshotdata_path.c_str());
 	}
 
@@ -322,7 +322,7 @@ void *run_controller_popserver(void *param) {
 
 		//printf("receive CACHE_POP from server and send it to switchos\n");
 		//dump_buf(buf, recvsize);
-		cache_pop_t tmp_cache_pop(buf, recvsize);
+		cache_pop_t tmp_cache_pop(CURMETHOD_ID, buf, recvsize);
 
 		// validate spine/leaf switchidx
 		validate_switchidx(tmp_cache_pop.key());
@@ -346,7 +346,7 @@ void *run_controller_popserver(void *param) {
 
 		if (!is_timeout) { // NOTE: controller.popserver does NOT need to retry due to server-side timeout-and-retry mechanism
 			// send CACHE_POP_ACK to server.popclient immediately to avoid timeout
-			cache_pop_ack_t tmp_cache_pop_ack(buf, recvsize);
+			cache_pop_ack_t tmp_cache_pop_ack(CURMETHOD_ID, buf, recvsize);
 			INVARIANT(tmp_cache_pop_ack.key() == tmp_cache_pop.key());
 			udpsendto(controller_popserver_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &server_popclient_addr, server_popclient_addrlen, "controller.popserver");
 		}
@@ -427,10 +427,10 @@ void *run_controller_evictserver(void *param) {
 		cache_evict_t *tmp_cache_evict_ptr;
 		packet_type_t optype = get_packet_type(buf, recvsize);
 		if (optype == packet_type_t::CACHE_EVICT) {
-			tmp_cache_evict_ptr = new cache_evict_t(buf, recvsize);
+			tmp_cache_evict_ptr = new cache_evict_t(CURMETHOD_ID, buf, recvsize);
 		}
 		else if (optype == packet_type_t::CACHE_EVICT_CASE2) {
-			tmp_cache_evict_ptr = new cache_evict_case2_t(buf, recvsize);
+			tmp_cache_evict_ptr = new cache_evict_case2_t(CURMETHOD_ID, buf, recvsize);
 		}
 		uint16_t tmp_global_server_logical_idx = tmp_cache_evict_ptr->serveridx();
 		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < max_server_total_logical_num);
@@ -732,7 +732,7 @@ void *run_controller_snapshotclient(void *param) {
 		udpsendto(controller_snapshotclient_for_leafswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &leafswitchos_snapshotserver_addr, leafswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_leafswitchos");
 		while (true) {
 			databufs[0].clear();
-			is_timeout = udprecvlarge_udpfrag(controller_snapshotclient_for_spineswitchos_udpsock, databufs[0], 0, NULL, NULL, "controller.snapshotclient_for_spineswitchos");
+			is_timeout = udprecvlarge_udpfrag(CURMETHOD_ID, controller_snapshotclient_for_spineswitchos_udpsock, databufs[0], 0, NULL, NULL, "controller.snapshotclient_for_spineswitchos");
 			if (is_timeout) {
 				udpsendto(controller_snapshotclient_for_spineswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &spineswitchos_snapshotserver_addr, spineswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_spineswitchos");
 				continue;
@@ -743,7 +743,7 @@ void *run_controller_snapshotclient(void *param) {
 		}
 		while (true) {
 			databufs[1].clear();
-			is_timeout = udprecvlarge_udpfrag(controller_snapshotclient_for_leafswitchos_udpsock, databufs[1], 0, NULL, NULL, "controller.snapshotclient_for_leafswitchos");
+			is_timeout = udprecvlarge_udpfrag(CURMETHOD_ID, controller_snapshotclient_for_leafswitchos_udpsock, databufs[1], 0, NULL, NULL, "controller.snapshotclient_for_leafswitchos");
 			if (is_timeout) {
 				udpsendto(controller_snapshotclient_for_leafswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &leafswitchos_snapshotserver_addr, leafswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_leafswitchos");
 				continue;

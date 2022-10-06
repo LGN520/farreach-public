@@ -17,12 +17,12 @@
 #include <string.h>
 #include <map>
 
-#include "helper.h"
+#include "../common/helper.h"
 
 #ifdef USE_YCSB
-#include "workloadparser/ycsb_parser.h"
+#include "../common/workloadparser/ycsb_parser.h"
 #elif defined USE_SYNTHETIC
-#include "workloadparser/synthetic_parser.h"
+#include "../common/workloadparser/synthetic_parser.h"
 #endif
 
 // CPU affinity
@@ -30,15 +30,15 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "latency_helper.h"
-#include "socket_helper.h"
+#include "../common/latency_helper.h"
+#include "../common/socket_helper.h"
 
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 #ifdef USE_YCSB
-#include "workloadparser/ycsb_parser.h"
+#include "../common/workloadparser/ycsb_parser.h"
 #elif defined USE_SYNTHETIC
-#include "workloadparser/synthetic_parser.h"
+#include "../common/workloadparser/synthetic_parser.h"
 #endif
 
 #include "common_impl.h"

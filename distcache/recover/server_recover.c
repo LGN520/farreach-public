@@ -5,10 +5,10 @@
 #include "rocksdb/utilities/transaction_db.h"
 #include "rocksdb/utilities/checkpoint.h"
 
-#include "../helper.h"
-#include "../io_helper.h"
-#include "../iniparser/iniparser_wrapper.h"
-#include "../rocksdb_wrapper.h"
+#include "../../common/helper.h"
+#include "../../common/io_helper.h"
+#include "../../common/iniparser/iniparser_wrapper.h"
+#include "../../common/rocksdb_wrapper.h"
 
 int main(int argc, char **argv) {
 	if (argc != 3) {

@@ -12,12 +12,12 @@
 #include "rocksdb/utilities/transaction_db.h"
 #include "rocksdb/utilities/checkpoint.h"
 
-#include "helper.h"
-#include "key.h"
-#include "val.h"
-#include "deleted_set_impl.h"
-#include "snapshot_record.h"
-#include "io_helper.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
+#include "../common/deleted_set_impl.h"
+#include "../common/snapshot_record.h"
+#include "../common/io_helper.h"
 
 #define MEMTABLE_SIZE 4 * 1024 * 1024
 #define MAX_MEMTABLE_NUM 2

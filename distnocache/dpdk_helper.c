@@ -1,6 +1,6 @@
 #include "dpdk_helper.h" 
-#include "helper.h"
-#include "packet_format.h"
+#include "../common/helper.h"
+#include "../common/packet_format.h"
 
 static struct rte_eth_conf port_conf_default;
 

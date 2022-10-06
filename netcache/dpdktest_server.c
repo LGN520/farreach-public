@@ -17,11 +17,11 @@
 #include <string.h>
 #include <map>
 
-#include "helper.h"
+#include "../common/helper.h"
 #include "dpdk_helper.h"
 
 #include "common_impl.h"
-#include "latency_helper.h"
+#include "../common/latency_helper.h"
 
 //#define KEYVALUE
 

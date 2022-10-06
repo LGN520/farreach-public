@@ -1,7 +1,7 @@
 #ifndef BF_H
 #define BF_H
 
-#include "helper.h"
+#include "../common/helper.h"
 #include <vector>
 
 template<class key_t>

@@ -16,12 +16,33 @@ replace(){
 	grep -r 'include "workloadparser/' -l | xargs sed -i  's!include "workloadparser/!include "../common/workloadparser/!g'
 	grep -r 'include "iniparser/' -l | xargs sed -i  's!include "iniparser/!include "../common/iniparser/!g'
 	grep -r 'include "../iniparser/' -l | xargs sed -i  's!include "../iniparser/!include "../../common/iniparser/!g'
+	grep -r 'include "packet_format.h"' -l | xargs sed -i  's!include "packet_format.h"!include "../common/packet_format.h"!g'
 	grep -r 'include "packet_format_impl.h"' -l | xargs sed -i  's!include "packet_format_impl.h"!include "../common/packet_format_impl.h"!g'
 	grep -r 'include "deleted_set_impl.h"' -l | xargs sed -i  's!include "deleted_set_impl.h"!include "../common/deleted_set_impl.h"!g'
 	grep -r 'include "rocksdb_wrapper.h"' -l | xargs sed -i  's!include "rocksdb_wrapper.h"!include "../common/rocksdb_wrapper.h"!g'
 	grep -r 'include "../rocksdb_wrapper.h"' -l | xargs sed -i  's!include "../rocksdb_wrapper.h"!include "../../common/rocksdb_wrapper.h"!g'
 }
 
-cd farreach
+#cd farreach
+#replace
+#cd ..
+
+#cd nocache
+#replace
+#cd ..
+
+#cd netcache
+#replace
+#cd ..
+
+#cd distfarreach
+#replace
+#cd ..
+
+#cd distcache
+#replace
+#cd ..
+
+cd distnocache
 replace
 cd ..

@@ -16,21 +16,20 @@
 #include <set>
 //#include <sys/time.h> // struct timeval
 
-#include "helper.h"
-#include "key.h"
-#include "val.h"
-#include "iniparser/iniparser_wrapper.h"
-#include "crc32.h"
-#include "latency_helper.h"
-#include "socket_helper.h"
-#include "dynamic_rulemap.h"
-#include "dynamic_array.h"
-#include "io_helper.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
+#include "../common/iniparser/iniparser_wrapper.h"
+#include "../common/latency_helper.h"
+#include "../common/socket_helper.h"
+#include "../common/dynamic_rulemap.h"
+#include "../common/dynamic_array.h"
+#include "../common/io_helper.h"
 
 #ifdef USE_YCSB
-#include "workloadparser/ycsb_parser.h"
+#include "../common/workloadparser/ycsb_parser.h"
 #elif defined USE_SYNTHETIC
-#include "workloadparser/synthetic_parser.h"
+#include "../common/workloadparser/synthetic_parser.h"
 #endif
 
 #include "common_impl.h"
@@ -1026,7 +1025,7 @@ void *run_client_worker(void *param) {
 
 			if (tmptype == optype_t(packet_type_t::GETREQ)) { // get
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
-				get_request_t req(tmpkey);
+				get_request_t req(CURMETHOD_ID, tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
@@ -1045,7 +1044,7 @@ void *run_client_worker(void *param) {
 				while (true) {
 					//is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 					dynamicbuf.clear();
-					is_timeout = udprecvlarge_ipfrag(client_udpsock_list[local_client_logical_idx], dynamicbuf, 0, NULL, NULL, "ycsb_remote_client");
+					is_timeout = udprecvlarge_ipfrag(CURMETHOD_ID, client_udpsock_list[local_client_logical_idx], dynamicbuf, 0, NULL, NULL, "ycsb_remote_client");
 					recv_size = dynamicbuf.size();
 					CUR_TIME(wait_t1);
 #ifdef DUMP_BUF
@@ -1062,12 +1061,12 @@ void *run_client_worker(void *param) {
 							netreach_key_t tmp_key_for_getreq;
 							uint16_t tmp_nodeidx_foreval_for_getreq = 0;
 							if (tmp_pkttype_for_getreq == packet_type_t::GETRES) {
-								get_response_t rsp(dynamicbuf.array(), recv_size);
+								get_response_t rsp(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 								tmp_key_for_getreq = rsp.key();
 								tmp_nodeidx_foreval_for_getreq = rsp.nodeidx_foreval();
 							}
 							else {
-								get_response_largevalue_t rsp(dynamicbuf.array(), recv_size);
+								get_response_largevalue_t rsp(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 								tmp_key_for_getreq = rsp.key();
 								tmp_nodeidx_foreval_for_getreq = rsp.nodeidx_foreval();
 							}
@@ -1096,7 +1095,7 @@ void *run_client_worker(void *param) {
 
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 				if (tmpval.val_length <= val_t::SWITCH_MAX_VALLEN) {
-					put_request_t req(tmpkey, tmpval);
+					put_request_t req(CURMETHOD_ID, tmpkey, tmpval);
 					req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 					dump_buf(buf, req_size);
@@ -1111,7 +1110,7 @@ void *run_client_worker(void *param) {
 					CUR_TIME(send_t2);
 				}
 				else { // for large value
-					put_request_largevalue_t req(tmpkey, tmpval, global_client_logical_idx, fragseq);
+					put_request_largevalue_t req(CURMETHOD_ID, tmpkey, tmpval, global_client_logical_idx, fragseq);
 					fragseq += 1;
 					dynamicbuf.clear();
 					req_size = req.dynamic_serialize(dynamicbuf);
@@ -1124,7 +1123,7 @@ void *run_client_worker(void *param) {
 						wait_time = GET_MICROSECOND(wait_t3);
 					}
 					CUR_TIME(send_t1);
-					udpsendlarge_ipfrag(client_udpsock_list[local_client_logical_idx], dynamicbuf.array(), req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client", put_request_largevalue_t::get_frag_hdrsize());
+					udpsendlarge_ipfrag(client_udpsock_list[local_client_logical_idx], dynamicbuf.array(), req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client", put_request_largevalue_t::get_frag_hdrsize(CURMETHOD_ID));
 					CUR_TIME(send_t2);
 				}
 
@@ -1164,7 +1163,7 @@ void *run_client_worker(void *param) {
 							continue; // continue to receive next packet
 						}
 						else {
-							put_response_t rsp(buf, recv_size);
+							put_response_t rsp(CURMETHOD_ID, buf, recv_size);
 							if (rsp.key() != tmpkey) {
 								thread_param.unmatched_cnt++;
 								continue; // continue to receive next packet
@@ -1195,7 +1194,7 @@ void *run_client_worker(void *param) {
 
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 				// NOTE: LOADREQ allows both small/large value
-				load_request_t req(tmpkey, tmpval, global_client_logical_idx, fragseq);
+				load_request_t req(CURMETHOD_ID, tmpkey, tmpval, global_client_logical_idx, fragseq);
 				fragseq += 1;
 				dynamicbuf.clear();
 				req_size = req.dynamic_serialize(dynamicbuf);
@@ -1208,7 +1207,7 @@ void *run_client_worker(void *param) {
 					wait_time = GET_MICROSECOND(wait_t3);
 				}
 				CUR_TIME(send_t1);
-				udpsendlarge_ipfrag(client_udpsock_list[local_client_logical_idx], dynamicbuf.array(), req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client", load_request_t::get_frag_hdrsize());
+				udpsendlarge_ipfrag(client_udpsock_list[local_client_logical_idx], dynamicbuf.array(), req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client", load_request_t::get_frag_hdrsize(CURMETHOD_ID));
 				CUR_TIME(send_t2);
 
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
@@ -1225,7 +1224,7 @@ void *run_client_worker(void *param) {
 							continue; // continue to receive next packet
 						}
 						else {
-							load_ack_t rsp(buf, recv_size);
+							load_ack_t rsp(CURMETHOD_ID, buf, recv_size);
 							if (rsp.key() != tmpkey) {
 								thread_param.unmatched_cnt++;
 								continue; // continue to receive next packet
@@ -1247,7 +1246,7 @@ void *run_client_worker(void *param) {
 			}
 			else if (tmptype == optype_t(packet_type_t::DELREQ)) {
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
-				del_request_t req(tmpkey);
+				del_request_t req(CURMETHOD_ID, tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
@@ -1277,7 +1276,7 @@ void *run_client_worker(void *param) {
 							continue; // continue to receive next packet
 						}
 						else {
-							del_response_t rsp(buf, recv_size);
+							del_response_t rsp(CURMETHOD_ID, buf, recv_size);
 							if (rsp.key() != tmpkey) {
 								thread_param.unmatched_cnt++;
 								continue; // continue to receive next packet
@@ -1307,7 +1306,7 @@ void *run_client_worker(void *param) {
 
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				//scan_request_t req(tmpkey, endkey, range_num);
-				scan_request_t req(tmpkey, endkey);
+				scan_request_t req(CURMETHOD_ID, tmpkey, endkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] startkey = " << tmpkey.to_string() 
 						<< "endkey = " << endkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -1328,7 +1327,7 @@ void *run_client_worker(void *param) {
 				std::vector<std::vector<struct sockaddr_in>> perswitch_perserver_addrs;
 				std::vector<std::vector<socklen_t>> perswitch_perserver_addrlens;
 				set_recvtimeout(client_udpsock_list[local_client_logical_idx], CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
-				is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[local_client_logical_idx], perswitch_perserver_scanbufs, 0, perswitch_perserver_addrs, perswitch_perserver_addrlens, "remote_client.worker", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), scan_response_split_t::get_srcswitchnum_off(), scan_response_split_t::get_srcswitchnum_len(), scan_response_split_t::get_srcswitchnum_conversion(), scan_response_split_t::get_srcswitchid_off(), scan_response_split_t::get_srcswitchid_len(), scan_response_split_t::get_srcswitchid_conversion(), true, optype_t(packet_type_t::SCANRES_SPLIT), tmpkey);
+				is_timeout = udprecvlarge_multisrc_ipfrag_dist(CURMETHOD_ID, client_udpsock_list[local_client_logical_idx], perswitch_perserver_scanbufs, 0, perswitch_perserver_addrs, perswitch_perserver_addrlens, "remote_client.worker", scan_response_split_t::get_frag_hdrsize(CURMETHOD_ID), scan_response_split_t::get_srcnum_off(CURMETHOD_ID), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(CURMETHOD_ID), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), scan_response_split_t::get_srcswitchnum_off(CURMETHOD_ID), scan_response_split_t::get_srcswitchnum_len(), scan_response_split_t::get_srcswitchnum_conversion(), scan_response_split_t::get_srcswitchid_off(CURMETHOD_ID), scan_response_split_t::get_srcswitchid_len(), scan_response_split_t::get_srcswitchid_conversion(), true, optype_t(packet_type_t::SCANRES_SPLIT), tmpkey);
 				CUR_TIME(wait_t1);
 				set_recvtimeout(client_udpsock_list[local_client_logical_idx], CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
 				if (is_timeout) {
@@ -1343,7 +1342,7 @@ void *run_client_worker(void *param) {
 				for (int i = 0; i < tmp_srcswitchnum; i++) {
 					printf("[leaf switch %d] tmp_srcservernum %d\n", i, perswitch_perserver_scanbufs[i].size());
 					for (int j = 0; j < perswitch_perserver_scanbufs[i].size(); j++) {
-						scan_response_split_t rsp(perswitch_perserver_scanbufs[i][j].array(), perswitch_perserver_scanbufs[i][j].size());
+						scan_response_split_t rsp(CURMETHOD_ID, perswitch_perserver_scanbufs[i][j].array(), perswitch_perserver_scanbufs[i][j].size());
 						FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] startkey = " << rsp.key().to_string()
 								<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
 						totalnum += rsp.pairnum();

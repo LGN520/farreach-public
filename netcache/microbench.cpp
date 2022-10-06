@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 
-#include "helper.h"
+#include "../common/helper.h"
 #include "xindex.h"
 #include "xindex_impl.h"
 

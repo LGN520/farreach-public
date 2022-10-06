@@ -19,17 +19,17 @@
 #include <map>
 #include <mutex>
 
-#include "helper.h"
-#include "io_helper.h"
-#include "key.h"
-#include "val.h"
+#include "../common/helper.h"
+#include "../common/io_helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
 
-#include "socket_helper.h"
-#include "iniparser/iniparser_wrapper.h"
+#include "../common/socket_helper.h"
+#include "../common/iniparser/iniparser_wrapper.h"
 #include "message_queue_impl.h"
-#include "packet_format_impl.h"
+#include "../common/packet_format_impl.h"
 #include "concurrent_map_impl.h"
-#include "dynamic_array.h"
+#include "../common/dynamic_array.h"
 
 #include "common_impl.h"
 
@@ -187,11 +187,11 @@ void *run_switchos_popserver(void *param) {
 		netcache_getreq_pop_t *tmp_netcache_getreq_pop_ptr = NULL; // freed by switchos.popworker if the key is not cached
 		packet_type_t tmp_optype = get_packet_type(buf, recvsize);
 		if (tmp_optype == packet_type_t::NETCACHE_WARMUPREQ_INSWITCH_POP) {
-			netcache_warmupreq_inswitch_pop_t tmp_netcache_warmupreq_inswitch_pop(buf, recvsize);
-			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(tmp_netcache_warmupreq_inswitch_pop.key());
+			netcache_warmupreq_inswitch_pop_t tmp_netcache_warmupreq_inswitch_pop(CURMETHOD_ID, buf, recvsize);
+			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(CURMETHOD_ID, tmp_netcache_warmupreq_inswitch_pop.key());
 		}
 		else if (tmp_optype == packet_type_t::NETCACHE_GETREQ_POP) {
-			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(buf, recvsize); // freed by switchos.popworker if the key is not cached
+			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(CURMETHOD_ID, buf, recvsize); // freed by switchos.popworker if the key is not cached
 		}
 		else {
 			printf("[switchos.popserver] invalid pkttype: %x\n", optype_t(tmp_optype));
@@ -354,7 +354,7 @@ void *run_switchos_popworker(void *param) {
 				while (true) {
 					//printf("send %d CACHE_EVICT_LOADFREQ_INSWITCHs to reflector\n", switchos_sample_cnt);
 					for (size_t i = 0; i < switchos_sample_cnt; i++) {
-						cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
+						cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(CURMETHOD_ID, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
 						pktsize = tmp_cache_evict_loadfreq_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 					}
@@ -368,7 +368,7 @@ void *run_switchos_popworker(void *param) {
 							break;
 						}
 
-						cache_evict_loadfreq_inswitch_ack_t tmp_cache_evict_loadfreq_inswitch_ack(ackbuf, ack_recvsize);
+						cache_evict_loadfreq_inswitch_ack_t tmp_cache_evict_loadfreq_inswitch_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
 						for (size_t i = 0; i < switchos_sample_cnt; i++) {
 							if (static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]) == tmp_cache_evict_loadfreq_inswitch_ack.key()) {
 								frequency_counters[i] = tmp_cache_evict_loadfreq_inswitch_ack.frequency();
@@ -426,7 +426,7 @@ void *run_switchos_popworker(void *param) {
 				// switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
 				
 				//CUR_TIME(evict_sendrecv_t1);
-				netcache_cache_evict_t tmp_netcache_cache_evict(cur_evictkey, switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx]);
+				netcache_cache_evict_t tmp_netcache_cache_evict(CURMETHOD_ID, cur_evictkey, switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx]);
 				pktsize = tmp_netcache_cache_evict.serialize(pktbuf, MAX_BUFSIZE);
 				while (true) {
 					//printf("send NETCACHE_CACHE_EVICT to controller.evictserver\n");
@@ -440,7 +440,7 @@ void *run_switchos_popworker(void *param) {
 						continue;
 					}
 					else {
-						netcache_cache_evict_ack_t tmp_cache_evict_ack(ackbuf, ack_recvsize);
+						netcache_cache_evict_ack_t tmp_cache_evict_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
 						INVARIANT(tmp_cache_evict_ack.key() == cur_evictkey);
 						break;
 					}
@@ -493,7 +493,7 @@ void *run_switchos_popworker(void *param) {
 			//printf("[switchos.popworker] switchos_perpipeline_cached_empty_index[%d]: %d, switchos_freeidx: %d\n", tmp_pipeidx, int(switchos_perpipeline_cached_empty_index[tmp_pipeidx]), int(switchos_freeidx)); // TMPDEBUG
 
 			// fetch value from correpsonding server by controller
-			netcache_cache_pop_t tmp_netcache_cache_pop(tmp_netcache_getreq_pop_ptr->key(), uint16_t(tmp_global_server_logical_idx));
+			netcache_cache_pop_t tmp_netcache_cache_pop(CURMETHOD_ID, tmp_netcache_getreq_pop_ptr->key(), uint16_t(tmp_global_server_logical_idx));
 			pktsize = tmp_netcache_cache_pop.serialize(pktbuf, MAX_BUFSIZE);
 			val_t tmp_val;
 			uint32_t tmp_seq = 0;
@@ -509,7 +509,7 @@ void *run_switchos_popworker(void *param) {
 				else {
 					packet_type_t tmp_acktype = get_packet_type(ackbuf, ack_recvsize);
 					if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_ACK) {
-						netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(ackbuf, ack_recvsize);
+						netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
 						if (unlikely(tmp_netcache_cache_pop_ack.key() != tmp_netcache_cache_pop.key())) {
 							printf("unmatched key of NETCACHE_CACHE_POP_ACK!\n");
 							continue;
@@ -523,7 +523,7 @@ void *run_switchos_popworker(void *param) {
 						}
 					}
 					else if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_ACK_NLATEST) { // for large value
-						netcache_cache_pop_ack_nlatest_t tmp_netcache_cache_pop_ack_nlatest(ackbuf, ack_recvsize);
+						netcache_cache_pop_ack_nlatest_t tmp_netcache_cache_pop_ack_nlatest(CURMETHOD_ID, ackbuf, ack_recvsize);
 						if (unlikely(tmp_netcache_cache_pop_ack_nlatest.key() != tmp_netcache_cache_pop.key())) {
 							printf("unmatched key of NETCACHE_CACHE_POP_ACK_NLATEST!\n");
 							continue;
@@ -546,11 +546,11 @@ void *run_switchos_popworker(void *param) {
 
 			// send CACHE_POP_INSWITCH/NETCACHE_CACHE_POP_INSWITCH_NLATEST to reflector (TODO: try internal pcie port)
 			if (is_nlatest_for_largevalue == false) {
-				cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_netcache_getreq_pop_ptr->key(), tmp_val, tmp_seq, switchos_freeidx, tmp_stat);
+				cache_pop_inswitch_t tmp_cache_pop_inswitch(CURMETHOD_ID, tmp_netcache_getreq_pop_ptr->key(), tmp_val, tmp_seq, switchos_freeidx, tmp_stat);
 				pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 			}
 			else { // for large value
-				netcache_cache_pop_inswitch_nlatest_t tmp_cache_pop_inswitch_nlatest(tmp_netcache_getreq_pop_ptr->key(), tmp_seq, switchos_freeidx, tmp_stat); // use default value w/ vallen = 0
+				netcache_cache_pop_inswitch_nlatest_t tmp_cache_pop_inswitch_nlatest(CURMETHOD_ID, tmp_netcache_getreq_pop_ptr->key(), tmp_seq, switchos_freeidx, tmp_stat); // use default value w/ vallen = 0
 				pktsize = tmp_cache_pop_inswitch_nlatest.serialize(pktbuf, MAX_BUFSIZE);
 			}
 
@@ -566,7 +566,7 @@ void *run_switchos_popworker(void *param) {
 						break;
 					}
 
-					cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(ackbuf, ack_recvsize);
+					cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
 					if (tmp_cache_pop_inswitch_ack.key() == tmp_netcache_getreq_pop_ptr->key()) {
 						with_correctack = true;
 						break;
@@ -596,7 +596,7 @@ void *run_switchos_popworker(void *param) {
 			switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_freeidx] = tmp_global_server_logical_idx;
 
 			// send NETCACHE_CACHE_POP_FINISH to server and wait for ACK
-			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(tmp_netcache_getreq_pop_ptr->key(), tmp_global_server_logical_idx);
+			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(CURMETHOD_ID, tmp_netcache_getreq_pop_ptr->key(), tmp_global_server_logical_idx);
 			pktsize = tmp_netcache_cache_pop_finish.serialize(pktbuf, MAX_BUFSIZE);
 			while (true) {
 				udpsendto(switchos_popworker_popclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "switchos.popworker.popclient_for_controller");
@@ -606,7 +606,7 @@ void *run_switchos_popworker(void *param) {
 					continue;
 				}
 				else {
-					netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(ackbuf, ack_recvsize);
+					netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
 					//INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_netcache_cache_pop_finish.key());
 					if (unlikely(!(tmp_netcache_cache_pop_finish_ack.key() == tmp_netcache_cache_pop_finish.key()))) {
 						printf("Unmatched key of NETCACHE_CACHE_POP_FINISH_ACK\n");

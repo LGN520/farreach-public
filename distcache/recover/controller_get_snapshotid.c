@@ -1,5 +1,5 @@
-#include "../helper.h"
-#include "../io_helper.h"
+#include "../../common/helper.h"
+#include "../../common/io_helper.h"
 
 int main(int argc, char **argv) {
 	std::string snapshotid_path;

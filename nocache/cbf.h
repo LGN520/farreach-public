@@ -1,7 +1,7 @@
 #ifndef CBF_H
 #define CBF_H
 
-#include "helper.h"
+#include "../common/helper.h"
 #include <vector>
 #include <boost/thread/shared_mutex.hpp>
 

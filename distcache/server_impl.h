@@ -5,17 +5,17 @@
 
 #include <map>
 #include <vector>
-#include "helper.h"
-#include "key.h"
-#include "val.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
 
-#include "snapshot_record.h"
+#include "../common/snapshot_record.h"
 #include "concurrent_map_impl.h"
 #include "concurrent_set_impl.h"
 #include "message_queue_impl.h"
-#include "rocksdb_wrapper.h"
-#include "dynamic_array.h"
-#include "pkt_ring_buffer.h"
+#include "../common/rocksdb_wrapper.h"
+#include "../common/dynamic_array.h"
+#include "../common/pkt_ring_buffer.h"
 
 //#define DUMP_BUF
 
@@ -248,11 +248,11 @@ void *run_server_popserver(void *param) {
 
 	if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
 		// receive NETCACHE_CACHE_POP_FINISH from controller
-		netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(recvbuf, recvsize);
+		netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(CURMETHOD_ID, recvbuf, recvsize);
 		INVARIANT(tmp_netcache_cache_pop_finish.serveridx() == global_server_logical_idx);
 
 		// send NETCACHE_CACHE_POP_FINISH_ACK to controller immediately to avoid timeout and retry
-		netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(tmp_netcache_cache_pop_finish.key(), global_server_logical_idx);
+		netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(CURMETHOD_ID, tmp_netcache_cache_pop_finish.key(), global_server_logical_idx);
 		uint32_t pktsize = tmp_netcache_cache_pop_finish_ack.serialize(buf, MAX_BUFSIZE);
 		udpsendto(server_popserver_udpsock_list[local_server_logical_idx], buf, pktsize, 0, &controller_popserver_popclient_addr, controller_popserver_popclient_addrlen, "server.popserver");
 
@@ -273,7 +273,7 @@ void *run_server_popserver(void *param) {
 			// get value from storage server KVS
 			val_t tmp_val;
 			uint32_t tmp_seq = 0;
-			bool tmp_stat = db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq);
+			bool tmp_stat = db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop_finish.key(), tmp_val, &tmp_seq);
 
 			if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
 				// mark it as being updated
@@ -290,7 +290,7 @@ void *run_server_popserver(void *param) {
 				//tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat, tmp_netcache_cache_pop_finish.kvidx());
 				//bool res = server_distcache_spine_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_spine_valueupdate_inswitch_ptr);
 				distcache_valueupdate_inswitch_t *tmp_distcache_valueupdate_inswitch_ptr = NULL; // freed by server.valueupdateserver
-				tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat, tmp_netcache_cache_pop_finish.kvidx());
+				tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(CURMETHOD_ID, tmp_spineswitchidx, tmp_leafswitchidx, tmp_netcache_cache_pop_finish.key(), tmp_val, tmp_seq, tmp_stat, tmp_netcache_cache_pop_finish.kvidx());
 				bool res = server_distcache_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_valueupdate_inswitch_ptr);
 				if (!res) {
 					printf("[server.popserver %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
@@ -413,7 +413,7 @@ void *run_server_worker(void * param) {
 
 	//bool is_timeout = udprecvfrom(server_worker_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
 	dynamicbuf.clear();
-	is_timeout = udprecvlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf, 0, &client_addr, &client_addrlen, "server.worker", &cur_worker_pkt_ring_buffer);
+	is_timeout = udprecvlarge_ipfrag(CURMETHOD_ID, server_worker_udpsock_list[local_server_logical_idx], dynamicbuf, 0, &client_addr, &client_addrlen, "server.worker", &cur_worker_pkt_ring_buffer);
 	recv_size = dynamicbuf.size();
 	if (is_timeout) {
 		/*if (!is_first_pkt) {
@@ -443,11 +443,11 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
-				get_request_t req(dynamicbuf.array(), recv_size);
+				get_request_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
-				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
+				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, &tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				//uint16_t tmp_spineswitchidx = uint16_t(req.key().get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
 				//uint16_t tmp_leafswitchidx = uint16_t(req.key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
@@ -455,7 +455,7 @@ void *run_server_worker(void * param) {
 
 				// NOTE: we use req.spine/leafswitchidx such that GETRES_SERVER can update spine/leafload_forclient in client-leaf
 				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-					get_response_server_t rsp(req.spineswitchidx(), req.leafswitchidx(), req.key(), tmp_val, tmp_stat, global_server_logical_idx, req.spineload(), req.leafload());
+					get_response_server_t rsp(CURMETHOD_ID, req.spineswitchidx(), req.leafswitchidx(), req.key(), tmp_val, tmp_stat, global_server_logical_idx, req.spineload(), req.leafload());
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -463,10 +463,10 @@ void *run_server_worker(void * param) {
 #endif
 				}
 				else {
-					get_response_largevalue_server_t rsp(req.spineswitchidx(), req.leafswitchidx(), req.key(), tmp_val, tmp_stat, global_server_logical_idx, req.spineload(), req.leafload());
+					get_response_largevalue_server_t rsp(CURMETHOD_ID, req.spineswitchidx(), req.leafswitchidx(), req.key(), tmp_val, tmp_stat, global_server_logical_idx, req.spineload(), req.leafload());
 					dynamicbuf.clear();
 					rsp_size = rsp.dynamic_serialize(dynamicbuf);
-					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_server_t::get_frag_hdrsize());
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_server_t::get_frag_hdrsize(CURMETHOD_ID));
 #ifdef DUMP_BUF
 					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
@@ -489,19 +489,19 @@ void *run_server_worker(void * param) {
 				val_t tmp_val;
 				uint32_t tmp_seq;
 				if (pkt_type == packet_type_t::PUTREQ_SEQ) {
-					put_request_seq_t req(dynamicbuf.array(), recv_size);
+					put_request_seq_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 					tmp_key = req.key();
 					tmp_val = req.val();
 					tmp_seq = req.seq();
 				}
 				else if (pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
-					put_request_largevalue_seq_t req(dynamicbuf.array(), recv_size);
+					put_request_largevalue_seq_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 					tmp_key = req.key();
 					tmp_val = req.val();
 					tmp_seq = req.seq();
 				}
 				else if (pkt_type == packet_type_t::DELREQ_SEQ) {
-					del_request_seq_t req(dynamicbuf.array(), recv_size);
+					del_request_seq_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 					tmp_key = req.key();
 					tmp_seq = req.seq();
 				}
@@ -534,7 +534,7 @@ void *run_server_worker(void * param) {
 					// Phase 1 of cache coherence: invalidate in-switch value
 					uint16_t tmp_spineswitchidx = uint16_t(tmp_key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
 					uint16_t tmp_leafswitchidx = uint16_t(tmp_key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
-					distcache_invalidate_t tmp_distcache_invalidate(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
+					distcache_invalidate_t tmp_distcache_invalidate(CURMETHOD_ID, tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
 					while (true) {
 						int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
 						udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
@@ -546,7 +546,7 @@ void *run_server_worker(void * param) {
 							continue;
 						}
 						else {
-							distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
+							distcache_invalidate_ack_t tmp_distcache_invalidate_ack(CURMETHOD_ID, buf, tmp_distcache_invalidate_ack_size);
 							INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
 							break;
 						}*/
@@ -594,11 +594,11 @@ void *run_server_worker(void * param) {
 							INVARIANT(pkt_type != packet_type_t::PUTREQ_LARGEVALUE_SEQ);
 							if (pkt_type == packet_type_t::PUTREQ_SEQ) {
 								//tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
-								tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
+								tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(CURMETHOD_ID, tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
 							}
 							else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
 								//tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
-								tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
+								tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(CURMETHOD_ID, tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
 							}
 							//bool res = server_distcache_spine_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_spine_valueupdate_inswitch_ptr);
 							bool res = server_distcache_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_valueupdate_inswitch_ptr);
@@ -627,11 +627,11 @@ void *run_server_worker(void * param) {
 #endif
 				
 				if (pkt_type == packet_type_t::PUTREQ_SEQ || pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ) {
-					put_response_server_t rsp(tmp_key, true, global_server_logical_idx);
+					put_response_server_t rsp(CURMETHOD_ID, tmp_key, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
 				else {
-					del_response_server_t rsp(tmp_key, true, global_server_logical_idx);
+					del_response_server_t rsp(CURMETHOD_ID, tmp_key, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
@@ -656,19 +656,19 @@ void *run_server_worker(void * param) {
 				val_t tmp_val;
 				uint32_t tmp_seq;
 				if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
-					netcache_put_request_seq_cached_t req(dynamicbuf.array(), recv_size);
+					netcache_put_request_seq_cached_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 					tmp_key = req.key();
 					tmp_val = req.val();
 					tmp_seq = req.seq();
 				}
 				else if (pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
-					put_request_largevalue_seq_cached_t req(dynamicbuf.array(), recv_size);
+					put_request_largevalue_seq_cached_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 					tmp_key = req.key();
 					tmp_val = req.val();
 					tmp_seq = req.seq();
 				}
 				else if (pkt_type == packet_type_t::NETCACHE_DELREQ_SEQ_CACHED) {
-					netcache_del_request_seq_cached_t req(dynamicbuf.array(), recv_size);
+					netcache_del_request_seq_cached_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 					tmp_key = req.key();
 					tmp_seq = req.seq();
 				}
@@ -701,7 +701,7 @@ void *run_server_worker(void * param) {
 					// Phase 1 of cache coherence: invalidate in-switch value
 					uint16_t tmp_spineswitchidx = uint16_t(tmp_key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
 					uint16_t tmp_leafswitchidx = uint16_t(tmp_key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
-					distcache_invalidate_t tmp_distcache_invalidate(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
+					distcache_invalidate_t tmp_distcache_invalidate(CURMETHOD_ID, tmp_spineswitchidx, tmp_leafswitchidx, tmp_key);
 					while (true) {
 						int tmp_distcache_invalidate_size = tmp_distcache_invalidate.serialize(buf, MAX_BUFSIZE);
 						udpsendto(server_worker_invalidateserver_udpsock_list[local_server_logical_idx], buf, tmp_distcache_invalidate_size, 0, &client_addr, client_addrlen, "server.worker.invalidateserver");
@@ -713,7 +713,7 @@ void *run_server_worker(void * param) {
 							continue;
 						}
 						else {
-							distcache_invalidate_ack_t tmp_distcache_invalidate_ack(buf, tmp_distcache_invalidate_ack_size);
+							distcache_invalidate_ack_t tmp_distcache_invalidate_ack(CURMETHOD_ID, buf, tmp_distcache_invalidate_ack_size);
 							INVARIANT(tmp_distcache_invalidate_ack.key() == tmp_distcache_invalidate.key());
 							break;
 						}*/
@@ -761,11 +761,11 @@ void *run_server_worker(void * param) {
 							INVARIANT(pkt_type != packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED);
 							if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
 								//tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
-								tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
+								tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(CURMETHOD_ID, tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, true, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
 							}
 							else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
 								//tmp_distcache_spine_valueupdate_inswitch_ptr = new distcache_spine_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
-								tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
+								tmp_distcache_valueupdate_inswitch_ptr = new distcache_valueupdate_inswitch_t(CURMETHOD_ID, tmp_spineswitchidx, tmp_leafswitchidx, tmp_key, tmp_val, tmp_seq, false, server_cached_keyidxmap_list[local_server_logical_idx][tmp_key]);
 							}
 							//bool res = server_distcache_spine_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_spine_valueupdate_inswitch_ptr);
 							bool res = server_distcache_valueupdate_inswitch_ptr_queue_list[local_server_logical_idx].write(tmp_distcache_valueupdate_inswitch_ptr);
@@ -792,11 +792,11 @@ void *run_server_worker(void * param) {
 #endif
 				
 				if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED || pkt_type == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED) {
-					put_response_t rsp(tmp_key, true, global_server_logical_idx);
+					put_response_t rsp(CURMETHOD_ID, tmp_key, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
 				else {
-					del_response_t rsp(tmp_key, true, global_server_logical_idx);
+					del_response_t rsp(CURMETHOD_ID, tmp_key, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
@@ -810,7 +810,7 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
-				scan_request_split_t req(dynamicbuf.array(), recv_size);
+				scan_request_split_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 				
 				// get verified key range
 				INVARIANT(req.key() <= max_endkey);
@@ -829,12 +829,12 @@ void *run_server_worker(void * param) {
 
 				//COUT_THIS("results size: " << results.size());
 
-				scan_response_split_server_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), req.cur_scanswitchidx(), req.max_scanswitchnum(), global_server_logical_idx, 0, results.size(), results);
+				scan_response_split_server_t rsp(CURMETHOD_ID, req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), req.cur_scanswitchidx(), req.max_scanswitchnum(), global_server_logical_idx, 0, results.size(), results);
 				//rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				//udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 				dynamicbuf.clear();
 				rsp_size = rsp.dynamic_serialize(dynamicbuf);
-				udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
+				udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize(CURMETHOD_ID));
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), rsp_size);
 #endif
@@ -845,7 +845,7 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
-				load_request_t req(dynamicbuf.array(), recv_size);
+				load_request_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 
 				//char val_buf[Val::SWITCH_MAX_VALLEN];
 				//memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);
@@ -853,7 +853,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].force_put(req.key(), req.val());
 				UNUSED(tmp_stat);
 				
-				load_ack_server_t rsp(req.key());
+				load_ack_server_t rsp(CURMETHOD_ID, req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -921,7 +921,7 @@ void *run_server_evictserver(void *param) {
 		//printf("receive NETCACHE_CACHE_EVICT from controller\n");
 		//dump_buf(recvbuf, recvsize);
 		
-		netcache_cache_evict_t tmp_netcache_cache_evict(recvbuf, recvsize);
+		netcache_cache_evict_t tmp_netcache_cache_evict(CURMETHOD_ID, recvbuf, recvsize);
 
 		uint16_t tmp_serveridx = tmp_netcache_cache_evict.serveridx();
 		INVARIANT(tmp_serveridx == global_server_logical_idx);
@@ -945,7 +945,7 @@ void *run_server_evictserver(void *param) {
 		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 
 		// send NETCACHE_CACHE_EVICT_ACK to controller.evictserver.evictclient
-		netcache_cache_evict_ack_t tmp_netcache_cache_evict_ack(tmp_netcache_cache_evict.key(), global_server_logical_idx);
+		netcache_cache_evict_ack_t tmp_netcache_cache_evict_ack(CURMETHOD_ID, tmp_netcache_cache_evict.key(), global_server_logical_idx);
 		int sendsize = tmp_netcache_cache_evict_ack.serialize(sendbuf, MAX_BUFSIZE);
 		//printf("send NETCACHE_CACHE_EVICT_ACK to controller\n");
 		//dump_buf(sendbuf, sendsize);
@@ -1075,7 +1075,7 @@ void *run_server_valueupdateserver(void *param) {
 				}
 				else {
 					packet_type_t tmp_optype = get_packet_type(recvbuf, recvsize);
-					distcache_valueupdate_inswitch_ack_t tmp_distcache_valueupdate_inswitch_ack(recvbuf, recvsize);
+					distcache_valueupdate_inswitch_ack_t tmp_distcache_valueupdate_inswitch_ack(CURMETHOD_ID, recvbuf, recvsize);
 					if (tmp_distcache_valueupdate_inswitch_ack.key() == tmp_distcache_valueupdate_inswitch_ptr->key()) {
 						break;
 					}

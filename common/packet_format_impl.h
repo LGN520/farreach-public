@@ -2660,6 +2660,12 @@ void NetcacheCachePop<key_t>::deserialize(const char * data, uint32_t recv_size)
 // NetcacheCachePopAck (value must <= 128B; only used in end-hosts)
 
 template<class key_t, class val_t>
+NetcacheCachePopAck<key_t, val_t>::NetcacheCachePopAck()
+	: CachePop<key_t, val_t>()
+{
+}
+
+template<class key_t, class val_t>
 NetcacheCachePopAck<key_t, val_t>::NetcacheCachePopAck(method_t methodid, key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx)
 	: CachePop<key_t, val_t>(methodid, key, val, seq, stat, serveridx)
 {
@@ -2684,10 +2690,19 @@ NetcacheCachePopAck<key_t, val_t>::NetcacheCachePopAck(method_t methodid, const 
 // NetcacheCachePopFinish (only used in end-hosts)
 
 template<class key_t>
+NetcacheCachePopFinish<key_t>::NetcacheCachePopFinish(method_t methodid, key_t key, uint16_t serveridx)
+	: NetcacheCachePop<key_t>(methodid, key, serveridx)
+{
+	INVARIANT(methodid == NETCACHE_ID);
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_FINISH);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t>
 NetcacheCachePopFinish<key_t>::NetcacheCachePopFinish(method_t methodid, key_t key, uint16_t serveridx, uint16_t kvidx)
 	: NetcacheCachePop<key_t>(methodid, key, serveridx), _kvidx(kvidx)
 {
-	INVARIANT(methodid == NETCACHE_ID || methodid == DISTCACHE_ID);
+	INVARIANT(methodid == DISTCACHE_ID);
 	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_FINISH);
 	INVARIANT(serveridx >= 0);
 }
@@ -2939,7 +2954,7 @@ DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim()
 
 template<class key_t>
 DistcacheCacheEvictVictim<key_t>::DistcacheCacheEvictVictim(method_t methodid, key_t key, key_t victimkey, uint16_t victimidx)
-	: Packet<key_t>(packet_type_t::DISTCACHE_CACHE_EVICT_VICTIM, 0, 0, key), _victimkey(victimkey), _victimidx(victimidx)
+	: Packet<key_t>(methodid, packet_type_t::DISTCACHE_CACHE_EVICT_VICTIM, 0, 0, key), _victimkey(victimkey), _victimidx(victimidx)
 {
 	INVARIANT(methodid == DISTCACHE_ID);
 }
@@ -3561,10 +3576,18 @@ void GetResponseLargevalue<key_t, val_t>::deserialize(const char * data, uint32_
 // GetResponseLargevalueServer (value must > 128B)
 
 template<class key_t, class val_t>
-GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload) 
+GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(method_t methodid, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval) 
 	: GetResponseLargevalue<key_t, val_t>(methodid, key, val, stat, nodeidx_foreval)
 {	
 	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
+	this->_type = static_cast<optype_t>(packet_type_t::GETRES_LARGEVALUE_SERVER);
+}
+
+template<class key_t, class val_t>
+GetResponseLargevalueServer<key_t, val_t>::GetResponseLargevalueServer(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload) 
+	: GetResponseLargevalue<key_t, val_t>(methodid, key, val, stat, nodeidx_foreval)
+{	
+	INVARIANT(methodid == DISTCACHE_ID);
 	this->_type = static_cast<optype_t>(packet_type_t::GETRES_LARGEVALUE_SERVER);
 	this->_spineswitchidx = spineswitchidx;
 	this->_leafswitchidx = leafswitchidx;

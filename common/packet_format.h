@@ -779,6 +779,7 @@ class NetcacheCachePop : public WarmupRequest<key_t> { // ophdr + serveridx
 template<class key_t, class val_t>
 class NetcacheCachePopAck : public CachePop<key_t, val_t> { // ophdr + val + seq + stat (not stat_hdr) + serveridx
 	public: 
+		NetcacheCachePopAck();
 		NetcacheCachePopAck(method_t methodid, key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx);
 		NetcacheCachePopAck(method_t methodid, const char * data, uint32_t recv_size);
 };
@@ -787,6 +788,7 @@ class NetcacheCachePopAck : public CachePop<key_t, val_t> { // ophdr + val + seq
 template<class key_t>
 class NetcacheCachePopFinish : public NetcacheCachePop<key_t> { // ophdr + serveridx
 	public: 
+		NetcacheCachePopFinish(method_t methodid, key_t key, uint16_t serveridx);
 		NetcacheCachePopFinish(method_t methodid, key_t key, uint16_t serveridx, uint16_t kvidx);
 		NetcacheCachePopFinish(method_t methodid, const char * data, uint32_t recv_size);
 
@@ -1057,6 +1059,7 @@ class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr&swi
 template<class key_t, class val_t>
 class GetResponseLargevalueServer : public GetResponseLargevalue<key_t, val_t> { // ophdr + val&stat_hdr in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
 	public:
+		GetResponseLargevalueServer(method_t methodid, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
 		GetResponseLargevalueServer(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload);
 		GetResponseLargevalueServer(method_t methodid, const char * data, uint32_t recv_size);
 

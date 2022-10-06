@@ -1,6 +1,6 @@
 -include Makefile.local
 
-include mk/recipes.mk
+include ../common/mk/recipes.mk
 
 DEPS :=
 CLEAN :=
@@ -13,11 +13,11 @@ CC := g++
 CFLAGS += -std=c++14 -O3 -g -Wall -march=native -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS_SHARED += $(CFLAGS) -fPIC
-LDLIBS += -lpthread -ldl -lstdc++fs -lboost_system
+LDLIBS += -lpthread -ldl -lstdc++fs -lboost_system -lcommon
 #-ljemalloc 
 LDLIBS += $(EXTRA_LDLIBS)
 
-LDDIR += -L/usr/lib/x86_64-linux-gnu
+LDDIR += -L/usr/lib/x86_64-linux-gnu -L../common
 INCDIR += -I/usr/include
 
 ##############################################################################
@@ -72,10 +72,6 @@ ROCKSDB_LDDIR += -L../rocksdb-6.22.1
 
 ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz -ldl
 
-DEPS += rocksdb_wrapper.d
-CLEAN += rocksdb_wrapper.o
-ROCKSDB_OBJECTS += rocksdb_wrapper.o
-
 INCDIR += $(ROCKSDB_INCDIR)
 LDDIR += $(ROCKSDB_LDDIR)
 
@@ -95,53 +91,9 @@ LDDIR += $(MKL_LDDIR)
 
 UTILS_OBJECTS :=
 
-DEPS += key.d val.d
-CLEAN += key.o val.o
-UTILS_OBJECTS += key.o val.o
-
-DEPS += socket_helper.d checksum_helper.d
-CLEAN += socket_helper.o checksum_helper.o
-UTILS_OBJECTS += socket_helper.o checksum_helper.o
-
-DEPS += workloadparser/parser.d workloadparser/ycsb_parser.d workloadparser/synthetic_parser.d
-CLEAN += workloadparser/parser.o workloadparser/ycsb_parser.o workloadparser/synthetic_parser.o
-UTILS_OBJECTS += workloadparser/parser.o workloadparser/ycsb_parser.o workloadparser/synthetic_parser.o
-
-DEPS += crc32.d
-CLEAN += crc32.o
-UTILS_OBJECTS += crc32.o
-
-DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
-CLEAN += iniparser/iniparser.o iniparser/dictionary.o iniparser/iniparser_wrapper.o
-UTILS_OBJECTS += iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
-
-DEPS += special_case.d
-CLEAN += special_case.o
-UTILS_OBJECTS += special_case.o
-
-DEPS += snapshot_record.d
-CLEAN += snapshot_record.o
-UTILS_OBJECTS += snapshot_record.o
-
-DEPS += latency_helper.d
-CLEAN += latency_helper.o
-UTILS_OBJECTS += latency_helper.o
-
-DEPS += io_helper.d
-CLEAN += io_helper.o
-UTILS_OBJECTS += io_helper.o
-
-DEPS += dynamic_rulemap.d
-CLEAN += dynamic_rulemap.o
-UTILS_OBJECTS += dynamic_rulemap.o
-
-DEPS += dynamic_array.d
-CLEAN += dynamic_array.o
-UTILS_OBJECTS += dynamic_array.o
-
-DEPS += pkt_ring_buffer.d
-CLEAN += pkt_ring_buffer.o
-UTILS_OBJECTS += pkt_ring_buffer.o
+#DEPS += checksum_helper.d
+#CLEAN += checksum_helper.o
+#UTILS_OBJECTS += checksum_helper.o
 
 #DEPS += seq_cache.d
 #CLEAN += seq_cache.o
@@ -156,61 +108,69 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 ##############################################################################
 
-TARGETS := prepare split_workload remote_client loader server switchos controller skewness_check recover/controller_get_snapshotid warmup_client preparefinish_client reflector
-#recover/server_recover localtest
-#dpdktest_client dpdktest_server socktest_client socktest_server
+TARGETS := 
 
 prepare: prepare.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += prepare.d
-CLEAN += prepare.o prepare
+CLEAN += prepare.o
+TARGETS += prepare
 
 localtest: localtest.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += localtest.d
-CLEAN += localtest.o localtest
+CLEAN += localtest.o
+TARGETS += localtest
 
 split_workload: split_workload.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += split_workload.d
-CLEAN += split_workload.o split_workload
+CLEAN += split_workload.o
+TARGETS += split_workload
 
 loader: loader.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += loader.d
-CLEAN += loader.o loader
+CLEAN += loader.o
+TARGETS += loader
 
 warmup_client: warmup_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += warmup_client.d
-CLEAN += warmup_client.o warmup_client
+CLEAN += warmup_client.o
+TARGETS += warmup_client
 
 remote_client: remote_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += remote_client.d
-CLEAN += remote_client.o remote_client
+CLEAN += remote_client.o
+TARGETS += remote_client
 
 preparefinish_client: preparefinish_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += preparefinish_client.d
-CLEAN += preparefinish_client.o preparefinish_client
+CLEAN += preparefinish_client.o
+TARGETS += preparefinish_client
 
 #server: server.o $(UTILS_OBJECTS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
 	#$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) $(DPDK_LDLIBS) -o $@
 server: server.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += server.d
-CLEAN += server.o server
+CLEAN += server.o
+TARGETS += server
 
 switchos: switchos.o $(UTILS_OBJECTS)
-	$(CC) -pthread -g $(LDDIR) $^ -lpthread -o $@
+	$(CC) -pthread -g $(LDDIR) $^ -lpthread -lcommon -o $@
 DEPS += switchos.d
-CLEAN += switchos.o switchos
+CLEAN += switchos.o
+TARGETS += switchos
 
 controller: controller.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += controller.d
-CLEAN += controller.o controller
+CLEAN += controller.o
+TARGETS += controller
 
 reflector: reflector.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
@@ -220,45 +180,53 @@ CLEAN += reflector.o reflector
 #dpdktest_client: dpdktest_client.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 #DEPS += dpdktest_client.d
-#CLEAN += dpdktest_client.o dpdktest_client
+#CLEAN += dpdktest_client.o
+#TARGETS += dpdktest_client
 
 #dpdktest_server: dpdktest_server.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 #DEPS += dpdktest_server.d
-#CLEAN += dpdktest_server.o dpdktest_server
+#CLEAN += dpdktest_server.o
+#TARGETS += dpdktest_server
 
 #socktest_client: socktest_client.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) -o $@
 #DEPS += socktest_client.d
-#CLEAN += socktest_client.o socktest_client
+#CLEAN += socktest_client.o
+#TARGETS += socktest_client
 
 #socktest_server: socktest_server.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) -o $@
 #DEPS += socktest_server.d
-#CLEAN += socktest_server.o socktest_server
+#CLEAN += socktest_server.o
+#TARGETS += socktest_server
 
 skewness_check: skewness_check.o $(UTILS_OBJECTS) 
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += skewness_check.d
-CLEAN += skewness_check.o skewness_check
+CLEAN += skewness_check.o
+TARGETS += skewness_check
 
 recover/controller_get_snapshotid: recover/controller_get_snapshotid.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += recover/controller_get_snapshotid.d
-CLEAN += recover/controller_get_snapshotid.o recover/controller_get_snapshotid
+CLEAN += recover/controller_get_snapshotid.o
+TARGETS += recover/controller_get_snapshotid
 
 recover/server_recover: recover/server_recover.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += recover/server_recover.d
-CLEAN += recover/server_recover.o recover/server_recover
+CLEAN += recover/server_recover.o
+TARGETS += recover/server_recover
 
 ##############################################################################
 # Top level targets
 
 all: $(TARGETS)
+	rm -rf $(CLEAN) $(DEPS)
 
 clean:
-	rm -rf $(CLEAN) $(DEPS)
+	rm -rf $(CLEAN) $(DEPS) $(TARGETS)
 
 .DEFAULT_GOAL := all
 .PHONY: all clean

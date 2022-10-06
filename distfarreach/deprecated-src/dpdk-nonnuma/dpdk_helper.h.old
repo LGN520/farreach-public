@@ -14,7 +14,7 @@
 #include <rte_flow.h>
 #include <arpa/inet.h>
 
-#include "key.h"
+#include "../common/key.h"
 
 #define RX_BURST_SIZE 32
 

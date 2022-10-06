@@ -5,13 +5,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "key.h"
-#include "val.h"
-#include "packet_format_impl.h"
-#include "socket_helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
+#include "../common/packet_format_impl.h"
+#include "../common/socket_helper.h"
 #include "message_queue_impl.h"
-#include "iniparser/iniparser_wrapper.h"
-#include "workloadparser/parser.h"
+#include "../common/iniparser/iniparser_wrapper.h"
+#include "../common/workloadparser/parser.h"
 
 /*
  * Class and alias

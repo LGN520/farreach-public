@@ -19,18 +19,18 @@
 #include <map>
 #include <mutex>
 
-#include "helper.h"
-#include "io_helper.h"
-#include "key.h"
-#include "val.h"
+#include "../common/helper.h"
+#include "../common/io_helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
 
-#include "socket_helper.h"
-#include "special_case.h"
-#include "iniparser/iniparser_wrapper.h"
+#include "../common/socket_helper.h"
+#include "../common/special_case.h"
+#include "../common/iniparser/iniparser_wrapper.h"
 #include "message_queue_impl.h"
-#include "packet_format_impl.h"
+#include "../common/packet_format_impl.h"
 #include "concurrent_map_impl.h"
-#include "dynamic_array.h"
+#include "../common/dynamic_array.h"
 
 #include "common_impl.h"
 
@@ -323,7 +323,7 @@ void prepare_switchos() {
 
 void recover() {
 	std::string snapshotid_path;
-	get_controller_snapshotid_path(snapshotid_path);
+	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path);
 	if (!isexist(snapshotid_path)) {
 		printf("You need to copy latest snapshotid from controller to switchos before running with recover mode\n");
 		exit(-1);
@@ -333,10 +333,10 @@ void recover() {
 	load_snapshotid(controller_snapshotid, snapshotid_path);
 	std::string snapshotdata_path;
 	if (strcmp(switchos_role, "spine") == 0) {
-		get_controller_spinesnapshotdata_path(snapshotdata_path, controller_snapshotid);
+		get_controller_spinesnapshotdata_path(CURMETHOD_ID, snapshotdata_path, controller_snapshotid);
 	}
 	else if (strcmp(switchos_role, "leaf") == 0) {
-		get_controller_leafsnapshotdata_path(snapshotdata_path, controller_snapshotid);
+		get_controller_leafsnapshotdata_path(CURMETHOD_ID, snapshotdata_path, controller_snapshotid);
 	}
 	if (!isexist(snapshotdata_path)) {
 		printf("You need to copy inswitch snapshot data from controller to switchos before running with recover mode\n");
@@ -424,10 +424,10 @@ void *run_switchos_popserver(void *param) {
 
 		//printf("receive CACHE_POP from controller\n");
 		//dump_buf(buf, recvsize);
-		cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, recvsize); // freed by switchos.popworker
+		cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(CURMETHOD_ID, buf, recvsize); // freed by switchos.popworker
 
 		// send CACHE_POP_ACK to controller.popclient immediately to avoid timeout
-		cache_pop_ack_t tmp_cache_pop_ack(tmp_cache_pop_ptr->key());
+		cache_pop_ack_t tmp_cache_pop_ack(CURMETHOD_ID, tmp_cache_pop_ptr->key());
 		uint32_t acksize = tmp_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
 		udpsendto(switchos_popserver_udpsock, buf, acksize, 0, &controller_popclient_addr, controller_popclient_addrlen, "switchos.popserver");
 
@@ -569,7 +569,7 @@ void *run_switchos_popworker(void *param) {
 					// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
 					// NOTE: we MUST set correct key and switchidx to enter the corresponding egress pipeline
 					while (true) {
-						setvalid_inswitch_t tmp_setvalid_req(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 0);
+						setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 0);
 						pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
 						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
@@ -579,7 +579,7 @@ void *run_switchos_popworker(void *param) {
 							continue;
 						}
 
-						setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
+						setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
 						//INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
 						if (unlikely(tmp_setvalid_rsp.key() != tmp_cache_pop_ptr->key())) {
 							printf("invalid key of SETVALID_INSWITCH_ACK %x which should be %x\n", tmp_setvalid_rsp.key().keyhihi, tmp_cache_pop_ptr->key().keyhihi);
@@ -619,7 +619,7 @@ void *run_switchos_popworker(void *param) {
 						//printf("send %d CACHE_EVICT_LOADFREQ_INSWITCHs to reflector\n", switchos_sample_cnt);
 						for (size_t i = 0; i < switchos_sample_cnt; i++) {
 							uint16_t switchidx_for_sampled_key = calculate_switchidx(static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]));
-							cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(switchidx_for_sampled_key, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
+							cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(CURMETHOD_ID, switchidx_for_sampled_key, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
 							pktsize = tmp_cache_evict_loadfreq_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 							udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 						}
@@ -633,7 +633,7 @@ void *run_switchos_popworker(void *param) {
 								break;
 							}
 
-							cache_evict_loadfreq_inswitch_ack_t tmp_cache_evict_loadfreq_inswitch_ack(ackbuf, ack_recvsize);
+							cache_evict_loadfreq_inswitch_ack_t tmp_cache_evict_loadfreq_inswitch_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
 							for (size_t i = 0; i < switchos_sample_cnt; i++) {
 								if (static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]) == tmp_cache_evict_loadfreq_inswitch_ack.key()) {
 									frequency_counters[i] = tmp_cache_evict_loadfreq_inswitch_ack.frequency();
@@ -686,7 +686,7 @@ void *run_switchos_popworker(void *param) {
 					
 					// set valid = 3 through reflector
 					while (true) {
-						setvalid_inswitch_t tmp_setvalid_req(switchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx, 3);
+						setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, switchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx, 3);
 						pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
 						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
@@ -696,7 +696,7 @@ void *run_switchos_popworker(void *param) {
 							continue;
 						}
 
-						setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
+						setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
 						INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
 						break;
 					}
@@ -704,7 +704,7 @@ void *run_switchos_popworker(void *param) {
 					// load evicted data of victim from data plane and set valid=3 at the same time for availability of latest value
 					while (true) {
 						//printf("send CACHE_EVICT_LOADDATA_INSWITCH to reflector\n");
-						cache_evict_loaddata_inswitch_t tmp_cache_evict_loaddata_inswitch_req(switchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx);
+						cache_evict_loaddata_inswitch_t tmp_cache_evict_loaddata_inswitch_req(CURMETHOD_ID, switchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx);
 						pktsize = tmp_cache_evict_loaddata_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
@@ -714,7 +714,7 @@ void *run_switchos_popworker(void *param) {
 							continue;
 						}
 
-						cache_evict_loaddata_inswitch_ack_t tmp_cache_evict_loaddata_inswitch_ack(ackbuf, ack_recvsize);
+						cache_evict_loaddata_inswitch_ack_t tmp_cache_evict_loaddata_inswitch_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
 						INVARIANT(tmp_cache_evict_loaddata_inswitch_ack.key() == cur_evictkey);
 						switchos_evictvalue = tmp_cache_evict_loaddata_inswitch_ack.val();
 						switchos_evictseq = tmp_cache_evict_loaddata_inswitch_ack.seq();
@@ -728,7 +728,7 @@ void *run_switchos_popworker(void *param) {
 					
 					//CUR_TIME(evict_sendrecv_t1); // TMPDEBUG
 					if (!is_case2) {
-						cache_evict_t tmp_cache_evict(cur_evictkey, \
+						cache_evict_t tmp_cache_evict(CURMETHOD_ID, cur_evictkey, \
 								//val_t(switchos_evictvalbytes, switchos_evictvallen),
 								switchos_evictvalue, \
 								switchos_evictseq, switchos_evictstat, \
@@ -736,7 +736,7 @@ void *run_switchos_popworker(void *param) {
 						pktsize = tmp_cache_evict.serialize(pktbuf, MAX_BUFSIZE);
 					}
 					else { // send CACHE_EVICT_CASE2 for server-side snapshot
-						cache_evict_case2_t tmp_cache_evict_case2(cur_evictkey, \
+						cache_evict_case2_t tmp_cache_evict_case2(CURMETHOD_ID, cur_evictkey, \
 								//val_t(switchos_evictvalbytes, switchos_evictvallen),
 								switchos_evictvalue, \
 								switchos_evictseq, switchos_evictstat, \
@@ -756,7 +756,7 @@ void *run_switchos_popworker(void *param) {
 							continue;
 						}
 						else {
-							cache_evict_ack_t tmp_cache_evict_ack(ackbuf, ack_recvsize);
+							cache_evict_ack_t tmp_cache_evict_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
 							INVARIANT(tmp_cache_evict_ack.key() == cur_evictkey);
 							break;
 						}
@@ -776,7 +776,7 @@ void *run_switchos_popworker(void *param) {
 					// NOTE: we should set valid = 0 through reflector before removing victim key from cache_lookup_tbl
 					// NOTE: we MUST set correct key and switchidx to enter the corresponding egress pipeline
 					while (true) {
-						setvalid_inswitch_t tmp_setvalid_req(switchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx, 0);
+						setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, switchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx, 0);
 						pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
 						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
@@ -786,7 +786,7 @@ void *run_switchos_popworker(void *param) {
 							continue;
 						}
 
-						setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
+						setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
 						INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
 						break;
 					}
@@ -850,7 +850,7 @@ void *run_switchos_popworker(void *param) {
 				//CUR_TIME(pop_cachepop_t1); // TMPDEBUG
 
 				// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-				cache_pop_inswitch_t tmp_cache_pop_inswitch(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
+				cache_pop_inswitch_t tmp_cache_pop_inswitch(CURMETHOD_ID, switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
 				pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 
 				while (true) {
@@ -865,7 +865,7 @@ void *run_switchos_popworker(void *param) {
 							break;
 						}
 
-						cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(ackbuf, ack_recvsize);
+						cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
 						if (tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_ptr->key()) {
 							with_correctack = true;
 							break;
@@ -898,7 +898,7 @@ void *run_switchos_popworker(void *param) {
 				// set valid = 1 through reflector
 				// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
 				while (true) {
-					setvalid_inswitch_t tmp_setvalid_req(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 1);
+					setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 1);
 					pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
 					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
@@ -908,7 +908,7 @@ void *run_switchos_popworker(void *param) {
 						continue;
 					}
 
-					setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
+					setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
 					INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
 					break;
 				}
@@ -1288,7 +1288,7 @@ void *run_switchos_snapshotserver(void *param) {
 					// NOTE: each ingress pipeline of data plane can inject the packet into the corresponding egress pipeline by key-based partition
 					for (uint32_t tmp_loadsnapshotdata_idx = 0; tmp_loadsnapshotdata_idx < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; tmp_loadsnapshotdata_idx++) {
 						uint16_t switchidx_for_snapshotdata_key = calculate_switchidx(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_idx]);
-						loadsnapshotdata_inswitch_t tmp_loadsnapshotdata_inswitch_req(switchidx_for_snapshotdata_key, switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_idx], tmp_loadsnapshotdata_idx);
+						loadsnapshotdata_inswitch_t tmp_loadsnapshotdata_inswitch_req(CURMETHOD_ID, switchidx_for_snapshotdata_key, switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_idx], tmp_loadsnapshotdata_idx);
 						pktsize = tmp_loadsnapshotdata_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 						udpsendto(switchos_snapshotserver_snapshotclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.snapshotserver.snapshotclient_for_reflector");
 					}
@@ -1305,14 +1305,14 @@ void *run_switchos_snapshotserver(void *param) {
 							for (uint32_t unreceived_idx = 0; unreceived_idx < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; unreceived_idx++) {
 								if (received_bitmap[unreceived_idx] == false) {
 									uint16_t switchidx_for_snapshotdata_key = calculate_switchidx(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][unreceived_idx]);
-									loadsnapshotdata_inswitch_t tmp_loadsnapshotdata_inswitch_req(switchidx_for_snapshotdata_key, switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][unreceived_idx], unreceived_idx);
+									loadsnapshotdata_inswitch_t tmp_loadsnapshotdata_inswitch_req(CURMETHOD_ID, switchidx_for_snapshotdata_key, switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][unreceived_idx], unreceived_idx);
 									pktsize = tmp_loadsnapshotdata_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 									udpsendto(switchos_snapshotserver_snapshotclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.snapshotserver.snapshotclient_for_reflector");
 								}
 							}
 						}
 						else {
-							loadsnapshotdata_inswitch_ack_t tmp_loadsnapshotdata_inswitch_ack(pktbuf, pkt_recvsize);
+							loadsnapshotdata_inswitch_ack_t tmp_loadsnapshotdata_inswitch_ack(CURMETHOD_ID, pktbuf, pkt_recvsize);
 							INVARIANT(tmp_loadsnapshotdata_inswitch_ack.key() == switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()]);
 							if (received_bitmap[tmp_loadsnapshotdata_inswitch_ack.idx()] == false) {
 								switchos_perpipeline_snapshot_values[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.val();
@@ -1532,25 +1532,25 @@ void *run_switchos_specialcaseserver(void *param) {
 			switch (pkt_type) {
 				case packet_type_t::GETRES_LATEST_SEQ_INSWITCH_CASE1:
 					{
-						getres_latest_seq_inswitch_case1_t req(buf, recv_size);
+						getres_latest_seq_inswitch_case1_t req(CURMETHOD_ID, buf, recv_size);
 						process_specialcase(req.idx(), req.key(), req.val(), req.seq(), req.stat());
 						break;
 					}
 				case packet_type_t::GETRES_DELETED_SEQ_INSWITCH_CASE1:
 					{
-						getres_deleted_seq_inswitch_case1_t req(buf, recv_size);
+						getres_deleted_seq_inswitch_case1_t req(CURMETHOD_ID, buf, recv_size);
 						process_specialcase(req.idx(), req.key(), req.val(), req.seq(), req.stat());
 						break;
 					}
 				case packet_type_t::PUTREQ_SEQ_INSWITCH_CASE1:
 					{
-						putreq_seq_inswitch_case1_t req(buf, recv_size);
+						putreq_seq_inswitch_case1_t req(CURMETHOD_ID, buf, recv_size);
 						process_specialcase(req.idx(), req.key(), req.val(), req.seq(), req.stat());
 						break;
 					}
 				case packet_type_t::DELREQ_SEQ_INSWITCH_CASE1:
 					{
-						delreq_seq_inswitch_case1_t req(buf, recv_size);
+						delreq_seq_inswitch_case1_t req(CURMETHOD_ID, buf, recv_size);
 						process_specialcase(req.idx(), req.key(), req.val(), req.seq(), req.stat());
 						break;
 					}

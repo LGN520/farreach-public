@@ -10,8 +10,8 @@
 #include <vector>
 #include <fstream>
 
-#include "helper.h"
-#include "key.h"
+#include "../common/helper.h"
+#include "../common/key.h"
 
 typedef Key index_key_t;
 

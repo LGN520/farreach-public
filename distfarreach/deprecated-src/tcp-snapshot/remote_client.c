@@ -16,19 +16,19 @@
 #include <set>
 //#include <sys/time.h> // struct timeval
 
-#include "helper.h"
-#include "key.h"
-#include "val.h"
-#include "iniparser/iniparser_wrapper.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/val.h"
+#include "../common/iniparser/iniparser_wrapper.h"
 #include "crc32.h"
-#include "latency_helper.h"
-#include "socket_helper.h"
-#include "dynamic_rulemap.h"
+#include "../common/latency_helper.h"
+#include "../common/socket_helper.h"
+#include "../common/dynamic_rulemap.h"
 
 #ifdef USE_YCSB
-#include "workloadparser/ycsb_parser.h"
+#include "../common/workloadparser/ycsb_parser.h"
 #elif defined USE_SYNTHETIC
-#include "workloadparser/synthetic_parser.h"
+#include "../common/workloadparser/synthetic_parser.h"
 #endif
 
 #include "common_impl.h"

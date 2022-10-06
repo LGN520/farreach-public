@@ -11,7 +11,7 @@
 #include <rte_flow.h>
 #include <arpa/inet.h>
 
-#include "key.h"
+#include "../common/key.h"
 #include "checksum_helper.h"
 
 #define MAX_LCORE_NUM 72

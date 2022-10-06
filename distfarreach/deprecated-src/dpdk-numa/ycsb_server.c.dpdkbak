@@ -17,10 +17,10 @@
 #include <string.h>
 #include <map>
 
-#include "helper.h"
+#include "../common/helper.h"
 #include "dpdk_helper.h"
 #include "ycsb/parser.h"
-#include "latency_helper.h"
+#include "../common/latency_helper.h"
 
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 

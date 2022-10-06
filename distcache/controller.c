@@ -27,8 +27,8 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "helper.h"
-#include "io_helper.h"
+#include "../common/helper.h"
+#include "../common/io_helper.h"
 
 #include "common_impl.h"
 
@@ -226,12 +226,12 @@ void *run_controller_popserver(void *param) {
 		netreach_key_t tmp_key;
 		uint16_t tmp_serveridx = 0;
 		if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP) {
-			netcache_cache_pop_t tmp_netcache_cache_pop(buf, recvsize);
+			netcache_cache_pop_t tmp_netcache_cache_pop(CURMETHOD_ID, buf, recvsize);
 			tmp_key = tmp_netcache_cache_pop.key();
 			tmp_serveridx = tmp_netcache_cache_pop.serveridx();
 		}
 		else if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
-			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(buf, recvsize);
+			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(CURMETHOD_ID, buf, recvsize);
 			tmp_key = tmp_netcache_cache_pop_finish.key();
 			tmp_serveridx = tmp_netcache_cache_pop_finish.serveridx();
 		}
@@ -247,7 +247,7 @@ void *run_controller_popserver(void *param) {
 			validate_switchidx(tmp_key);
 
 			// send two CACHE_POPs w/ default value to spine/leaf switchos.cppopserver
-			cache_pop_t tmp_cache_pop(tmp_key, val_t(), 0, false, tmp_serveridx);
+			cache_pop_t tmp_cache_pop(CURMETHOD_ID, tmp_key, val_t(), 0, false, tmp_serveridx);
 			int pktsize = tmp_cache_pop.serialize(buf, MAX_BUFSIZE);
 			udpsendto(controller_popserver_popclient_for_spine_udpsock, buf, pktsize, 0, &spineswitchos_cppopserver_addr, spineswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_spine");
 			udpsendto(controller_popserver_popclient_for_leaf_udpsock, buf, pktsize, 0, &leafswitchos_cppopserver_addr, leafswitchos_cppopserver_addrlen, "controller.popserver.popclient_for_leaf");
@@ -255,15 +255,15 @@ void *run_controller_popserver(void *param) {
 			// wait for two CACHE_POP_ACKs
 			is_timeout = udprecvfrom(controller_popserver_popclient_for_spine_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_spine");
 			if (!is_timeout) {
-				cache_pop_ack_t tmp_cache_pop_ack_from_spine(buf, recvsize);
+				cache_pop_ack_t tmp_cache_pop_ack_from_spine(CURMETHOD_ID, buf, recvsize);
 				INVARIANT(tmp_cache_pop_ack_from_spine.key() == tmp_cache_pop.key());
 				is_timeout = udprecvfrom(controller_popserver_popclient_for_leaf_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_leaf");
 				if (!is_timeout) {
-					cache_pop_ack_t tmp_cache_pop_ack_from_leaf(buf, recvsize);
+					cache_pop_ack_t tmp_cache_pop_ack_from_leaf(CURMETHOD_ID, buf, recvsize);
 					INVARIANT(tmp_cache_pop_ack_from_leaf.key() == tmp_cache_pop.key());
 
 					// send NETCACHE_CACHE_POP_ACK w/ default value to original switchos.dppopserver
-					netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_key, val_t(), 0, false, tmp_serveridx);
+					netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(CURMETHOD_ID, tmp_key, val_t(), 0, false, tmp_serveridx);
 					pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
 					udpsendto(controller_popserver_udpsock, buf, pktsize, 0, &switchos_dppopserver_popworker_addr, switchos_dppopserver_popworker_addrlen, "controller.popserver");
 				}
@@ -296,7 +296,7 @@ void *run_controller_popserver(void *param) {
 				// send NETCACHE_CACHE_POP_ACK/_FINISH_ACK to switchos.popworker immediately to avoid timeout
 				packet_type_t tmp_acktype = get_packet_type(buf, recvsize);
 				if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_FINISH_ACK) {
-					netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(buf, recvsize);
+					netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(CURMETHOD_ID, buf, recvsize);
 					if (likely(tmp_netcache_cache_pop_finish_ack.key() == tmp_key)) {
 						// send NETCACHE_CACHE_POP_FINISH_ACK to original switchos.popworker
 						udpsendto(controller_popserver_udpsock, buf, recvsize, 0, &switchos_dppopserver_popworker_addr, switchos_dppopserver_popworker_addrlen, "controller.popserver");
@@ -345,7 +345,7 @@ void *run_controller_victimserver(void *param) {
 		//printf("receive DISTCACHE_CACHE_EVICT_VICTIM from spineswitchos\n");
 		//dump_buf(buf, recvsize);
 
-		distcache_cache_evict_victim_t tmp_distcache_cache_evict_victim(buf, recvsize);
+		distcache_cache_evict_victim_t tmp_distcache_cache_evict_victim(CURMETHOD_ID, buf, recvsize);
 
 		// validate spine/leaf switchidx
 		validate_switchidx(tmp_distcache_cache_evict_victim.key());
@@ -356,7 +356,7 @@ void *run_controller_victimserver(void *param) {
 		// wait for DISTCACHE_CACHE_EVICT_VICTIM_ACK from leaf switchos
 		is_timeout = udprecvfrom(controller_victimserver_victimclient_for_leaf_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controlelr.victimserver.victimclient_for_leaf");
 		if (!is_timeout) {
-			distcache_cache_evict_victim_ack_t tmp_distcache_cache_evict_victim_ack(buf, recvsize);
+			distcache_cache_evict_victim_ack_t tmp_distcache_cache_evict_victim_ack(CURMETHOD_ID, buf, recvsize);
 			INVARIANT(tmp_distcache_cache_evict_victim_ack.key() == tmp_distcache_cache_evict_victim.key());
 			// send DISTCACHE_CACHE_EVICT_VICTIM_ACK to spine switchos
 			udpsendto(controller_victimserver_udpsock, buf, recvsize, 0, &spineswitchos_victimclient_addr, spineswitchos_victimclient_addrlen, "controller.victimserver");
@@ -426,7 +426,7 @@ void *run_controller_evictserver(void *param) {
 		udprecvfrom(controller_evictserver_udpsock, buf, MAX_BUFSIZE, 0, &switchos_evictclient_addr, &switchos_evictclient_addrlen, recvsize, "controller.evictserver");
 
 		// set dstaddr for the corresponding server
-		netcache_cache_evict_t tmp_netcache_cache_evict(buf, recvsize);
+		netcache_cache_evict_t tmp_netcache_cache_evict(CURMETHOD_ID, buf, recvsize);
 		uint16_t tmp_global_server_logical_idx = tmp_netcache_cache_evict.serveridx();
 		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < max_server_total_logical_num);
 		int tmp_server_physical_idx = -1;
@@ -453,7 +453,7 @@ void *run_controller_evictserver(void *param) {
 			// send NETCACHE_CACHE_EVICT_ACK to switchos.popworker.evictclient
 			//printf("receive NETCACHE_CACHE_EVICT_ACK from server and send to switchos\n");
 			//dump_buf(buf, recvsize);
-			netcache_cache_evict_ack_t tmp_netcache_cache_evict_ack(buf, recvsize);
+			netcache_cache_evict_ack_t tmp_netcache_cache_evict_ack(CURMETHOD_ID, buf, recvsize);
 			INVARIANT(tmp_netcache_cache_evict_ack.key() == tmp_netcache_cache_evict.key());
 			udpsendto(controller_evictserver_udpsock, buf, recvsize, 0, &switchos_evictclient_addr, switchos_evictclient_addrlen, "controller.evictserver");
 		}

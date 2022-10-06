@@ -5,10 +5,12 @@
 #include "rocksdb/utilities/transaction_db.h"
 #include "rocksdb/utilities/checkpoint.h"
 
-#include "../helper.h"
-#include "../io_helper.h"
-#include "../iniparser/iniparser_wrapper.h"
-#include "../rocksdb_wrapper.h"
+#include "../../common/helper.h"
+#include "../../common/io_helper.h"
+#include "../../common/iniparser/iniparser_wrapper.h"
+#include "../../common/rocksdb_wrapper.h"
+
+#include "../common_impl.h"
 
 int main(int argc, char **argv) {
 	if (argc != 3) {
@@ -31,33 +33,33 @@ int main(int argc, char **argv) {
 	for (uint16_t i = 0; i < current_server_logical_idxes.size(); i++) {
 		// overwrite snapshotid
 		std::string snapshotid_path;
-		get_server_snapshotid_path(snapshotid_path, i);
+		get_server_snapshotid_path(CURMETHOD_ID, snapshotid_path, i);
 		store_snapshotid(snapshotid, snapshotid_path);
 
 		// remove larger snapshot database and deletedset if any
 		int larger_snapshotid = snapshotid + 1;
 		std::string larger_snapshotdbseq_path;
-		get_server_snapshotdbseq_path(larger_snapshotdbseq_path, i, larger_snapshotid);
+		get_server_snapshotdbseq_path(CURMETHOD_ID, larger_snapshotdbseq_path, i, larger_snapshotid);
 		rmfiles(larger_snapshotdbseq_path.c_str());
 		std::string larger_snapshotdeletedset_path;
-		get_server_snapshotdeletedset_path(larger_snapshotdeletedset_path, i, larger_snapshotid);
+		get_server_snapshotdeletedset_path(CURMETHOD_ID, larger_snapshotdeletedset_path, i, larger_snapshotid);
 		rmfiles(larger_snapshotdeletedset_path.c_str());
 
 		// remove snapshotdb if any
 		std::string snapshotdb_path;
-		get_server_snapshotdb_path(snapshotdb_path, i);
+		get_server_snapshotdb_path(CURMETHOD_ID, snapshotdb_path, i);
 		rmfiles(snapshotdb_path.c_str());
 
 		// open runtime database
 		std::string db_path;
-		get_server_db_path(db_path, i);
+		get_server_db_path(CURMETHOD_ID, db_path, i);
 		rocksdb::TransactionDB *db_ptr = NULL;
 		rocksdb::Status s = rocksdb::TransactionDB::Open(RocksdbWrapper::rocksdb_options, rocksdb::TransactionDBOptions(), db_path, &db_ptr);
 		INVARIANT(db_ptr != NULL);
 
 		// create latest snapshot database as snapshotdb
 		std::string latest_snapshotdbseq_path;
-		get_server_snapshotdb_path(latest_snapshotdbseq_path, i);
+		get_server_snapshotdb_path(CURMETHOD_ID, latest_snapshotdbseq_path, i);
 		uint64_t latest_snapshotdbseq;
 		load_snapshotdbseq(latest_snapshotdbseq, latest_snapshotdbseq_path);
 		rocksdb::Checkpoint *checkpoint_ptr = NULL;
@@ -73,7 +75,7 @@ int main(int argc, char **argv) {
 		db_ptr = NULL;
 		rmfiles(db_path.c_str());
 		std::string deletedset_path;
-		get_server_deletedset_path(deletedset_path, i);
+		get_server_deletedset_path(CURMETHOD_ID, deletedset_path, i);
 		rmfiles(deletedset_path.c_str());
 
 		// copy snapshotdb as runtime database
@@ -84,7 +86,7 @@ int main(int argc, char **argv) {
 
 		// copy latest snapshot deletedset as runtime deletedset
 		std::string latest_snapshotdeletedset_path;
-		get_server_snapshotdeletedset_path(latest_snapshotdeletedset_path, i, snapshotid);
+		get_server_snapshotdeletedset_path(CURMETHOD_ID, latest_snapshotdeletedset_path, i, snapshotid);
 		sprintf(cmd, "cp -r %s %s", latest_snapshotdeletedset_path.c_str(), deletedset_path.c_str());
 		system(cmd);
 	}

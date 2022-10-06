@@ -27,8 +27,8 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "helper.h"
-#include "io_helper.h"
+#include "../common/helper.h"
+#include "../common/io_helper.h"
 
 #include "common_impl.h"
 
@@ -183,12 +183,12 @@ void *run_controller_popserver(void *param) {
 		netreach_key_t tmp_key;
 		uint16_t tmp_serveridx = 0;
 		if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP) {
-			netcache_cache_pop_t tmp_netcache_cache_pop(buf, recvsize);
+			netcache_cache_pop_t tmp_netcache_cache_pop(CURMETHOD_ID, buf, recvsize);
 			tmp_key = tmp_netcache_cache_pop.key();
 			tmp_serveridx = tmp_netcache_cache_pop.serveridx();
 		}
 		else if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
-			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(buf, recvsize);
+			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(CURMETHOD_ID, buf, recvsize);
 			tmp_key = tmp_netcache_cache_pop_finish.key();
 			tmp_serveridx = tmp_netcache_cache_pop_finish.serveridx();
 		}
@@ -224,15 +224,15 @@ void *run_controller_popserver(void *param) {
 			// send NETCACHE_CACHE_POP_ACK/_FINISH_ACK to switchos.popworker immediately to avoid timeout
 			packet_type_t tmp_acktype = get_packet_type(buf, recvsize);
 			if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_ACK) {
-				netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(buf, recvsize);
+				netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(CURMETHOD_ID, buf, recvsize);
 				INVARIANT(tmp_netcache_cache_pop_ack.key() == tmp_key);
 			}
 			else if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_ACK_NLATEST) {
-				netcache_cache_pop_ack_nlatest_t tmp_netcache_cache_pop_ack_nlatest(buf, recvsize);
+				netcache_cache_pop_ack_nlatest_t tmp_netcache_cache_pop_ack_nlatest(CURMETHOD_ID, buf, recvsize);
 				INVARIANT(tmp_netcache_cache_pop_ack_nlatest.key() == tmp_key);
 			}
 			else if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_FINISH_ACK) {
-				netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(buf, recvsize);
+				netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(CURMETHOD_ID, buf, recvsize);
 				INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_key);
 			}
 			else {
@@ -278,7 +278,7 @@ void *run_controller_evictserver(void *param) {
 		udprecvfrom(controller_evictserver_udpsock, buf, MAX_BUFSIZE, 0, &switchos_evictclient_addr, &switchos_evictclient_addrlen, recvsize, "controller.evictserver");
 
 		// set dstaddr for the corresponding server
-		netcache_cache_evict_t tmp_netcache_cache_evict(buf, recvsize);
+		netcache_cache_evict_t tmp_netcache_cache_evict(CURMETHOD_ID, buf, recvsize);
 		uint16_t tmp_global_server_logical_idx = tmp_netcache_cache_evict.serveridx();
 		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < max_server_total_logical_num);
 		int tmp_server_physical_idx = -1;
@@ -305,7 +305,7 @@ void *run_controller_evictserver(void *param) {
 			// send NETCACHE_CACHE_EVICT_ACK to switchos.popworker.evictclient
 			//printf("receive NETCACHE_CACHE_EVICT_ACK from server and send to switchos\n");
 			//dump_buf(buf, recvsize);
-			netcache_cache_evict_ack_t tmp_netcache_cache_evict_ack(buf, recvsize);
+			netcache_cache_evict_ack_t tmp_netcache_cache_evict_ack(CURMETHOD_ID, buf, recvsize);
 			INVARIANT(tmp_netcache_cache_evict_ack.key() == tmp_netcache_cache_evict.key());
 			udpsendto(controller_evictserver_udpsock, buf, recvsize, 0, &switchos_evictclient_addr, switchos_evictclient_addrlen, "controller.evictserver");
 		}

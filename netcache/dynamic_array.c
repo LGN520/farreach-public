@@ -1,4 +1,4 @@
-#include "dynamic_array.h"
+#include "../common/dynamic_array.h"
 
 DynamicArray::DynamicArray() {
 	_cursize = 0;

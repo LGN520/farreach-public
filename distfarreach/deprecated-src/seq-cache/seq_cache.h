@@ -4,8 +4,8 @@
 #include <map>
 #include <stdint.h>
 
-#include "key.h"
-#include "helper.h"
+#include "../common/key.h"
+#include "../common/helper.h"
 
 // total seq cache size = # of server thread * per-server seq cache size
 // For example, under 128 server threads, we need at least 128 * 1M * (16B+4B) = 5GB

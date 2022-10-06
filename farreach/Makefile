@@ -21,20 +21,6 @@ LDDIR += -L/usr/lib/x86_64-linux-gnu -L../common
 INCDIR += -I/usr/include
 
 ##############################################################################
-# RocksDB configuration
-
-ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
-ROCKSDB_LDDIR += -L../rocksdb-6.22.1
-# V2: Bourbon
-#ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
-#ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
-
-ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz -ldl
-
-INCDIR += $(ROCKSDB_INCDIR)
-LDDIR += $(ROCKSDB_LDDIR)
-
-##############################################################################
 # DPDK configuration
 
 # Prefix for dpdk
@@ -74,6 +60,20 @@ DPDK_OBJECTS += dpdk_helper.o
 
 INCDIR += $(DPDK_INCDIR)
 LDDIR += $(DPDK_LDDIR)
+
+##############################################################################
+# RocksDB configuration
+
+ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
+ROCKSDB_LDDIR += -L../rocksdb-6.22.1
+# V2: Bourbon
+#ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
+#ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
+
+ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz -ldl
+
+INCDIR += $(ROCKSDB_INCDIR)
+LDDIR += $(ROCKSDB_LDDIR)
 
 ##############################################################################
 

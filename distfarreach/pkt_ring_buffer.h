@@ -7,10 +7,10 @@
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // htons htonl
 
-#include "helper.h"
-#include "key.h"
-#include "packet_format_impl.h"
-#include "dynamic_array.h"
+#include "../common/helper.h"
+#include "../common/key.h"
+#include "../common/packet_format_impl.h"
+#include "../common/dynamic_array.h"
 
 // at most one packet from each logical client ideally
 #define PKT_RING_BUFFER_SIZE 2048

@@ -12,13 +12,13 @@
 #include <fstream>
 #include <sys/time.h> // struct timeval
 
-#include "helper.h"
-#include "rocksdb_wrapper.h"
+#include "../common/helper.h"
+#include "../common/rocksdb_wrapper.h"
 
 #ifdef USE_YCSB
-#include "workloadparser/ycsb_parser.h"
+#include "../common/workloadparser/ycsb_parser.h"
 #elif defined USE_SYNTHETIC
-#include "workloadparser/synthetic_parser.h"
+#include "../common/workloadparser/synthetic_parser.h"
 #endif
 
 #include "common_impl.h"

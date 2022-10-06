@@ -11,8 +11,8 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "helper.h"
-#include "socket_helper.h"
+#include "../common/helper.h"
+#include "../common/socket_helper.h"
 
 #include "common_impl.h"
 

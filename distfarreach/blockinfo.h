@@ -5,9 +5,9 @@
 #include <vector>
 #include <netinet/in.h> // struct sockaddr_in
 
-#include "key.h"
-#include "val.h"
-#include "packet_format.h"
+#include "../common/key.h"
+#include "../common/val.h"
+#include "../common/packet_format.h"
 
 typedef GetRequestBeingevicted<netreach_key_t> get_request_beingevicted_t;
 

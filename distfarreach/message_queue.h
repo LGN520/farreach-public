@@ -1,7 +1,7 @@
 #ifndef MESSAGE_QUEUE_H
 #define MESSAGE_QUEUE_H
 
-#include "helper.h"
+#include "../common/helper.h"
 
 template<class obj_t>
 class MessagePtrQueue {

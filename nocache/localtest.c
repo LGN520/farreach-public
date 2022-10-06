@@ -12,9 +12,9 @@
 #include <map>
 #include <sys/time.h> // struct timeval
 
-#include "helper.h"
-#include "rocksdb_wrapper.h"
-#include "snapshot_record.h"
+#include "../common/helper.h"
+#include "../common/rocksdb_wrapper.h"
+#include "../common/snapshot_record.h"
 
 #include "common_impl.h"
 
@@ -343,7 +343,7 @@ void *run_sfg(void * param) {
 		  curkey = non_exist_keys[curkeyidx - op_exist_keys_size];
 	  }
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << curkey.to_string_for_print());
-	  bool tmp_stat = db_wrappers[thread_id].get(curkey, tmp_val, tmp_seq);
+	  bool tmp_stat = db_wrappers[thread_id].get(curkey, tmp_val, &tmp_seq);
 	  UNUSED(tmp_stat);
       query_i++;
       if (unlikely(query_i == op_keys_size / 2)) {
