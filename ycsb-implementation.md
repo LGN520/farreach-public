@@ -3,19 +3,19 @@
 - TODO
 	+ TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
 	+ TODO: Test farreach/nocache/netcache under hotin pattern for six workloads
-	+ Debug keydump module to get keydump results
-		* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
-			- TODO: Remove -df from command-line parameters
-		* TODO: Send back SendPktRcvAck from sendpktserver to sendpktclient
-		* TODO: Use custom pair for SCANRES_SPLIT
+	* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
+		- TODO: Remove -df from command-line parameters
+	* TODO: Send back SendPktRcvAck from sendpktserver to sendpktclient (DONE?)
+	* TODO: Use custom pair for SCANRES_SPLIT
 
 - 10.7
 	+ Siyuan
 		* TODO: Re-organize ycsb/ as benchmark/, including ycsb/, inswitchcache-java-lib/, inswitchcache-c-lib/, output/, results/
 			- TODO: Disaggregate JAVA-based lib for YCSB
 		* TODO: Update jnisrc to use libcommon
-		* TODO: Add udprecvlarge_ipfrag_dist in JNI-based socket
-		* TODO: Add udprecvlarge_ipfrag_multisrc and udprecvlarge_ipfrag_multisrc_dist in JNI-based socket
+		* TODO: Support range query
+			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
+			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
 		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB
 		* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 	+ Huancheng
@@ -23,7 +23,7 @@
 		* TODO: Update inswitchcache.core.PacketFormat as common/ (introduce methodid yet NOT affect UDP packet content)
 		* TODO: Double check remote_client of farreach (e.g., add preparefinish_client in prebenchmark of farreach)
 		* TODO: Try hotout and random workloads
-		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN of FarreachClient (NOT need InetAddress of ip and svraddr of udprecvfrom)
+		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
 
 - 10.5 - 10.6
 	+ Siyuan: Disaggregate C-based lib for remote_client.c and server for ALL methods
