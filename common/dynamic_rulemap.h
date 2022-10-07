@@ -19,7 +19,7 @@ class DynamicRulemap {
 	typedef std::map<netreach_key_t, netreach_key_t> o2n_map_t; // mapping from original key to new key
 
 	public:
-		DynamicRulemap(int periodnum, const char * ruleprefix);
+		DynamicRulemap(int periodnum, const char * rulepath);
 		~DynamicRulemap();
 
 		// try mapping of current period

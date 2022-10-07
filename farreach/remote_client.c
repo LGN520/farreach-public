@@ -120,7 +120,9 @@ int main(int argc, char **argv) {
 
 	// prepare for clients
 	if (workload_mode != 0) {
-		dynamic_rulemap_ptr = new dynamic_rulemap_t(dynamic_periodnum, dynamic_ruleprefix);
+		char dynamic_rulepath[256];
+		DYNAMIC_RULEPATH(dynamic_rulepath, workload_name, dynamic_ruleprefix);
+		dynamic_rulemap_ptr = new dynamic_rulemap_t(dynamic_periodnum, dynamic_rulepath);
 		INVARIANT(dynamic_rulemap_ptr != NULL);
 		dynamic_rulemap_ptr->nextperiod();
 	}

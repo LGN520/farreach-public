@@ -293,8 +293,8 @@ void prepare_switchos() {
 }
 
 void recover() {
-	std::string snapshotid_path;
-	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path);
+	char snapshotid_path[256];
+	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path, 256);
 	if (!isexist(snapshotid_path)) {
 		printf("You need to copy latest snapshotid from controller to switchos before running with recover mode\n");
 		exit(-1);
@@ -302,8 +302,8 @@ void recover() {
 
 	int controller_snapshotid = 0;
 	load_snapshotid(controller_snapshotid, snapshotid_path);
-	std::string snapshotdata_path;
-	get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, controller_snapshotid);
+	char snapshotdata_path[256];
+	get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, 256, controller_snapshotid);
 	if (!isexist(snapshotdata_path)) {
 		printf("You need to copy inswitch snapshot data from controller to switchos before running with recover mode\n");
 		exit(-1);

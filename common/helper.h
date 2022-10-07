@@ -42,6 +42,9 @@ static const char *get_methodname_byid(method_t methodid) {
 #define WARMUP_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "../benchmark/output/%s-hotest.out", workload)
 
+#define DYNAMIC_RULEPATH(buf, workload, prefix) \
+	sprintf(buf, "../benchmark/output/%s-%srules/", workload, prefix)
+
 #define LOAD_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "%s-load.out", workload)
 

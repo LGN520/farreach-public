@@ -1,13 +1,13 @@
 #include "../common/dynamic_rulemap.h"
 
-DynamicRulemap::DynamicRulemap(int periodnum, const char * ruleprefix) {
+DynamicRulemap::DynamicRulemap(int periodnum, const char * rulepath) {
 	INVARIANT(ruleprefix != NULL);
 
 	mappings.resize(periodnum);
 	for (int i = 0; i < periodnum; i++) { // 0, 1, ..., 5
 		char tmp_rulefile[256];
 		memset(tmp_rulefile, 0, 256);
-		sprintf(tmp_rulefile, "%s%d", ruleprefix, i); // 0, 1, 2, ..., 5
+		sprintf(tmp_rulefile, "%s/%d.out", rulepath, i); // 0, 1, 2, ..., 5
 
 		FILE *tmp_rulefd = fopen(tmp_rulefile, "r");
 		if (tmp_rulefd == NULL) {

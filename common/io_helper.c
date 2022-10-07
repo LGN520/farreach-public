@@ -166,3 +166,97 @@ void store_buf(const char * buf, uint32_t bufsize, std::string path) {
 	fclose(fd);
 	return;
 }
+
+// for switchos
+
+void get_controller_snapshotid_path(method_t methodid, char *snapshotid_path, int len) {
+	const char *methodname = get_methodname_byid(methodid);
+	char tmpstr[256];
+	memset(tmpstr, '\0', 256);
+	sprintf(tmpstr, "/tmp/%s/controller.snapshotid", methodname);
+	INVARIANT(snapshotid_path != NULL && len >= strlen(tmpstr));
+	memset(snapshotid_path, '\0', len);
+	memcpy(snapshotid_path, tmpstr, strlen(tmpstr));
+	return;
+}
+
+void get_controller_snapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid) {
+	const char *methodname = get_methodname_byid(methodid);
+	char tmpstr[256];
+	memset(tmpstr, '\0', 256);
+	sprintf(tmpstr, "/tmp/%s/controller.snapshotdata", methodname);
+	INVARIANT(snapshotdata_path != NULL && len >= strlen(tmpstr));
+	memset(snapshotdata_path, '\0', len);
+	memcpy(snapshotdata_path, tmpstr, strlen(tmpstr));
+	return;
+}
+
+void get_controller_spinesnapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid) {
+	const char *methodname = get_methodname_byid(methodid);
+	char tmpstr[256];
+	memset(tmpstr, '\0', 256);
+	sprintf(tmpstr, "/tmp/%s/controller.spinesnapshotdata", methodname);
+	INVARIANT(snapshotdata_path != NULL && len >= strlen(tmpstr));
+	memset(snapshotdata_path, '\0', len);
+	memcpy(snapshotdata_path, tmpstr, strlen(tmpstr));
+	return;
+}
+
+void get_controller_leafsnapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid) {
+	const char *methodname = get_methodname_byid(methodid);
+	char tmpstr[256];
+	memset(tmpstr, '\0', 256);
+	sprintf(tmpstr, "/tmp/%s/controller.leafsnapshotdata", methodname);
+	INVARIANT(snapshotdata_path != NULL && len >= strlen(tmpstr));
+	memset(snapshotdata_path, '\0', len);
+	memcpy(snapshotdata_path, tmpstr, strlen(tmpstr));
+	return;
+}
+
+bool isexist(const char *path) {
+	return access(path, F_OK) == 0;
+}
+
+void load_snapshotid(int &snapshotid, const char *snapshotid_path) {
+	FILE *snapshotid_fd = fopen(snapshotid_path, "rb");
+	fread(&snapshotid, sizeof(int), 1, snapshotid_fd);
+	fclose(snapshotid_fd);
+	return;
+}
+
+uint32_t get_filesize(const char *path) {
+	if (isexist(path)) {
+		int fd = open(path, O_RDONLY);
+		INVARIANT(fd != -1);
+
+		struct stat statbuf;
+		int fstat_res = fstat(fd, &statbuf);
+		if (fstat_res < 0) {
+			printf("Cannot get stat of %s\n", path);
+			exit(-1);
+		}
+		uint32_t filesize = statbuf.st_size;
+
+		close(fd);
+		return filesize;
+	}
+	return 0;
+}
+
+char *readonly_mmap(const char *path, uint32_t offset, uint32_t size) {
+	if (isexist(path)) {
+		int fd = open(path, O_RDONLY);
+		INVARIANT(fd != -1);
+
+		char * content = (char *)(mmap(NULL, size, PROT_READ, MAP_SHARED, fd, offset)); // NOTE: the last argument must be page-size-aligned
+		if (content == MAP_FAILED) {
+			printf("mmap fails: errno = %d\n", errno);
+			exit(-1);
+		}
+		INVARIANT(content != NULL);
+
+		close(fd);
+		return content;
+	}
+	return NULL;
+}

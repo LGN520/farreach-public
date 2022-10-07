@@ -39,4 +39,14 @@ void load_snapshotdbseq(uint64_t &snapshotdbseq, std::string snapshotdbseq_path)
 void store_snapshotdbseq(uint64_t snapshotdbseq, std::string snapshotdbseq_path);
 void store_buf(const char * buf, uint32_t bufsize, std::string path);
 
+// for switchos
+void get_controller_snapshotid_path(method_t methodid, char *snapshotid_path, int len);
+void get_controller_snapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid);
+void get_controller_spinesnapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid);
+void get_controller_leafsnapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid);
+bool isexist(const char *path);
+void load_snapshotid(int &snapshotid, const char* snapshotid_path);
+uint32_t get_filesize(const char* path);
+char *readonly_mmap(const char *path, uint32_t offset, uint32_t size);
+
 #endif
