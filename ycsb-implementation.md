@@ -2,7 +2,6 @@
 
 - TODO
 	+ TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
-	+ TODO: Test farreach/nocache/netcache under hotin pattern for six workloads
 	* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
 		- TODO: Remove -df from command-line parameters
 	* TODO: Use custom pair for SCANRES_SPLIT
@@ -10,13 +9,19 @@
 
 - 10.8
 	+ Siyuan
+		* TODO: Update jnisrc to use libcommon
+		* TODO: Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
+		* TODO: Review code related with ByteBuffer
 		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
-		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB
+		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
 		* TODO: Support range query
 			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
 			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+		* TODO: Dump per-second latency histogram and throughput of each physical client into temporary file
+			- TODO: Use script to aggregate the per-physical-client statistics into final statistics
 		* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 	+ HuanCheng
+		* TODO: Test farreach/nocache/netcache under hotin pattern of six YCSB workloads (some workloads may not be supported now, e.g. workloads with range query)
 		* TODO: Double check remote_client of farreach (e.g., add preparefinish_client in prebenchmark of farreach)
 
 - 10.7
@@ -24,14 +29,11 @@
 		* Check correctness of JNI on UDP checksum for cache hits/misses
 		* Re-organize ycsb/ as benchmark/, including ycsb/, inswitchcache-java-lib/, inswitchcache-c-lib/, output/, results/
 			- Use inswitchcache.core.Key/Value/SocketHelper in farreach
-			- TODO: Disaggregate JAVA-based lib for YCSB
-		* TODO: Update jnisrc to use libcommon
-		* TODO: Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
-		* TODO: Update scripts and benchmark.md (make rocksdb and common -> make each method)
+			- Disaggregate JAVA-based lib for YCSB
+		* Update scripts and benchmark.md (make rocksdb/common and then make each method in scripts/local/make\*.sh)
 	+ Huancheng
-		* TODO: Fix inconsistent hash_partition_idx issue of key
-		* TODO: Double-check packet format of GET/PUT/DEL/LOAD request and response
-		* TODO: Review code related with ByteBuffer
+		* Fix inconsistent hash_partition_idx issue of key
+		* Double-check packet format of GET/PUT/DEL/ TODO LOAD request and response
 		* TODO: Reproduce preliminary results of farreach on 4 cases
 			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
 			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
