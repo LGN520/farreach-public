@@ -1,6 +1,6 @@
 # Running Guide
 
-- method: netreach-v4-lsm / nocache / netcache / distfarreach / distnocache / distcache
+- method: farreach / nocache / netcache / distfarreach / distnocache / distcache
 
 ## Environment Installation
 
@@ -25,6 +25,14 @@
 		* `bash compile.sh` (NOTE: if we have already compiled for all methods, we do NOT need to run this command unless we change in-switch implementation)
 	+ Under each physical client, enter directory of ycsb/
 		* `bash compile.sh` to compile java code of all methods
+
+## Prepare
+
+- Under the main client, enter directory of ycsb/
+	+ Get hot/cold keys for static/dynamic workloads, and get bottleneck partition for server rotation
+		* `./bin/ycsb run keydump -P <workloadpattern> -pi 0 -df <workloadname>`
+	+ Generate rulemap rule files for dynamic workload
+		* `python generate_dynamicrules.py <workloadname>`
 
 ## Normal running
 
@@ -73,7 +81,7 @@
 			* server0::server_logical_idxes
 			* server1::server_logical_idxes
 			* bottleneck_serveridx in shell
-	+ Under main client (i.e., the first physical client dl11), enter directory of method/
+	+ DEPRECATED: Under main client (i.e., the first physical client dl11), enter directory of method/
 		+ `bash remotescripts/prepare_for_static.sh` to sync necessary files to another client and servers
 - Test phase
 	+ Under main client (i.e., the first physical client dl11), enter directory of method/
