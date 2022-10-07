@@ -6,24 +6,35 @@
 	* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
 		- TODO: Remove -df from command-line parameters
 	* TODO: Use custom pair for SCANRES_SPLIT
+	* TODO: Change permission to all users for rocksdb files after loading
+
+- 10.8
+	+ Siyuan
+		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
+		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB
+		* TODO: Support range query
+			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
+			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+		* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
+	+ HuanCheng
+		* TODO: Double check remote_client of farreach (e.g., add preparefinish_client in prebenchmark of farreach)
 
 - 10.7
 	+ Siyuan
 		* Check correctness of JNI on UDP checksum for cache hits/misses
 		* Re-organize ycsb/ as benchmark/, including ycsb/, inswitchcache-java-lib/, inswitchcache-c-lib/, output/, results/
+			- Use inswitchcache.core.Key/Value/SocketHelper in farreach
 			- TODO: Disaggregate JAVA-based lib for YCSB
 		* TODO: Update jnisrc to use libcommon
-		* TODO: Support range query
-			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
-			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB
-		* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
+		* TODO: Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
+		* TODO: Update scripts and benchmark.md (make rocksdb and common -> make each method)
 	+ Huancheng
-		* TODO: Use inswitchcache.core.Key/Value in farreach and keydump
-		* TODO: Update inswitchcache.core.PacketFormat as common/ (introduce methodid yet NOT affect UDP packet content)
-		* TODO: Double check remote_client of farreach (e.g., add preparefinish_client in prebenchmark of farreach)
-		* TODO: Try hotout and random workloads
-		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
+		* TODO: Fix inconsistent hash_partition_idx issue of key
+		* TODO: Double-check packet format of GET/PUT/DEL/LOAD request and response
+		* TODO: Review code related with ByteBuffer
+		* TODO: Reproduce preliminary results of farreach on 4 cases
+			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
+			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
 
 - 10.5 - 10.6
 	+ Siyuan: Disaggregate C-based lib for remote_client.c and server for ALL methods
@@ -35,10 +46,6 @@
 		* Compile common/ as libcommon.a for benchmark/ and method/
 			- Update usage of packet_format, socket_helper, rocksdb_wrapper, io_helper (files: loader.c, localtest.c, remote_client.c, server_impl.h, switchos.c, controller.c, recover/\*) -> SYNC to ALL
 			- Update Makefile and includes by running replace.sh -> SYNC to ALL
-	+ Huancheng
-		* TODO: Reproduce preliminary results on hotin workload
-		* TODO: Check correctness of loading phase by LOADREQ
-		* TODO: Update run.md (make rocksdb and common -> make each method)
 
 ## History log
 
