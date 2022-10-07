@@ -9,7 +9,8 @@
 
 - 10.7
 	+ Siyuan
-		* TODO: Re-organize ycsb/ as benchmark/, including ycsb/, inswitchcache-java-lib/, inswitchcache-c-lib/, output/, results/
+		* Check correctness of JNI on UDP checksum for cache hits/misses
+		* Re-organize ycsb/ as benchmark/, including ycsb/, inswitchcache-java-lib/, inswitchcache-c-lib/, output/, results/
 			- TODO: Disaggregate JAVA-based lib for YCSB
 		* TODO: Update jnisrc to use libcommon
 		* TODO: Support range query
@@ -35,7 +36,6 @@
 			- Update usage of packet_format, socket_helper, rocksdb_wrapper, io_helper (files: loader.c, localtest.c, remote_client.c, server_impl.h, switchos.c, controller.c, recover/\*) -> SYNC to ALL
 			- Update Makefile and includes by running replace.sh -> SYNC to ALL
 	+ Huancheng
-		* TODO: Check correctness of JNI on UDP checksum for cache hits/misses
 		* TODO: Reproduce preliminary results on hotin workload
 		* TODO: Check correctness of loading phase by LOADREQ
 		* TODO: Update run.md (make rocksdb and common -> make each method)
