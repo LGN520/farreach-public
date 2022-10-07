@@ -39,13 +39,8 @@ static const char *get_methodname_byid(method_t methodid) {
 //#define USE_SYNTHETIC
 //#define USE_TPCC
 
-#ifdef USE_YCSB
 #define WARMUP_RAW_WORKLOAD(buf, workload) \
-	sprintf(buf, "../ycsb/%s-hotest.out", workload)
-#elif defined(USE_SYNTHETIC)
-#define WARMUP_RAW_WORKLOAD(buf, workload) \
-	sprintf(buf, "%s-warmup.out", workload)
-#endif
+	sprintf(buf, "../benchmark/output/%s-hotest.out", workload)
 
 #define LOAD_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "%s-load.out", workload)

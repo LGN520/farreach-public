@@ -5,7 +5,6 @@
 	+ TODO: Test farreach/nocache/netcache under hotin pattern for six workloads
 	* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
 		- TODO: Remove -df from command-line parameters
-	* TODO: Send back SendPktRcvAck from sendpktserver to sendpktclient (DONE?)
 	* TODO: Use custom pair for SCANRES_SPLIT
 
 - 10.7

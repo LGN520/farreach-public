@@ -37,9 +37,11 @@
 - Compile source code
 	+ Compile software code
 		* Manual way
-			- Under project root directory of each client, run ``
-		* Automatic way: under main client (i.e., the first physical client dl11), enter directory of method/
-			- `bash remotescripts/makeremotefiles` to make C/C++ and java code including client, switchos, controller, and server
+			- Under project root directory of each client, run `cd scripts/local; bash makeclient.sh`
+			- Under project root directory of each switch, run `cd scripts/local; bash makeswitch.sh`
+			- Under project root directory of each server, run `cd scripts/local; bash makeserver.sh`
+		* Automatic way: under project root directory of main client (i.e., the first physical client dl11)
+			- `cd scripts/remote; bash makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server
 	+ Compile hardware code
 		* (NOT need to run now) Under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
 			- `bash compile.sh` (NOTE: if we have already compiled for all methods, we do NOT need to run this command unless we change in-switch implementation)
