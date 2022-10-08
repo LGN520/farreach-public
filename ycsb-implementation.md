@@ -9,7 +9,7 @@
 
 - 10.8
 	+ Siyuan
-		* TODO: Update jnisrc to use libcommon
+		* TODO: Update jnisrc to use libcommon (add methodid into inswitchcache-java-lib::SocketHelper)
 		* TODO: Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
 		* TODO: Review code related with ByteBuffer
 		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)

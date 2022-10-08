@@ -7,6 +7,7 @@
 #include <execinfo.h> // backtrace
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #if !defined(HELPER_H)
 #define HELPER_H

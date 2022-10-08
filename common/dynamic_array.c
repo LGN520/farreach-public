@@ -22,7 +22,10 @@ DynamicArray::~DynamicArray() {
 }
 
 void DynamicArray::init(int mincapability, int maxcapability) {
-	INVARIANT(maxcapability > mincapability);
+	if (maxcapability <= mincapability) {
+		printf("[ERROR] DynamicArray::init() maxcapability %d should > mincapability %d\n", maxcapability, mincapability);
+		exit(-1);
+	}
 
 	_mincapability = mincapability;
 	_maxcapability = maxcapability;
@@ -33,7 +36,10 @@ void DynamicArray::init(int mincapability, int maxcapability) {
 }
 
 char& DynamicArray::operator[](int idx) {
-	INVARIANT(idx >= 0 && idx < _cursize);
+	if (!(idx >= 0 && idx < _cursize)) {
+		printf("[ERROR] DynamicArray::operator[]() invalid idx %d should should in [0, %d)\n", idx, _cursize);
+		exit(-1);
+	}
 	return _array[idx];
 }
 
@@ -57,7 +63,10 @@ void DynamicArray::dynamic_memset(int off, int value, int len) {
 
 void DynamicArray::clear() {
 	if (_curcapability != _mincapability) {
-		INVARIANT(_array != NULL);
+		if (_array == NULL) {
+			printf("[ERROR] DynamicArray::clear() _array is NULL!\n");
+			exit(-1);
+		}
 		delete [] _array;
 		_array = new char[_mincapability];
 		_curcapability = _mincapability;
@@ -83,9 +92,12 @@ void DynamicArray::dynamic_reserve(int off, int len) {
 	// [off, off+len)
 	if (off + len > _curcapability) {
 		// NOTE: _curcapability < off + len <= _maxcapability
-		INVARIANT(_curcapability < _maxcapability);
+		if (_curcapability >= _maxcapability) {
+			printf("[ERROR] DynamicArray::dynamic_reserve() _curcapability %d should < _maxcapability %d\n", _curcapability, _maxcapability);
+			exit(-1);
+		}
 
-		INVARIANT(_curcapability > 0);
+		INVARIANT(_curcapability > 0 && _maxcapcbility > 0);
 		int newcapability = 2*_curcapability;
 		while (newcapability < off + len) {
 			newcapability = 2*newcapability;
