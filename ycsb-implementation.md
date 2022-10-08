@@ -1,31 +1,43 @@
 # Implementation log of YCSB
 
 - TODO
-	+ TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
 	* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
 		- TODO: Remove -df from command-line parameters
+	* TODO: Support range query
+		- TODO: Add SCANRES
+		- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
+		- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+	* TODO: Dump per-second latency histogram and throughput of each physical client into temporary file
+		- TODO: Use script to aggregate the per-physical-client statistics into final statistics
+	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 	* TODO: Use custom pair for SCANRES_SPLIT
-	* TODO: Change permission to all users for rocksdb files after loading
 
-- 10.8
+- 10.9
 	+ Siyuan
-		* Update jnisrc to use libcommon (add methodid into inswitchcache-java-lib::SocketHelper)
-		* Fix path errors of Tofino scripts
-		* TODO: Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
-			- TODO: Implement dynamic_serialize for put/insert; use udpsendlarge_ipfrag for put/insert
+		* Support large value
+			- TODO: Add GETRES_LARGEVALUE and PUTREQ_LARGEVALUE w/ dynamic_serialize 
+			- TODO: Use udpsendlarge_ipfrag for PUTREQ_LARGEVALUE in update/insert
+		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
+		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
 		* Code review
 			- TODO: Review code related with ByteBuffer
 			- TODO: Review code related with remote_client.c (e.g., add preparefinish_client in prebenchmark of farreach)
-		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
-		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
-		* TODO: Support range query
-			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
-			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-		* TODO: Dump per-second latency histogram and throughput of each physical client into temporary file
-			- TODO: Use script to aggregate the per-physical-client statistics into final statistics
-		* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 	+ HuanCheng
+		* TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
+			- TODO: Backup the loaded database files (NOT in /tmp; put in /home)
+			- TODO: Change permission to all users for rocksdb files after loading
 		* TODO: Test farreach/nocache/netcache under hotin pattern of six YCSB workloads (some workloads may not be supported now, e.g. workloads with range query)
+
+- 10.8 - 10.9
+	+ Siyuan
+		* Update jnisrc to use libcommon (add methodid into inswitchcache-java-lib::SocketHelper)
+		* Fix path errors of Tofino scripts
+			- Use CLIENT/SWITCH/SERVER_ROOTPATH in scripts
+		* Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
+			- Add LOADREQ and LOADACK; add dynamic_serialize in Val
+	+ HuanCheng
+		* TODO: Implement a client for loading phase and test LOADREQ
+			- NOTE: YCSB uses recordcnt for loading phase, where each request (MUST be INSERT) has a different key
 
 - 10.7
 	+ Siyuan
@@ -36,7 +48,7 @@
 		* Update scripts and benchmark.md (make rocksdb/common and then make each method in scripts/local/make\*.sh)
 	+ Huancheng
 		* Fix inconsistent hash_partition_idx issue of key
-		* Double-check packet format of GET/PUT/DEL/ TODO LOAD request and response
+		* Double-check packet format of GET/PUT/DEL/request and response
 		* TODO: Reproduce preliminary results of farreach on 4 cases
 			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
 			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads

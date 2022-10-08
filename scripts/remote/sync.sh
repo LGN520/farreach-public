@@ -13,8 +13,8 @@ syncfiles_toclient() {
 syncfiles_toall(){
 	TMPDIRNAME=$1
 
-	ssh ${USER}@bf1 "rm -rf NetBuffer/$TMPDIRNAME"
-	ssh ${USER}@bf3 "rm -rf NetBuffer/$TMPDIRNAME"
+	ssh ${USER}@bf1 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME"
+	ssh ${USER}@bf3 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME"
 	ssh ${USER}@dl13 "rm -rf projects/NetBuffer/$TMPDIRNAME"
 	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf projects/NetBuffer/$TMPDIRNAME"
 	ssh ${USER}@dl16 "rm -rf projects/NetBuffer/$TMPDIRNAME"

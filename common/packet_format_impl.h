@@ -2132,8 +2132,8 @@ uint32_t LoadRequest<key_t, val_t>::dynamic_serialize(dynamic_array_t &dynamic_d
 
 template<class key_t, class val_t>
 uint32_t LoadRequest<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	uint32_t my_size = this->size();
-	INVARIANT(max_size >= my_size);
+	//uint32_t my_size = this->size();
+	//INVARIANT(max_size >= my_size);
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
@@ -2152,8 +2152,8 @@ uint32_t LoadRequest<key_t, val_t>::serialize(char * const data, uint32_t max_si
 
 template<class key_t, class val_t>
 void LoadRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
-	uint32_t my_size = this->size();
-	INVARIANT(my_size <= recv_size);
+	//uint32_t my_size = this->size();
+	//INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
