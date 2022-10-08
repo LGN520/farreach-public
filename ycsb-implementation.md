@@ -9,9 +9,12 @@
 
 - 10.8
 	+ Siyuan
-		* TODO: Update jnisrc to use libcommon (add methodid into inswitchcache-java-lib::SocketHelper)
+		* Update jnisrc to use libcommon (add methodid into inswitchcache-java-lib::SocketHelper)
 		* TODO: Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
-		* TODO: Review code related with ByteBuffer
+			- TODO: Implement dynamic_serialize for put/insert; use udpsendlarge_ipfrag for put/insert
+		* Code review
+			- TODO: Review code related with ByteBuffer
+			- TODO: Review code related with remote_client.c (e.g., add preparefinish_client in prebenchmark of farreach)
 		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
 		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
 		* TODO: Support range query
@@ -22,7 +25,6 @@
 		* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 	+ HuanCheng
 		* TODO: Test farreach/nocache/netcache under hotin pattern of six YCSB workloads (some workloads may not be supported now, e.g. workloads with range query)
-		* TODO: Double check remote_client of farreach (e.g., add preparefinish_client in prebenchmark of farreach)
 
 - 10.7
 	+ Siyuan
