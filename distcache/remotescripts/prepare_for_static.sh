@@ -1,3 +1,4 @@
+source ../scripts/common.sh
 DIRNAME="distcache"
 WORKLOADNAME="synthetic"
 
@@ -8,5 +9,5 @@ scp -r ${WORKLOADNAME}-run-128/ ${USER}@${SECONDARY_CLIENT}:~/projects/NetBuffer
 
 # NOTE: ONLY required by NetCache/DistCache
 echo "sync warmup.out to servers"
-scp -r ${WORKLOADNAME}-warmup.out ssy@dl16:~/projects/NetBuffer/${DIRNAME}/ >/dev/null
-scp -r ${WORKLOADNAME}-warmup.out ssy@dl13:~/projects/NetBuffer/${DIRNAME}/ >/dev/null
+scp -r ${WORKLOADNAME}-warmup.out ${USER}@dl16:~/projects/NetBuffer/${DIRNAME}/ >/dev/null
+scp -r ${WORKLOADNAME}-warmup.out ${USER}@dl13:~/projects/NetBuffer/${DIRNAME}/ >/dev/null

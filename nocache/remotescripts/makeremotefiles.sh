@@ -1,3 +1,4 @@
+source ../scripts/common.sh
 DIRNAME="nocache"
 
 set -e
@@ -9,5 +10,5 @@ cd ../common; make all; cd ../ycsb; bash compile.sh; cd ../$DIRNAME; make all
 ssh ${USER}@${SECONDARY_CLIENT} "cd projects/NetBuffer/common; make all; cd ../ycsb; bash compile.sh; cd ../${DIRNAME}; make all"
 
 echo "make servers"
-ssh ssy@dl16 "cd projects/NetBuffer/common; make all; cd ../${DIRNAME}; make all"
-ssh ssy@dl13 "cd projects/NetBuffer/common; make all; cd ../${DIRNAME}; make all"
+ssh ${USER}@dl16 "cd projects/NetBuffer/common; make all; cd ../${DIRNAME}; make all"
+ssh ${USER}@dl13 "cd projects/NetBuffer/common; make all; cd ../${DIRNAME}; make all"

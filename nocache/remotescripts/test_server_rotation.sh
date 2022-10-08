@@ -1,3 +1,4 @@
+source ../scripts/common.sh
 DIRNAME="nocache"
 
 # NOTE: you need to finish loading phase [+ warmup phase (if w/ inswitch cache)] before running this script
@@ -18,20 +19,20 @@ configfile_line2=87
 configfile_line3=107
 echo "clear tmp files in remote clients/servers"
 ssh ${USER}@${SECONDARY_CLIENT} "cd projects/NetBuffer/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; rm tmp_serverrotation_part2*.out"
+ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
+ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; rm tmp_serverrotation_part2*.out"
 
 echo "[part 1] run single bottleneck server thread"
 
 echo "stop servers"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
 echo "stop clients"
 bash localscripts/stop_client.sh >/dev/null 2>&1
 ssh ${USER}@${SECONDARY_CLIENT} "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_client.sh >/dev/null 2>&1"
 echo "kill servers"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
 echo "kill clients"
 bash localscripts/kill_client.sh >/dev/null 2>&1
 ssh ${USER}@${SECONDARY_CLIENT} "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_client.sh >/dev/null 2>&1"
@@ -39,8 +40,8 @@ sleep 1s
 
 # TODO: retrieve dl16.bottleneckserver to the state just after loading phase
 echo "retrieve bottleneck partition back to the state after loading phase"
-#ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/*"
-#ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/*"
+#ssh ${USER}@dl16 "rm -r /tmp/${DIRNAME}/*"
+#ssh ${USER}@dl13 "rm -r /tmp/${DIRNAME}/*"
 
 echo "prepare and sync config.ini"
 cp configs/config.ini.rotation-transaction1p.dl16dl13 config.tmp
@@ -49,7 +50,7 @@ rm config.tmp
 bash sync_file.sh config.ini
 
 echo "start servers"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp_serverrotation_part1_server.out 2>&1 &"
+ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp_serverrotation_part1_server.out 2>&1 &"
 sleep 5s
 
 echo "start clients"
@@ -58,12 +59,12 @@ sleep 10s
 ./remote_client 0
 
 echo "stop servers"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
 sleep 5s
 echo "kill servers"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
 
 
 
@@ -82,23 +83,23 @@ do
 	echo "rotateidx: "${rotateidx}
 
 	echo "stop servers"
-	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
-	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
+	ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
+	ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
 	echo "stop clients"
 	bash localscripts/stop_client.sh >/dev/null 2>&1
 	ssh ${USER}@${SECONDARY_CLIENT} "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_client.sh >/dev/null"
 	sleep 1s
 	echo "kill servers"
-	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
-	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+	ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+	ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
 	echo "kill clients"
 	bash localscripts/kill_client.sh >/dev/null 2>&1
 	ssh ${USER}@${SECONDARY_CLIENT} "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_client.sh >/dev/null 2>&1"
 
 	# TODO: retrieve dl16.bottleneckserver to the state just after loading phase
 	echo "retrieve bottleneck partition back to the state after loading phase"
-	#ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/*"
-	#ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/*"
+	#ssh ${USER}@dl16 "rm -r /tmp/${DIRNAME}/*"
+	#ssh ${USER}@dl13 "rm -r /tmp/${DIRNAME}/*"
 
 	echo "prepare and sync config.ini"
 	cp configs/config.ini.rotation-transaction2p.dl16dl13 config.tmp
@@ -107,8 +108,8 @@ do
 	bash sync_file.sh config.ini
 
 	echo "start servers"
-	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >>tmp_serverrotation_part2_server.out 2>&1 &"
-	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >>tmp_serverrotation_part2_server.out 2>&1 &"
+	ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >>tmp_serverrotation_part2_server.out 2>&1 &"
+	ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >>tmp_serverrotation_part2_server.out 2>&1 &"
 	sleep 5s
 
 	echo "start clients"
@@ -117,12 +118,12 @@ do
 	./remote_client 0
 
 	echo "stop servers"
-	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
-	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
+	ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
+	ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
 	sleep 5s
 	echo "kill servers"
-	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
-	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+	ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+	ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
 
 	#read -p "Continue[y/n]: " is_continue
 	#if [ ${is_continue}x == nx ]

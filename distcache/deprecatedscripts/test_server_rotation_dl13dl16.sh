@@ -14,14 +14,14 @@ server_total_logical_num_for_rotation=128
 
 echo "clear tmp files in remote clients/servers"
 ssh ${USER}@${SECONDARY_CLIENT} "cd projects/NetBuffer/${DIRNAME}; rm tmp0.out; rm tmp.out"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; rm tmp0.out; rm tmp.out"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; rm tmp.out"
+ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; rm tmp0.out; rm tmp.out"
+ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; rm tmp.out"
 
 echo "[part 1] run single bottleneck server thread"
 
 echo "stop servers"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
 echo "stop clients"
 bash stop_client.sh >/dev/null 2>&1
 ssh ${USER}@${SECONDARY_CLIENT} "cd projects/NetBuffer/${DIRNAME}; bash stop_client.sh >/dev/null 2>&1"
@@ -29,8 +29,8 @@ sleep 1s
 
 # TODO: retrieve dl13.bottleneckserver to the state just after loading phase
 echo "retrieve bottleneck partition back to the state after loading phase"
-ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/*"
-ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/*"
+ssh ${USER}@dl13 "rm -r /tmp/${DIRNAME}/*"
+ssh ${USER}@dl16 "rm -r /tmp/${DIRNAME}/*"
 
 echo "prepare and sync config.ini"
 cp configs/config.ini.rotation-transaction1p.dl13dl16 config.tmp
@@ -39,7 +39,7 @@ rm config.tmp
 bash sync_file.sh config.ini
 
 echo "start servers"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp0.out 2>&1 &"
+ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp0.out 2>&1 &"
 sleep 5s
 
 echo "start clients"
@@ -48,8 +48,8 @@ sleep 10s
 ./remote_client 0
 
 echo "stop servers"
-ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
-ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
 sleep 5s
 
 
@@ -69,8 +69,8 @@ do
 	echo "rotateidx: "${rotateidx}
 
 	echo "stop servers"
-	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null"
-	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null"
+	ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null"
+	ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null"
 	echo "stop clients"
 	bash stop_client.sh >/dev/null 2>&1
 	ssh ${USER}@${SECONDARY_CLIENT} "cd projects/NetBuffer/${DIRNAME}; bash stop_client.sh >/dev/null"
@@ -78,8 +78,8 @@ do
 
 	# TODO: retrieve dl13.bottleneckserver to the state just after loading phase
 	echo "retrieve bottleneck partition back to the state after loading phase"
-	ssh ssy@dl13 "rm -r /tmp/${DIRNAME}/*"
-	ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/*"
+	ssh ${USER}@dl13 "rm -r /tmp/${DIRNAME}/*"
+	ssh ${USER}@dl16 "rm -r /tmp/${DIRNAME}/*"
 
 	echo "prepare and sync config.ini"
 	cp configs/config.ini.rotation-transaction2p.dl13dl16 config.tmp
@@ -88,8 +88,8 @@ do
 	bash sync_file.sh config.ini
 
 	echo "start servers"
-	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >>tmp.out 2>&1 &"
-	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >>tmp.out 2>&1 &"
+	ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >>tmp.out 2>&1 &"
+	ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >>tmp.out 2>&1 &"
 	sleep 5s
 
 	echo "start clients"
@@ -98,8 +98,8 @@ do
 	./remote_client 0
 
 	echo "stop servers"
-	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null"
-	ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null"
+	ssh ${USER}@dl13 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null"
+	ssh ${USER}@dl16 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null"
 	sleep 5s
 
 	exit
