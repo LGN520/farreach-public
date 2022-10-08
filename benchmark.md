@@ -34,7 +34,7 @@
 ## Code compilation
 
 - NOTE: update scripts based on your testbed accordingly
-	+ Update scripts/common.sh with specific USER (username), DIRNAME (method), and XXX_PATH (directory path)
+	+ Update scripts/common.sh with specific USER (username), DIRNAME (method), SECONDARY_CLIENT, and XXX_PATH (directory path)
 	+ Update scripts/remote/makeremotefiles.sh and scripts/remote/sync.sh with specific hostnames of physical machines
 - Under main client (i.e., the first physical client dl11)
 	+ `cd scripts/remote; bash sync.sh` to sync source code to all machines

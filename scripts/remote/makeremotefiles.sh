@@ -6,7 +6,7 @@ set -e
 
 echo "make clients"
 cd ../local; bash makeclient.sh
-ssh ${USER}@dl15 "cd ${CLIENT_ROOTPATH}/scripts/local; bash makeclient.sh"
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/scripts/local; bash makeclient.sh"
 
 echo "make spine/leaf switchos"
 ssh ${USER}@bf1 "cd ${SWITCH_ROOTPATH}/scripts/local; bash makeswitchos.sh"

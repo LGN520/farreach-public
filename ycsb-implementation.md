@@ -10,6 +10,7 @@
 - 10.8
 	+ Siyuan
 		* Update jnisrc to use libcommon (add methodid into inswitchcache-java-lib::SocketHelper)
+		* Fix path errors of Tofino scripts
 		* TODO: Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
 			- TODO: Implement dynamic_serialize for put/insert; use udpsendlarge_ipfrag for put/insert
 		* Code review

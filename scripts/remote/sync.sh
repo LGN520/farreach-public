@@ -3,11 +3,11 @@ source ../common.sh
 syncfiles_toclient() {
 	TMPDIRNAME=$1
 
-	ssh ${USER}@dl15 "rm -rf projects/NetBuffer/$TMPDIRNAME"
+	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf projects/NetBuffer/$TMPDIRNAME"
 
 	echo "sync to dl15"
 	# NOTE: not --exclude "*.out" for output/*
-	rsync -av -e ssh --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@dl15:~/projects/NetBuffer
+	rsync -av -e ssh --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:~/projects/NetBuffer
 }
 
 syncfiles_toall(){
@@ -16,7 +16,7 @@ syncfiles_toall(){
 	ssh ${USER}@bf1 "rm -rf NetBuffer/$TMPDIRNAME"
 	ssh ${USER}@bf3 "rm -rf NetBuffer/$TMPDIRNAME"
 	ssh ${USER}@dl13 "rm -rf projects/NetBuffer/$TMPDIRNAME"
-	ssh ${USER}@dl15 "rm -rf projects/NetBuffer/$TMPDIRNAME"
+	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf projects/NetBuffer/$TMPDIRNAME"
 	ssh ${USER}@dl16 "rm -rf projects/NetBuffer/$TMPDIRNAME"
 
 	echo "sync to bf1"
@@ -26,7 +26,7 @@ syncfiles_toall(){
 	echo "sync to dl13"
 	rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@dl13:~/projects/NetBuffer
 	echo "sync to dl15"
-	rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@dl15:~/projects/NetBuffer
+	rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:~/projects/NetBuffer
 	echo "sync to dl16"
 	rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@dl16:~/projects/NetBuffer
 }
