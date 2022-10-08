@@ -18,10 +18,10 @@
 			- TODO: Add GETRES_LARGEVALUE and PUTREQ_LARGEVALUE w/ dynamic_serialize 
 			- TODO: Use udpsendlarge_ipfrag for PUTREQ_LARGEVALUE in update/insert
 		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
-		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
 		* Code review
 			- TODO: Review code related with ByteBuffer
 			- TODO: Review code related with remote_client.c (e.g., add preparefinish_client in prebenchmark of farreach)
+		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
 	+ HuanCheng
 		* TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
 			- TODO: Backup the loaded database files (NOT in /tmp; put in /home)

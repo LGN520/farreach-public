@@ -8,6 +8,7 @@ echo "make clients"
 cd ../local; bash makeclient.sh
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/scripts/local; bash makeclient.sh"
 
+# NOTE: comment commands of "makeswitchos" for nocache/distnocache
 echo "make spine/leaf switchos"
 ssh ${USER}@bf1 "cd ${SWITCH_ROOTPATH}/scripts/local; bash makeswitchos.sh"
 ssh ${USER}@bf3 "cd ${SWITCH_ROOTPATH}/scripts/local; bash makeswitchos.sh"

@@ -3,7 +3,7 @@ source ../common.sh
 syncfiles_toclient() {
 	TMPDIRNAME=$1
 
-	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf projects/NetBuffer/$TMPDIRNAME"
+	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME"
 
 	echo "sync to dl15"
 	# NOTE: not --exclude "*.out" for output/*
@@ -15,9 +15,9 @@ syncfiles_toall(){
 
 	ssh ${USER}@bf1 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME"
 	ssh ${USER}@bf3 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME"
-	ssh ${USER}@dl13 "rm -rf projects/NetBuffer/$TMPDIRNAME"
-	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf projects/NetBuffer/$TMPDIRNAME"
-	ssh ${USER}@dl16 "rm -rf projects/NetBuffer/$TMPDIRNAME"
+	ssh ${USER}@dl13 "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME"
+	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME"
+	ssh ${USER}@dl16 "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME"
 
 	echo "sync to bf1"
 	rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@bf1:~/NetBuffer
