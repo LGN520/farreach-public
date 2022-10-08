@@ -10,7 +10,7 @@ rm tmp_popserver.out
 rm tmp_cleaner.out
 
 echo "configure data plane"
-bash tofino/configure.sh
+cd tofino; bash configure.sh; cd ..
 
 echo "launch switchos"
 nohup ./switchos >tmp_switchos.out 2>&1 &
