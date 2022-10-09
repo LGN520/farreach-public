@@ -3496,7 +3496,11 @@ uint32_t GetResponseLargevalue<key_t, val_t>::leafload() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLargevalue<key_t, val_t>::size() { // unused
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid) + sizeof(uint32_t) + sizeof(uint32_t);
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	if (this->_methodid == DISTCACHE_ID) {
+	    size += (sizeof(uint32_t) + sizeof(uint32_t));
+	}
+    return size;
 }
 
 template<class key_t, class val_t>
@@ -3517,12 +3521,14 @@ uint32_t GetResponseLargevalue<key_t, val_t>::dynamic_serialize(dynamic_array_t 
 	dynamic_data.dynamic_memcpy(tmpoff, (char*)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	tmpoff += sizeof(uint16_t);
 	tmpoff += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
-	uint32_t bigendian_spineload = htonl(this->_spineload);
-	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_spineload, sizeof(uint32_t));
-	tmpoff += sizeof(uint32_t);
-	uint32_t bigendian_leafload = htonl(this->_leafload);
-	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_leafload, sizeof(uint32_t));
-	tmpoff += sizeof(uint32_t);
+	if (this->_methodid == DISTCACHE_ID) {
+	    uint32_t bigendian_spineload = htonl(this->_spineload);
+    	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_spineload, sizeof(uint32_t));
+    	tmpoff += sizeof(uint32_t);
+    	uint32_t bigendian_leafload = htonl(this->_leafload);
+    	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_leafload, sizeof(uint32_t));
+    	tmpoff += sizeof(uint32_t);
+	}
 	return tmpoff;
 }
 
@@ -3541,12 +3547,14 @@ uint32_t GetResponseLargevalue<key_t, val_t>::serialize(char * const data, uint3
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
-	uint32_t bigendian_spineload = htonl(this->_spineload);
-	memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
-	begin += sizeof(uint32_t);
-	uint32_t bigendian_leafload = htonl(this->_leafload);
-	memcpy(begin, (void *)&bigendian_leafload, sizeof(uint32_t));
-	begin += sizeof(uint32_t);
+	if (this->_methodid == DISTCACHE_ID) {
+	    uint32_t bigendian_spineload = htonl(this->_spineload);
+    	memcpy(begin, (void *)&bigendian_spineload, sizeof(uint32_t));
+    	begin += sizeof(uint32_t);
+    	uint32_t bigendian_leafload = htonl(this->_leafload);
+    	memcpy(begin, (void *)&bigendian_leafload, sizeof(uint32_t));
+    	begin += sizeof(uint32_t);
+	}
 	return uint32_t(begin - data);
 }
 
@@ -3565,12 +3573,14 @@ void GetResponseLargevalue<key_t, val_t>::deserialize(const char * data, uint32_
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
 	begin += sizeof(uint16_t);
 	begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
-	memcpy(&this->_spineload, begin, sizeof(uint32_t));
-	this->_spineload = ntohl(this->_spineload);
-	begin += sizeof(uint32_t);
-	memcpy(&this->_leafload, begin, sizeof(uint32_t));
-	this->_leafload = ntohl(this->_leafload);
-	begin += sizeof(uint32_t);
+	if (this->_methodid == DISTCACHE_ID) {
+	    memcpy(&this->_spineload, begin, sizeof(uint32_t));
+    	this->_spineload = ntohl(this->_spineload);
+    	begin += sizeof(uint32_t);
+    	memcpy(&this->_leafload, begin, sizeof(uint32_t));
+    	this->_leafload = ntohl(this->_leafload);
+    	begin += sizeof(uint32_t);
+	}
 }
 
 // GetResponseLargevalueServer (value must > 128B)

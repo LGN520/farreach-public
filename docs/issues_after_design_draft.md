@@ -24,6 +24,29 @@
 		* 50%-write-50%-read workload
 			- DONE: farreach, nocache, netcache, distnocache, distcache, distfarreach
 
++ Preliminary results for proposal at 2022.10.09
+	* Re-run dynamic workloads to present avg/medium/tail(99th) latency, and remove normalized throughput
+		- NOTE: test 100% write of each method first -> test 0% and 50% write of each method based on the rocksdb files after 100% write of farreach, such that rocksdb have similar read performance
+		- FarReach: 100% write; 0% write; 50% write
+		- NetCache: 100% write; 0% write; 50% write
+		- NoCache: 100% write; 0% write; 50% write
+		- [IMPORTANT] Latency result
+			+ Larger avg/tail latency 1.5/1.8ms -> 2.5/20ms
+				* Reason: large server-side simulation overhead (e.g., disk contention) -> no large avg/tail latency if w/ 128 clients + 2 servers
+			+ Smaller medium latency and improvement
+				* Reason: smaller load imbalance ratio -> smaller queuing latency of many small latencies
+	* Re-run dynamic workload w/ 128 clients + 2 servers
+		- NOTE: test 100% write of each method first -> test 0% and 50% write of each method based on the rocksdb files after 100% write of farreach, such that rocksdb have similar read performance
+		- [IMPORTANT]
+			- Avoid server-side simulation overhead -> the avg/tail latency should not be too large
+			- Small load imbalance ratio -> small ququing latency -> avg/medium/tail latency becomes smaller than static workload w/ server rotation
+			- [Code change] update configuration and prepartion script -> SYNC to ALL (files: config.ini, configs/config.dl16dl13, remotescripts/prepare_for_dynamic.sh)
+		- NoCache: 100% write; 0% write; 50% write
+		- FarReach: 100% write; 0% write; 50% write
+		- NetCache: 100% write; 0% write; 50% write
+	* Use larger font for y-label and legend
+	* Present approximate results of avg/medium/tail(99th) latency for static workloads
+
 ## During prepare preliminary results
 
 + Under read-only dynamic workload, farreach is worse than netcache

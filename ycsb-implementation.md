@@ -15,14 +15,28 @@
 - 10.9
 	+ Siyuan
 		* Support large value
-			- TODO: Add GETRES_LARGEVALUE and PUTREQ_LARGEVALUE w/ dynamic_serialize 
-			- TODO: Use udpsendlarge_ipfrag for PUTREQ_LARGEVALUE in update/insert
-		* TODO: Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
+			- Add GETRES_LARGEVALUE and PUTREQ_LARGEVALUE w/ dynamic_serialize 
+			- Use udprecvlarge_ipfrag for GETRES_LARGEVALUE in read
+			- Use udpsendlarge_ipfrag for PUTREQ_LARGEVALUE in update/insert
+		* Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
+		* TODO: Implement a LoadClient for loading phase and test LOADREQ
+			- TODO: Use udpsendlarge_ipfrag for LOADREQ
+			- NOTE: YCSB uses recordcnt for loading phase, where each request (MUST be INSERT) has a different key
 		* Code review
 			- TODO: Review code related with ByteBuffer
 			- TODO: Review code related with remote_client.c (e.g., add preparefinish_client in prebenchmark of farreach)
 		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
+		* Prepare for static workload
+			- TODO: If workload_mode = 0, pre-generate workloads for the two running partitions under each subthread of logical client
+			- TODO: During transaction phase, each logical client sends requests of pre-generated workload one by one while ignoring the input request
+			- TODO: Test static workload script
 	+ HuanCheng
+		* Implement StatisticsHelper
+			- TODO: Support to dump latency histogram
+			- TODO: Support to dump system aggregate thpt and per-server thpt
+			- TODO: For dynamic workload, store per-second statistics; while for static workload, store the final statistics
+			- TODO: Dump per-second or final statistics in postbenchmark phase
+			- TODO: Use scripts to aggregate statistics -> sum per-physical client thpt; calculate per-physical avg/medium/99P latency
 		* TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
 			- TODO: Backup the loaded database files (NOT in /tmp; put in /home)
 			- TODO: Change permission to all users for rocksdb files after loading
@@ -36,8 +50,9 @@
 		* Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
 			- Add LOADREQ and LOADACK; add dynamic_serialize in Val
 	+ HuanCheng
-		* TODO: Implement a client for loading phase and test LOADREQ
-			- NOTE: YCSB uses recordcnt for loading phase, where each request (MUST be INSERT) has a different key
+		* TODO: Reproduce preliminary results of farreach on 4 cases
+			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
+			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
 
 - 10.7
 	+ Siyuan
@@ -49,9 +64,6 @@
 	+ Huancheng
 		* Fix inconsistent hash_partition_idx issue of key
 		* Double-check packet format of GET/PUT/DEL/request and response
-		* TODO: Reproduce preliminary results of farreach on 4 cases
-			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
-			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
 
 - 10.5 - 10.6
 	+ Siyuan: Disaggregate C-based lib for remote_client.c and server for ALL methods
