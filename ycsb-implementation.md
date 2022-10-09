@@ -1,16 +1,32 @@
 # Implementation log of YCSB
 
 - TODO
-	* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
-		- TODO: Remove -df from command-line parameters
+	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
+		- NOTE: Add preparefinish_client in prebenchmark of distfarreach to trigger snapshot
 	* TODO: Support range query
-		- TODO: Add SCANRES
+		- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
 		- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
 		- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-	* TODO: Dump per-second latency histogram and throughput of each physical client into temporary file
-		- TODO: Use script to aggregate the per-physical-client statistics into final statistics
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
-	* TODO: Use custom pair for SCANRES_SPLIT
+
+- 10.10
+	+ Siyuan
+		* Code review
+			- TODO: Review code related with ByteBuffer
+		* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
+			- TODO: Remove -df from command-line parameters
+		* Prepare for static workload
+			- TODO: Find bottleneck server for 16/32/64/128 scale in KeydumpClient
+			- TODO: If workload_mode = 0, pre-generate workloads for the two running partitions under each subthread of logical client
+			- TODO: During transaction phase, each logical client sends requests of pre-generated workload one by one while ignoring the input request
+			- TODO: Test static workload script
+	+ Huancheng
+		* TODO: Test preparefinish_client invoked by Java; test LOADREQ + GETREQ
+		* TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
+			- TODO: Backup the loaded database files (NOT in /tmp; put in /home)
+			- TODO: Change permission to all users for rocksdb files after loading
+		* TODO: Test static workload w/ 16 servers
+		* TODO: Test farreach/nocache/netcache under hotin pattern of six YCSB workloads (some workloads may not be supported now, e.g. workloads with range query)
 
 - 10.9
 	+ Siyuan
@@ -19,28 +35,22 @@
 			- Use udprecvlarge_ipfrag for GETRES_LARGEVALUE in read
 			- Use udpsendlarge_ipfrag for PUTREQ_LARGEVALUE in update/insert
 		* Encapsulate an individual class for GET/PUT/DEL/SCAN (general for each method) (NOT need InetAddress of ip and svraddr of udprecvfrom)
-		* TODO: Implement a LoadClient for loading phase and test LOADREQ
-			- TODO: Use udpsendlarge_ipfrag for LOADREQ
+		* Implement a RecordloadClient for loading phase
+			- Use udpsendlarge_ipfrag for LOADREQ
 			- NOTE: YCSB uses recordcnt for loading phase, where each request (MUST be INSERT) has a different key
-		* Code review
-			- TODO: Review code related with ByteBuffer
-			- TODO: Review code related with remote_client.c (e.g., add preparefinish_client in prebenchmark of farreach)
-		* TODO: Implement NoCacheClient, NetCacheClient, DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
-		* Prepare for static workload
-			- TODO: If workload_mode = 0, pre-generate workloads for the two running partitions under each subthread of logical client
-			- TODO: During transaction phase, each logical client sends requests of pre-generated workload one by one while ignoring the input request
-			- TODO: Test static workload script
+		* Implement NoCacheClient and NetCacheClient
+			- Add preparefinish_client in prebenchmark of farreach to trigger snapshot
 	+ HuanCheng
+		* TODO: Reproduce preliminary results of farreach on 4 cases
+			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
+			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
 		* Implement StatisticsHelper
 			- TODO: Support to dump latency histogram
 			- TODO: Support to dump system aggregate thpt and per-server thpt
 			- TODO: For dynamic workload, store per-second statistics; while for static workload, store the final statistics
 			- TODO: Dump per-second or final statistics in postbenchmark phase
-			- TODO: Use scripts to aggregate statistics -> sum per-physical client thpt; calculate per-physical avg/medium/99P latency
-		* TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
-			- TODO: Backup the loaded database files (NOT in /tmp; put in /home)
-			- TODO: Change permission to all users for rocksdb files after loading
-		* TODO: Test farreach/nocache/netcache under hotin pattern of six YCSB workloads (some workloads may not be supported now, e.g. workloads with range query)
+			- TODO: Use scripts to aggregate per-physical-clientr statistics
+				+ NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
 
 - 10.8 - 10.9
 	+ Siyuan
@@ -49,10 +59,6 @@
 			- Use CLIENT/SWITCH/SERVER_ROOTPATH in scripts
 		* Update inswitchcache.core.PacketFormat as libcommon (introduce methodid yet NOT affect UDP packet content)
 			- Add LOADREQ and LOADACK; add dynamic_serialize in Val
-	+ HuanCheng
-		* TODO: Reproduce preliminary results of farreach on 4 cases
-			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
-			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
 
 - 10.7
 	+ Siyuan
