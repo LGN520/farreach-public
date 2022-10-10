@@ -9,14 +9,9 @@
 		- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 
-- 10.10
+- 10.11
 	+ Siyuan
-		* Code review
-			- TODO: Review code related with ByteBuffer
-		* TODO: Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
-			- TODO: Remove -df from command-line parameters
 		* Prepare for static workload
-			- TODO: Find bottleneck server for 16/32/64/128 scale in KeydumpClient
 			- TODO: If workload_mode = 0, pre-generate workloads for the two running partitions under each subthread of logical client
 			- TODO: During transaction phase, each logical client sends requests of pre-generated workload one by one while ignoring the input request
 			- TODO: Test static workload script
@@ -27,6 +22,27 @@
 			- TODO: Change permission to all users for rocksdb files after loading
 		* TODO: Test static workload w/ 16 servers
 		* TODO: Test farreach/nocache/netcache under hotin pattern of six YCSB workloads (some workloads may not be supported now, e.g. workloads with range query)
+
+- 10.10
+	+ Siyuan
+		* Code review
+			- Review code related with ByteBuffer -> update equals() and hashCode() in inswitchcache.core.Key
+		* Overwrite workload based on config (map workload name into workload property), cancel required param for workload property
+			- Remove -P and -df from command-line parameters
+		* Prepare for static workload
+			- Find bottleneck server for 16/32/64/128 scale in KeydumpClient
+			- Update calculation of cache hit rate and normalized throughput
+	+ Huancheng
+		* TODO: Reproduce preliminary results of farreach on 4 cases
+			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
+			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
+		* Implement StatisticsHelper
+			- TODO: Support to dump latency histogram
+			- TODO: Support to dump system aggregate thpt and per-server thpt
+			- TODO: For dynamic workload, store per-second statistics; while for static workload, store the final statistics
+			- TODO: Dump per-second or final statistics in postbenchmark phase
+			- TODO: Use scripts to aggregate per-physical-clientr statistics
+				+ NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
 
 - 10.9
 	+ Siyuan
@@ -41,16 +57,8 @@
 		* Implement NoCacheClient and NetCacheClient
 			- Add preparefinish_client in prebenchmark of farreach to trigger snapshot
 	+ HuanCheng
-		* TODO: Reproduce preliminary results of farreach on 4 cases
-			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
-			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
-		* Implement StatisticsHelper
-			- TODO: Support to dump latency histogram
-			- TODO: Support to dump system aggregate thpt and per-server thpt
-			- TODO: For dynamic workload, store per-second statistics; while for static workload, store the final statistics
-			- TODO: Dump per-second or final statistics in postbenchmark phase
-			- TODO: Use scripts to aggregate per-physical-clientr statistics
-				+ NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
+		* Fix data race of the shared map for dynamic rulemap statistics
+		* Fix the bug of Key comparison in dynamic rulemap
 
 - 10.8 - 10.9
 	+ Siyuan
