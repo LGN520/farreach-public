@@ -650,8 +650,12 @@ void *run_switchos_popworker(void *param) {
 					exit(-1);
 				}
 
-				printf("switchos_evictidx: %d, evictkey %x -> newkey %x\n", switchos_evictidx, cur_evictkey.keyhihi, tmp_cache_pop_ptr->key().keyhihi);
-				fflush(stdout);
+				// TMPDEBUG
+				//printf("Evict key %ld for new hot key %ld\n", ((uint64_t)cur_evictkey.keyhihi)<<32 | ((uint64_t)cur_evictkey.keyhilo), ((uint64_t)tmp_cache_pop_ptr->key().keyhihi)<<32 | ((uint64_t)tmp_cache_pop_ptr->key().keyhilo));
+				//fflush(stdout);
+
+				//printf("switchos_evictidx: %d, evictkey %x -> newkey %x\n", switchos_evictidx, cur_evictkey.keyhihi, tmp_cache_pop_ptr->key().keyhihi);
+				//fflush(stdout);
 
 				//CUR_TIME(evict_load_t2); // TMPDEBUG
 

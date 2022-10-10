@@ -678,6 +678,10 @@ void *run_switchos_popworker(void *param) {
 						exit(-1);
 					}
 
+					// TMPDEBUG
+					//printf("Evict key %ld for new hot key %ld\n", ((uint64_t)cur_evictkey.keyhihi)<<32 | ((uint64_t)cur_evictkey.keyhilo), ((uint64_t)tmp_cache_pop_ptr->key().keyhihi)<<32 | ((uint64_t)tmp_cache_pop_ptr->key().keyhilo));
+					//fflush(stdout);
+
 					// set valid = 3 by ptf channel (cannot perform it in data plane due to stateful ALU API limitation)
 					//ptf_sendsize = serialize_setvalid3(ptfbuf, switchos_evictidx, tmp_pipeidx);
 					//udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
