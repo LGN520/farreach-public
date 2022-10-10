@@ -221,6 +221,7 @@
 		* Comment -Wstrict-prototype and -Werror if compilation fails due to strict-alias warning
 		* Add PORTABLE=1 if with runtime error of illegal instruction when open()
 		* Add USE_RTTI=1 if with compilation errors of undefined reference for "typeinfo"
+		* NOTE: DEBUG_LEVEL=0 is conflict with USE_RTTI???
 	+ Issues
 		* Error: Compression type Snappy is not linked with the binary
 			- Install libsnappy and remake static lib of rocksdb

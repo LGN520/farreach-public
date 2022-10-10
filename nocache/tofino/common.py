@@ -1,6 +1,7 @@
 import ConfigParser
 
-hot_threshold = 100 # for 200/500 keys under 16/2 server threads
+hot_threshold = 20 # for 200 keys under 2 server threads for YCSB-based workload
+#hot_threshold = 100 # for 200/500 keys under 16/2 server threads (around from 125) for NetCache synthetic workload
 #hot_threshold = 200 # for 500 keys under 16/2 server threads w/o WAL or 1000 keys under 16/2 server threads
 
 this_dir = os.path.dirname(os.path.abspath(__file__))

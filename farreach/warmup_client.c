@@ -87,8 +87,8 @@ void run_warmuper() {
 			dump_buf(buf, req_size);
 #endif
 
-			printf("key: %x, hashres: %d\n", req.key().keyhihi, req.key().get_hashpartition_idx(32768, 16));
-			exit(-1);
+			//printf("key: %x, hashres: %d\n", req.key().keyhihi, req.key().get_hashpartition_idx(32768, 16));
+			//exit(-1);
 
 			udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 

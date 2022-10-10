@@ -71,6 +71,7 @@ ROCKSDB_LDDIR += -L../rocksdb-6.22.1
 #ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
 
 ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz -ldl
+#ROCKSDB_LDLIBS = -lrocksdb_debug -lzstd -lbz2 -llz4 -lsnappy -lz -ldl
 
 INCDIR += $(ROCKSDB_INCDIR)
 LDDIR += $(ROCKSDB_LDDIR)
