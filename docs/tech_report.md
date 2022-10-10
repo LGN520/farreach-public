@@ -215,9 +215,12 @@
 	+ `gunzip v6.22.1.tar.gz`
 	+ `tar -xvf v6.22.1.tar`
 	+ `cd rocksdb-6.22.1`
-	+ `PORTABLE=1 make static_lib`
+	+ `make clean`
+	+ `PORTABLE=1 USE_RTTI=1 make`
+		* DEPRECATED: `PORTABLE=1 make static_lib` (not make db_bench by default)
 		* Comment -Wstrict-prototype and -Werror if compilation fails due to strict-alias warning
 		* Add PORTABLE=1 if with runtime error of illegal instruction when open()
+		* Add USE_RTTI=1 if with compilation errors of undefined reference for "typeinfo"
 	+ Issues
 		* Error: Compression type Snappy is not linked with the binary
 			- Install libsnappy and remake static lib of rocksdb
