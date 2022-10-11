@@ -20,17 +20,6 @@
 	+ `sudo hugeadm --thp-never`
 	+ `cat /sys/kernel/mm/transparent_hugepage/enabled` to check
 
-## Workload preparation
-
-- Under the main client, enter benchmark/ycsb/
-	+ Get hot/cold keys for static/dynamic workloads, and get bottleneck partition for server rotation
-		* `./bin/ycsb run keydump -P <workloadpattern> -pi 0 -df <workloadname>`
-		* For example, `./bin/ycsb run keydump -P workload/workloada -pi 0 -df workloada`
-	+ Generate rulemap rule files for dynamic workload
-		* `python generate_dynamicrules.py <workloadname>`
-		* For example, `python generate_dynamicrules.py workloada`
-	+ NOTE: the generated files are stored in benchmark/output/
-
 ## Code compilation
 
 - NOTE: update scripts based on your testbed accordingly
@@ -59,10 +48,22 @@
 		* (NOT need to run now) Under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
 			- `bash compile.sh` (NOTE: if we have already compiled for all methods, we do NOT need to run this command unless we change in-switch implementation)
 
+## Loading phase
+
+- TODO
+
 ## Dynamic running of single-switch method (e.g., farreach/nocache/netcache)
 
-- NOTE
-	+ Make sure workload_mode = 1 in method/config.ini
+- Preparation
+	+ Configuration
+		* Make sure workload_mode = 1 in method/config.ini
+		* Make sure the workloadname is consistent in keydump/config.ini and method/config.ini
+	+ Under the main client, enter benchmark/ycsb/ to prepare dynamic rules if not prepared before
+		* Get hot/cold keys for static/dynamic workloads
+			- `./bin/ycsb run keydump`, which generates workload files in benchmark/output/<workloadname>-\*.out
+		* Generate rulemap rule files for dynamic workload
+			- `python generate_dynamicrules.py <workloadname>`, which generates rules in benchmark/output/<workloadname>-\*rules/
+			- For example, `python generate_dynamicrules.py workloada`
 - Under each physical switch
 	+ Create a terminal and run `cd method/tofino; su; bash start_switch.sh`
 	+ Create a terminal and run `cd method; su; bash localscripts/launchswitchtestbed.sh`
@@ -73,9 +74,23 @@
 	+ NOTE: if encounter nay problem, check tmp_\*.out in each server first
 		* Run `cd method; bash remotescripts/stopservertestbed.sh` in main client before next time of running
 - Under client 1
-	+ Run `cd benchmark/ycsb; ./bin/ycsb run keydump -P <workloadpattern> -pi 1`
+	+ Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 1`
 - Under client 0
-	+ Run `cd benchmark/ycsb; ./bin/ycsb run keydump -P <workloadpattern> -pi 0`
+	+ Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 0`
 - After running
 	+ Under each physical switch, run `cd method; su; bash localscripts/stopswitchtestbed.sh`
 	+ Under main client, run `cd method; bash remotescripts/stopservertestbed.sh`
+
+## Static running of single-switch method (e.g., farreach/nocache/netcache)
+
+- Preparation
+	+ Configuration
+		* Make sure workload_mode = 0 in method/config.ini and SERVER_ROTATION is defined in common/helper.h
+		* Make sure the workloadname is consistent in keydump/config.ini and method/config.ini
+	+ Under the main client, enter benchmark/ycsb/ to get bottleneck serveridx for each scale
+		* Get bottleneck serveridx under different scales, and pre-generate per-logical-client workload to avoid invalid CPU cycles
+			- `./bin/ycsb run keydump`
+	+ Under client 1
+		* Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 1`
+	+ Under client 0
+		* Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 0`

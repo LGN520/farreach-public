@@ -1,21 +1,43 @@
 # Implementation log of YCSB
 
 - TODO
-	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
-		- NOTE: Add preparefinish_client in prebenchmark of distfarreach to trigger snapshot
+	* TODO: Implement TraceReplayHelper in inswitchcache-java-lib for Twitter traces
+		- NOTE: we implement pre-generated workload and replayed workload at the same level of YCSB::CoreWorkload
 	* TODO: Support range query
 		- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
 		- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
 		- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+- FUTURE
+	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
+		- NOTE: Add preparefinish_client in prebenchmark of distfarreach to trigger snapshot
+		- [IMPORTANT] current distributed extension is a single discussion instead of a critical design -> NOT need to evaluate
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
+		- [IMPORTANT] NOT need to provide c-lib for db_bench
 
-- 10.11
+- 10.11 - 10.12
 	+ Siyuan
+		* Dump timeout information
 		* Prepare for static workload
-			- TODO: If workload_mode = 0, pre-generate workloads for the two running partitions under each subthread of logical client
-			- TODO: During transaction phase, each logical client sends requests of pre-generated workload one by one while ignoring the input request
+			- Update benchmark.md (not need -pi for keydump and workloadpregenerate)
+			- Pre-generate per-client workloads for server rotation by Keydump
+			- Load pre-generated workload by PregeneratedWorkload, keep requests for running servers under server rotation, and assign requests to different logical clients
+				+ NOTE: keydump and recordload never uses PregeneratedWorkload (for transaction phase), which only uses CoreWorkload or TwitterWorkload for preparation and loading phase
+				+ NOTE: each method uses CoreWorkload/TwitterWorkload if workload mode = 1, or PregeneratedWorkload otherwise during transaction phase
+			- TODO: Test Keydump and PregeneratedWorkload
+				+ TODO: Directly write InmemoryReq to file in Keydump instead of maintaining as a list in InswitchCacheClient
+				+ TODO: Test time of different operation counts (100K, 1M, 10M, and 100M)
 			- TODO: Test static workload script
 	+ Huancheng
+		* TODO: Reproduce preliminary results of farreach on 4 cases
+			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
+			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
+		* Implement StatisticsHelper
+			- TODO: Support to dump latency histogram
+			- TODO: Support to dump system aggregate thpt and per-server thpt
+			- TODO: For dynamic workload, store per-second statistics; while for static workload, store the final statistics
+			- TODO: Dump per-second or final statistics in postbenchmark phase
+			- TODO: Use scripts to aggregate per-physical-clientr statistics
+				+ NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
 		* TODO: Test preparefinish_client invoked by Java; test LOADREQ + GETREQ
 		* TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
 			- TODO: Backup the loaded database files (NOT in /tmp; put in /home)
@@ -32,17 +54,6 @@
 		* Prepare for static workload
 			- Find bottleneck server for 16/32/64/128 scale in KeydumpClient
 			- Update calculation of cache hit rate and normalized throughput
-	+ Huancheng
-		* TODO: Reproduce preliminary results of farreach on 4 cases
-			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
-			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
-		* Implement StatisticsHelper
-			- TODO: Support to dump latency histogram
-			- TODO: Support to dump system aggregate thpt and per-server thpt
-			- TODO: For dynamic workload, store per-second statistics; while for static workload, store the final statistics
-			- TODO: Dump per-second or final statistics in postbenchmark phase
-			- TODO: Use scripts to aggregate per-physical-clientr statistics
-				+ NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
 
 - 10.9
 	+ Siyuan
