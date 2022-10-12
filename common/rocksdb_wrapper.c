@@ -250,12 +250,15 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 
 	bool stat = false;
 	if (method_needseq()) {
-		INVARIANT(seqptr != NULL);
-		*seqptr = 0;
+		//INVARIANT(seqptr != NULL);
+		uint32_t tmpseq = 0;
 		if (valstr != "") {
-			*seqptr = val.from_string_for_rocksdb(valstr);
+			tmpseq = val.from_string_for_rocksdb(valstr);
 			INVARIANT(s.ok());
 			stat = true;
+		}
+		if (seqptr != NULL) {
+			*seqptr = tmpseq;
 		}
 	}
 	else {
@@ -290,7 +293,13 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 	}
 
 	rocksdb::Status s;
-	std::string valstr = val.to_string_for_rocksdb(seq);
+	std::string valstr;
+	if (method_needseq()) {
+		valstr = val.to_string_for_rocksdb(seq);
+	}
+	else {
+		valstr = val.to_string_for_rocksdb_noseq();
+	}
 	rocksdb::WriteOptions write_options;
 	write_options.sync = SYNC_WRITE; // Write through for persistency
 	write_options.disableWAL = DISABLE_WAL;
@@ -534,7 +543,8 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 
 bool RocksdbWrapper::method_needseq() const {
 	INVARIANT(methodid != INVALID_ID);
-	return methodid == NETCACHE_ID || methodid == DISTCACHE_ID || methodid == FARREACH_ID || methodid == DISTFARREACH_ID;
+	//return methodid == NETCACHE_ID || methodid == DISTCACHE_ID || methodid == FARREACH_ID || methodid == DISTFARREACH_ID;
+	return methodid == NETCACHE_ID || methodid == DISTCACHE_ID || methodid == FARREACH_ID || methodid == DISTFARREACH_ID || methodid == NOCACHE_ID || methodid == DISTNOCACHE_ID; // also store seq of 0 for nocache/distnocache such that all methods can use the same RocksDB files after the loading phase
 }
 
 bool RocksdbWrapper::method_needsnapshot() const {

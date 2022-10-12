@@ -18,7 +18,7 @@
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
 
-- 10.11 - 10.12
+- 10.11 - 10.13
 	+ Siyuan
 		* Dump timeout information
 		* Prepare for static workload
@@ -31,17 +31,20 @@
 				+ Directly write InmemoryReq to file in Keydump instead of maintaining as a list in InswitchCacheClient (NOTE: NO reqnum at the beginning of the file now)
 				+ Test time of different operation counts (1M: 1s, 10M: 8s, and 100M: <2min)
 				+ Optimize PregeneratedWorkload by mmap I/O (MappedByteBuffer) and concurrent loading (initThread)
-		* TODO: Update static workload script for YCSB client
+		* Implement CustomHistogramMeasurement to collect us-level avg/medium/99P latency
+			+ NOTE: as we need YCSB's statistics including ClientThreads (local clients) for throughput and Measurements (global singleton) for latency, we cannot use it in inswitchcache-java-lib
+			+ For static workload, collect throughput and latency statistics after postBenchmark in Client.java
+			+ TODO: For dynamic workload, collect per-second throughput and latency statistics in computeStats of StatusThread.java
 		* TODO: Implement StatisticsHelper
-			- TODO: Implement CustomHistogramMeasurement to collect us-level avg/medium/99P latency
 			- TODO: Support to dump latency histogram, system thpt, and per-server thpt to StringByteBuffer
-				+ TODO: For dynamic workload, rm and store per-second statistics into 1 file per physical server
-					* NOTE: point out the second of each statistic
-				+ TODO: For static workload, rm for the first rotation, and append the final statistics into 1 file per physical server
-					* NOTE: point out the rotation of each statistic
-			- TODO: Flush and close the StringByteBuffer into disk at the end of StatusThread
-			- TODO: Use scripts to aggregate per-physical-clientr statistics
-				+ NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
+			- TODO: For dynamic workload, rm and store per-second statistics into 1 file per physical server
+				+ TODO: Flush and close the StringByteBuffer into disk at the end of StatusThread
+				+ NOTE: point out the second of each statistic
+			- TODO: For static workload, rm for the first rotation, and append the final statistics into 1 file per physical server
+				+ NOTE: point out the rotation of each statistic
+		* TODO: Use scripts to aggregate per-physical-clientr statistics
+			- NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
+		* TODO: Update static workload script for YCSB client
 	+ Huancheng
 		* Reproduce preliminary results of farreach on 4 cases
 			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
