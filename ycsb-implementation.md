@@ -1,8 +1,12 @@
 # Implementation log of YCSB
 
 - TODO
-	* TODO: Implement TraceReplayHelper in inswitchcache-java-lib for Twitter traces
-		- NOTE: we implement pre-generated workload and replayed workload at the same level of YCSB::CoreWorkload
+	* TODO: Implement YCSB trace replay for Twitter trace
+		- TODO: Implement TraceReplayWorkload for Twitter traces
+		- TODO: Filter requests if workload mode = 0
+	+ TODO: Others
+		* TODO: Add control plane bandwidth usage calculation
+		* TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
 	* TODO: Support range query
 		- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
 		- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
@@ -23,27 +27,32 @@
 			- Load pre-generated workload by PregeneratedWorkload, keep requests for running servers under server rotation, and assign requests to different logical clients
 				+ NOTE: keydump and recordload never uses PregeneratedWorkload (for transaction phase), which only uses CoreWorkload or TwitterWorkload for preparation and loading phase
 				+ NOTE: each method uses CoreWorkload/TwitterWorkload if workload mode = 1, or PregeneratedWorkload otherwise during transaction phase
-			- TODO: Test Keydump and PregeneratedWorkload
-				+ TODO: Directly write InmemoryReq to file in Keydump instead of maintaining as a list in InswitchCacheClient
-				+ TODO: Test time of different operation counts (100K, 1M, 10M, and 100M)
-			- TODO: Test static workload script
-	+ Huancheng
-		* TODO: Reproduce preliminary results of farreach on 4 cases
-			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
-			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
-		* Implement StatisticsHelper
-			- TODO: Support to dump latency histogram
-			- TODO: Support to dump system aggregate thpt and per-server thpt
-			- TODO: For dynamic workload, store per-second statistics; while for static workload, store the final statistics
-			- TODO: Dump per-second or final statistics in postbenchmark phase
+			- Test Keydump and PregeneratedWorkload
+				+ Directly write InmemoryReq to file in Keydump instead of maintaining as a list in InswitchCacheClient (NOTE: NO reqnum at the beginning of the file now)
+				+ Test time of different operation counts (1M: 1s, 10M: 8s, and 100M: <2min)
+				+ Optimize PregeneratedWorkload by mmap I/O (MappedByteBuffer) and concurrent loading (initThread)
+		* TODO: Update static workload script for YCSB client
+		* TODO: Implement StatisticsHelper
+			- TODO: Implement CustomHistogramMeasurement to collect us-level avg/medium/99P latency
+			- TODO: Support to dump latency histogram, system thpt, and per-server thpt to StringByteBuffer
+				+ TODO: For dynamic workload, rm and store per-second statistics into 1 file per physical server
+					* NOTE: point out the second of each statistic
+				+ TODO: For static workload, rm for the first rotation, and append the final statistics into 1 file per physical server
+					* NOTE: point out the rotation of each statistic
+			- TODO: Flush and close the StringByteBuffer into disk at the end of StatusThread
 			- TODO: Use scripts to aggregate per-physical-clientr statistics
 				+ NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
-		* TODO: Test preparefinish_client invoked by Java; test LOADREQ + GETREQ
+	+ Huancheng
+		* Reproduce preliminary results of farreach on 4 cases
+			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
+			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
+		* TODO: Test farreach/nocache/netcache under hotin pattern of six YCSB workloads (some workloads may not be supported now, e.g. workloads with range query)
+		* TODO: Test loading phase
+		* TODO: Test static workload script w/ 16 servers
+		* TODO: Test preparefinish_client invoked by Java
 		* TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
 			- TODO: Backup the loaded database files (NOT in /tmp; put in /home)
 			- TODO: Change permission to all users for rocksdb files after loading
-		* TODO: Test static workload w/ 16 servers
-		* TODO: Test farreach/nocache/netcache under hotin pattern of six YCSB workloads (some workloads may not be supported now, e.g. workloads with range query)
 
 - 10.10
 	+ Siyuan
