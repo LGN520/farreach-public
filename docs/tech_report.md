@@ -216,12 +216,12 @@
 	+ `tar -xvf v6.22.1.tar`
 	+ `cd rocksdb-6.22.1`
 	+ `make clean`
-	+ `PORTABLE=1 USE_RTTI=1 make`
-		* DEPRECATED: `PORTABLE=1 make static_lib` (not make db_bench by default)
+	+ `PORTABLE=1 make static_lib` (not make db_bench by default)
 		* Comment -Wstrict-prototype and -Werror if compilation fails due to strict-alias warning
 		* Add PORTABLE=1 if with runtime error of illegal instruction when open()
-		* Add USE_RTTI=1 if with compilation errors of undefined reference for "typeinfo"
-		* NOTE: DEBUG_LEVEL=0 is conflict with USE_RTTI???
+		* (NOT used now) If you want to make db_bench, use `PORTABLE=1 USE_RTTI=1 make`
+			- Add USE_RTTI=1 if with compilation errors of undefined reference for "typeinfo"
+			- NOTE: DEBUG_LEVEL=0 is conflict with USE_RTTI???
 	+ Issues
 		* Error: Compression type Snappy is not linked with the binary
 			- Install libsnappy and remake static lib of rocksdb

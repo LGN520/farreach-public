@@ -1,22 +1,22 @@
 # Implementation log of YCSB
 
-- TODO
-	* TODO: Implement YCSB trace replay for Twitter trace
-		- TODO: Implement TraceReplayWorkload for Twitter traces
-		- TODO: Filter requests if workload mode = 0
-	+ TODO: Others
-		* TODO: Add control plane bandwidth usage calculation
-		* TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
-	* TODO: Support range query
-		- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
-		- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
-		- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
 - FUTURE
 	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
 		- NOTE: Add preparefinish_client in prebenchmark of distfarreach to trigger snapshot
 		- [IMPORTANT] current distributed extension is a single discussion instead of a critical design -> NOT need to evaluate
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
+
+- 10.14 ([IMPORTANT] start evaluation)
+	+ Siyuan
+		* TODO: Support range query
+			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
+			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
+			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+	+ Huancheng
+		* TODO: Implement YCSB trace replay for Twitter trace
+			- TODO: Implement TraceReplayWorkload for Twitter traces
+			- TODO: Filter requests if workload mode = 0
 
 - 10.11 - 10.13
 	+ Siyuan
@@ -33,29 +33,34 @@
 				+ Optimize PregeneratedWorkload by mmap I/O (MappedByteBuffer) and concurrent loading (initThread)
 		* Implement CustomHistogramMeasurement to collect us-level avg/medium/99P latency
 			+ NOTE: as we need YCSB's statistics including ClientThreads (local clients) for throughput and Measurements (global singleton) for latency, we cannot use it in inswitchcache-java-lib
-			+ For static workload, collect throughput and latency statistics after postBenchmark in Client.java
-			+ TODO: For dynamic workload, collect per-second throughput and latency statistics in computeStats of StatusThread.java
-		* TODO: Implement StatisticsHelper
-			- TODO: Support to dump latency histogram, system thpt, and per-server thpt to StringByteBuffer
-			- TODO: For dynamic workload, rm and store per-second statistics into 1 file per physical server
-				+ TODO: Flush and close the StringByteBuffer into disk at the end of StatusThread
-				+ NOTE: point out the second of each statistic
-			- TODO: For static workload, rm for the first rotation, and append the final statistics into 1 file per physical server
-				+ NOTE: point out the rotation of each statistic
-		* TODO: Use scripts to aggregate per-physical-clientr statistics
+			+ For static workload, collect and flush throughput and latency statistics after postBenchmark in Client.java
+			+ For dynamic workload, collect per-second throughput and latency statistics in computeStats of StatusThread.java
+				* Flush per-second statistics at the end of StatusThread
+		* Implement StatisticsHelper
+			- Support to collect and dump latency histogram, system thpt, and per-server thpt
+			- For dynamic workload, given the file per physical client, rm existing file and dump per-second statistics
+				+ NOTE: each JSONObject corresponds to the statistics of each second
+			- For static workload, given the file per physical client, rm existing file for the first rotation; merge and dump statistics for each subsequent rotation
+				+ NOTE: each JSONObject corresponds to the statistics of each rotation
+		* TODO: Use scripts to aggregate per-physical-client statistics
+			- TODO NOTE: dynamic workload statistics may not have the same number of JSONObjects due to execution time variance
 			- NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
 		* TODO: Update static workload script for YCSB client
+		* TODO: Others
+			- TODO: Add control plane bandwidth usage calculation
+			- TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
 	+ Huancheng
 		* Reproduce preliminary results of farreach on 4 cases
 			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
 			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
-		* TODO: Test farreach/nocache/netcache under hotin pattern of six YCSB workloads (some workloads may not be supported now, e.g. workloads with range query)
+		* TODO: Test farreach/nocache/netcache under hotin/hotout/random pattern with 128B-value write-only 0.99-skewed workload (use 100B value to get preliminary results)
 		* TODO: Test loading phase
-		* TODO: Test static workload script w/ 16 servers
-		* TODO: Test preparefinish_client invoked by Java
-		* TODO: Use loading phase to pre-load 100M records into stoarge server (NOTE: without in-switch cache)
+		* TODO: Run farreach with hotin write-only workload to get aggregated statistics, and check whether it is consistent with our preliminary result
+		* TODO: Use loading phase to pre-load 100M records into 16 storage servers (NOTE: without in-switch cache)
 			- TODO: Backup the loaded database files (NOT in /tmp; put in /home)
 			- TODO: Change permission to all users for rocksdb files after loading
+		* TODO: Test static workload script w/ 16 servers
+		* TODO: Test preparefinish_client invoked by Java
 
 - 10.10
 	+ Siyuan
