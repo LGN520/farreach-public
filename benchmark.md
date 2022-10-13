@@ -80,6 +80,9 @@
 - After running
 	+ Under each physical switch, run `cd method; su; bash localscripts/stopswitchtestbed.sh`
 	+ Under main client, run `cd method; bash remotescripts/stopservertestbed.sh`
+- Aggregate statistics
+	+ NOTE: each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-<dynamicpattern>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-hotin-client0.out)
+	+ Run `cd scripts/remote; bash calculate_statistics.sh <workloadname> dynamic <dynamicpattern>` to get aggregated statistics
 
 ## Static running of single-switch method (e.g., farreach/nocache/netcache)
 
@@ -94,3 +97,7 @@
 		* Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 1`
 	+ Under client 0
 		* Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 0`
+- TODO: Evaluation steps
+- Aggregate statistics
+	+ NOTE: each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-static<staticscale>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out)
+	+ Run `cd scripts/remote; bash calculate_statistics.sh <workloadname> static <staticscale>` to get aggregated statistics
