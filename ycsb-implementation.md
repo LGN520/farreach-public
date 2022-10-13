@@ -9,6 +9,10 @@
 
 - 10.14 ([IMPORTANT] start evaluation)
 	+ Siyuan
+		* TODO: Test static workload script w/ 16 servers
+		* TODO: Others
+			- TODO: Add control plane bandwidth usage calculation
+			- TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
 		* TODO: Support range query
 			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
 			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
@@ -17,6 +21,9 @@
 		* TODO: Implement YCSB trace replay for Twitter trace
 			- TODO: Implement TraceReplayWorkload for Twitter traces
 			- TODO: Filter requests if workload mode = 0
+		* TODO: Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
+		* TODO: Start evaluation of experiment 2
+
 
 - 10.11 - 10.13
 	+ Siyuan
@@ -42,25 +49,25 @@
 				+ NOTE: each JSONObject corresponds to the statistics of each second
 			- For static workload, given the file per physical client, rm existing file for the first rotation; merge and dump statistics for each subsequent rotation
 				+ NOTE: each JSONObject corresponds to the statistics of each rotation
-		* TODO: Use scripts to aggregate per-physical-client statistics
-			- TODO NOTE: dynamic workload statistics may not have the same number of JSONObjects due to execution time variance
+		* Use scripts to aggregate per-physical-client statistics
+			- NOTE: dynamic workload statistics may not have the same number of JSONObjects due to execution time variance
 			- NOTE: sum per-physical-client thpt; sum per-physical-client latency histogram to calculate avg/medium/99P latency
-		* TODO: Update static workload script for YCSB client
-		* TODO: Others
-			- TODO: Add control plane bandwidth usage calculation
-			- TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
+		* Update static workload script for YCSB client
+			- TODO: Add ~/ into CLIENT/SWITCH/SERVER_ROOTPATH -> update all other scripts to remove ~/ before XXX_ROOTPATH
+			- TODO: Use localstop/kill.sh and remove stop/kill_server/client/controller.sh -> update all related scripts
+			- TODO: Update test_server_rotation.sh and stop_server_rotation.sh -> TODO: SYNC to all methods after testing correctness
 	+ Huancheng
 		* Reproduce preliminary results of farreach on 4 cases
 			- Without cache (1 case): client w/ workload mode = 1 + server w/ workload mode = 0 + NO warmup phase
 			- With cache (3 cases): client and server w/ workload mode = 1 + warmup phase on hotin/hotout/random dynamic workloads
-		* TODO: Test farreach/nocache/netcache under hotin/hotout/random pattern with 128B-value write-only 0.99-skewed workload (use 100B value to get preliminary results)
-		* TODO: Test loading phase
+		* Test farreach/nocache/netcache under hotin/hotout/random pattern with 128B-value write-only 0.99-skewed workload (use 100B value to get preliminary results) -> get reasonable results!
+		* Test loading phase by LOADREQ + GETREQ
+		* TODO: Check whether nocache saves seq=0 for LOADREQ and read seq=0 for READREQ
 		* TODO: Run farreach with hotin write-only workload to get aggregated statistics, and check whether it is consistent with our preliminary result
-		* TODO: Use loading phase to pre-load 100M records into 16 storage servers (NOTE: without in-switch cache)
-			- TODO: Backup the loaded database files (NOT in /tmp; put in /home)
+		* TODO: Use loading phase to pre-load 100M records into 16 storage servers (NOTE: recordload client + nocache switch/server)
+			- TODO: Backup the loaded database files (worker0/ - worker7/ in server 0 and worker8/ - worker15/ in server 1) into both server 0 and server 1
+				+ NOTE: place backuped files into /home/backupedrocksdb instead of /tmp
 			- TODO: Change permission to all users for rocksdb files after loading
-		* TODO: Test static workload script w/ 16 servers
-		* TODO: Test preparefinish_client invoked by Java
 
 - 10.10
 	+ Siyuan
