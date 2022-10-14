@@ -3,8 +3,8 @@ DIRNAME="farreach"
 
 # NOTE: you need to launch switch data plane and local control plane before running this script
 
-echo "clear tmp files in remote servers"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_server.out; rm tmp_reflector.out; rm tmp_controller.out"
+echo "clear tmp files in remote servers and controller"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_server.out; rm tmp_reflector.out; rm tmp_controller.out; rm tmp_controller_bwcost.out"
 ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_server.out"
 
 bash remotescripts/stopservertestbed.sh

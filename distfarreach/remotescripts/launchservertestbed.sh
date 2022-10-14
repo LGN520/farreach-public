@@ -3,9 +3,9 @@ DIRNAME="distfarreach"
 
 # NOTE: you need to launch spine/leaf switch data plane and local control plane before running this script
 
-echo "clear tmp files in remote servers"
+echo "clear tmp files in remote servers and controller"
 sudo rm tmp_reflector.out
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_server.out; rm tmp_reflector.out; rm tmp_controller.out"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_server.out; rm tmp_reflector.out; rm tmp_controller.out; rm tmp_controller_bwcost.out"
 ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_server.out"
 
 bash remotescripts/stopservertestbed.sh

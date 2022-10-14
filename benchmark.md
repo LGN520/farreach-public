@@ -93,18 +93,30 @@
 ## Static running of single-switch method (e.g., farreach/nocache/netcache)
 
 - Preparation
-	+ Configuration
-		* Make sure workload_mode = 0 in method/config.ini and SERVER_ROTATION is defined in common/helper.h
+	+ Configuration and compilation
+		* Make sure workload_mode = 0 in method/config.ini
 		* Make sure the workloadname is consistent in keydump/config.ini and method/config.ini
+		* Enable server_rotation in common/helper.h, and re-compile clients/servers/switchos
+		* Set corresponding bottleneck server idx under the workload with the scale
+			- method/configs/config.ini.rotation-switch: global::server_total_logical_num, global::server_total_logical_num_for_rotation, global::bottleneck_serveridx_for_rotation, server0::server_logical_idxes, and server1::server_logical_idxes
+			- scripts/common.sh: bottleneck_serveridx and max_logical_server_num_for_rotation
+			- NOTE: config.ini in each rotation must have the correct bottleneckidx and maxservernum, otherwise PregeneratedWorkload will choose the incorrect requests of non-running servers and hence timeout
 	+ Under the main client, enter benchmark/ycsb/
 		* Get bottleneck serveridx under different scales, and pre-generate per-logical-client workload to avoid invalid CPU cycles
 			- `./bin/ycsb run keydump`
 			- (TODO: provide a script) Use `scp` to copy pre-generated per-logical-client workload to the secondary client
-	+ Under client 1
-		* Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 1`
-	+ Under client 0
-		* Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 0`
 - TODO: Evaluation steps
 - Aggregate statistics
 	+ NOTE: each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-static<staticscale>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out)
 	+ Run `cd scripts/remote; bash calculate_statistics.sh <workloadname> static <staticscale>` to get aggregated statistics
+
+## Appendix
+
+- Static server idx for different workloads and scale
+
+| Workload Name | Scale | Bottleneck Serveridx |
+| --- | --- | --- |
+| workloada | 16 | 14 |
+| workloada | 32 | 29 |
+| workloada | 64 | 59 |
+| workloada | 128 | 118 |

@@ -9,13 +9,26 @@
 
 - 10.15
 	+ Siyuan
-		* TODO: Use loading phase to pre-load 100M records into 32, 64, 128 storage servers (NOTE: recordload client + nocache switch/server)
+		* Add new scripts
+			- TODO: Remove the line number in test_server_rotation.sh
+			- TODO: For each method, provide a template config and use a script to generate the config files for the given workloadname and server rotation parameters
+			- TODO: Use a single script to generate config file and test server rotation
+			- TODO: After configuring the workloadname, use a script to run keydump, and copy pregenereated workload to secondary client
+			- TODO: After configuring the workloadname, use a script to run recordload, and backup the loaded database files (worker0/ - worker7/ in server 0 and worker8/ - worker15/ in server 1) into both server 0 and server 1
+				+ NOTE: place backuped files into /home/backupedrocksdb instead of /tmp
+				+ NOTE: Change permission to all users for rocksdb files after loading
+			- TODO: Update benchmark.md
+		* TODO: Use loading phase to pre-load 100M records into 2, 32, 64, 128 storage servers (NOTE: recordload client + nocache switch/server)
 		* TODO: Support range query
 			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
 			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
 			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
 			- TODO: Update benchmark.md
 	+ HuanCheng
+		* TODO: Start evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twittert traces)
+			- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
+			- TODO: Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
+				+ TODO: Check tmp_controller_bwcost.out
 		* TODO: Finish evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twittert traces)
 			- TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
 
@@ -33,21 +46,27 @@
 			- NOTE: LOAD triggers force_put instead of put
 		* Check whether nocache saves seq=0 for LOADREQ and read seq=0 for READREQ with 128B value (val size = 128 and valstr size = 132)
 			- NOTE: 50M per physical client may change key distribution, while 100M per physical client loads 200M records -> we limit the number of physical index as 1 for recordload as in keydump
-		* TODO: Others in C
-			- TODO: Add control plane bandwidth usage calculation (files: controller.c in farreach/distfarreach)
-		* TODO: Test static workload script w/ 16 servers
-			- TODO: Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
-			- TODO: Update test_server_rotation.sh and stop_server_rotation.sh -> TODO: SYNC to all methods after testing correctness
-		* TODO: Use loading phase to pre-load 100M records into 16 storage servers (NOTE: recordload client + nocache switch/server)
-			- TODO: Use script to backup the loaded database files (worker0/ - worker7/ in server 0 and worker8/ - worker15/ in server 1) into both server 0 and server 1
-				+ NOTE: place backuped files into /home/backupedrocksdb instead of /tmp
-				+ TODO: Change permission to all users for rocksdb files after loading
+		* Others in C
+			- Add control plane bandwidth usage calculation (files: controller.c in farreach/distfarreach)
+			- TODO: Add bandwidth usage of reporting original values during snapshot (files: switchos.c, controller.c)
+				+ NOTE: bandwidth cost of switch os (i.e., local control plane) also belongs to control plane bandwidth usage
+		* Use loading phase to pre-load 100M records into 16 storage servers (NOTE: recordload client + nocache switch/server)
+			- Backuped path: /home/rocksdbbackups/16/ in both dl16 and dl13
+		* Test static workload script w/ 16 servers
+			- Changes
+				+ Use variables defined in scripts/common.sh
+				+ Use backuped files to retrieve consistent state of server-side rocksdb
+				+ Overwrite all related fields in corresponding config templates
+				+ Launch YCSB client instead of remote_client
+			- Fix path issue, max server num issue in script
+			- Fix wrong throughput statistics caused by PregeneratedWorkload
+				+ Alive client threads may NOT send packets due to doTransaction returns false
+				+ initThread() is counted into execution time
+			- Update test_server_rotation.sh and stop_server_rotation.sh -> SYNC to all methods after testing correctness
 	+ Huancheng
 		* TODO: Implement YCSB trace replay for Twitter trace
 			- TODO: Implement TraceReplayWorkload for Twitter traces
-			- (TODO after discussion) Filter requests if workload mode = 0 (or use keydump + PregeneratedWorkload)
-		* TODO: Start evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twittert traces)
-			- TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
+			- TODO: Filter requests if workload mode = 0
 
 
 - 10.11 - 10.13
