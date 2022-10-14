@@ -1758,6 +1758,11 @@ uint32_t CachePop<key_t, val_t>::size() { // unused
 }
 
 template<class key_t, class val_t>
+uint32_t CachePop<key_t, val_t>::bwcost() { // used by FarReach controller
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + this->_val.val_length + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+}
+
+template<class key_t, class val_t>
 void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 {
 	//uint32_t my_size = this->size();
@@ -1921,6 +1926,11 @@ uint32_t CacheEvict<key_t, val_t>::size() { // unused
 }
 
 template<class key_t, class val_t>
+uint32_t CacheEvict<key_t, val_t>::bwcost() { // used by FarReach controller
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + this->_val.val_length + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+}
+
+template<class key_t, class val_t>
 uint32_t CacheEvict<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	//uint32_t my_size = this->size();
 	//INVARIANT(max_size >= my_size);
@@ -1973,6 +1983,11 @@ CacheEvictAck<key_t>::CacheEvictAck(method_t methodid, const char * data, uint32
 	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_EVICT_ACK);
+}
+
+template<class key_t>
+uint32_t CacheEvictAck<key_t>::bwcost() { // used by FarReach controller
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t);
 }
 
 // CacheEvictCase2 (value must <= 128B; only used in end-hosts)
@@ -2198,6 +2213,11 @@ CachePopAck<key_t>::CachePopAck(method_t methodid, const char * data, uint32_t r
 	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_POP_ACK);
+}
+
+template<class key_t>
+uint32_t CachePopAck<key_t>::bwcost() { // used by FarReach controller
+	return Packet<key_t>::get_ophdrsize(this->_methodid);
 }
 
 // CacheEvictLoadfreqInswitch

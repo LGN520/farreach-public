@@ -508,6 +508,8 @@ class CachePop : public PutRequestSeq<key_t, val_t> { // ophdr + val + seq + sta
 		bool stat() const;
 		uint16_t serveridx() const;
 
+		uint32_t bwcost();
+
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
@@ -553,6 +555,8 @@ class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + 
 
 		uint16_t serveridx() const;
 
+		uint32_t bwcost();
+
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
@@ -567,6 +571,8 @@ class CacheEvictAck : public WarmupRequest<key_t> { // ophdr
 		CacheEvictAck(method_t methodid, key_t key);
 		CacheEvictAck(method_t methodid, const char * data, uint32_t recv_size);
 		virtual ~CacheEvictAck(){}
+
+		uint32_t bwcost();
 };
 
 // NOTE: only used in end-hosts
@@ -640,6 +646,8 @@ class CachePopAck : public WarmupRequest<key_t> { // ophdr
 	public: 
 		CachePopAck(method_t methodid, key_t key);
 		CachePopAck(method_t methodid, const char * data, uint32_t recv_size);
+
+		uint32_t bwcost();
 };
 
 template<class key_t>

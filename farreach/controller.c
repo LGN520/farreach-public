@@ -73,6 +73,9 @@ int *controller_snapshotclient_for_server_udpsock_list = NULL;
 // written by controller.snapshotclient; read by controller.snapshotclient.senddata_subthread to server.snapshotdataserver
 dynamic_array_t *controller_snapshotclient_for_server_databuf_list = NULL;
 
+// control plane bandwidth usage
+std::atomic<uint64_t> bandwidthcost(0); // in unit of byte (cleared per snapshot period)
+
 void prepare_controller();
 void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
@@ -302,6 +305,9 @@ void *run_controller_popserver(void *param) {
 		//dump_buf(buf, recvsize);
 		cache_pop_t tmp_cache_pop(CURMETHOD_ID, buf, recvsize);
 
+		// update bandwidth usage
+		bandwidthcost += tmp_cache_pop.bwcost();
+
 		// send CACHE_POP to switch os
 		udpsendto(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &switchos_popserver_addr, switchos_popserver_addrlen, "controller.popserver.popclient");
 		
@@ -312,6 +318,9 @@ void *run_controller_popserver(void *param) {
 			cache_pop_ack_t tmp_cache_pop_ack(CURMETHOD_ID, buf, recvsize);
 			INVARIANT(tmp_cache_pop_ack.key() == tmp_cache_pop.key());
 			udpsendto(controller_popserver_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &server_popclient_addr, server_popclient_addrlen, "controller.popserver");
+
+			// update bandwidth usage
+			bandwidthcost += tmp_cache_pop_ack.bwcost();
 		}
 
 		/*if (controller_cachedkey_serveridx_map.find(tmp_cache_pop->key()) == controller_cachedkey_serveridx_map.end()) {
@@ -367,6 +376,11 @@ void *run_controller_evictserver(void *param) {
 		else if (optype == packet_type_t::CACHE_EVICT_CASE2) {
 			tmp_cache_evict_ptr = new cache_evict_case2_t(CURMETHOD_ID, buf, recvsize);
 		}
+
+		// update bandwidth usage
+		bandwidthcost += tmp_cache_evict_ptr->bwcost();
+
+		// verify serveridx
 		uint16_t tmp_global_server_logical_idx = tmp_cache_evict_ptr->serveridx();
 		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < max_server_total_logical_num);
 		int tmp_server_physical_idx = -1;
@@ -391,6 +405,10 @@ void *run_controller_evictserver(void *param) {
 		// NOTE: timeout-and-retry of CACHE_EVICT is handled by switchos.popworker.evictclient (cover entire eviction workflow)
 		bool is_timeout = udprecvfrom(controller_evictserver_evictclient_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.evictserver.evictclient");
 		if (!is_timeout) {
+			// update bandwidth usage
+			cache_evict_ack_t tmpack(CURMETHOD_ID, buf, recvsize);
+			bandwidthcost += tmpack.bwcost();
+
 			// send CACHE_EVICT_ACK to switchos.popworker.evictclient
 			//printf("receive CACHE_EVICT_ACK from server and send to switchos\n");
 			//dump_buf(buf, recvsize);
@@ -533,6 +551,7 @@ void *run_controller_snapshotclient(void *param) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
 			pthread_join(cleanup_subthread_for_server_list[tmp_global_server_logical_idx], NULL);
 		}
+		bandwidthcost += (valid_global_server_logical_idxes.size() + 1) * 2 * sizeof(int); // update bandwidth usage
 
 		// (2) send SNAPSHOT_PREPARE to each switch os to enable single path for snapshot atomicity
 		printf("[controller.snapshotclient] send SNAPSHOT_PREPARE to each switchos\n");
@@ -550,6 +569,7 @@ void *run_controller_snapshotclient(void *param) {
 				break;
 			}
 		}
+		bandwidthcost += 2 * sizeof(int); // update bandwidth usage
 
 #ifdef DEBUG_SNAPSHOT
 		// TMPDEBUG
@@ -573,6 +593,7 @@ void *run_controller_snapshotclient(void *param) {
 				break;
 			}
 		}
+		bandwidthcost += 2 * sizeof(int); // update bandwidth usage
 
 		// (4) send SNAPSHOT_START to each switchos and server concurrently
 		printf("[controller.snapshotclient] send SNAPSHOT_STARTs to each switchos and server\n");
@@ -586,6 +607,7 @@ void *run_controller_snapshotclient(void *param) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
 			pthread_join(start_subthread_for_server_list[tmp_global_server_logical_idx], NULL);
 		}
+		bandwidthcost += (valid_global_server_logical_idxes.size() + 1) * 2 * sizeof(int); // update bandwidth usage
 
 		// prepare to process per-server snapshot data
 		// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
@@ -613,6 +635,7 @@ void *run_controller_snapshotclient(void *param) {
 		memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
 		while (true) {
 			udpsendto(controller_snapshotclient_for_switchos_udpsock, sendbuf, 2*sizeof(int), 0, &switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controller.snapshotclient");
+			bandwidthcost += 2 * sizeof(int); // update bandwidth usage
 
 			databuf.clear();
 			is_timeout = udprecvlarge_udpfrag(CURMETHOD_ID, controller_snapshotclient_for_switchos_udpsock, databuf, 0, NULL, NULL, "controller.snapshotclient");
@@ -627,6 +650,8 @@ void *run_controller_snapshotclient(void *param) {
 				INVARIANT(*((int *)databuf.array()) == SNAPSHOT_GETDATA_ACK);
 				int32_t total_bytes = *((int32_t *)(databuf.array() + sizeof(int)));
 				INVARIANT(databuf.size() == total_bytes);
+
+				bandwidthcost += total_bytes; // update bandwidth usage
 				
 				// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
 				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
@@ -682,10 +707,22 @@ void *run_controller_snapshotclient(void *param) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
 			pthread_join(senddata_subthread_for_server_list[tmp_global_server_logical_idx], NULL);
 		}
+		bandwidthcost += valid_global_server_logical_idxes.size() * 2 * sizeof(int); // update bandwidth usage
 
 		CUR_TIME(snapshot_t2);
 		DELTA_TIME(snapshot_t2, snapshot_t1, snapshot_t3);
 		printf("Time of making consistent system snapshot: %f s\n", GET_MICROSECOND(snapshot_t3) / 1000.0 / 1000.0);
+
+		// NOTE: append bandwidthcost into tmp_controller_bwcost.out
+		double bwcost_rate = bandwidthcost / (controller_snapshot_period / 1000.0) / 1024.0 / 1024.0; // MiB/s
+		//printf("bandwidth cost: %f MiB/s\n", bwcost_rate);
+		//fflush(stdout);
+		FILE *tmpfd = fopen("tmp_controller_bwcost.out", "a+");
+		fprintf(tmpfd, "bwcost: %f MiB/s\n", bwcost_rate);
+		fflush(tmpfd);
+		fclose(tmpfd);
+
+		bandwidthcost = 0; // clear to count the next period
 		
 		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databuf) for controller failure recovery
 		controller_update_snapshotid(databuf.array(), databuf.size());
