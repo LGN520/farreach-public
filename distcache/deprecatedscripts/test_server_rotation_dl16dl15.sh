@@ -20,11 +20,11 @@ ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; rm tmp.out"
 echo "[part 1] run single bottleneck server thread"
 
 echo "stop servers"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localstop.sh server >/dev/null 2>&1"
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localstop.sh server >/dev/null 2>&1"
 echo "stop clients"
-bash stop_client.sh >/dev/null 2>&1
-ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash stop_client.sh >/dev/null 2>&1"
+bash localstop.sh client >/dev/null 2>&1
+ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localstop.sh client >/dev/null 2>&1"
 sleep 1s
 
 # TODO: retrieve dl16.bottleneckserver to the state just after loading phase
@@ -48,8 +48,8 @@ sleep 10s
 ./remote_client 0
 
 echo "stop servers"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localstop.sh server >/dev/null 2>&1"
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localstop.sh server >/dev/null 2>&1"
 sleep 5s
 
 
@@ -69,11 +69,11 @@ do
 	echo "rotateidx: "${rotateidx}
 
 	echo "stop servers"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash stop_server.sh >/dev/null"
-	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash stop_server.sh >/dev/null"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localstop.sh server >/dev/null"
+	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localstop.sh server >/dev/null"
 	echo "stop clients"
-	bash stop_client.sh >/dev/null 2>&1
-	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash stop_client.sh >/dev/null"
+	bash localstop.sh client >/dev/null 2>&1
+	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localstop.sh client >/dev/null"
 	sleep 1s
 
 	# TODO: retrieve dl16.bottleneckserver to the state just after loading phase
@@ -98,8 +98,8 @@ do
 	./remote_client 0
 
 	echo "stop servers"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash stop_server.sh >/dev/null"
-	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash stop_server.sh >/dev/null"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localstop.sh server >/dev/null"
+	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localstop.sh server >/dev/null"
 	sleep 5s
 
 	exit

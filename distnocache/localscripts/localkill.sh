@@ -1,6 +1,8 @@
 #!/use/bin/env bash
 
-clientpids=( "$(ps -aux | grep "./remote_client" | grep -v "grep" | awk '{print $2}')" )
+keyword=$1
+
+clientpids=( "$(ps -aux | grep "$1" | grep -v "grep" | awk '{print $2}')" )
 
 if [ ${#clientpids[@]} -gt 0 ]
 then
@@ -8,7 +10,7 @@ then
 	do
 		if [ "${clientpids[i]}x" != "x" ]
 		then
-			kill -15 ${clientpids[i]}
+			kill -9 ${clientpids[i]}
 		fi
 	done
 fi

@@ -25,21 +25,21 @@ ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part2*
 echo "[part 1] run single bottleneck server thread"
 
 echo "stop servers"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
-ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null 2>&1"
 echo "stop clients"
-bash localscripts/stop_client.sh >/dev/null 2>&1
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/stop_client.sh >/dev/null 2>&1"
+bash localscripts/localstop.sh client >/dev/null 2>&1
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh client >/dev/null 2>&1"
 echo "stop controller"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_controller.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh controller >/dev/null 2>&1"
 echo "kill servers"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
-ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
 echo "kill clients"
-bash localscripts/kill_client.sh >/dev/null 2>&1
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/kill_client.sh >/dev/null 2>&1"
+bash localscripts/localkill.sh client >/dev/null 2>&1
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh client >/dev/null 2>&1"
 echo "kill controller"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_controller.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh controller >/dev/null 2>&1"
 sleep 1s
 
 # TODO: retrieve dl16.bottleneckserver to the state just after loading phase
@@ -65,16 +65,16 @@ sleep 10s
 ./remote_client 0
 
 echo "stop servers"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
-ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null 2>&1"
 echo "stop controller"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_controller.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh controller >/dev/null 2>&1"
 sleep 5s
 echo "kill servers"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
-ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
 echo "kill controller"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_controller.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh controller >/dev/null 2>&1"
 
 
 
@@ -93,22 +93,22 @@ do
 	echo "rotateidx: "${rotateidx}
 
 	echo "stop servers"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
-	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null"
+	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null"
 	echo "stop clients"
-	bash localscripts/stop_client.sh >/dev/null 2>&1
-	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/stop_client.sh >/dev/null"
+	bash localscripts/localstop.sh client >/dev/null 2>&1
+	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh client >/dev/null"
 	echo "stop controller"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_controller.sh >/dev/null 2>&1"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh controller >/dev/null 2>&1"
 	sleep 1s
 	echo "kill servers"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
-	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
+	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
 	echo "kill clients"
-	bash localscripts/kill_client.sh >/dev/null 2>&1
-	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/kill_client.sh >/dev/null 2>&1"
+	bash localscripts/localkill.sh client >/dev/null 2>&1
+	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh client >/dev/null 2>&1"
 	echo "kill controller"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_controller.sh >/dev/null 2>&1"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh controller >/dev/null 2>&1"
 
 	# TODO: retrieve dl16.bottleneckserver to the state just after loading phase
 	echo "retrieve bottleneck partition back to the state after loading phase"
@@ -134,16 +134,16 @@ do
 	./remote_client 0
 
 	echo "stop servers"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
-	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null"
+	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null"
 	echo "stop controller"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_controller.sh >/dev/null 2>&1"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh controller >/dev/null 2>&1"
 	sleep 5s
 	echo "kill servers"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
-	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
+	ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
 	echo "kill controller"
-	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_controller.sh >/dev/null 2>&1"
+	ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh controller >/dev/null 2>&1"
 
 	#read -p "Continue[y/n]: " is_continue
 	#if [ ${is_continue}x == nx ]

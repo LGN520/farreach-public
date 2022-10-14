@@ -196,8 +196,8 @@ SERVER_TARGETS += controller
 #socktest_server: socktest_server.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) -o $@
 #DEPS += socktest_server.d
-#SERVER_CLEAN += socktest_server.o
-#TARGETS += socktest_server
+#CLEAN += socktest_server.o
+#SERVER_TARGETS += socktest_server
 
 skewness_check: skewness_check.o $(UTILS_OBJECTS) 
 	$(LINK) $^ $(LDLIBS) -o $@

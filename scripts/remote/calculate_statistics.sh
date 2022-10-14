@@ -26,7 +26,7 @@ fi
 
 methodname=${DIRNAME}
 statisticsdir="${workloadname}-statistics"
-filedir=~/${CLIENT_ROOTPATH}/benchmark/output/${statisticsdir}
+filedir=${CLIENT_ROOTPATH}/benchmark/output/${statisticsdir}
 
 localfilename="${methodname}-${midstr}-client0.out"
 remotefilename="${methodname}-${midstr}-client1.out"

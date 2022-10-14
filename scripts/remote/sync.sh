@@ -7,7 +7,7 @@ syncfiles_toclient() {
 
 	echo "sync to dl15"
 	# NOTE: not --exclude "*.out" for output/*
-	rsync -av -e ssh --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:~/projects/NetBuffer
+	rsync -av -e ssh --exclude "*-pregeneration/*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:~/projects/NetBuffer
 }
 
 syncfiles_toall(){

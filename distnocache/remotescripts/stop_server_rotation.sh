@@ -18,15 +18,15 @@ then
 fi
 
 echo "stop servers"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
-ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/stop_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh server >/dev/null 2>&1"
 echo "stop clients"
-bash localscripts/stop_client.sh >/dev/null 2>&1
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/stop_client.sh >/dev/null 2>&1"
+bash localscripts/localstop.sh client >/dev/null 2>&1
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/localstop.sh client >/dev/null 2>&1"
 
 echo "kill servers"
-ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
-ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/kill_server.sh >/dev/null 2>&1"
+ssh ${USER}@dl16 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
+ssh ${USER}@dl13 "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh server >/dev/null 2>&1"
 echo "kill clients"
-bash localscripts/kill_client.sh >/dev/null 2>&1
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/kill_client.sh >/dev/null 2>&1"
+bash localscripts/localkill.sh client >/dev/null 2>&1
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}; bash localscripts/localkill.sh client >/dev/null 2>&1"

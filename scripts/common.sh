@@ -4,9 +4,9 @@ USER="ssy"
 #MAIN_CLIENT="dl11" # NOT used
 SECONDARY_CLIENT="dl15"
 
-CLIENT_ROOTPATH="~/projects/NetBuffer"
-SWITCH_ROOTPATH="~/NetBuffer"
-SERVER_ROOTPATH="~/projects/NetBuffer"
+CLIENT_ROOTPATH="/home/${USER}/projects/NetBuffer"
+SWITCH_ROOTPATH="/home/${USER}/NetBuffer"
+SERVER_ROOTPATH="/home/${USER}/projects/NetBuffer"
 
 # backup rocksdb after loading phase
 BACKUPS_ROOTPATH="/home/rocksdbbackups"

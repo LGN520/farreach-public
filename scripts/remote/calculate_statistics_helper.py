@@ -27,7 +27,7 @@ def aggregate(localjsonarray, remotejsonarray, length):
         for j in range(len(localjsonobj[PERSERVER_OPSDONE])):
             aggobj[PERSERVER_OPSDONE].append(localjsonobj[PERSERVER_OPSDONE][j] + remotejsonobj[PERSERVER_OPSDONE][j])
         localjsonobj[PERSERVER_OPSDONE] + remotejsonobj[PERSERVER_OPSDONE]
-        aggobj[EXECUTION_MILLIS] = localjsonobj[EXECUTION_MILLIS] + remotejsonobj[EXECUTION_MILLIS]
+        aggobj[EXECUTION_MILLIS] = (localjsonobj[EXECUTION_MILLIS] + remotejsonobj[EXECUTION_MILLIS]) / 2
         aggobj[TOTAL_LATENCY] = localjsonobj[TOTAL_LATENCY] + remotejsonobj[TOTAL_LATENCY]
         aggobj[TOTAL_LATENCYNUM] = localjsonobj[TOTAL_LATENCYNUM] + remotejsonobj[TOTAL_LATENCYNUM]
         aggobj[TOTAL_HISTOGRAM] = []
@@ -40,6 +40,23 @@ def aggregate(localjsonarray, remotejsonarray, length):
             aggobj[TOTAL_HISTOGRAM].append(localjsonobj[TOTAL_HISTOGRAM][j] + remotejsonobj[TOTAL_HISTOGRAM][j])
         aggjsonarray.append(aggobj)
     return aggjsonarray
+
+def calculatelatency(totallatency, totallatencynum, totalhistogram):
+    avglatency = float(totallatency) / float(totallatencynum)
+    donemedium = False
+    latencymedium = 0
+    #done99p = False
+    latency99p = 0
+    curlatencynum = 0
+    for i in range(len(totalhistogram)):
+        curlatencynum += totalhistogram[i]
+        if donemedium == False and float(curlatencynum) / float(totallatencynum) >= 0.50:
+            donemedium = True
+            latencymedium = i
+        if float(curlatencynum) / float(totallatencynum) >= 0.99:
+            latency99p = i
+            break
+    return avglatency, latencymedium, latency99p
 
 def staticprocess(localjsonarray, remotejsonarray):
     if (len(localjsonarray) != len(remotejsonarray)):
@@ -66,20 +83,7 @@ def staticprocess(localjsonarray, remotejsonarray):
         for j in range(len(aggjsonarray[i][TOTAL_HISTOGRAM])):
             totalhistogram[j] += aggjsonarray[i][TOTAL_HISTOGRAM][j]
 
-    avglatency = float(totallatency) / float(totallatencynum)
-    donemedium = False
-    latencymedium = 0
-    #done99p = False
-    latency99p = 0
-    curlatencynum = 0
-    for i in range(len(totalhistogram)):
-        curlatencynum += totalhistogram[i]
-        if donemedium == False and float(curlatencynum) / float(totallatencynum) >= 0.50:
-            donemedium = True
-            latencymedium = i
-        if float(curlatencynum) / float(totallatencynum) >= 0.99:
-            latency99p = i
-            break
+    avglatency, latencymedium, latency99p = calculate_latency(totallatency, totallatencynum, totalhistogram)
     print "[STATIC] average latency {} us, medium latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency99p)
 
 def dynamicprocess(localjsonarray, remotejsonarray):
@@ -96,29 +100,25 @@ def dynamicprocess(localjsonarray, remotejsonarray):
     perseclatency99p = [0] * seconds
     for i in range(seconds):
         persecthpt[i] = aggjsonarray[i][TOTAL_OPSDONE] / aggjsonarray[i][EXECUTION_MILLIS] * 1000 / 1000.0 / 1000.0
-        perseclatencyavg[i] = float(aggjsonarray[i][TOTAL_LATENCY]) /float(aggjsonarray[i][TOTAL_LATENCYNUM])
-
-        donemedium = False
-        latencymedium = 0
-        #done99p = False
-        latency99p = 0
-        curlatencynum = 0
-        totallatencynum = aggjsonarray[i][TOTAL_LATENCYNUM]
-        for j in range(len(aggjsonarray[i][TOTAL_HISTOGRAM])):
-            curlatencynum += aggjsonarray[i][TOTAL_HISTOGRAM][i]
-            if donemedium == False and float(curlatencynum) / float(totallatencynum) >= 0.50:
-                donemedium = True
-                latencymedium = i
-            if float(curlatencynum) / float(totallatencynum) >= 0.99:
-                latency99p = i
-                break
-        perseclatencymedium[i] = latencymedium
-        perseclatency99p[i] = latency99p
+        perseclatencyavg[i], perseclatencymedium[i], perseclatency99p[i] = calculatelatency(\
+                aggjsonarray[i][TOTAL_LATENCY], aggjsonarray[i][TOTAL_LATENCYNUM], aggjsonarray[i][TOTAL_HISTOGRAM])
     print "[DYNAMIC] per-second statistics:"
     print "thpt (MOPS): {}".format(persecthpt)
     print "avg latency (us): {}".format(perseclatencyavg)
     print "medium latency (us): {}".format(perseclatencymedium)
     print "99P latency (us): {}".format(perseclatency99p)
+
+    totallatency = 0
+    totallatencynum = 0
+    totalhistogram = [0] * len(aggjsonarray[0][TOTAL_HISTOGRAM])
+    for i in range(len(aggjsonarray)):
+        totallatency += aggjsonarray[i][TOTAL_LATENCY]
+        totallatencynum += aggjsonarray[i][TOTAL_LATENCYNUM]
+        for j in range(len(aggjsonarray[i][TOTAL_HISTOGRAM])):
+            totalhistogram[j] += aggjsonarray[i][TOTAL_HISTOGRAM][j]
+
+    avglatency, latencymedium, latency99p = calculatelatency(totallatency, totallatencynum, totalhistogram)
+    print "[DYNAMIC][OVERALL] average latency {} us, medium latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency99p)
 
 if len(sys.argv) != 4:
     print "Invalid usage of calculate_statistics_helper.py"
