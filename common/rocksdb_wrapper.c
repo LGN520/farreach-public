@@ -214,7 +214,7 @@ bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
 	std::string valstr = val.to_string_for_rocksdb(0);
 
 	// TMPDEBUG
-	//printf("[FORCE PUT] seq %d vallen %d valstr len %d\n".format(0, val.val_length, valstr.size()));
+	//printf("[FORCE PUT] seq %d vallen %d valstr len %d\n", 0, val.val_length, valstr.size());
 	//fflush(stdout);
 
 	rocksdb::WriteOptions write_options;
@@ -263,7 +263,7 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 			stat = true;
 
 			// TMPDEBUG
-			//printf("[GET] seq %d vallen %d valstr len %d\n".format(tmpseq, val.val_length, valstr.size()));
+			//printf("[GET] seq %d vallen %d valstr len %d\n", tmpseq, val.val_length, valstr.size());
 			//fflush(stdout);
 		}
 		if (seqptr != NULL) {
