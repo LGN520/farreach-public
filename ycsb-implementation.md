@@ -7,6 +7,18 @@
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
 
+- 10.15
+	+ Siyuan
+		* TODO: Use loading phase to pre-load 100M records into 32, 64, 128 storage servers (NOTE: recordload client + nocache switch/server)
+		* TODO: Support range query
+			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
+			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
+			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+			- TODO: Update benchmark.md
+	+ HuanCheng
+		* TODO: Finish evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twittert traces)
+			- TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
+
 - 10.14 ([IMPORTANT] start evaluation)
 	+ Siyuan
 		* Update static workload script for YCSB client
@@ -19,28 +31,23 @@
 			- Fix val toString issue with valdata = null
 			- FIx serializeOphdr issue in Packet.java (Key.java returns false size in dynamicSerialize)
 			- NOTE: LOAD triggers force_put instead of put
+		* Check whether nocache saves seq=0 for LOADREQ and read seq=0 for READREQ with 128B value (val size = 128 and valstr size = 132)
+			- NOTE: 50M per physical client may change key distribution, while 100M per physical client loads 200M records -> we limit the number of physical index as 1 for recordload as in keydump
 		* TODO: Others in C
-			- TODO: Add control plane bandwidth usage calculation
-			- TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
-		* TODO: Support range query
-			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
-			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
-			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-			- TODO: Update benchmark.md
+			- TODO: Add control plane bandwidth usage calculation (files: controller.c in farreach/distfarreach)
 		* TODO: Test static workload script w/ 16 servers
+			- TODO: Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
 			- TODO: Update test_server_rotation.sh and stop_server_rotation.sh -> TODO: SYNC to all methods after testing correctness
-	+ Huancheng
-		* TODO: Implement YCSB trace replay for Twitter trace
-			- TODO: Implement TraceReplayWorkload for Twitter traces
-			- (TODO after discussion) Filter requests if workload mode = 0 (or use keydump + PregeneratedWorkload)
-		* TODO: Check whether nocache saves seq=0 for LOADREQ and read seq=0 for READREQ with 128B value
-			- TODO: Check valsize in server log
 		* TODO: Use loading phase to pre-load 100M records into 16 storage servers (NOTE: recordload client + nocache switch/server)
 			- TODO: Use script to backup the loaded database files (worker0/ - worker7/ in server 0 and worker8/ - worker15/ in server 1) into both server 0 and server 1
 				+ NOTE: place backuped files into /home/backupedrocksdb instead of /tmp
 				+ TODO: Change permission to all users for rocksdb files after loading
-		* TODO: Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
-		* TODO: Start evaluation of experiment 2
+	+ Huancheng
+		* TODO: Implement YCSB trace replay for Twitter trace
+			- TODO: Implement TraceReplayWorkload for Twitter traces
+			- (TODO after discussion) Filter requests if workload mode = 0 (or use keydump + PregeneratedWorkload)
+		* TODO: Start evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twittert traces)
+			- TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
 
 
 - 10.11 - 10.13

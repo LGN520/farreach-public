@@ -50,7 +50,13 @@
 
 ## Loading phase
 
-- TODO
+- Preparation
+	+ Configuration
+		* Make sure the total server logical num and logical server idxes are consistent in recordload/config.ini and nocache/config.ini
+	+ Under the main client, enter benchmark/ycsb/
+		* Pre-load 100M records into logical servers and backup the RocksDB files to reduce evaluation time
+			- `./bin/ycsb load recordload`
+			- (TODO: provide a script) Use `scp` such that each physical server has all backuped databases
 
 ## Dynamic running of single-switch method (e.g., farreach/nocache/netcache)
 
@@ -90,9 +96,10 @@
 	+ Configuration
 		* Make sure workload_mode = 0 in method/config.ini and SERVER_ROTATION is defined in common/helper.h
 		* Make sure the workloadname is consistent in keydump/config.ini and method/config.ini
-	+ Under the main client, enter benchmark/ycsb/ to get bottleneck serveridx for each scale
+	+ Under the main client, enter benchmark/ycsb/
 		* Get bottleneck serveridx under different scales, and pre-generate per-logical-client workload to avoid invalid CPU cycles
 			- `./bin/ycsb run keydump`
+			- (TODO: provide a script) Use `scp` to copy pre-generated per-logical-client workload to the secondary client
 	+ Under client 1
 		* Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 1`
 	+ Under client 0
