@@ -146,7 +146,7 @@ do
 	sed -i '1,$s/bottleneck_serveridx_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
 	sed -i '1,$s/server_logical_idxes=TODO0/server_logical_idxes='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
 	sed -i '1,$s/server_logical_idxes=TODO1/server_logical_idxes='${rotateidx}/'' ${DIRNAME}/config.ini
-	source scripts/remote/sync_file.sh ${DIRNAME}/config.ini
+	source scripts/remote/sync_file.sh ${DIRNAME} config.ini
 
 	echo "start servers"
 	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./server 0 >tmp_serverrotation_part1_server.out 2>&1 &"
