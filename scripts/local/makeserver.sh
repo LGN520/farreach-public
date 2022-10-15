@@ -1,3 +1,7 @@
-source ../common.sh
+if [ ${is_common_included} -ne 1 ]
+then
+	source scripts/common.sh
+fi
 
-cd ../../common; make all; cd ../$DIRNAME; make allserver
+cd common; make all; cd ..
+cd $DIRNAME; make allserver; cd ..

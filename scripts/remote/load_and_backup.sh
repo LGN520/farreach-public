@@ -1,4 +1,7 @@
-source scripts/common.sh
+if [ ${is_common_included} -ne 1 ]
+then
+	source scripts/common.sh
+fi
 
 set -x
 set -e

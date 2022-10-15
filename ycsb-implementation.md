@@ -14,7 +14,7 @@
 				+ Remove recordload/ -> directly use nocache/config.ini for both YCSB client, switch, and server to avoid consistency issue
 				+ Add load_and_backup.sh for loading phase
 				+ Parse config.ini in shell and update load_and_backup.sh to avoid parameter consistency issue
-				+ TODO: Test load_band_backup.sh
+				+ Test common.sh, sync.sh, makeremotefiles.sh, TODO load_band_backup.sh
 			- TODO: Reduce unnecessary remotescripts and localscripts in each method/
 			- For server rotation
 				- TODO: Remove the line number in test_server_rotation.sh

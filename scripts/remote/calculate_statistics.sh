@@ -1,26 +1,25 @@
-source scripts/common.sh
+if [ ${is_common_included} -ne 1 ]
+then
+	source scripts/common.sh
+fi
 
 set -x
 set -e
 
-if [ $# -ne 3 ]
+if [ $# -ne 0 ]
 then
-	echo "Usage: bash calculate_statistics.sh <workloadname> <static/dynamic> <static-scale/dynamic-pattern>"
-	echo "Static example: bash calculate_statistics.sh workloada static 16"
-	echo "Dynamic example: bash calculate_statistics.sh workloada dynamic hotin"
+	echo "Usage: bash calculate_statistics.sh"
 	exit
 fi
 
-workloadname=$1
-workloadpattern=$2
-if [ ${workloadpattern} == "static" ]
+if [ ${workloadmode} == "0" ]
 then
-	midstr="static$3"
-elif [ ${workloadpattern} == "dynamic" ]
+	midstr="static${server_total_logical_num_for_rotation}"
+elif [ ${workloadmode} == "1" ]
 then
-	midstr=$3
+	midstr=${dynamicpattern}
 else
-	echo "Invalid argument 2: $2, which should be static or dynamic"
+	echo "Invalid workloadmode: ${workloadmode}"
 	exit
 fi
 
@@ -37,4 +36,6 @@ remotefilepath=${filedir}/${remotefilename}
 echo "copy statistics file ${remotefilename} from another client"
 scp ${USER}@${SECONDARY_CLIENT}:${remotefilepath} ${filedir}
 
+cd scripts/local/
 python calculate_statistics_helper.py ${workloadpattern} ${localfilepath} ${remotefilepath}
+cd ../../

@@ -1,10 +1,8 @@
-function readini() {     
+function readini() {
 	tmpfile=$1
-	tmpsection=$2
-	tmpkey=$3
-	result=`awk -F '=' '/\['${tmpsection}'\]/{a=1}a==1&&$1~/'${tmpkey}'/{print $2;exit}' ${tmpfile}`
+	result=$(awk -F '=' -v tmpsection=[$2] -v tmpkey=$3 '$0==tmpsection {flag = 1; next} /\[/ {flag = 0; next} flag && $1==tmpkey {print $2}' ${tmpfile})
 	echo ${result}
-} 
+}
 
 DIRNAME="farreach"
 USER="ssy"
@@ -37,10 +35,14 @@ BACKUPS_ROOTPATH="/tmp/rocksdbbackups"
 #fi
 
 configfile=${DIRNAME}/config.ini
-echo "Load configuration from ${configfile}"
+echo "[COMMON] load configuration from ${configfile}"
 
 # for server rotation (must be consistent with each config.ini)
+workloadname=$(readini ${configfile} "global" "workload_name")
 workloadmode=$(readini ${configfile} "global" "workload_mode")
+dynamicpattern=$(readini ${configfile} "global" "dynamic_ruleprefix")
 bottleneck_serveridx=$(readini ${configfile} "global" "bottleneck_serveridx_for_rotation")
 server_total_logical_num=$(readini ${configfile} "global" "server_total_logical_num")
 server_total_logical_num_for_rotation=$(readini ${configfile} "global" "server_total_logical_num_for_rotation")
+
+is_common_included=1
