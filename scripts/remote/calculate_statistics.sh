@@ -8,7 +8,7 @@ set -e
 
 if [ $# -ne 0 ]
 then
-	echo "Usage: bash remote/scripts/calculate_statistics.sh"
+	echo "Usage: bash scripts/remote/calculate_statistics.sh"
 	exit
 fi
 
