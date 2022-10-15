@@ -3,7 +3,7 @@ then
 	source scripts/common.sh
 fi
 
-set -x
+#set -x
 
 echo "stop servers"
 ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/local/localstop.sh '\./server' >/dev/null"
@@ -19,7 +19,7 @@ if [ "x${DIRNAME}" == "xdistcache" ] || [ "x${DIRNAME}" == "xdistfarreach" ]
 then
 	echo "stop reflectors"
 	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/local/localstop.sh '\./reflector' >/dev/null"
-	sudo bash scripts/local/localstop.sh "\./reflector"
+	sudo source scripts/local/localstop.sh "\./reflector"
 fi
 
 echo "kill servers"
@@ -36,5 +36,5 @@ if [ "x${DIRNAME}" == "xdistcache" ] || [ "x${DIRNAME}" == "xdistfarreach" ]
 then
 	echo "kill reflector"
 	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/local/localkill.sh '\./reflector' >/dev/null"
-	sudo bash scripts/local/localkill.sh "\./reflector"
+	sudo source scripts/local/localkill.sh "\./reflector"
 fi

@@ -7,25 +7,9 @@
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
 
-- 10.15 ([IMPORTANT] start evaluation)
+- 10.16
 	+ Siyuan
-		* Add new scripts (NOTE: always invoke scripts under root directory)
-			- For loading phase
-				+ Remove recordload/ -> directly use nocache/config.ini for both YCSB client, switch, and server to avoid consistency issue
-				+ Add load_and_backup.sh for loading phase
-				+ Parse config.ini in shell and update load_and_backup.sh to avoid parameter consistency issue
-				+ Test common.sh, sync.sh, makeremotefiles.sh, TODO load_band_backup.sh
-			- TODO: Reduce unnecessary remotescripts and localscripts in each method/
-			- For server rotation
-				- TODO: Remove the line number in test_server_rotation.sh
-				- TODO: For each method, provide a template config and use a script to generate the config files for the given workloadname and server rotation parameters
-				- TODO: Use a single script to generate config file and test server rotation
-				- TODO: After configuring the workloadname, use a script to run keydump, and copy pregenereated workload to secondary client
-				- TODO: After configuring the workloadname, use a script to run recordload, and backup the loaded database files (worker0/ - worker7/ in server 0 and worker8/ - worker15/ in server 1) into both server 0 and server 1
-					+ NOTE: place backuped files into /home/backupedrocksdb instead of /tmp
-					+ NOTE: Change permission to all users for rocksdb files after loading
-				- TODO: Retrieve config.ini after test_server_rotation.sh
-			- TODO: Update benchmark.md
+		* TODO: Reduce redundant switch-related scripts in method/localscripts/
 		* Others in C
 			- TODO: Add bandwidth usage of reporting original values during snapshot (files: switchos.c, controller.c)
 				+ NOTE: bandwidth cost of switch os (i.e., local control plane) also belongs to control plane bandwidth usage
@@ -35,6 +19,27 @@
 				+ NOTE: pass workloadmode -> if workloadmode=0, directly return after receiving one SCANRES_SPLIT
 			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
 			- TODO: Update DbUdpNative to invoke the native function
+
+- 10.15 ([IMPORTANT] start evaluation)
+	+ Siyuan
+		* Add new scripts (NOTE: always invoke scripts under root directory)
+			- For loading phase
+				+ Remove recordload/ -> directly use nocache/config.ini for both YCSB client, switch, and server to avoid consistency issue
+				+ Use load_and_backup.sh to run recordload, backup the loaded database files, and sync required database files between two clients if the loading phase is for static server rotation
+					+ NOTE: place backuped files into /tmp/backupedrocksdb instead of /tmp
+					+ NOTE: Change permission to all users for rocksdb files after loading
+				+ Parse config.ini in shell and update load_and_backup.sh to avoid parameter consistency issue
+				+ Test common.sh, sync.sh, makeremotefiles.sh, stopservertestbed.sh, and load_and_backup.sh
+			- For workload analysis
+				- After running keydump, use synckeydump.sh to copy pregenereated workload to secondary client
+			- Reduce unnecessary remotescripts and localscripts in each method/
+			- For server rotation
+				- Use prepare_server_rotation.sh to generate config file before launching testbed
+				- Remove the line number in test_server_rotation.sh
+				- Retrieve config.ini after test/stop_server_rotation.sh
+				- For each method, provide a template config and use a script to generate the config files for the given workloadname and server rotation parameters
+			- Update benchmark.md
+		* TODO: Test scripts for server rotation
 	+ HuanCheng
 		* TODO: Finish TraceReplay workload
 			- TODO: Filter requests if workload mode = 0

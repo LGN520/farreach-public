@@ -3,7 +3,7 @@ then
 	source scripts/common.sh
 fi
 
-set -x
+#set -x
 set -e
 
 if [ $# -ne 0 ]
@@ -29,7 +29,7 @@ echo "workloadmode: ${workloadmode}; server scale: ${serverscale}"
 cd benchmark/ycsb
 ./bin/ycsb load recordload
 cd ../../
-bash scripts/remote/stopservertestbed.sh
+source scripts/remote/stopservertestbed.sh
 
 echo "backup files from /tmp/${DIRNAME} to ${BACKUPS_ROOTPATH} in each physical server"
 ssh ${USER}@${SERVER0} "mkdir -p ${BACKUPS_ROOTPATH}/${serverscale}; mv /tmp/${DIRNAME}/* ${BACKUPS_ROOTPATH}/${serverscale}/"
@@ -47,3 +47,5 @@ then
 		fi
 	done
 fi
+
+echo "[WARNING] if you are cooperated with other uses, please change the permission of ${BACKUPS_ROOTPATH} to all users in each physical server!"

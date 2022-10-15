@@ -1,6 +1,6 @@
 [global]
-;workload_name=workloada
-workload_name=synthetic
+workload_name=TODO
+;workload_name=synthetic
 ; workload_mode: 0 - static mode; 1 - dynamic mode
 workload_mode=0
 ; 6*10 seconds
@@ -20,11 +20,11 @@ server_physical_num=2
 client_total_logical_num=128
 ; total # of server threads (all server logical idxes must < server_total_logical_num)
 ; change MAX_SERVER_NUM in tofino/netbufferv4.p4 if necessary
-server_total_logical_num=2
+server_total_logical_num=TODO
 ; only used by remote_client for server rotation under static workload
-server_total_logical_num_for_rotation=128
+server_total_logical_num_for_rotation=TODO
 ; bottleneck server logical idx (bottleneck partition) for server rotation (change test_server_rotation.sh accordingly)
-bottleneck_serveridx_for_rotation=123
+bottleneck_serveridx_for_rotation=TODO
 
 [client]
 ; a single port (the first physical client uses the port the receive rotation data from other physical clients)
@@ -84,7 +84,7 @@ server_total_corenum=24
 ; 0:1:2:3:4:5:6:7
 ; 0:1:2:3:4:5:6:7:8:9:10:11:12:13:14:15
 ; 0:1:2:3:4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19:20:21:22:23:24:25:26:27:28:29:30:31:32:33:34:35:36:37:38:39:40:41:42:43:44:45:46:47:48:49:50:51:52:53:54:55:56:57:58:59:60:61:62:63
-server_logical_idxes=123
+server_logical_idxes=TODO0
 ; dl13 -> bf1 (dpdk interface)
 server_ip=10.0.1.16
 server_mac=3c:fd:fe:b5:1f:e1
@@ -104,7 +104,7 @@ server_total_corenum=48
 ; 64:65:66:67:68:69:70:71:72:73:74:75:76:77:78:79:80:81:82:83:84:85:86:87:88:89:90:91:92:93:94:95:96:97:98:99:100:101:102:103:104:105:106:107:108:109:110:111:112:113:114:115:116:117:118:119:120:121:122:123:124:125:126:127
 ; switch for rotation (all of [0, 127] except 123): 0:1:2:3:4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19:20:21:22:23:24:25:26:27:28:29:30:31:32:33:34:35:36:37:38:39:40:41:42:43:44:45:46:47:48:49:50:51:52:53:54:55:56:57:58:59:60:61:62:63:64:65:66:67:68:69:70:71:72:73:74:75:76:77:78:79:80:81:82:83:84:85:86:87:88:89:90:91:92:93:94:95:96:97:98:99:100:101:102:103:104:105:106:107:108:109:110:111:112:113:114:115:116:117:118:119:120:121:122:124:125:126:127
 ; client/server for rotation (one of [0, 127] except 123): 0
-server_logical_idxes=0
+server_logical_idxes=TODO1
 ; dl16 -> bf1 (dpdk interface)
 server_ip=10.0.1.13
 server_mac=3c:fd:fe:bb:c9:c8
@@ -136,6 +136,7 @@ switch_kv_bucket_num=10000
 switch_pipeline_num=2
 ; max # of bytes supported in switch (8B aligned)
 switch_max_vallen=128
+switchos_ip=172.16.112.17
 switchos_sample_cnt=10
 ; a single port
 switchos_popserver_port=5003
@@ -147,58 +148,11 @@ switchos_specialcaseserver_port=5005
 switchos_ptf_popserver_port=5006
 ; a single port
 switchos_ptf_snapshotserver_port=5007
-spineswitch_total_logical_num=4
-leafswitch_total_logical_num=16
 
-[spineswitch]
-switch_logical_idxes=0:1:2:3
-; bf2 -> bf1
-;switchos_ip=172.16.112.18
-;spineswitch_fpport_to_leaf=32/0
-; bf3 -> bf1
-switchos_ip=172.16.112.19
-spineswitch_fpport_to_leaf=32/0
-
-[leafswitch]
-switch_logical_idxes=4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19
-switchos_ip=172.16.112.17
-; bf1 -> bf2
-;leafswitch_fpport_to_spine=31/0
-;leafswitch_pipeidx=1
-; bf1 -> bf3
-leafswitch_fpport_to_spine=32/0
-leafswitch_pipeidx=1
-
-; NOTE: we place reflector_for_leaf at the corresponding physical machine, which must connect with switch
-[reflector_for_leaf]
-; bf1 is connected with all four physical machines
+; NOTE: we place reflector at the first physical server
+[reflector]
 reflector_ip_for_switchos=172.16.112.16
-; a single port (NOTE: udpate p4src/parser.p4 accordingly)
+; a single port
 reflector_dp2cpserver_port=5008
-; a single port (NOTE: udpate p4src/parser.p4 accordingly)
+; a single port
 reflector_cp2dpserver_port=5009
-; NOTE: cp2dp_dstip CANNOT be the same as the ip of NIC in deployed physical machine (i.e., 10.0.1.16)
-reflector_cp2dp_dstip=10.0.1.11
-; ONLY used by ptf to configure data plane for pkt of switch2switchos
-reflector_cp2dp_dstmac=3c:fd:fe:bb:ca:79
-
-; NOTE: we place reflector_for_spine at the corresponding physical machine, which must connect with switch
-[reflector_for_spine]
-; bf2 is connected with dl16/13 (two physical servers)
-;reflector_ip_for_switchos=172.16.112.16
-;reflector_ip_for_switch=10.0.2.16
-;reflector_mac_for_switch=3c:fd:fe:b5:1f:e0
-;reflector_fpport_for_switch=16/0
-; bf3 is connected with dl11 (one physical client)
-reflector_ip_for_switchos=172.16.112.11
-reflector_ip_for_switch=10.0.2.11
-reflector_mac_for_switch=3c:fd:fe:bb:ca:78
-reflector_fpport_for_switch=5/0
-; a single port (NOTE: udpate p4src/parser.p4 accordingly)
-reflector_dp2cpserver_port=5018
-; a single port (NOTE: udpate p4src/parser.p4 accordingly)
-reflector_cp2dpserver_port=5019
-; NOTE: cp2dp_dstip CANNOT be the same as the ip of NIC in deployed physical machine (i.e., 10.0.2.11/16)
-reflector_cp2dp_dstip=10.0.2.15
-; ONLY used by ptf to configure data plane for pkt of switch2switchos
-reflector_cp2dp_dstmac=3c:fd:fe:b5:28:58

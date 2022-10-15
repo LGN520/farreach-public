@@ -3,7 +3,7 @@ then
 	source scripts/common.sh
 fi
 
-set -x
+#set -x
 
 cd ${DIRNAME}
 

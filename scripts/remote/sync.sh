@@ -3,7 +3,7 @@ then
 	source scripts/common.sh
 fi
 
-set -x
+#set -x
 
 function syncfiles_toclient() {
 	TMPDIRNAME=$1
