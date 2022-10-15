@@ -7,32 +7,49 @@
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
 
-- 10.15
+- 10.15 ([IMPORTANT] start evaluation)
 	+ Siyuan
-		* Add new scripts
-			- TODO: Remove the line number in test_server_rotation.sh
-			- TODO: For each method, provide a template config and use a script to generate the config files for the given workloadname and server rotation parameters
-			- TODO: Use a single script to generate config file and test server rotation
-			- TODO: After configuring the workloadname, use a script to run keydump, and copy pregenereated workload to secondary client
-			- TODO: After configuring the workloadname, use a script to run recordload, and backup the loaded database files (worker0/ - worker7/ in server 0 and worker8/ - worker15/ in server 1) into both server 0 and server 1
-				+ NOTE: place backuped files into /home/backupedrocksdb instead of /tmp
-				+ NOTE: Change permission to all users for rocksdb files after loading
+		* Add new scripts (NOTE: always invoke scripts under root directory)
+			- For loading phase
+				+ Remove recordload/ -> directly use nocache/config.ini for both YCSB client, switch, and server to avoid consistency issue
+				+ Add load_and_backup.sh for loading phase
+				+ Parse config.ini in shell and update load_and_backup.sh to avoid parameter consistency issue
+				+ TODO: Test load_band_backup.sh
+			- TODO: Reduce unnecessary remotescripts and localscripts in each method/
+			- For server rotation
+				- TODO: Remove the line number in test_server_rotation.sh
+				- TODO: For each method, provide a template config and use a script to generate the config files for the given workloadname and server rotation parameters
+				- TODO: Use a single script to generate config file and test server rotation
+				- TODO: After configuring the workloadname, use a script to run keydump, and copy pregenereated workload to secondary client
+				- TODO: After configuring the workloadname, use a script to run recordload, and backup the loaded database files (worker0/ - worker7/ in server 0 and worker8/ - worker15/ in server 1) into both server 0 and server 1
+					+ NOTE: place backuped files into /home/backupedrocksdb instead of /tmp
+					+ NOTE: Change permission to all users for rocksdb files after loading
+				- TODO: Retrieve config.ini after test_server_rotation.sh
 			- TODO: Update benchmark.md
+		* Others in C
+			- TODO: Add bandwidth usage of reporting original values during snapshot (files: switchos.c, controller.c)
+				+ NOTE: bandwidth cost of switch os (i.e., local control plane) also belongs to control plane bandwidth usage
 		* TODO: Use loading phase to pre-load 100M records into 2, 32, 64, 128 storage servers (NOTE: recordload client + nocache switch/server)
-		* TODO: Support range query
-			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
+		* Support range query
 			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
+				+ NOTE: pass workloadmode -> if workloadmode=0, directly return after receiving one SCANRES_SPLIT
 			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-			- TODO: Update benchmark.md
+			- TODO: Update DbUdpNative to invoke the native function
 	+ HuanCheng
-		* TODO: Start evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twittert traces)
+		* TODO: Finish TraceReplay workload
+			- TODO: Filter requests if workload mode = 0
+			- TODO: Get correpsonding trace file based on workloadName
+			- TODO: Limit max # of parsed inmemory requests
+		* Support range query
+			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
+			- TODO: Update DbUdpNative to receive SCANRES_SPLIT
+		* TODO: Make evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twitter traces (Twitter traces may be later) )
 			- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
 			- TODO: Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
 				+ TODO: Check tmp_controller_bwcost.out
-		* TODO: Finish evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twittert traces)
-			- TODO: Maintain benchmark/results/, and benchmark.md of each command and code/configuration change
+		* TODO: Make evaluation of experiment 2 with 16/32/64/128 servers under YCSB core workload A
 
-- 10.14 ([IMPORTANT] start evaluation)
+- 10.14
 	+ Siyuan
 		* Update static workload script for YCSB client
 			- Use localstop/kill.sh and remove stop/kill_server/client/controller.sh -> update all related scripts
@@ -48,8 +65,6 @@
 			- NOTE: 50M per physical client may change key distribution, while 100M per physical client loads 200M records -> we limit the number of physical index as 1 for recordload as in keydump
 		* Others in C
 			- Add control plane bandwidth usage calculation (files: controller.c in farreach/distfarreach)
-			- TODO: Add bandwidth usage of reporting original values during snapshot (files: switchos.c, controller.c)
-				+ NOTE: bandwidth cost of switch os (i.e., local control plane) also belongs to control plane bandwidth usage
 		* Use loading phase to pre-load 100M records into 16 storage servers (NOTE: recordload client + nocache switch/server)
 			- Backuped path: /home/rocksdbbackups/16/ in both dl16 and dl13
 		* Test static workload script w/ 16 servers
@@ -64,9 +79,8 @@
 				+ initThread() is counted into execution time
 			- Update test_server_rotation.sh and stop_server_rotation.sh -> SYNC to all methods after testing correctness
 	+ Huancheng
-		* TODO: Implement YCSB trace replay for Twitter trace
-			- TODO: Implement TraceReplayWorkload for Twitter traces
-			- TODO: Filter requests if workload mode = 0
+		* Implement YCSB trace replay for Twitter trace
+			- Implement TraceReplayWorkload for Twitter traces
 
 
 - 10.11 - 10.13

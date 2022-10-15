@@ -1,34 +1,36 @@
-source ../common.sh
+source scripts/common.sh
 
-syncfiles_toclient() {
+set -x
+
+function syncfiles_toclient() {
 	TMPDIRNAME=$1
 
 	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME"
 
-	echo "sync to dl15"
+	echo "sync to ${SECONDARY_CLIENT}"
 	# NOTE: not --exclude "*.out" for output/*
-	rsync -av -e ssh --exclude "*-pregeneration/*" --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:~/projects/NetBuffer
+	rsync -av -e ssh --exclude "*-pregeneration/*" --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}
 }
 
-syncfiles_toall(){
+function syncfiles_toall(){
 	TMPDIRNAME=$1
 
 	ssh ${USER}@bf1 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME"
 	ssh ${USER}@bf3 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME"
-	ssh ${USER}@dl13 "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME"
 	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME"
-	ssh ${USER}@dl16 "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME"
+	ssh ${USER}@${SERVER0} "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME"
+	ssh ${USER}@${SERVER1} "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME"
 
 	echo "sync to bf1"
-	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@bf1:~/NetBuffer
+	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@bf1:${SWITCH_ROOTPATH}
 	echo "sync to bf3"
-	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@bf3:~/NetBuffer
-	echo "sync to dl13"
-	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@dl13:~/projects/NetBuffer
-	echo "sync to dl15"
-	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:~/projects/NetBuffer
-	echo "sync to dl16"
-	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@dl16:~/projects/NetBuffer
+	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@bf3:${SWITCH_ROOTPATH}
+	echo "sync to ${SECONDARY_CLIENT}"
+	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}
+	echo "sync to ${SERVER0}"
+	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SERVER0}:${SERVER_ROOTPATH}
+	echo "sync to ${SERVER1}"
+	rsync -av -e ssh --exclude "*.a" --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SERVER1}:${SERVER_ROOTPATH}
 }
 
 cd ../../

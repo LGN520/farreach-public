@@ -52,11 +52,11 @@
 
 - Preparation
 	+ Configuration
-		* Make sure the total server logical num and logical server idxes are consistent in recordload/config.ini and nocache/config.ini
-	+ Under the main client, enter benchmark/ycsb/
-		* Pre-load 100M records into logical servers and backup the RocksDB files to reduce evaluation time
-			- `./bin/ycsb load recordload`
-			- (TODO: provide a script) Use `scp` such that each physical server has all backuped databases
+		* In nocache/config.ini, set workloadmode, total_server_logical_num, and per-server logical_server_idxes accordingly
+			- If workloadmode=0, also set bottleneck_serveridx_for_rotation and total_server_logical_num_for_rotation accordingly (NOTE: total_server_logical_num_for_rotation must = total_server_logical_num here)
+	+ Under the main client, perform the loading phase and backup for evaluation time reduction
+		* Launch nocache/ in switch and servers
+		* Run `bash scripts/remote/load_and_backup.sh`, which will kill servers after backup
 
 ## Dynamic running of single-switch method (e.g., farreach/nocache/netcache)
 

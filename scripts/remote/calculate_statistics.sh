@@ -1,4 +1,4 @@
-source ../common.sh
+source scripts/common.sh
 
 set -x
 set -e
