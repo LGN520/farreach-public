@@ -2,7 +2,7 @@
 
 keyword=$1
 
-clientpids=( "$(ps -aux | grep "$1" | grep -v "grep" | awk '{print $2}')" )
+clientpids=( "$(ps -aux | grep "$1" | grep -v "localkill.sh" | grep -v "grep" | awk '{print $2}')" )
 
 if [ ${#clientpids[@]} -gt 0 ]
 then

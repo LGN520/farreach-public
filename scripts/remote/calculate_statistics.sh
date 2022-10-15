@@ -8,7 +8,7 @@ set -e
 
 if [ $# -ne 0 ]
 then
-	echo "Usage: bash calculate_statistics.sh"
+	echo "Usage: bash remote/scripts/calculate_statistics.sh"
 	exit
 fi
 
@@ -37,5 +37,5 @@ echo "copy statistics file ${remotefilename} from another client"
 scp ${USER}@${SECONDARY_CLIENT}:${remotefilepath} ${filedir}
 
 cd scripts/local/
-python calculate_statistics_helper.py ${workloadpattern} ${localfilepath} ${remotefilepath}
+python calculate_statistics_helper.py ${workloadmode} ${localfilepath} ${remotefilepath}
 cd ../../

@@ -2,7 +2,7 @@
 
 keyword=$1
 
-clientpids=( "$(ps -aux | grep "${keyword}" | grep -v "grep" | awk '{print $2}')" )
+clientpids=( "$(ps -aux | grep "${keyword}" | grep -v "localstop.sh" | grep -v "grep" | awk '{print $2}')" )
 
 if [ ${#clientpids[@]} -gt 0 ]
 then

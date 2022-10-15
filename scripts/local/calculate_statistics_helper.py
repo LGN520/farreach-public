@@ -125,10 +125,10 @@ if len(sys.argv) != 4:
     print "Arguments: {}".format(sys.argv)
     exit(-1)
 
-workloadpattern = sys.argv[1]
+workloadmode = int(sys.argv[1])
 
-if workloadpattern != "static" and workloadpattern != "dynamic":
-    print "Invalid workloadpattern {}".format(workloadpattern)
+if workloadmode != 1 and workloadmode != 0:
+    print "Invalid workloadmode {}".format(workloadmode)
     exit(-1)
 
 localfilepath = sys.argv[2]
@@ -164,7 +164,7 @@ print "Decode {}...".format(remotefilepath)
 #remotejsonstr = re.sub(r'\\', '', remotejsonstr) # uncomment if with \" in json file
 remotejsonarray = json.loads(remotejsonstr)
 
-if workloadpattern == "static":
+if workloadmode == 0:
     staticprocess(localjsonarray, remotejsonarray)
 else:
     dynamicprocess(localjsonarray, remotejsonarray)

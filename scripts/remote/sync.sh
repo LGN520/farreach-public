@@ -11,8 +11,7 @@ function syncfiles_toclient() {
 	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME"
 
 	echo "sync to ${SECONDARY_CLIENT}"
-	# NOTE: not --exclude "*.out" for output/*
-	rsync -av -e ssh --exclude "*-pregeneration/*" --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH} >/dev/null
+	rsync -av -e ssh --exclude "*.out" --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH} >/dev/null
 }
 
 function syncfiles_toall(){
