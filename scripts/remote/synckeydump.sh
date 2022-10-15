@@ -7,12 +7,13 @@ fi
 
 function syncfiles_toclient() {
 	TMPDIRNAME=$1
+	TMPFILENAME=$2
 
-	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME"
+	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir $CLIENT_ROOTPATH/$TMPDIRNAME"
 
-	echo "sync to ${SECONDARY_CLIENT}"
+	echo "sync ${TMPDIRNAME}/${TMPFILENAME} to ${SECONDARY_CLIENT}"
 	# NOTE: not --exclude "*.out" for benchmark/output/*
-	rsync -av -e ssh --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" ./$TMPDIRNAME ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH} >/dev/null
+	rsync -av -e ssh --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" $TMPDIRNAME/$TMPFILENAME ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${TMPDIRNAME} >/dev/null
 }
 
 if [ $# -ne 1 ]
@@ -24,10 +25,10 @@ fi
 
 tmpworkloadname=$1
 
-syncfiles_toclient benchmark/output/${tmpworkloadname}-hotest.out
-syncfiles_toclient benchmark/output/${tmpworkloadname}-coldest.out
-syncfiles_toclient benchmark/output/${tmpworkloadname}-nearhot.out
-syncfiles_toclient benchmark/output/${tmpworkloadname}-hotinrules
-syncfiles_toclient benchmark/output/${tmpworkloadname}-hotoutrules
-syncfiles_toclient benchmark/output/${tmpworkloadname}-randomrules
-syncfiles_toclient benchmark/output/${tmpworkloadname}-pregeneration
+syncfiles_toclient benchmark/output ${tmpworkloadname}-hotest.out
+syncfiles_toclient benchmark/output ${tmpworkloadname}-coldest.out
+syncfiles_toclient benchmark/output ${tmpworkloadname}-nearhot.out
+syncfiles_toclient benchmark/output/${tmpworkloadname}-hotinrules \*
+syncfiles_toclient benchmark/output/${tmpworkloadname}-hotoutrules \*
+syncfiles_toclient benchmark/output/${tmpworkloadname}-randomrules \*
+syncfiles_toclient benchmark/output/${tmpworkloadname}-pregeneration \*

@@ -45,14 +45,14 @@
 
 ## Prepartion phase
 
-- Loading phase
+- Loading phase for each server scale (e.g., 2/16/32/64/128 servers)
 	+ Configuration
 		* In nocache/config.ini, set workloadmode, total_server_logical_num, and per-server logical_server_idxes accordingly
 			- If workloadmode=0, also set bottleneck_serveridx_for_rotation and total_server_logical_num_for_rotation accordingly (NOTE: total_server_logical_num_for_rotation must = total_server_logical_num here)
 	+ Under the main client, perform the loading phase and backup for evaluation time reduction
 		* Launch nocache/ in switch and servers
 		* Run `bash scripts/remote/load_and_backup.sh`, which will kill servers after backup
-- For each workload (e.g., workloada)
+- Workload analysis for each workload (e.g., workloada)
 	+ Under the main client
 		* Update workload_name with the workload in keydump/config.ini
 		* `cd benchmark/ycsb; ./bin/ycsb run keydump; cd ../../`
@@ -68,6 +68,10 @@
 - Given a method (e.g., farreach) and a workload (e.g., workloada)
 	* Set workload_mode = 1 and workload_name = workload in method/config.ini
 	* Set scripts/common.sh accordingly
+- Re-compile code for server rotation if necessary
+	+ Disable server_rotation in common/helper.h
+	+ `bash scripts/remote/sync.sh` to sync code to all machines
+	+ Re-compile clients/servers/switchos as mentioned before
 - Under each physical switch
 	+ Create a terminal and run `cd method/tofino; su; bash start_switch.sh`
 	+ Create a terminal and run `cd method; su; bash localscripts/launchswitchtestbed.sh`
@@ -93,11 +97,11 @@
 
 - Given a method (e.g., farreach) and a workload (e.g., workloada)
 	+ In method/config.ini
-		* Set workload_mode = 0 and workload_name = workload
+		* Set workload_name = workload
 		* Set bottleneck_serveridx_for_rotation and server_total_logical_num_for_rotation accordingly
 			- NOTE: config.ini must have the correct bottleneckidx and rotationscal, otherwise PregeneratedWorkload will choose the incorrect requests of non-running servers and hence timeout
 	+ Set scripts/common.sh accordingly
-- Re-compile code for server rotation
+- Re-compile code for server rotation if necessary
 	+ Enable server_rotation in common/helper.h
 	+ `bash scripts/remote/sync.sh` to sync code to all machines
 	+ Re-compile clients/servers/switchos as mentioned before

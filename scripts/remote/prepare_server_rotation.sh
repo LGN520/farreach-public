@@ -4,7 +4,7 @@ then
 fi
 
 #set -x
-set -e
+#set -e
 
 rotated_servers=""
 for ((i = 0; i < ${server_total_logical_num_for_rotation}; i++))
@@ -28,9 +28,9 @@ cp ${DIRNAME}/configs/config.ini.static.setup ${DIRNAME}/config.ini
 sed -i '1,$s/workload_name=TODO/workload_name='${workloadname}/'' ${DIRNAME}/config.ini
 sed -i '1,$s/server_total_logical_num=TODO/server_total_logical_num='${server_total_logical_num_for_rotation}/'' ${DIRNAME}/config.ini
 sed -i '1,$s/server_total_logical_num_for_rotation=TODO/server_total_logical_num_for_rotation='${server_total_logical_num_for_rotation}/'' ${DIRNAME}/config.ini
-sed -i '1,$s/bottleneck_serverid_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
-sed -i '1,$s/server_logical_idxes=TODO0/server_logiacl_idxes='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
-sed -i '1,$s/server_logical_idxes=TODO1/server_logiacl_idxes='${rotated_servers}/'' ${DIRNAME}/config.ini
+sed -i '1,$s/bottleneck_serveridx_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
+sed -i '1,$s/server_logical_idxes=TODO0/server_logical_idxes='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
+sed -i '1,$s/server_logical_idxes=TODO1/server_logical_idxes='${rotated_servers}/'' ${DIRNAME}/config.ini
 
 echo "Sync new ${DIRNAME}/config.ini to all machines"
-source scripts/remote/sync_file.sh ${DIRNAME}/config.ini
+source scripts/remote/sync_file.sh ${DIRNAME} config.ini

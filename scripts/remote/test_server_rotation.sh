@@ -23,27 +23,27 @@ ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_
 echo "[part 1] run single bottleneck server thread"
 
 echo "stop servers"
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash localscripts/localstop.sh '\./server' >/dev/null"
-ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./server' >/dev/null"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash localscripts/localstop.sh ./server >/dev/null 2>&1"
+ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./server >/dev/null 2>&1"
 echo "stop clients"
-source bash scripts/local/localstop.sh \./client >/dev/null 2>&1
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/remote/localstop.sh '\./client' >/dev/null"
+source bash scripts/local/localstop.sh ./client >/dev/null 2>&1
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/remote/localstop.sh ./client >/dev/null 2>&1"
 if [ ${with_controller} -eq 1 ]
 then
 	echo "stop controller"
-	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./controller' >/dev/null"
+	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./controller >/dev/null 2>&1"
 fi
 #sleep 1s
 echo "kill servers"
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./server' >/dev/null"
-ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./server' >/dev/null"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./server >/dev/null 2>&1"
+ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./server >/dev/null 2>&1"
 echo "kill clients"
-source scripts/local/localkill.sh \./client >/dev/null 2>&1
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/remote/localkill.sh '\./client' >/dev/null"
+source scripts/local/localkill.sh ./client >/dev/null 2>&1
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/remote/localkill.sh ./client >/dev/null 2>&1"
 if [ ${with_controller} -eq 1 ]
 then
 	echo "kill controller"
-	ssh ${USER}${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./controller' >/dev/null"
+	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./controller >/dev/null 2>&1"
 fi
 
 # Retrieve both dl16.bottleneckserver and dl13.rotatedservers to the state just after loading phase
@@ -55,9 +55,9 @@ echo "prepare and sync config.ini"
 cp ${DIRNAME}/configs/config.ini.static.1p ${DIRNAME}/config.ini
 sed -i '1,$s/workload_name=TODO/workload_name='${workloadname}/'' ${DIRNAME}/config.ini
 sed -i '1,$s/server_total_logical_num_for_rotation=TODO/server_total_logical_num_for_rotation='${server_total_logical_num_for_rotation}/'' ${DIRNAME}/config.ini
-sed -i '1,$s/bottleneck_serverid_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
-sed -i '1,$s/server_logical_idxes=TODO0/server_logiacl_idxes='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
-source scripts/remote/sync_file.sh ${DIRNAME}/config.ini
+sed -i '1,$s/bottleneck_serveridx_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
+sed -i '1,$s/server_logical_idxes=TODO0/server_logical_idxes='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
+source scripts/remote/sync_file.sh ${DIRNAME} config.ini
 
 echo "start servers"
 ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./server 0 >tmp_serverrotation_part1_server.out 2>&1 &"
@@ -76,21 +76,21 @@ cd benchmark/ycsb/
 cd ../../
 
 echo "stop servers"
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./server' >/dev/null"
-ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./server' >/dev/null"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./server >/dev/null 2>&1"
+ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./server >/dev/null 2>&1"
 if [ ${with_controller} -eq 1 ]
 then
 	echo "stop controller"
-	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./controller' >/dev/null"
+	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./controller >/dev/null 2>&1"
 fi
 sleep 5s
 echo "kill servers"
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./server' >/dev/null"
-ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./server' >/dev/null"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./server >/dev/null 2>&1"
+ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./server >/dev/null 2>&1"
 if [ ${with_controller} -eq 1 ]
 then
 	echo "kill controller"
-	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./controller' >/dev/null"
+	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./controller >/dev/null 2>&1"
 fi
 
 
@@ -110,27 +110,27 @@ do
 	echo "rotateidx: "${rotateidx}
 
 	echo "stop servers"
-	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./server' >/dev/null"
-	ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./server' >/dev/null"
+	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./server >/dev/null 2>&1"
+	ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./server >/dev/null 2>&1"
 	echo "stop clients"
-	source bash scripts/local/localstop.sh \./client >/dev/null 2>&1
-	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/remote/localstop.sh '\./client' >/dev/null"
+	source bash scripts/local/localstop.sh ./client >/dev/null 2>&1
+	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/remote/localstop.sh ./client >/dev/null 2>&1"
 	if [ ${with_controller} -eq 1 ]
 	then
 		echo "stop controller"
-		ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./controller' >/dev/null"
+		ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./controller >/dev/null 2>&1"
 	fi
 	#sleep 1s
 	echo "kill servers"
-	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./server' >/dev/null"
-	ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./server' >/dev/null"
+	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./server >/dev/null 2>&1"
+	ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./server >/dev/null 2>&1"
 	echo "kill clients"
-	source scripts/local/localkill.sh \./client >/dev/null 2>&1
-	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/remote/localkill.sh '\./client' >/dev/null"
+	source scripts/local/localkill.sh ./client >/dev/null 2>&1
+	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/remote/localkill.sh ./client >/dev/null 2>&1"
 	if [ ${with_controller} -eq 1 ]
 	then
 		echo "kill controller"
-		ssh ${USER}${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./controller' >/dev/null"
+		ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./controller >/dev/null 2>&1"
 	fi
 
 	# TODO: only retrieve dl16.bottleneckserver to the state just after loading phase
@@ -143,9 +143,9 @@ do
 	cp ${DIRNAME}/configs/config.ini.static.2p ${DIRNAME}/config.ini
 	sed -i '1,$s/workload_name=TODO/workload_name='${workloadname}/'' ${DIRNAME}/config.ini
 	sed -i '1,$s/server_total_logical_num_for_rotation=TODO/server_total_logical_num_for_rotation='${server_total_logical_num_for_rotation}/'' ${DIRNAME}/config.ini
-	sed -i '1,$s/bottleneck_serverid_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
-	sed -i '1,$s/server_logical_idxes=TODO0/server_logiacl_idxes='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
-	sed -i '1,$s/server_logical_idxes=TODO1/server_logiacl_idxes='${rotateidx}/'' ${DIRNAME}/config.ini
+	sed -i '1,$s/bottleneck_serveridx_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
+	sed -i '1,$s/server_logical_idxes=TODO0/server_logical_idxes='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
+	sed -i '1,$s/server_logical_idxes=TODO1/server_logical_idxes='${rotateidx}/'' ${DIRNAME}/config.ini
 	source scripts/remote/sync_file.sh ${DIRNAME}/config.ini
 
 	echo "start servers"
@@ -166,21 +166,21 @@ do
 	cd ../../
 
 	echo "stop servers"
-	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./server' >/dev/null"
-	ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./server' >/dev/null"
+	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./server >/dev/null 2>&1"
+	ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./server >/dev/null 2>&1"
 	if [ ${with_controller} -eq 1 ]
 	then
 		echo "stop controller"
-		ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh '\./controller' >/dev/null"
+		ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localstop.sh ./controller >/dev/null 2>&1"
 	fi
 	sleep 5s
 	echo "kill servers"
-	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./server' >/dev/null"
-	ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./server' >/dev/null"
+	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./server >/dev/null 2>&1"
+	ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./server >/dev/null 2>&1"
 	if [ ${with_controller} -eq 1 ]
 	then
 		echo "kill controller"
-		ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh '\./controller' >/dev/null"
+		ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/remote/localkill.sh ./controller >/dev/null 2>&1"
 	fi
 
 	#read -p "Continue[y/n]: " is_continue
