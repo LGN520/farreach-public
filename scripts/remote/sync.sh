@@ -1,4 +1,4 @@
-if [ ${is_common_included} -ne 1 ]
+if [ "x${is_common_included}" != "x1" ]
 then
 	source scripts/common.sh
 fi

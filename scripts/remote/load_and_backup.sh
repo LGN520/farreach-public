@@ -1,4 +1,4 @@
-if [ ${is_common_included} -ne 1 ]
+if [ "x${is_common_included}" != "x1" ]
 then
 	source scripts/common.sh
 fi
@@ -12,12 +12,12 @@ then
 	exit
 fi
 
-if [ ${DIRNAME} -ne "nocache" ]
+if [ "x${DIRNAME}" != "xnocache" ]
 then
-	echo "[ERROR][scripts/common.sh] DIRNAME is not nocache in scripts/common.sh"
+	echo "[ERROR][scripts/common.sh] DIRNAME (${DIRNAME}) is not nocache in scripts/common.sh"
 	exit
 else
-	if [ ${workloadmode} -eq 0 ] && [ ${server_total_logical_num} -ne ${server_total_logial_num_for_rotation} ]
+	if [ "x${workloadmode}" != "x0" ] && [ "x${server_total_logical_num}" != "x${server_total_logial_num_for_rotation}" ]
 	then
 		echo "[ERROR][${DIRNAME}/config.ini] server_total_logical_num should = server_total_logical_num_for_rotation under loading phase of static pattern"
 		exit
@@ -35,7 +35,7 @@ echo "backup files from /tmp/${DIRNAME} to ${BACKUPS_ROOTPATH} in each physical 
 ssh ${USER}@${SERVER0} "mkdir -p ${BACKUPS_ROOTPATH}/${serverscale}; mv /tmp/${DIRNAME}/* ${BACKUPS_ROOTPATH}/${serverscale}/*"
 ssh ${USER}@${SERVER1} "mkdir -p ${BACKUPS_ROOTPATH}/${serverscale}; mv /tmp/${DIRNAME}/* ${BACKUPS_ROOTPATH}/${serverscale}/*"
 
-if [ ${workloadmode} -eq "0" ]
+if [ "x${workloadmode}" != "x0" ]
 then
 	echo "sync files for server rotation under static pattern"
 	scp -r ${USER}@${SERVER1}:${BACKUPS_ROOTPATH}/${serverscale}/worker${bottleneck_serveridx}.* ${USER}@${SERVER0}:${BACKUPS_ROOTPATH}/${serverscale}/ >/dev/null

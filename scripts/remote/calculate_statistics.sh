@@ -1,4 +1,4 @@
-if [ ${is_common_included} -ne 1 ]
+if [ "x${is_common_included}" != "x1" ]
 then
 	source scripts/common.sh
 fi
@@ -12,10 +12,10 @@ then
 	exit
 fi
 
-if [ ${workloadmode} == "0" ]
+if [ "x${workloadmode}" == "x0" ]
 then
 	midstr="static${server_total_logical_num_for_rotation}"
-elif [ ${workloadmode} == "1" ]
+elif [ "x${workloadmode}" == "x1" ]
 then
 	midstr=${dynamicpattern}
 else
