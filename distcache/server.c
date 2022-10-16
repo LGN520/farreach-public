@@ -294,7 +294,7 @@ void transaction_main() {
 				break;
 			}
 
-			INVARIANT(packet_type_t(iter->type()) == packet_type_t::PUTREQ);
+			INVARIANT(packet_type_t(iter->type()) == packet_type_t::WARMUPREQ);
 			tmpkey = iter->key();
 #ifdef USE_HASH
 			uint32_t tmp_global_server_logical_idx = tmpkey.get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
