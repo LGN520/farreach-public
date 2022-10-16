@@ -83,7 +83,7 @@ def staticprocess(localjsonarray, remotejsonarray):
         for j in range(len(aggjsonarray[i][TOTAL_HISTOGRAM])):
             totalhistogram[j] += aggjsonarray[i][TOTAL_HISTOGRAM][j]
 
-    avglatency, latencymedium, latency99p = calculate_latency(totallatency, totallatencynum, totalhistogram)
+    avglatency, latencymedium, latency99p = calculatelatency(totallatency, totallatencynum, totalhistogram)
     print "[STATIC] average latency {} us, medium latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency99p)
 
 def dynamicprocess(localjsonarray, remotejsonarray):

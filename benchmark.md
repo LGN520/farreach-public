@@ -97,7 +97,7 @@
 
 - Given a method (e.g., farreach) and a workload (e.g., workloada)
 	+ In method/config.ini
-		* Set workload_name = workload
+		* Set workload_name = workload, workload_mode = 0
 		* Set bottleneck_serveridx_for_rotation and server_total_logical_num_for_rotation accordingly
 			- NOTE: config.ini must have the correct bottleneckidx and rotationscal, otherwise PregeneratedWorkload will choose the incorrect requests of non-running servers and hence timeout
 	+ Set scripts/common.sh accordingly
