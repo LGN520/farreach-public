@@ -9,7 +9,7 @@ function syncfiles_toclient() {
 	TMPDIRNAME=$1
 	TMPFILENAME=$2
 
-	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir $CLIENT_ROOTPATH/$TMPDIRNAME"
+	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir -p $CLIENT_ROOTPATH/$TMPDIRNAME"
 
 	echo "sync ${TMPDIRNAME}/${TMPFILENAME} to ${SECONDARY_CLIENT}"
 	# NOTE: not --exclude "*.out" for benchmark/output/*
@@ -20,11 +20,11 @@ function syncfiles_toall(){
 	TMPDIRNAME=$1
 	TMPFILENAME=$2
 
-	ssh ${USER}@bf1 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir $SWITCH_ROOTPATH/$TMPDIRNAME"
-	ssh ${USER}@bf3 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir $SWITCH_ROOTPATH/$TMPDIRNAME"
-	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir $CLIENT_ROOTPATH/$TMPDIRNAME"
-	ssh ${USER}@${SERVER0} "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir $SERVER_ROOTPATH/$TMPDIRNAME"
-	ssh ${USER}@${SERVER1} "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir $SERVER_ROOTPATH/$TMPDIRNAME"
+	ssh ${USER}@bf1 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir -p $SWITCH_ROOTPATH/$TMPDIRNAME"
+	ssh ${USER}@bf3 "rm -rf ${SWITCH_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir -p $SWITCH_ROOTPATH/$TMPDIRNAME"
+	ssh ${USER}@${SECONDARY_CLIENT} "rm -rf ${CLIENT_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir -p $CLIENT_ROOTPATH/$TMPDIRNAME"
+	ssh ${USER}@${SERVER0} "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir -p $SERVER_ROOTPATH/$TMPDIRNAME"
+	ssh ${USER}@${SERVER1} "rm -rf ${SERVER_ROOTPATH}/$TMPDIRNAME/$TMPFILENAME; mkdir -p $SERVER_ROOTPATH/$TMPDIRNAME"
 
 	echo "sync ${TMPDIRNAME}/$TMPFILENAME to bf1"
 	# NOTE: not --exclude "*.out" for benchmark/output/*
@@ -66,4 +66,4 @@ syncfiles_toclient benchmark/output/${tmpworkloadname}-randomrules \*
 syncfiles_toclient benchmark/output/${tmpworkloadname}-pregeneration \*
 
 # sync hotkey files to servers for netcache/distcache to resume cached keyset under server rotation
-syncfile_toall benchmark/output \*-hotest.out
+syncfiles_toall benchmark/output \*-hotest.out
