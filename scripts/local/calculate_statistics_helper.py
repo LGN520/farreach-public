@@ -12,7 +12,13 @@ TOTAL_LATENCY = "totalLatency"
 TOTAL_LATENCYNUM = "totalLatencynum"
 TOTAL_HISTOGRAM = "totalHistogram"
 
+STATIC_PEROBJ_EXECUTION_MILLIS = 10 * 1000
+DYNAMIC_PEROBJ_EXECUTION_MILLIS = 1 * 1000
+GLOBAL_PEROBJ_EXECUTION_MILLIS = -1
+
 def aggregate(localjsonarray, remotejsonarray, length):
+    global GLOBAL_PEROBJ_EXECUTION_MILLIS
+
     aggjsonarray = []
     for i in range(length):
         localjsonobj = localjsonarray[i]
@@ -28,7 +34,8 @@ def aggregate(localjsonarray, remotejsonarray, length):
         for j in range(len(localjsonobj[PERSERVER_OPSDONE])):
             aggobj[PERSERVER_OPSDONE].append(localjsonobj[PERSERVER_OPSDONE][j] + remotejsonobj[PERSERVER_OPSDONE][j])
         localjsonobj[PERSERVER_OPSDONE] + remotejsonobj[PERSERVER_OPSDONE]
-        aggobj[EXECUTION_MILLIS] = (localjsonobj[EXECUTION_MILLIS] + remotejsonobj[EXECUTION_MILLIS]) / 2
+        #aggobj[EXECUTION_MILLIS] = (localjsonobj[EXECUTION_MILLIS] + remotejsonobj[EXECUTION_MILLIS]) / 2
+        aggobj[EXECUTION_MILLIS] = GLOBAL_PEROBJ_EXECUTION_MILLIS
         aggobj[TOTAL_LATENCY] = localjsonobj[TOTAL_LATENCY] + remotejsonobj[TOTAL_LATENCY]
         aggobj[TOTAL_LATENCYNUM] = localjsonobj[TOTAL_LATENCYNUM] + remotejsonobj[TOTAL_LATENCYNUM]
         aggobj[TOTAL_HISTOGRAM] = []
@@ -63,7 +70,10 @@ def calculate_perobjstat(aggjsonarray):
     for i in range(len(aggjsonarray)):
         tmpjsonobj = aggjsonarray[i]
 
-        tmpstrid = tmpjsonobj[STRID]
+        if STRID in tmpjsonobj.keys():
+            tmpstrid = tmpjsonobj[STRID]
+        else:
+            tmpstrid = "tmpstrid"
         tmptotalops = tmpjsonobj[TOTAL_OPSDONE]
         tmp_perserverops = tmpjsonobj[PERSERVER_OPSDONE]
         tmptotaltime = tmpjsonobj[EXECUTION_MILLIS]
@@ -77,7 +87,7 @@ def calculate_perobjstat(aggjsonarray):
         
         tmp_cachehitcnt = tmptotalops - tmp_cachemisscnt
         tmp_normalizedthpt = float(tmptotalops) / float(tmp_maxserverops)
-        print "[{}] thpt {}; cache hit rate {}; normalized thpt {}".format(tmpstrid, float(tmp_cachehitcnt) / float(tmptotalops), tmp_normalizedthpt)
+        print "[{}] thpt {}; cache hit rate {}; normalized thpt {}".format(tmpstrid, float(tmptotalops) / float(tmptotaltime), float(tmp_cachehitcnt) / float(tmptotalops), tmp_normalizedthpt)
 
 def staticprocess(localjsonarray, remotejsonarray):
     if (len(localjsonarray) != len(remotejsonarray)):
@@ -190,6 +200,8 @@ print "Decode {}...".format(remotefilepath)
 remotejsonarray = json.loads(remotejsonstr)
 
 if workloadmode == 0:
+    GLOBAL_PEROBJ_EXECUTION_MILLIS = STATIC_PEROBJ_EXECUTION_MILLIS
     staticprocess(localjsonarray, remotejsonarray)
 else:
+    GLOBAL_PEROBJ_EXECUTION_MILLIS = DYNAMIC_PEROBJ_EXECUTION_MILLIS
     dynamicprocess(localjsonarray, remotejsonarray)
