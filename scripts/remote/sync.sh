@@ -47,3 +47,6 @@ syncfiles_toclient benchmark/ycsb/ \*
 syncfiles_toall common \*
 
 syncfiles_toall ${DIRNAME} \*
+
+# sync hotkey files to servers for netcache/distcache to resume cached keyset under server rotation
+syncfile_toall benchmark/output \*-hotest.out

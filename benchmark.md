@@ -46,22 +46,24 @@
 ## Prepartion phase
 
 - Loading phase for each server scale (e.g., 2/16/32/64/128 servers)
-	+ Configuration
-		* In nocache/config.ini, set workloadmode, total_server_logical_num, and per-server logical_server_idxes accordingly
-			- If workloadmode=0, also set bottleneck_serveridx_for_rotation and total_server_logical_num_for_rotation accordingly (NOTE: total_server_logical_num_for_rotation must = total_server_logical_num here)
+	+ In nocache/config.ini, set workloadmode, total_server_logical_num, and per-server logical_server_idxes accordingly
+		* If workloadmode=0, also set bottleneck_serveridx_for_rotation and total_server_logical_num_for_rotation accordingly (NOTE: total_server_logical_num_for_rotation must = total_server_logical_num here)
 	+ Under the main client, perform the loading phase and backup for evaluation time reduction
 		* Launch nocache/ in switch and servers
 		* Run `bash scripts/remote/load_and_backup.sh`, which will kill servers after backup
 - Workload analysis for each workload (e.g., workloada)
 	+ Under the main client
 		* Update workload_name with the workload in keydump/config.ini
-		* `cd benchmark/ycsb; ./bin/ycsb run keydump; cd ../../`
-			- Dump hottest/nearhot/coldest keys into benchmark/output/<workloadname>-\*.out for warmup phase later
-			- Dump bottleneckt serveridx for different server rotation scales for server rotation later
-			- Pre-generate workload files in benchmark/output/<workloadname>-pregeneration/ for server rotation later
-		* `cd benchmark/ycsb; python generate_dynamicrules.py <workloadname>; cd ../../`
-			- Generates key popularity changing rules in benchmark/output/<workloadname>-\*rules/ for dynamic pattern later
-		* `bash scripts/remote/synckeydump.sh <workloadname>` to sync the above files of the workload to another client
+		* Automatic way
+			- Run `bash scripts/remote/keydump_and_sync.sh`, which will sync required files to clients/server after keydump
+		* ~~Manual way (DEPRECATED)~~
+			- ~~`cd benchmark/ycsb; ./bin/ycsb run keydump; cd ../../`~~
+				+ Dump hottest/nearhot/coldest keys into benchmark/output/<workloadname>-\*.out for warmup phase later
+				+ Dump bottleneckt serveridx for different server rotation scales for server rotation later
+				+ Pre-generate workload files in benchmark/output/<workloadname>-pregeneration/ for server rotation later
+			- ~~`cd benchmark/ycsb; python generate_dynamicrules.py <workloadname>; cd ../../`~~
+				+ Generates key popularity changing rules in benchmark/output/<workloadname>-\*rules/ for dynamic pattern later
+			- ~~`bash scripts/remote/synckeydump.sh <workloadname>` to sync the above files of the workload to another client~~
 
 ## Dynamic running
 
