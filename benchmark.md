@@ -80,14 +80,17 @@
 	+ NOTE: if encounter any problem, check tmp_\*.out and tofino/tmp_\*.out in switch first
 		* Run `cd method; su; bash localscripts/stopswitchtestbed.sh` before next time of running
 - Under the main client
-	+ Run `bash scripts/remotes/launchservertestbed.sh`
-	+ NOTE: if encounter nay problem, check tmp_\*.out in each server first
-		* Run `bash scripts/remote/stopservertestbed.sh` before next time of running
-- Evaluation
-	- Under client 1
-		+ Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 1`
-	- Under client 0
-		+ Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 0`
+	+ Run `bash scripts/remote/test_dynamic.sh` to evaluate under dynamic pattern
+	+ ~~Manual way (DEPRECATED)~~
+		+ ~~Run `bash scripts/remotes/launchservertestbed.sh`~~
+			* ~~Run `cd method; ./warmup_client; cd ..` to pre-admit hot keys~~
+		+ ~~NOTE: if encounter nay problem, check tmp_\*.out in each server first~~
+			* ~~Run `bash scripts/remote/stopservertestbed.sh` before next time of running~~
+		+ ~~Launch clients~~
+			- ~~Under client 1~~
+				+ ~~Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 1`~~
+			- ~~Under client 0~~
+				+ ~~Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 0`~~
 	- NOTE: each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-<dynamicpattern>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-hotin-client0.out)
 - After running
 	+ Under each physical switch, run `cd method; su; bash localscripts/stopswitchtestbed.sh`
@@ -109,9 +112,11 @@
 	+ Re-compile clients/servers/switchos as mentioned before
 - Phase 0: setup hot keys and forwarding rules into switch
 	+ `bash scripts/remote/prepare_server_rotation.sh` to generate and sync config.ini for setup phase
-	+ Launch switch, server, and controller based on the new config.ini as mentioned in dynamic running
-	+ If the method is not nocache/distnocache, `cd method; ./warmup_client` to pre-admit hot keys into switch
-	+ `bash scripts/remote/stopservertestbed.sh` to stop server and controller
+	+ Launch switch based on the new config.ini as mentioned in dynamic running
+	+ ~~Manual way (DEPRECATED)~~
+		+ ~~Launch server and controller based on the new config.ini as mentioned in dynamic running~~
+		+ ~~If the method is not nocache/distnocache, `cd method; ./warmup_client` to pre-admit hot keys into switch~~
+		+ ~~`bash scripts/remote/stopservertestbed.sh` to stop server and controller~~
 - Server rotation
 	+ `bash scripts/remote/test_server_rotation.sh`
 		* Phase 1: the first rotation (physical server 0 runs the bottleneck server)
@@ -119,6 +124,12 @@
 		* NOTE: each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-static<staticscale>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out)
 			- NOTE: you can check the statistics during server rotation to see whether the result is reasonable
 	+ `bash scripts/remote/stop_server_rotation.sh`
+	+ NOTE: if some rotation is failed, you can use scripts/remote/test_server_rotation_\<p1/p2\>.sh to get the result of the rotation
+		* For example, if strid=server-x is missed, run `bash scripts/remote/test_server_rotation_p1.sh`
+		* For example, if strid=server-x-y is missed, run `bash scripts/remote/test_server_rotation_p2.sh y`
+		* TODO: Update JAVA code
+			- TODO: We must notify -debug to StatisticsHelper such that it will not delete the statistics file for the first rotation; instead, it will load exsting statistics and merge the current rotation result
+			- TODO: We must overwrite the current rotation result into the array if existing; or insert it into the correct position
 - Aggregate statistics
 	+ Run `bash scripts/remote/calculate_statistics.sh` to get aggregated statistics
 

@@ -4,6 +4,7 @@ import sys
 import json
 #import demjson
 
+STRID = "strid"
 TOTAL_OPSDONE = "totalOpsdone"
 PERSERVER_OPSDONE = "perserverOpsdone"
 EXECUTION_MILLIS = "executionMillis"
@@ -58,12 +59,34 @@ def calculatelatency(totallatency, totallatencynum, totalhistogram):
             break
     return avglatency, latencymedium, latency99p
 
+def calculate_perobjstat(aggjsonarray):
+    for i in range(len(aggjsonarray)):
+        tmpjsonobj = aggjsonarray[i]
+
+        tmpstrid = tmpjsonobj[STRID]
+        tmptotalops = tmpjsonobj[TOTAL_OPSDONE]
+        tmp_perserverops = tmpjsonobj[PERSERVER_OPSDONE]
+        tmptotaltime = tmpjsonobj[EXECUTION_MILLIS]
+
+        tmp_cachemisscnt = 0
+        tmp_maxserverops = 0
+        for j in range(len(tmp_perserverops)):
+            tmp_cachemisscnt += tmp_perserverops[j]
+            if tmp_perserverops[j] > tmp_maxserverops:
+                tmp_maxserverops = tmp_perserverops[j]
+        
+        tmp_cachehitcnt = tmptotalops - tmp_cachemisscnt
+        tmp_normalizedthpt = float(tmptotalops) / float(tmp_maxserverops)
+        print "[{}] thpt {}; cache hit rate {}; normalized thpt {}".format(tmpstrid, float(tmp_cachehitcnt) / float(tmptotalops), tmp_normalizedthpt)
+
 def staticprocess(localjsonarray, remotejsonarray):
     if (len(localjsonarray) != len(remotejsonarray)):
         print "[ERROR][STATIC] client 0 jsonarray size {} != client 1 jsonarray size {}".format(len(localjsonarray), len(remotejsonarray))
         exit(-1)
 
     aggjsonarray = aggregate(localjsonarray, remotejsonarray, len(localjsonarray))
+
+    calculate_perobjstat(aggjsonarray)
 
     bottleneckthpt = aggjsonarray[0][TOTAL_OPSDONE] / aggjsonarray[0][EXECUTION_MILLIS] * 1000 / 1000.0 / 1000.0
     totalthpt = bottleneckthpt
@@ -93,6 +116,8 @@ def dynamicprocess(localjsonarray, remotejsonarray):
     print "[DYNAMIC] common seconds: {}".format(seconds)
 
     aggjsonarray = aggregate(localjsonarray, remotejsonarray, seconds)
+
+    calculate_perobjstat(aggjsonarray)
 
     persecthpt = [0] * seconds
     perseclatencyavg = [0] * seconds

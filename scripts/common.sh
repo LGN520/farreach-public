@@ -24,6 +24,20 @@ SERVER_ROOTPATH="/home/${USER}/projects/NetBuffer"
 # backup rocksdb after loading phase
 BACKUPS_ROOTPATH="/tmp/rocksdbbackups"
 
+##### method-related variables #####
+
+with_controller=0
+if [ "x${DIRNAME}" == "xfarreach" ] || [ "x${DIRNAME}" == "xnetcache" ] || [ "x${DIRNAME}" == "xdistfarreach" ] || [ "x${DIRNAME}" == "xdistcache" ]
+then
+	with_controller=1
+fi
+
+with_reflector=0
+if [ "x${DIRNAME}" == "xdistfarreach" ] || [ "x${DIRNAME}" == "xdistcache" ]
+then
+	with_reflector=1
+fi
+
 ##### Parse ${DRINAME}/config.ini #####
 
 #CURRENT_ROOTPATH=${CLIENT_ROOTPATH}

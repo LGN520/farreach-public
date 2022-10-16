@@ -1,6 +1,7 @@
 # Implementation log of YCSB
 
 - FUTURE
+	* TODO: Reduce redundant switch-related scripts in method/localscripts/
 	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
 		- NOTE: Add preparefinish_client in prebenchmark of distfarreach to trigger snapshot
 		- [IMPORTANT] current distributed extension is a single discussion instead of a critical design -> NOT need to evaluate
@@ -9,16 +10,42 @@
 
 - 10.16
 	+ Siyuan
-		* TODO: Reduce redundant switch-related scripts in method/localscripts/
+		* Fix cached keyset resume issue of netcache/distcache under static pattern
+		* Use keydump_and_sync.sh for workload analysis and pregeneration
+		* Use test_dynamic.sh for dynamic pattern
+		* Launch servers and clients in test_server_rotation.sh, test_dynamic.sh, and load_and_backup.sh
+		* Dump more information for server rotation
+			- Dump strid into each JSONObject of JSONArray in StatisticsHelper
+			- Calculate cache hit rate and normalized throughput in calculate_statistics_helper.py
+		* TODO: Test scripts
+			- TODO: Test sync.sh and keydump_and_sync.sh to check whether they will overwrite benchmark/output/*-statistics
+			- TODO: Test test_server_rotation.sh, test_dynamic.sh, and load_and_backup.sh
+		* Tiny changes in Java
+			- TODO: Support to merge the result of an individual rotation into the existing statistics file
+			- TODO: For synthetic workload, add write ratio, skewness, and value size into StaticStatisticsFilepath
+			- TODO: For TraceReplayWorkload, limit the maximum number of parsed requests, and the maximum value size based on its paper
+			- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
 		* Others in C
 			- TODO: Add bandwidth usage of reporting original values during snapshot (files: switchos.c, controller.c)
 				+ NOTE: bandwidth cost of switch os (i.e., local control plane) also belongs to control plane bandwidth usage
-		* TODO: Use loading phase to pre-load 100M records into 2, 32, 64, 128 storage servers (NOTE: recordload client + nocache switch/server)
 		* Support range query
 			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
 				+ NOTE: pass workloadmode -> if workloadmode=0, directly return after receiving one SCANRES_SPLIT
 			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
 			- TODO: Update DbUdpNative to invoke the native function
+	+ Huancheng
+		* TODO: Make evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twitter traces (Twitter traces may be later) )
+			- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
+		* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
+			- TODO: Check tmp_controller_bwcost.out
+		* TODO: Make evaluation of experiment 2 with 16/32/64/128 servers under YCSB core workload A
+			- TODO: Use loading phase to pre-load 100M records into 32, 64, 128 storage servers (NOTE: recordload client + nocache switch/server)
+		* TODO: Finish TraceReplay workload
+			- TODO: Get correpsonding trace file based on workloadName
+			- TODO: Limit max # of parsed inmemory requests
+		* Support range query
+			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
+			- TODO: Update DbUdpNative to receive SCANRES_SPLIT
 
 - 10.15 ([IMPORTANT] start evaluation)
 	+ Siyuan
@@ -39,20 +66,7 @@
 				- Retrieve config.ini after test/stop_server_rotation.sh
 				- For each method, provide a template config and use a script to generate the config files for the given workloadname and server rotation parameters
 			- Update benchmark.md
-		* TODO: Test scripts for server rotation
-	+ HuanCheng
-		* TODO: Finish TraceReplay workload
-			- TODO: Filter requests if workload mode = 0
-			- TODO: Get correpsonding trace file based on workloadName
-			- TODO: Limit max # of parsed inmemory requests
-		* Support range query
-			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
-			- TODO: Update DbUdpNative to receive SCANRES_SPLIT
-		* TODO: Make evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twitter traces (Twitter traces may be later) )
-			- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
-			- TODO: Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
-				+ TODO: Check tmp_controller_bwcost.out
-		* TODO: Make evaluation of experiment 2 with 16/32/64/128 servers under YCSB core workload A
+		* Test scripts for server rotation
 
 - 10.14
 	+ Siyuan
