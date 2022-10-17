@@ -59,7 +59,7 @@ sleep 5s
 echo "start clients"
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 >>tmp_serverrotation_part2_client.out 2>&1 &"
 sleep 1s
-cd benchmark/ycsb/
+cd ${CLIENT_ROOTPATH}/benchmark/ycsb/
 ./bin/ycsb run ${DIRNAME} -pi 0
 cd ../../
 

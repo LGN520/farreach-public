@@ -18,7 +18,7 @@ source scripts/remote/test_server_rotation_p0.sh
 
 echo "[part 1] run single bottleneck server thread"
 
-source test_server_rotation_p1.sh
+source scripts/remote/test_server_rotation_p1.sh
 
 ##### Part 2 #####
 

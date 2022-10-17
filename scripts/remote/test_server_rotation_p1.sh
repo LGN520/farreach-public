@@ -6,7 +6,7 @@ fi
 #set -x
 
 echo "clear tmp files in remote clients/servers and controller"
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}/benchmark/ycsb/; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
 ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out; rm tmp_controller_bwcost.out"
 ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part2*.out"
 
@@ -52,7 +52,7 @@ sleep 15s # wait longer time for the first rotation, as rocksdb needs to load th
 echo "start clients"
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 >tmp_serverrotation_part1_client.out 2>&1 &"
 sleep 1s
-cd benchmark/ycsb/
+cd ${CLIENT_ROOTPATH}/benchmark/ycsb/
 ./bin/ycsb run ${DIRNAME} -pi 0
 cd ../../
 

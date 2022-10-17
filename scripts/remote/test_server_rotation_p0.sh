@@ -5,7 +5,7 @@ fi
 
 #set -x
 
-if [ with_controller -eq 1 ]
+if [[ with_controller -eq 1 ]]
 then
 	# NOTE: if w/ in-switch cache, finish warmup phase by launching servers of correpsonding method + warmup_client + stopping servers
 	echo "[part 0] pre-admit hot keys into switch before server rotation"
