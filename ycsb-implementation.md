@@ -1,6 +1,7 @@
 # Implementation log of YCSB
 
 - FUTURE
+	* TODO: For synthetic workload, add write ratio, skewness, and value size into StaticStatisticsFilepath -> introduce too many CLI parameters into scripts/remote/calculate_statistics.sh and change too many lines of code in YCSB
 	* TODO: Reduce redundant switch-related scripts in method/localscripts/
 	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
 		- NOTE: Add preparefinish_client in prebenchmark of distfarreach to trigger snapshot
@@ -10,6 +11,11 @@
 
 - 10.18
 	+ Siyuan
+		* TODO: Prepare for in-memory KVS in TangLu's testbed
+			- TODO: Define USE_INMEMORY_KVS in helper.h (commented by default)
+			- TODO: If USE_INMEMORY_KVS, replace rocksdb with in-memory KVS
+			- TODO: Prepare configs/config.ini.inmemory for each method
+			- TODO: Provide scripts/local/change_testbed_inmemory.sh to replace config.ini as configs/config.ini.inmemory for each method, and
 		* TODO: Try in-memory KVS in TangLu's testbed
 
 - 10.17
@@ -34,21 +40,18 @@
 			- Update client code to set endkey = startkey + scan recordcnt (from 1 to 100 in YCSB core workload E) (files: Key.java)
 			- Update server code to calculate scan recordcnt based on endkey - startkey (files: rocksdb_wrapper.c, deleted_set_impl.h)
 		* Tiny changes in Java
-			- TODO: For synthetic workload, add write ratio, skewness, and value size into StaticStatisticsFilepath
-			- TODO: For InswitchCacheClient, always enable withinBenchmark() for FarReach/DistFarReach
+			- For InswitchCacheClient, always enable withinBenchmark() for FarReach/DistFarReach
+			- Test withinBenchmark() to see whether Java can invoke shell command successfully
 		* Others in C
-			- TODO: Add bandwidth usage of reporting original values during snapshot (files: switchos.c, controller.c)
+			- Add bandwidth usage of reporting original values during snapshot (files: switchos.c, controller.c)
 				+ NOTE: bandwidth cost of switch os (i.e., local control plane) also belongs to control plane bandwidth usage
-		* TODO: Prepare for in-memory KVS in TangLu's testbed
-			- TODO: Define USE_INMEMORY_KVS in helper.h (commented by default)
-			- TODO: If USE_INMEMORY_KVS, replace rocksdb with in-memory KVS
-			- TODO: Prepare configs/config.ini.inmemory for each method
-			- TODO: Provide scripts/local/change_testbed_inmemory.sh to replace config.ini as configs/config.ini.inmemory for each method, and
+				+ In controller, bandwidth cost refers to total control plane bandwidth usage including the local control plane bandwidth cost (i.e., bandwidth cost for special cases)
+		* Update benchmark.md for synthetic workload path issue (make an IMPORTANT NOTE)
 	+ Huancheng
 		* Evaluation
 			* TODO: Make evaluation of experiment 1 on nocache/netcache
 				- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
-			* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
+			* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
 				- TODO: Check tmp_controller_bwcost.out
 			* Test new scripts if you need to use them (see benchmark.md for usage)
 				- TODO: Test test_server_rotation.sh, test_dynamic.sh, and load_and_backup.sh

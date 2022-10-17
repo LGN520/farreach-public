@@ -134,6 +134,19 @@
 - Aggregate statistics
 	+ Run `bash scripts/remote/calculate_statistics.sh` to get aggregated statistics
 
+## Parameter sensitivity
+
+- Change parameters
+	+ For write ratio, change read/updateproportion in benchmark/ycsb/workloads/synthetic
+	+ For value size, change fieldlength in benchmark/ycsb/workloads/synthetic
+	+ For skewness, change ZIPFIAN_CONSTANT in benchmark/ycsb/core/generator/ZipfianGenerator + sync_file.sh + re-compile ycsb
+- IMPORTANT NOTE
+	- Under static pattern, each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-static<staticscale>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out) without parameter info
+	- NOTE: before changing parameter for the next time of experiment
+		+ Run `bash scripts/remote/calculate_statistics.sh` to get results of the current parameter
+		+ Backup the statistics files of the current parameter if necessary, which will be overwritten next time
+	- ~~(NOT run dynamic pattern here) under dynamic pattern, each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-<dynamicpattern>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-hotin-client0.out)~~
+
 ## Appendix
 
 - Static server idx for different workloads and scale
