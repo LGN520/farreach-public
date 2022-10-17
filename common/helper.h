@@ -80,6 +80,8 @@ static const char *get_methodname_byid(method_t methodid) {
 
 #define SERVER_ROTATION
 
+#define USE_SCANRECORDCNT
+
 /***** Timing *****/
 
 // us

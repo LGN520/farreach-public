@@ -107,12 +107,18 @@ template<class key_t, class seq_t>
 size_t DeletedSet<key_t, seq_t>::range_scan(key_t startkey, key_t endkey, std::vector<std::pair<key_t, snapshot_record_t>> &results) {
 	results.clear();
 	typename std::map<key_t, seq_t>::iterator iter = records_sorted_bykey.lower_bound(startkey);
-	for (; iter != records_sorted_bykey.end() && iter->first <= endkey; iter++) {
+#ifdef USE_SCANRECORDCNT
+	int scanrecordcnt = netreach_key_t::get_scanrecordcnt(startkey, endkey);
+	for (int scanrecordidx = 0; iter != records_sorted_bykey.end() && scanrecordidx < scanrecordcnt; scanrecordidx++) {
+#else
+	for (; iter != records_sorted_bykey.end() && iter->first <= endkey; ) {
+#endif
 		snapshot_record_t tmprecord;
 		tmprecord.seq = iter->second;
 		tmprecord.stat = false;
 
 		results.push_back(std::pair<key_t, snapshot_record_t>(iter->first, tmprecord));
+		iter++;
 	}
 	return results.size();
 }

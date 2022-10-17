@@ -34,6 +34,17 @@ Key Key::min() {
     return min_key;
 }
 
+int Key::get_scanrecordcnt(Key &startkey, Key &endkey) {
+#ifdef LARGE_KEY
+	int scanrecordcnt = endkey.keylolo - startkey.keylolo;
+#else
+	int scanrecordcnt = endkey.keylo - startkey.keylo;
+#endif
+	INVARIANT(scanrecordcnt > 0);
+	INVARIANT(scanrecordcnt <= 1000); // NOT too large
+	return scanrecordcnt;
+}
+
 Key::Key() {
 #ifdef LARGE_KEY
 	keylolo = 0;

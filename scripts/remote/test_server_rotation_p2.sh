@@ -5,14 +5,20 @@ fi
 
 #set -x
 
-if [ $# -ne 1 ]
+if [ $# -ne 2 ]
 then
-	echo "Usage: bash scripts/remote/test_server_rotation_p2.sh <rotationidx>"
+	echo "Usage: bash scripts/remote/test_server_rotation_p2.sh <isSingleRotation> <rotationidx>"
 	exit
 fi
 
-tmprotateidx=$1
+tmpsinglerotation=$1
+if [ ${tmpsinglerotation} -ne 1 ] && [ ${tmpsinglerotation} -ne 0 ]
+then
+	echo "isSingleRotation should be 1 or 0"
+	exit
+fi
 
+tmprotateidx=$2
 echo "tmprotateidx: "${tmprotateidx}
 
 echo "stop clients"
@@ -57,10 +63,10 @@ fi
 sleep 5s
 
 echo "start clients"
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 >>tmp_serverrotation_part2_client.out 2>&1 &"
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >>tmp_serverrotation_part2_client.out 2>&1 &"
 sleep 1s
 cd benchmark/ycsb/
-./bin/ycsb run ${DIRNAME} -pi 0
+./bin/ycsb run ${DIRNAME} -pi 0 -sr ${tmpsinglerotation}
 cd ../../
 
 # stop and kill server/controller/reflector

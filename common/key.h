@@ -30,6 +30,8 @@ class Key {
   static Key max();
   static Key min();
 
+  static int get_scanrecordcnt(Key &startkey, Key &endkey);
+
   Key();
 #ifdef LARGE_KEY
   Key(uint32_t keylolo, uint32_t keylohi, uint32_t keyhilo, uint32_t keyhihi);

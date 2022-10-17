@@ -125,11 +125,12 @@
 			- NOTE: you can check the statistics during server rotation to see whether the result is reasonable
 	+ `bash scripts/remote/stop_server_rotation.sh`
 	+ NOTE: if some rotation is failed, you can use scripts/remote/test_server_rotation_\<p1/p2\>.sh to get the result of the rotation
-		* For example, if strid=server-x is missed, run `bash scripts/remote/test_server_rotation_p1.sh`
-		* For example, if strid=server-x-y is missed, run `bash scripts/remote/test_server_rotation_p2.sh y`
-		* TODO: Update JAVA code
-			- TODO: We must notify -debug to StatisticsHelper such that it will not delete the statistics file for the first rotation; instead, it will load exsting statistics and merge the current rotation result
-			- TODO: We must overwrite the current rotation result into the array if existing; or insert it into the correct position
+		* [IMPORTANT] backup the existing statistics file first to avoid mis-overwriting
+		* For example, if strid=server-x is missed, run `bash scripts/remote/test_server_rotation_p1.sh 1`
+		* For example, if strid=server-x-y is missed, run `bash scripts/remote/test_server_rotation_p2.sh 1 y`
+	+ NOTE: we limit the execution time of each rotation as 10 seconds in all methods for fair comparisons
+		* Involved files: ycsb/core/Client.java
+		* DEPRECATED: ycsb/core/TerminatorThread.java, scripts/local/calculate_statistics_helper.py
 - Aggregate statistics
 	+ Run `bash scripts/remote/calculate_statistics.sh` to get aggregated statistics
 

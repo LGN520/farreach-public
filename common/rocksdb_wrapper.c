@@ -488,13 +488,25 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 	std::string startkeystr = startkey.to_string_for_rocksdb();
 	std::string endkeystr = endkey.to_string_for_rocksdb();
 	iter->Seek(startkeystr);
+#ifdef USE_SCANRECORDCNT
+	int scanrecordcnt = netreach_key_t::get_scanrecordcnt(startkey, endkey);
+	int scanrecordidx = 0;
+#endif
 	while (iter->Valid()) {
 		std::string tmpkeystr = iter->key().ToString();
 		netreach_key_t tmpkey;
 		tmpkey.from_string_for_rocksdb(tmpkeystr);
+#ifdef USE_SCANRECORDCNT
+		if (scanrecordidx >= scanrecordcnt) {
+			break;
+		} else {
+			scanrecordidx += 1;
+		}
+#else
 		if (tmpkey > endkey) {
 			break;
 		}
+#endif
 		std::string tmpvalstr = iter->value().ToString();
 		INVARIANT(tmpvalstr != "");
 
@@ -528,8 +540,13 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 		// get results from inswitch snapshot
 		std::vector<std::pair<netreach_key_t, snapshot_record_t>> inswitch_results;
 		std::map<netreach_key_t, snapshot_record_t>::iterator inswitch_snapshot_iter = inswitch_snapshot.lower_bound(startkey);
-		for (; inswitch_snapshot_iter != inswitch_snapshot.end() && inswitch_snapshot_iter->first <= endkey; inswitch_snapshot_iter++) {
+#ifdef USE_SCANRECORDCNT
+		for (int inswitch_scanrecordidx = 0; inswitch_snapshot_iter != inswitch_snapshot.end() && inswitch_scanrecordidx < scanrecordcnt; inswitch_scanrecordidx++) {
+#else
+		for (; inswitch_snapshot_iter != inswitch_snapshot.end() && inswitch_snapshot_iter->first <= endkey; ) {
+#endif
 			inswitch_results.push_back(*inswitch_snapshot_iter);
+			inswitch_snapshot_iter++;
 		}
 
 		//mutexlock.unlock();
@@ -546,6 +563,12 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 	else {
 		results = db_results;
 	}
+
+#ifdef USE_SCANRECORDCNT
+	if (results.size() > scanrecordcnt) {
+		results = std::vector<std::pair<netreach_key_t, snapshot_record_t>>(results.begin(), results.begin() + scanrecordcnt);
+	}
+#endif
 
 	return results.size();
 }

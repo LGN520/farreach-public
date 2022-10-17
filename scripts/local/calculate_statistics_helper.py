@@ -16,6 +16,14 @@ STATIC_PEROBJ_EXECUTION_MILLIS = 10 * 1000
 DYNAMIC_PEROBJ_EXECUTION_MILLIS = 1 * 1000
 GLOBAL_PEROBJ_EXECUTION_MILLIS = -1
 
+def getstrid(tmpjsonobj):
+    if STRID in tmpjsonobj.keys():
+        tmpstrid = tmpjsonobj[STRID]
+    else:
+        tmpstrid = "NOSTRID"
+    return tmpstrid
+
+
 def aggregate(localjsonarray, remotejsonarray, length):
     global GLOBAL_PEROBJ_EXECUTION_MILLIS
 
@@ -23,7 +31,17 @@ def aggregate(localjsonarray, remotejsonarray, length):
     for i in range(length):
         localjsonobj = localjsonarray[i]
         remotejsonobj = remotejsonarray[i]
+
         aggobj = {}
+
+        localstrid = getstrid(localjsonobj)
+        remotestrid = getstrid(remotejsonobj)
+        if localstrid == remotestrid:
+            aggobj[STRID] = localstrid
+        else:
+            print "[ERROR][STRID] for STRID of the {}th JsonObject, {} != {}".format(i, localstrid, remotestrid)
+            exit(-1)
+
         aggobj[TOTAL_OPSDONE] = localjsonobj[TOTAL_OPSDONE] + remotejsonobj[TOTAL_OPSDONE]
         aggobj[PERSERVER_OPSDONE] = []
         if (len(localjsonobj[PERSERVER_OPSDONE]) != len(remotejsonobj[PERSERVER_OPSDONE])):
@@ -80,10 +98,7 @@ def calculate_perobjstat(aggjsonarray):
     for i in range(len(aggjsonarray)):
         tmpjsonobj = aggjsonarray[i]
 
-        if STRID in tmpjsonobj.keys():
-            tmpstrid = tmpjsonobj[STRID]
-        else:
-            tmpstrid = "tmpstrid"
+        tmpstrid = getstrid(tmpjsonobj)
         tmptotalops = tmpjsonobj[TOTAL_OPSDONE]
         tmp_perserverops = tmpjsonobj[PERSERVER_OPSDONE]
         tmptotaltime = tmpjsonobj[EXECUTION_MILLIS]
