@@ -12,6 +12,7 @@ ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_
 
 echo "stop clients"
 source bash scripts/local/localstop.sh ./client >/dev/null 2>&1
+sleep 5s
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/local/localstop.sh ./client >/dev/null 2>&1"
 echo "kill clients"
 source scripts/local/localkill.sh ./client >/dev/null 2>&1
@@ -50,7 +51,7 @@ sleep 15s # wait longer time for the first rotation, as rocksdb needs to load th
 # NOTE: we trigger snapshot in the physical client 0 during transaction phase for farreach/distfarreach
 echo "start clients"
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 >tmp_serverrotation_part1_client.out 2>&1 &"
-sleep 5s
+sleep 1s
 cd benchmark/ycsb/
 ./bin/ycsb run ${DIRNAME} -pi 0
 cd ../../
