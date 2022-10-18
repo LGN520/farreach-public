@@ -224,7 +224,8 @@ bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxid
 	for (int i = 0; i < maxidx; i++) {
 		tommyds_object_t *tmpobj = new tommyds_object_t();
 		tmpobj->key = keys[i];
-		tmpobj->val = vals[i];
+		//tmpobj->val = vals[i];
+		tmpobj->vallen = vals[i].val_length;
 		tmpobj->seq = 0;
 		tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj->key.hash_bycrc32());
 	}
@@ -254,7 +255,8 @@ bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
 #ifdef USE_TOMMYDS_KVS
 	tommyds_object_t *tmpobj = new tommyds_object_t();
 	tmpobj->key = key;
-	tmpobj->val = val;
+	//tmpobj->val = val;
+	tmpobj->vallen = val.val_length;
 	tmpobj->seq = 0;
 	tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj->key.hash_bycrc32());
 #else
@@ -296,7 +298,11 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 #ifdef USE_TOMMYDS_KVS
 	tommyds_object_t *tmpobj = (tommyds_object_t *) tommy_hashdyn_search(db_ptr, tommyds_compare, &key, key.hash_bycrc32());
 	if (!tmpobj) {
-		val = tmpobj->val;
+		//val = tmpobj->val;
+		uint32_t tmpvallen = tmpobj->vallen;
+		char tmpbuf[tmpvallen];
+		memset(tmpbuf, 0x01, tmpvallen);
+		val = val_t(tmpbuf, tmpvallen);
 		tmpseq = tmpobj->seq;
 		stat = true;
 	}
@@ -385,7 +391,8 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 	// put into in-memory KVS
 	tommyds_object_t *tmpobj = new tommyds_object_t();
 	tmpobj->key = key;
-	tmpobj->val = val;
+	//tmpobj->val = val;
+	tmpobj->vallen = val.val_length;
 	tmpobj->seq = seq;
 	tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj->key.hash_bycrc32());
 #else

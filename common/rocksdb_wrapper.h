@@ -69,7 +69,8 @@
 #ifdef USE_TOMMYDS_KVS
 typedef struct TommydsObject {
 	netreach_key_t key;
-	val_t val;
+	//val_t val;
+	uint32_t vallen; // store vallen instead of valdata to save memory
 	uint32_t seq;
 	tommy_node node;
 } tommyds_object_t;
