@@ -14,7 +14,7 @@ echo "launch storage servers of ${DIRNAME}"
 source scripts/remote/launchservertestebed.sh
 sleep 10s
 
-if [ with_controller -eq 1 ]
+if [ ${with_controller} -eq 1 ]
 then
 	echo "pre-admit hot keys"
 	cd ${DIRNAME}

@@ -58,13 +58,16 @@ if [ ${with_reflector} -eq 1 ]
 then
 	echo "start reflectors"
 	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./reflector leaf >>tmp_serverrotation_part2_reflector.out 2>&1 &"
+	cd ${DIRNAME}
 	sudo nohup ./reflector spine >>tmp_serverrotation_part2_reflector.out 2>&1 &
+	cd ..
 fi
 sleep 5s
 
 echo "start clients"
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >>tmp_serverrotation_part2_client.out 2>&1 &"
 sleep 1s
+pwd
 cd ${CLIENT_ROOTPATH}/benchmark/ycsb/
 ./bin/ycsb run ${DIRNAME} -pi 0
 cd ../../

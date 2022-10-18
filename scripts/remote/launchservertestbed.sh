@@ -35,7 +35,9 @@ if [ ${with_reflector} -eq 1 ]
 then
 	echo "launch reflectors"
 	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./reflector leaf >tmp_reflector.out 2>&1 &"
+	cd ${DIRNAME}
 	sudo nohup ./reflector spine >tmp_reflector.out 2>&1 &
+	cd ..
 fi
 
 cd ..
