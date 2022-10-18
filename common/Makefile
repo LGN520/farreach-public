@@ -25,7 +25,7 @@ INCDIR += $(ROCKSDB_INCDIR)
 TOMMYDS_INCDIR += -I../tommyds-2.2/tommyds
 INCDIR += $(TOMMYDS_INCDIR)
 
-DEPS += rocksdb_wrapper.d
+DEPS += rocksdb_wrapper.d rocksdb_wrapper.shared.d
 CLEAN += rocksdb_wrapper.o rocksdb_wrapper.shared.o
 ROCKSDB_OBJECTS += rocksdb_wrapper.o
 ROCKSDB_SHARED_OBJECTS += rocksdb_wrapper.shared.o
@@ -36,62 +36,62 @@ ROCKSDB_SHARED_OBJECTS += rocksdb_wrapper.shared.o
 
 UTILS_OBJECTS :=
 
-DEPS += key.d val.d
+DEPS += key.d val.d key.shared.d val.shared.d
 CLEAN += key.o val.o key.shared.o val.shared.o
 UTILS_OBJECTS += key.o val.o
 UTILS_SHARED_OBJECTS += key.shared.o val.shared.o
 
-DEPS += crc32.d
+DEPS += crc32.d crc32.shared.d
 CLEAN += crc32.o crc32.shared.o
 UTILS_OBJECTS += crc32.o
 UTILS_SHARED_OBJECTS += crc32.shared.o
 
-DEPS += dynamic_array.d
+DEPS += dynamic_array.d dynamic_array.shared.d
 CLEAN += dynamic_array.o dynamic_array.shared.o
 UTILS_OBJECTS += dynamic_array.o
 UTILS_SHARED_OBJECTS += dynamic_array.shared.o
 
-DEPS += workloadparser/parser.d workloadparser/ycsb_parser.d workloadparser/synthetic_parser.d
+DEPS += workloadparser/parser.d workloadparser/ycsb_parser.d workloadparser/synthetic_parser.d workloadparser/parser.shared.d workloadparser/ycsb_parser.shared.d workloadparser/synthetic_parser.shared.d
 CLEAN += workloadparser/parser.o workloadparser/ycsb_parser.o workloadparser/synthetic_parser.o workloadparser/parser.shared.o workloadparser/ycsb_parser.shared.o workloadparser/synthetic_parser.shared.o
 UTILS_OBJECTS += workloadparser/parser.o workloadparser/ycsb_parser.o workloadparser/synthetic_parser.o
 UTILS_SHARED_OBJECTS += workloadparser/parser.shared.o workloadparser/ycsb_parser.shared.o workloadparser/synthetic_parser.shared.o
 
-DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
+DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d iniparser/iniparser.shared.d iniparser/dictionary.shared.d iniparser/iniparser_wrapper.shared.d
 CLEAN += iniparser/iniparser.o iniparser/dictionary.o iniparser/iniparser_wrapper.o iniparser/iniparser.shared.o iniparser/dictionary.shared.o iniparser/iniparser_wrapper.shared.o
 UTILS_OBJECTS += iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
 UTILS_SHARED_OBJECTS += iniparser/iniparser_wrapper.shared.o iniparser/iniparser.shared.o iniparser/dictionary.shared.o
 
-DEPS += special_case.d
+DEPS += special_case.d special_case.shared.d
 CLEAN += special_case.o special_case.shared.o
 UTILS_OBJECTS += special_case.o
 UTILS_SHARED_OBJECTS += special_case.shared.o
 
-DEPS += snapshot_record.d
+DEPS += snapshot_record.d snapshot_record.shared.d
 CLEAN += snapshot_record.o snapshot_record.shared.o
 UTILS_OBJECTS += snapshot_record.o
 UTILS_SHARED_OBJECTS += snapshot_record.shared.o
 
-DEPS += latency_helper.d
+DEPS += latency_helper.d latency_helper.shared.d
 CLEAN += latency_helper.o latency_helper.shared.o
 UTILS_OBJECTS += latency_helper.o
 UTILS_SHARED_OBJECTS += latency_helper.shared.o
 
-DEPS += dynamic_rulemap.d
+DEPS += dynamic_rulemap.d dynamic_rulemap.shared.d
 CLEAN += dynamic_rulemap.o dynamic_rulemap.shared.o
 UTILS_OBJECTS += dynamic_rulemap.o
 UTILS_SHARED_OBJECTS += dynamic_rulemap.shared.o
 
-DEPS += pkt_ring_buffer.d
+DEPS += pkt_ring_buffer.d pkt_ring_buffer.shared.d
 CLEAN += pkt_ring_buffer.o pkt_ring_buffer.shared.o
 UTILS_OBJECTS += pkt_ring_buffer.o
 UTILS_SHARED_OBJECTS += pkt_ring_buffer.shared.o
 
-DEPS += io_helper.d
+DEPS += io_helper.d io_helper.shared.d
 CLEAN += io_helper.o io_helper.shared.o
 UTILS_OBJECTS += io_helper.o
 UTILS_SHARED_OBJECTS += io_helper.shared.o
 
-DEPS += socket_helper.d
+DEPS += socket_helper.d socket_helper.shared.d
 CLEAN += socket_helper.o socket_helper.shared.o
 UTILS_OBJECTS += socket_helper.o
 UTILS_SHARED_OBJECTS += socket_helper.shared.o

@@ -2,10 +2,15 @@
 
 /***** for all ******/
 
+#ifdef USE_TOMMYDS_KVS
+#else
 rocksdb::Options RocksdbWrapper::rocksdb_options = rocksdb::Options();
+#endif
 
 void RocksdbWrapper::prepare_rocksdb() {
-
+#ifdef USE_TOMMYDS_KVS
+  printf("[WARN] TommyDS does not need preparation and ignore prepare().\n");
+#else
   rocksdb_options.create_if_missing = true; // create database if not exist
   rocksdb_options.enable_blob_files = false; // disable key-value separation
   
@@ -55,6 +60,8 @@ void RocksdbWrapper::prepare_rocksdb() {
 #ifdef DEBUG_ROCKSDB
   //rocksdb_options.statistics = rocksdb::CreateDBStatistics();
   rocksdb_options.stats_dump_period_sec = 1;
+#endif
+
 #endif
 }
 
@@ -215,11 +222,11 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxidx) {
 #ifdef USE_TOMMYDS_KVS
 	for (int i = 0; i < maxidx; i++) {
-		struct tommyds_object_t *tmpobj = new tommyds_object_t();
-		tmpobj.key = keys[i];
-		tmpobj.val = vals[i];
-		tmpobj.seq = 0;
-		tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj.key.hash_bycrc32());
+		tommyds_object_t *tmpobj = new tommyds_object_t();
+		tmpobj->key = keys[i];
+		tmpobj->val = vals[i];
+		tmpobj->seq = 0;
+		tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj->key.hash_bycrc32());
 	}
 #else
 	rocksdb::Status s;
@@ -245,11 +252,11 @@ bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxid
 
 bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
 #ifdef USE_TOMMYDS_KVS
-	struct tommyds_object_t *tmpobj = new tommyds_object_t();
-	tmpobj.key = key;
-	tmpobj.val = val;
-	tmpobj.seq = 0;
-	tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj.key.hash_bycrc32());
+	tommyds_object_t *tmpobj = new tommyds_object_t();
+	tmpobj->key = key;
+	tmpobj->val = val;
+	tmpobj->seq = 0;
+	tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj->key.hash_bycrc32());
 #else
 	rocksdb::Status s;
 	std::string valstr = val.to_string_for_rocksdb(0);
@@ -287,7 +294,7 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 	uint32_t tmpseq = 0;
 
 #ifdef USE_TOMMYDS_KVS
-	struct tommyds_object_t *tmpobj = tommy_hashdyn_search(db_ptr, compare, &key, key.hash_bycrc32());
+	tommyds_object_t *tmpobj = (tommyds_object_t *) tommy_hashdyn_search(db_ptr, tommyds_compare, &key, key.hash_bycrc32());
 	if (!tmpobj) {
 		val = tmpobj->val;
 		tmpseq = tmpobj->seq;
@@ -364,7 +371,7 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 #ifdef USE_TOMMYDS_KVS
 	// check seq of undeleted keys if necessary
 	if (method_needseq() && checkseq) {
-		struct tommyds_object_t *tmpobj = tommy_hashdyn_search(db_ptr, compare, &key, key.hash_bycrc32());
+		tommyds_object_t *tmpobj = (tommyds_object_t *) tommy_hashdyn_search(db_ptr, tommyds_compare, &key, key.hash_bycrc32());
 		if (!tmpobj) {
 			tmp_seq = tmpobj->seq;
 		}
@@ -376,11 +383,11 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 	}
 
 	// put into in-memory KVS
-	struct tommyds_object_t *tmpobj = new tommyds_object_t();
-	tmpobj.key = key;
-	tmpobj.val = val;
-	tmpobj.seq = seq;
-	tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj.key.hash_bycrc32());
+	tommyds_object_t *tmpobj = new tommyds_object_t();
+	tmpobj->key = key;
+	tmpobj->val = val;
+	tmpobj->seq = seq;
+	tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj->key.hash_bycrc32());
 #else
 	rocksdb::Status s;
 	std::string valstr;
@@ -473,7 +480,7 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 #ifdef USE_TOMMYDS_KVS
 	// check seq of undeleted keys if necessary
 	if (method_needseq() && checkseq) {
-		struct tommyds_object_t *tmpobj = tommy_hashdyn_search(db_ptr, compare, &key, key.hash_bycrc32());
+		tommyds_object_t *tmpobj = (tommyds_object_t *) tommy_hashdyn_search(db_ptr, tommyds_compare, &key, key.hash_bycrc32());
 		if (!tmpobj) {
 			tmp_seq = tmpobj->seq;
 		}
@@ -485,7 +492,7 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 	}
 
 	// delete from in-memory KVS
-	struct tommyds_object_t *tmpobj = tommy_hashdyn_remove(db_ptr, compare, &key, key.hash_bycrc32());
+	tommyds_object_t *tmpobj = (tommyds_object_t *) tommy_hashdyn_remove(db_ptr, tommyds_compare, &key, key.hash_bycrc32());
 	if (!tmpobj) {
 		delete tmpobj;
 		tmpobj = NULL;

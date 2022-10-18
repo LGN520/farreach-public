@@ -131,17 +131,17 @@ DEPS += remote_client.d
 CLEAN += remote_client.o
 CLIENT_TARGETS += remote_client
 
-localtest: localtest.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
-DEPS += localtest.d
-CLEAN += localtest.o
-SERVER_TARGETS += localtest
+#localtest: localtest.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
+#	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
+#DEPS += localtest.d
+#CLEAN += localtest.o
+#SERVER_TARGETS += localtest
 
-loader: loader.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
-DEPS += loader.d
-CLEAN += loader.o
-SERVER_TARGETS += loader
+#loader: loader.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
+#	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
+#DEPS += loader.d
+#CLEAN += loader.o
+#SERVER_TARGETS += loader
 
 #server: server.o $(UTILS_OBJECTS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
 	#$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) $(DPDK_LDLIBS) -o $@
