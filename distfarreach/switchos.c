@@ -135,6 +135,9 @@ std::atomic<bool> popworker_know_snapshot_end(false); // ensure current case2 is
 //bool volatile specialcaseserver_know_snapshot_end = false; // ensure current case1s are reported before rollback
 std::atomic<bool> specialcaseserver_know_snapshot_end(false); // ensure current case1s are reported before rollback
 
+// local control plane bandwidth usage
+std::atomic<uint64_t> specialcase_bwcost(0); // in unit of byte (cleared per snapshot period)
+
 void prepare_switchos();
 void recover();
 void *run_switchos_popserver(void *param);
@@ -352,13 +355,13 @@ void recover() {
 	system("sudo bash tofino/recover_switch.sh");
 
 	// extract snapshot data
-	// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes (including SNAPSHOT_GETDATA_ACK), per-server data>
+	// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes (including SNAPSHOT_GETDATA_ACK), uint64_t cur_specialcase_bwcost, per-server data>
 	// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 	// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 	int control_type = *((int *)content);
 	INVARIANT(control_type == SNAPSHOT_GETDATA_ACK);
 	int total_bytes = *((int32_t *)(content + sizeof(int)));
-	int tmp_offset = sizeof(int) + sizeof(int32_t); // SNAPSHOT_DATA + total_bytes
+	int tmp_offset = sizeof(int) + sizeof(int32_t) + sizeof(uint64_t); // SNAPSHOT_DATA + total_bytes + cur_specialcase_bwcost
 	while (true) {
 		tmp_offset += sizeof(int32_t); // skip perserver_bytes
 		uint16_t tmp_serveridx = *((uint16_t *)(content + tmp_offset));
@@ -1219,6 +1222,9 @@ void *run_switchos_snapshotserver(void *param) {
 			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_ENABLE_SINGLEPATH_ACK);
 
+			// reset local control plane bandwidth cost
+			specialcase_bwcost = 0;
+
 			// sendback SNAPSHOT_PREPARE_ACK
 			udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_PREPARE_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
@@ -1421,9 +1427,10 @@ void *run_switchos_snapshotserver(void *param) {
 #endif
 				}
 
-				// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, per-server data>
+				// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, uint64_t cur_specialcase_bwcost, per-server data>
 				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
+				uint64_t cur_specialcase_bwcost = specialcase_bwcost;
 				memset((void *)tmp_send_bytes, 0, max_server_total_logical_num*sizeof(int));
 				memset((void *)tmp_record_cnts, 0, max_server_total_logical_num*sizeof(int));
 				for (size_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
@@ -1445,7 +1452,7 @@ void *run_switchos_snapshotserver(void *param) {
 						tmp_record_cnts[tmp_serveridx] += 1;
 					}
 				}
-				int total_bytes = sizeof(int) + sizeof(int32_t); // leave 4B for SNAPSHOT_DATA and total_bytes
+				int total_bytes = sizeof(int) + sizeof(int32_t) + sizeof(uint64_t); // leave 16B for SNAPSHOT_DATA and total_bytes and cur_specialcase_bwcost
 				for (uint16_t tmp_serveridx = 0; tmp_serveridx < max_server_total_logical_num; tmp_serveridx++) {
 					if (tmp_record_cnts[tmp_serveridx] > 0) {
 						int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int);
@@ -1461,6 +1468,7 @@ void *run_switchos_snapshotserver(void *param) {
 				}
 				sendbuf.dynamic_memcpy(0, (char *)&SNAPSHOT_GETDATA_ACK, sizeof(int)); // set 1st 4B as SNAPSHOT_GETDATA_ACK
 				sendbuf.dynamic_memcpy(0 + sizeof(int), (char *)&total_bytes, sizeof(int32_t)); // set 2nd 4B as total_bytes
+				sendbuf.dynamic_memcpy(0 + sizeof(int) + sizeof(int32_t), (char *)&cur_specialcase_bwcost, sizeof(uint64_t)); // set 3rd 8B as cur_specialcase_bwcost
 				INVARIANT(total_bytes <= MAX_LARGE_BUFSIZE);
 				INVARIANT(total_bytes == sendbuf.size());
 			}
@@ -1538,24 +1546,28 @@ void *run_switchos_specialcaseserver(void *param) {
 					{
 						getres_latest_seq_inswitch_case1_t req(CURMETHOD_ID, buf, recv_size);
 						process_specialcase(req.idx(), req.key(), req.val(), req.seq(), req.stat());
+						specialcase_bwcost += req.bwcost();
 						break;
 					}
 				case packet_type_t::GETRES_DELETED_SEQ_INSWITCH_CASE1:
 					{
 						getres_deleted_seq_inswitch_case1_t req(CURMETHOD_ID, buf, recv_size);
 						process_specialcase(req.idx(), req.key(), req.val(), req.seq(), req.stat());
+						specialcase_bwcost += req.bwcost();
 						break;
 					}
 				case packet_type_t::PUTREQ_SEQ_INSWITCH_CASE1:
 					{
 						putreq_seq_inswitch_case1_t req(CURMETHOD_ID, buf, recv_size);
 						process_specialcase(req.idx(), req.key(), req.val(), req.seq(), req.stat());
+						specialcase_bwcost += req.bwcost();
 						break;
 					}
 				case packet_type_t::DELREQ_SEQ_INSWITCH_CASE1:
 					{
 						delreq_seq_inswitch_case1_t req(CURMETHOD_ID, buf, recv_size);
 						process_specialcase(req.idx(), req.key(), req.val(), req.seq(), req.stat());
+						specialcase_bwcost += req.bwcost();
 						break;
 					}
 				default:

@@ -80,6 +80,12 @@ static const char *get_methodname_byid(method_t methodid) {
 
 #define SERVER_ROTATION
 
+// determine how to perform range query
+#define USE_SCANRECORDCNT
+
+// determine whether using in-memory KVS in server
+//#define USE_TOMMYDS_KVS
+
 /***** Timing *****/
 
 // us

@@ -76,7 +76,8 @@ int *controller_snapshotclient_for_server_udpsock_list = NULL;
 dynamic_array_t *controller_snapshotclient_for_server_databuf_list = NULL;
 
 // control plane bandwidth usage
-std::atomic<uint64_t> bandwidthcost(0); // in unit of byte (cleared per snapshot period)
+std::atomic<uint64_t> bandwidthcost(0); // in unit of byte (cleared per snapshot period); including local control plane BW cost
+std::atomic<uint64_t> localcp_bandwidthcost(0); // in unit of byte; only for local control plane BW cost (speical cases)
 
 void prepare_controller();
 void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
@@ -778,7 +779,7 @@ void *run_controller_snapshotclient(void *param) {
 		for (size_t i = 0; i < total_switch_physical_num; i++) {
 			dynamic_array_t &databuf = databufs[i];
 
-			// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes (including SNAPSHOT_GETDATA_ACK), per-server data>
+			// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes (including SNAPSHOT_GETDATA_ACK), uint64_t cur_specialcase_bwcost, per-server data>
 			// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 			
@@ -787,10 +788,14 @@ void *run_controller_snapshotclient(void *param) {
 			INVARIANT(databuf.size() == total_bytes);
 
 			bandwidthcost += total_bytes; // update bandwidth usage
+
+			uint64_t cur_specialcase_bwcost = *((uint64_t *)(databuf.array() + sizeof(int) + sizeof(int32_t)));
+			bandwidthcost += cur_specialcase_bwcost;
+			localcp_bandwidthcost += cur_specialcase_bwcost;
 			
 			// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
 			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-			int tmp_offset = sizeof(int) + sizeof(int32_t); // SNAPSHOT_GETDATA_ACK + total_bytes
+			int tmp_offset = sizeof(int) + sizeof(int32_t) + sizeof(uint64_t); // SNAPSHOT_GETDATA_ACK + total_bytes + cur_specialcase_bwcost
 			while (tmp_offset < total_bytes) {
 				int32_t tmp_serverbytes = *((int32_t *)(databuf.array() + tmp_offset));
 				int32_t effective_serverbytes = tmp_serverbytes - sizeof(int32_t) - sizeof(uint16_t) - sizeof(int32_t);
@@ -849,14 +854,17 @@ void *run_controller_snapshotclient(void *param) {
 
 		// NOTE: append bandwidthcost into tmp_controller_bwcost.out
 		double bwcost_rate = bandwidthcost / (controller_snapshot_period / 1000.0) / 1024.0 / 1024.0; // MiB/s
+		double localcp_bwcost_rate = localcp_bandwidthcost / (controller_snapshot_period / 1000.0) / 1024.0 / 1024.0; // MiB/s
 		//printf("bandwidth cost: %f MiB/s\n", bwcost_rate);
 		//fflush(stdout);
 		FILE *tmpfd = fopen("tmp_controller_bwcost.out", "a+");
-		fprintf(tmpfd, "bwcost: %f MiB/s\n", bwcost_rate);
+		fprintf(tmpfd, "total bwcost: %f MiB/s (including local bwcost %f MiB/s)\n", bwcost_rate, localcp_bwcost_rate);
 		fflush(tmpfd);
 		fclose(tmpfd);
 
-		bandwidthcost = 0; // clear to count the next period
+		// clear to count the next period
+		bandwidthcost = 0; 
+		localcp_bandwidthcost = 0;
 		
 		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databufs) for controller failure recovery
 		controller_update_snapshotid(databufs[0].array(), databufs[0].size(), databufs[1].array(), databufs[1].size());

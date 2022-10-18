@@ -1,12 +1,78 @@
 # Implementation log of YCSB
 
 - FUTURE
+	* TODO: For synthetic workload, add write ratio, skewness, and value size into StaticStatisticsFilepath -> introduce too many CLI parameters into scripts/remote/calculate_statistics.sh and change too many lines of code in YCSB
 	* TODO: Reduce redundant switch-related scripts in method/localscripts/
 	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
 		- NOTE: Add preparefinish_client in prebenchmark of distfarreach to trigger snapshot
 		- [IMPORTANT] current distributed extension is a single discussion instead of a critical design -> NOT need to evaluate
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
+
+- 10.18
+	+ Siyuan
+		* TODO: Prepare for in-memory KVS in TangLu's testbed
+			- Define USE_TOMMYDS_KVS in helper.h (commented by default)
+			- If USE_TOMMYDS_KVS, replace rocksdb with in-memory KVS
+			- TODO: Prepare configs/config.ini.inmemory for each method
+			- TODO: Provide scripts/local/change_testbed_inmemory.sh to replace config.ini as configs/config.ini.inmemory for each method, and
+		* TODO: Try in-memory KVS in TangLu's testbed
+
+- 10.17
+	+ Siyuan
+		* Fix timeout issue for correct execution time
+			- Dump static statistics in TerminatorThread instead of Client
+			- Add a boolean isStop in InswitchCacheClient: set it as true in TerminalThread and judge it in DbUdpNative
+			- Sleep 1s before stopping client1 to wait for client1.TerminatorThread to dump static statistics in test_server_rotation\*.sh
+		* Update scripts
+			- Add 90P and 95P latency result
+			- Support singlerotation mode in YCSB client
+				+ Add -sr <1/0> in command line parameters and save it into GlobalConfig
+				+ If GlobalConfig.singlerotation = true
+					* NOTE: the statistics file must exist; otherwise, you should re-run the entire server rotation
+					* For the first rotation, StatisticsHelper does NOT delete the statistics file; instead, we load exsting statistics
+					* For the first and each subsequent rotation
+						- If the statistics of the rotation exists in statistics file, overwrite it
+						- If the statistics of the rotation does not exist in statistics file, insert it into the correct position
+				+ Add -sr when launching clients in test_server_rotation_p1/p2.sh
+			- In calculate_statistics_helper.py, judge whether strid is the same in aggregate()
+		* Adapt to YCSB range query
+			- Update client code to set endkey = startkey + scan recordcnt (from 1 to 100 in YCSB core workload E) (files: Key.java)
+			- Update server code to calculate scan recordcnt based on endkey - startkey (files: rocksdb_wrapper.c, deleted_set_impl.h)
+		* Tiny changes in Java
+			- For InswitchCacheClient, always enable withinBenchmark() for FarReach/DistFarReach
+			- Test withinBenchmark() to see whether Java can invoke shell command successfully
+		* Others in C
+			- Add bandwidth usage of reporting original values during snapshot (files: switchos.c, controller.c)
+				+ NOTE: bandwidth cost of switch os (i.e., local control plane) also belongs to control plane bandwidth usage
+				+ In controller, bandwidth cost refers to total control plane bandwidth usage including the local control plane bandwidth cost (i.e., bandwidth cost for special cases)
+		* Update benchmark.md for synthetic workload path issue (make an IMPORTANT NOTE)
+	+ Huancheng
+		* Evaluation
+			* TODO: Make evaluation of experiment 1 on nocache/netcache
+				- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
+			* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
+				- TODO: Check tmp_controller_bwcost.out
+			* Test new scripts if you need to use them (see benchmark.md for usage)
+				- TODO: Test test_server_rotation.sh, test_dynamic.sh, and load_and_backup.sh
+			* TODO: Make evaluation of experiment 2 with 16/32/64/128 servers under YCSB core workload A
+				- TODO: Use loading phase to pre-load 100M records into 32, 64, 128 storage servers
+		* Coding
+			* TODO: Finish TraceReplay workload
+				- TODO: Get correpsonding trace file based on workloadName
+				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
+				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
+			* Support range query
+				- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
+				- (Discuss first before implementation) update JNI for range query
+					- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
+						+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
+						+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
+							* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
+							* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
+					- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+					- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
 
 - 10.16
 	+ Siyuan
@@ -17,35 +83,10 @@
 		* Dump more information for server rotation
 			- Dump strid into each JSONObject of JSONArray in StatisticsHelper
 			- Calculate cache hit rate and normalized throughput in calculate_statistics_helper.py
-		* TODO: Test scripts
-			- TODO: Test sync.sh and keydump_and_sync.sh to check whether they will overwrite benchmark/output/*-statistics
-			- TODO: Test test_server_rotation.sh, test_dynamic.sh, and load_and_backup.sh
-		* Tiny changes in Java
-			- TODO: Support to merge the result of an individual rotation into the existing statistics file
-			- TODO: For synthetic workload, add write ratio, skewness, and value size into StaticStatisticsFilepath
-			- TODO: For TraceReplayWorkload, limit the maximum number of parsed requests, and the maximum value size based on its paper
-			- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-		* Others in C
-			- TODO: Add bandwidth usage of reporting original values during snapshot (files: switchos.c, controller.c)
-				+ NOTE: bandwidth cost of switch os (i.e., local control plane) also belongs to control plane bandwidth usage
-		* Support range query
-			- TODO: Add _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist in JNI-based socket
-				+ NOTE: pass workloadmode -> if workloadmode=0, directly return after receiving one SCANRES_SPLIT
-			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-			- TODO: Update DbUdpNative to invoke the native function
+		* Test scripts
+			- Test sync.sh and keydump_and_sync.sh to check whether they will overwrite benchmark/output/*-statistics
 	+ Huancheng
-		* TODO: Make evaluation of experiment 1 with 16 servers under different workloads (YCSB core worklads except E + Twitter traces (Twitter traces may be later) )
-			- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
-		* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can invoke shell command successfully
-			- TODO: Check tmp_controller_bwcost.out
-		* TODO: Make evaluation of experiment 2 with 16/32/64/128 servers under YCSB core workload A
-			- TODO: Use loading phase to pre-load 100M records into 32, 64, 128 storage servers (NOTE: recordload client + nocache switch/server)
-		* TODO: Finish TraceReplay workload
-			- TODO: Get correpsonding trace file based on workloadName
-			- TODO: Limit max # of parsed inmemory requests
-		* Support range query
-			- TODO: Add SCANRES_SPLIT (use Map::Entry as pair)
-			- TODO: Update DbUdpNative to receive SCANRES_SPLIT
+		* Make evaluation of experiment 1 on farreaceh
 
 - 10.15 ([IMPORTANT] start evaluation)
 	+ Siyuan

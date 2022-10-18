@@ -50,7 +50,7 @@ sleep 15s # wait longer time for the first rotation, as rocksdb needs to load th
 
 # NOTE: we trigger snapshot in the physical client 0 during transaction phase for farreach/distfarreach
 echo "start clients"
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 >tmp_serverrotation_part1_client.out 2>&1 &"
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >tmp_serverrotation_part1_client.out 2>&1 &"
 sleep 1s
 cd ${CLIENT_ROOTPATH}/benchmark/ycsb/
 ./bin/ycsb run ${DIRNAME} -pi 0

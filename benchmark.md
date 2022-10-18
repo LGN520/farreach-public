@@ -125,13 +125,27 @@
 			- NOTE: you can check the statistics during server rotation to see whether the result is reasonable
 	+ `bash scripts/remote/stop_server_rotation.sh`
 	+ NOTE: if some rotation is failed, you can use scripts/remote/test_server_rotation_\<p1/p2\>.sh to get the result of the rotation
-		* For example, if strid=server-x is missed, run `bash scripts/remote/test_server_rotation_p1.sh`
-		* For example, if strid=server-x-y is missed, run `bash scripts/remote/test_server_rotation_p2.sh y`
-		* TODO: Update JAVA code
-			- TODO: We must notify -debug to StatisticsHelper such that it will not delete the statistics file for the first rotation; instead, it will load exsting statistics and merge the current rotation result
-			- TODO: We must overwrite the current rotation result into the array if existing; or insert it into the correct position
+		* [IMPORTANT] backup the existing statistics file first to avoid mis-overwriting
+		* For example, if strid=server-x is missed, run `bash scripts/remote/test_server_rotation_p1.sh 1`
+		* For example, if strid=server-x-y is missed, run `bash scripts/remote/test_server_rotation_p2.sh 1 y`
+	+ NOTE: we limit the execution time of each rotation as 10 seconds in all methods for fair comparisons
+		* Involved files: ycsb/core/Client.java
+		* DEPRECATED: ycsb/core/TerminatorThread.java, scripts/local/calculate_statistics_helper.py
 - Aggregate statistics
 	+ Run `bash scripts/remote/calculate_statistics.sh` to get aggregated statistics
+
+## Parameter sensitivity
+
+- Change parameters
+	+ For write ratio, change read/updateproportion in benchmark/ycsb/workloads/synthetic
+	+ For value size, change fieldlength in benchmark/ycsb/workloads/synthetic
+	+ For skewness, change ZIPFIAN_CONSTANT in benchmark/ycsb/core/generator/ZipfianGenerator + sync_file.sh + re-compile ycsb
+- IMPORTANT NOTE
+	- Under static pattern, each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-static<staticscale>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out) without parameter info
+	- NOTE: before changing parameter for the next time of experiment
+		+ Run `bash scripts/remote/calculate_statistics.sh` to get results of the current parameter
+		+ Backup the statistics files of the current parameter if necessary, which will be overwritten next time
+	- ~~(NOT run dynamic pattern here) under dynamic pattern, each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-<dynamicpattern>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-hotin-client0.out)~~
 
 ## Appendix
 
@@ -143,3 +157,12 @@
 | workloada | 32 | 29 |
 | workloada | 64 | 59 |
 | workloada | 128 | 118 |
+
+## Trial of in-memory KVS to reproduce NetCache
+
+- Prepare TommyDS
+	+ Uncomment `USE_TOMMYDS_KVS` in helper.h
+	+ Use `TOMMYDS_LDLIBS` instead of `ROCKSDB_LDLIBS` in farreach/Makefile
+	+ Uncomment `syncfiles_toall tommyds-2.2 \*` in sync.sh
+	+ Run `bash scripts/remote/sync.sh` to sync required files including tommyds-2.2/ to all machines
+	+ In each server, enter tommyds-2.2/ and run `make staticlib` to compile TommyDS before `bash scripts/remote/makeserver.sh`

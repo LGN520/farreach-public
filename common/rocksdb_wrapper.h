@@ -7,6 +7,10 @@
 #include <map>
 #include <boost/thread/shared_mutex.hpp>
 
+#ifdef USE_TOMMYDS_KVS
+#include "tommy.h"
+#endif
+
 #include "rocksdb/db.h"
 #include "rocksdb/cache.h"
 #include "rocksdb/table.h"
@@ -62,6 +66,21 @@
 #define SYNC_WRITE false // flush WAL instead of memtable for each operation
 #define DISABLE_WAL false // disable WAL flush
 
+#ifdef USE_TOMMYDS_KVS
+struct TommydsObject {
+	netreach_key_t key;
+	val_t val;
+	uint32_t seq;
+	tommy_node node;
+} tommyds_object_t;
+
+int tommyds_compare(const void *arg, const void *obj) {
+	const netreach_key_t *targetkey = (const netreach_key_t *)arg;
+	const tommyds_object_t *obj_to_compare = (const tommyds_object_t *)obj;
+	return *targetkey != obj->key;
+}
+#endif
+
 class RocksdbWrapper {
 
 	typedef DeletedSet<netreach_key_t, uint32_t> deleted_set_t;
@@ -110,8 +129,12 @@ class RocksdbWrapper {
 
 		boost::shared_mutex rwlock; // protect db_ptr and deleted_set in get/put/remove/make_snapshot
 		//std::mutex mutexlock; // protect db_ptr and deleted_set in get/put/remove/make_snapshot
+#ifdef USE_TOMMYDS_KVS
+		tommy_hashdyn *db_ptr = NULL;
+#else
 		//rocksdb::TransactionDB *db_ptr = NULL;
 		rocksdb::DB *db_ptr = NULL;
+#endif
 
 	/***** for farreach/distfarreaech *****/
 
@@ -132,6 +155,9 @@ class RocksdbWrapper {
 
 		int snapshotid = -1; // to locate snapshot files
 
+#ifdef USE_TOMMYDS_KVS
+		// NOTE: TommyDS does NOT support consistent snapshot
+#else
 		/* snapshot data for range query */
 
 		boost::shared_mutex rwlock_for_snapshot; // protect snapshotdata used by range query (including sp_ptr, snapshotdb_ptr, snapshot_deleted_set, and inswitch_snapshot) in range_scan/make_snapshot/update_snapshot
@@ -149,6 +175,7 @@ class RocksdbWrapper {
 		// save latest snapshot temporarily
 		const rocksdb::Snapshot *latest_sp_ptr = NULL;
 		deleted_set_t latest_snapshot_deleted_set;
+#endif
 
 		/* utils */
 		void create_snapshotdb_checkpoint(uint64_t snapshotdbseq);

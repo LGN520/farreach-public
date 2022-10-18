@@ -1264,6 +1264,11 @@ uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::size() { // unused
 }
 
 template<class key_t, class val_t>
+uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::bwcost() {
+	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + this->_val.val_length + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid) + Packet<key_t>::get_clone_bytes(this->_methodid);
+}
+
+template<class key_t, class val_t>
 uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	//uint32_t my_size = this->size();
 	//INVARIANT(max_size >= my_size);

@@ -18,15 +18,17 @@ INCDIR += -I/usr/include
 
 ##############################################################################
 # RocksDB configuration
-
 ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
+INCDIR += $(ROCKSDB_INCDIR)
+
+# TommyDS configuration
+TOMMYDS_INCDIR += -I../tommyds-2.2/tommyds
+INCDIR += $(TOMMYDS_INCDIR)
 
 DEPS += rocksdb_wrapper.d
 CLEAN += rocksdb_wrapper.o rocksdb_wrapper.shared.o
 ROCKSDB_OBJECTS += rocksdb_wrapper.o
 ROCKSDB_SHARED_OBJECTS += rocksdb_wrapper.shared.o
-
-INCDIR += $(ROCKSDB_INCDIR)
 
 ##############################################################################
 

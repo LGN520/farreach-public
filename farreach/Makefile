@@ -77,6 +77,17 @@ INCDIR += $(ROCKSDB_INCDIR)
 LDDIR += $(ROCKSDB_LDDIR)
 
 ##############################################################################
+# TommyDS configuration
+
+TOMMYDS_INCDIR += -I../tommyds-2.2/tommyds
+TOMMYDS_LDDIR += -L../tommyds-2.2
+
+TOMMYDS_LDLIBS = -ltommy
+
+INCDIR += $(TOMMYDS_INCDIR)
+LDDIR += $(TOMMYDS_LDDIR)
+
+##############################################################################
 
 # MKL configuration
 MKL_INCDIR += -I/opt/intel/mkl/include
@@ -162,9 +173,11 @@ CLEAN += loader.o
 SERVER_TARGETS += loader
 
 #server: server.o $(UTILS_OBJECTS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
-	#$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) $(DPDK_LDLIBS) -o $@
+#	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) $(DPDK_LDLIBS) -o $@
 server: server.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
+#server: server.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
+#	$(LINK) $^ $(LDLIBS) $(TOMMYDS_LDLIBS) -o $@
 DEPS += server.d
 CLEAN += server.o
 SERVER_TARGETS += server

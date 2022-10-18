@@ -30,6 +30,8 @@ class Key {
   static Key max();
   static Key min();
 
+  static int get_scanrecordcnt(Key &startkey, Key &endkey);
+
   Key();
 #ifdef LARGE_KEY
   Key(uint32_t keylolo, uint32_t keylohi, uint32_t keyhilo, uint32_t keyhihi);
@@ -50,7 +52,7 @@ class Key {
 
   //model_key_t to_model_key_for_train() const; // for xindex
 
-  int64_t to_int_for_hash() const; // for hash
+  //int64_t to_int_for_hash() const; // for hash
 
   std::string to_string_for_print() const; // for print
 
@@ -67,6 +69,8 @@ class Key {
   uint32_t serialize(char *buf, uint32_t buflen) const;
   uint32_t serialize(char *buf, uint32_t buflen) volatile;
   uint32_t dynamic_serialize(dynamic_array_t &buf, int offset);
+
+  uint32_t hash_bycrc32();
 
   uint32_t get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum);
   uint32_t get_rangepartition_idx(uint32_t server_num);

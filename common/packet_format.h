@@ -358,6 +358,8 @@ class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val
 		uint16_t idx() const;
 		bool stat() const;
 
+		uint32_t bwcost();
+
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
