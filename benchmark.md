@@ -46,10 +46,11 @@
 ## Prepartion phase
 
 - Loading phase for each server scale (e.g., 2/16/32/64/128 servers)
-	+ In nocache/config.ini, set workloadmode, total_server_logical_num, and per-server logical_server_idxes accordingly
+	+ In nocache/config.ini, set workloadmode, server_physical_num, total_server_logical_num, and per-server logical_server_idxes accordingly
 		* If workloadmode=0, also set bottleneck_serveridx_for_rotation and total_server_logical_num_for_rotation accordingly (NOTE: total_server_logical_num_for_rotation must = total_server_logical_num here)
 	+ Under the main client, perform the loading phase and backup for evaluation time reduction
-		* Sync nocache/ including the new nocache/config.ini to all machines
+		* Disable server_rotation in common/helper.h
+		* Sync nocache/ including the new nocache/config.ini to all machines and re-compile
 		* In switch, launch and configure nocache switch by start_switch.sh and launchswitchtestebed.sh in nocache/
 		* Run `bash scripts/remote/load_and_backup.sh`, which will launch and kill servers automatically
 - Workload analysis for each workload (e.g., workloada)
@@ -70,6 +71,7 @@
 
 - Given a method (e.g., farreach) and a workload (e.g., workloada)
 	* Set workload_mode = 1 and workload_name = workload in method/config.ini
+		- Keep server_physical_num=2, server0::server_logical_idxes=0, and server1:;server_logical_idxes=1
 	* Set scripts/common.sh accordingly
 - Re-compile code for server rotation if necessary
 	+ Disable server_rotation in common/helper.h

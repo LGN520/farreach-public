@@ -57,6 +57,7 @@
 			- Store vallen instead of valdata for TommyDS with limited running time to save memory
 			- Prepare configs/config.ini.inmemory for farreach
 			- Provide scripts/local/change_testbed_inmemory.sh to replace config.ini as configs/config.ini.inmemory for farreach, and update common/helper.h, farreach/Makefile, and scripts/remote/sync.sh accordingly
+		* Get XMU machines topology information and login successfully
 	+ HuanCheng
 		* Evaluation
 			* TODO: Make evaluation of experiment 1 on nocache/netcache
