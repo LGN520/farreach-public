@@ -9,14 +9,61 @@
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
 
+- 10.19
+	+ TODO: Deploy FarReach in TangLu's testbed
+	+ TODO: Test dynamic workload performnace of FarReach
+		* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
+		* TODO: Disk bottleneck (still 2 logical servers): <20 MQPS with in-memory KVS instead of RocksDB
+			- Thpt under 256*2 logical clients: TODO MQPS
+			- Thpt under 512*2 logical clients: TODO MQPS
+		* TODO: Network bottleneck (with 128 logical servers): <40 MOPS under 1024*2 logical clients
+			- Thpt under 512*2 logical clients: TODO MQPS
+			- Thpt under 1024*2 logical clients: TODO MQPS
+		* Therefore, the reason of the difference (around 100X) between our absolute result and that in NetCache paper is disk
+			- Single-server RocksDB w/o cache: <0.1 MQPS; single-server TommyDS w/o cache: <10 MQPS
+			- Our static thpt based on RocksDB under 128 servers w/ cache: ~20 MOPS (TODO); that of NetCache: 2 GQPS
+	+ HuanCheng
+		* Evaluation
+			* TODO: Make evaluation of experiment 1 on nocache/netcache
+				- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
+			* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
+				- TODO: Check tmp_controller_bwcost.out
+			* Test new scripts if you need to use them (see benchmark.md for usage)
+				- TODO: Test test_server_rotation.sh, test_dynamic.sh, and load_and_backup.sh
+			* TODO: Make evaluation of experiment 2 with 16/32/64/128 servers under YCSB core workload A
+				- TODO: Use loading phase to pre-load 100M records into 32, 64 storage servers if necessary
+		* Coding
+			* TODO: Finish TraceReplay workload
+				- TODO: Get correpsonding trace file based on workloadName
+				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
+				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
+			* Support range query
+				- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
+				- (Discuss first before implementation) update JNI for range query
+					- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
+						+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
+						+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
+							* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
+							* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
+					- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+					- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+
 - 10.18
 	+ Siyuan
-		* TODO: Prepare for in-memory KVS in TangLu's testbed
+		* Prepare for in-memory KVS in TangLu's testbed
 			- Define USE_TOMMYDS_KVS in helper.h (commented by default)
 			- If USE_TOMMYDS_KVS, replace rocksdb with in-memory KVS
-			- TODO: Prepare configs/config.ini.inmemory for each method
-			- TODO: Provide scripts/local/change_testbed_inmemory.sh to replace config.ini as configs/config.ini.inmemory for each method, and
-		* TODO: Try in-memory KVS in TangLu's testbed
+			- Store vallen instead of valdata for TommyDS with limited running time to save memory
+			- Prepare configs/config.ini.inmemory for farreach
+			- Provide scripts/local/change_testbed_inmemory.sh to replace config.ini as configs/config.ini.inmemory for farreach, and update common/helper.h, farreach/Makefile, and scripts/remote/sync.sh accordingly
+	+ HuanCheng
+		* Evaluation
+			* TODO: Make evaluation of experiment 1 on nocache/netcache
+			* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
+				- TODO: Check tmp_controller_bwcost.out
+			* TODO: Launch farreach with 128 servers under YCSB core workload A for experiment 2
+				- TODO: Use loading phase to pre-load 100M records into 128 storage servers
 
 - 10.17
 	+ Siyuan
@@ -48,31 +95,8 @@
 				+ In controller, bandwidth cost refers to total control plane bandwidth usage including the local control plane bandwidth cost (i.e., bandwidth cost for special cases)
 		* Update benchmark.md for synthetic workload path issue (make an IMPORTANT NOTE)
 	+ Huancheng
-		* Evaluation
-			* TODO: Make evaluation of experiment 1 on nocache/netcache
-				- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
-			* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
-				- TODO: Check tmp_controller_bwcost.out
-			* Test new scripts if you need to use them (see benchmark.md for usage)
-				- TODO: Test test_server_rotation.sh, test_dynamic.sh, and load_and_backup.sh
-			* TODO: Make evaluation of experiment 2 with 16/32/64/128 servers under YCSB core workload A
-				- TODO: Use loading phase to pre-load 100M records into 32, 64, 128 storage servers
-		* Coding
-			* TODO: Finish TraceReplay workload
-				- TODO: Get correpsonding trace file based on workloadName
-				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
-				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
-			* Support range query
-				- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
-				- (Discuss first before implementation) update JNI for range query
-					- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
-						+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
-						+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
-							* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
-							* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
-					- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-					- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+		+ Evaluation
+			* Make evaluation of experiment 1 on nocache
 
 - 10.16
 	+ Siyuan

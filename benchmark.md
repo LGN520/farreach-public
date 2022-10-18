@@ -49,8 +49,9 @@
 	+ In nocache/config.ini, set workloadmode, total_server_logical_num, and per-server logical_server_idxes accordingly
 		* If workloadmode=0, also set bottleneck_serveridx_for_rotation and total_server_logical_num_for_rotation accordingly (NOTE: total_server_logical_num_for_rotation must = total_server_logical_num here)
 	+ Under the main client, perform the loading phase and backup for evaluation time reduction
-		* Launch nocache/ in switch and servers
-		* Run `bash scripts/remote/load_and_backup.sh`, which will kill servers after backup
+		* Sync nocache/ including the new nocache/config.ini to all machines
+		* In switch, launch and configure nocache switch by start_switch.sh and launchswitchtestebed.sh in nocache/
+		* Run `bash scripts/remote/load_and_backup.sh`, which will launch and kill servers automatically
 - Workload analysis for each workload (e.g., workloada)
 	+ Under the main client
 		* Update workload_name with the workload in keydump/config.ini
@@ -161,8 +162,11 @@
 ## Trial of in-memory KVS to reproduce NetCache
 
 - Prepare TommyDS
-	+ Uncomment `USE_TOMMYDS_KVS` in helper.h
-	+ Use `TOMMYDS_LDLIBS` instead of `ROCKSDB_LDLIBS` for `server` in farreach/Makefile
-	+ Uncomment `syncfiles_toall tommyds-2.2 \*` in sync.sh
+	+ Run `bash scripts/local/changeto_inmemory_testbed.sh` to perform the following steps
+		+ Uncomment `USE_TOMMYDS_KVS` in common/helper.h
+		+ Use `TOMMYDS_LDLIBS` instead of `ROCKSDB_LDLIBS` for `server` in farreach/Makefile
+		+ Replace farreach/config.ini with farreach/configs/config.ini.inmemory
+		+ Uncomment `syncfiles_toall tommyds-2.2 \*` in sync.sh
 	+ Run `bash scripts/remote/sync.sh` to sync required files including tommyds-2.2/ to all machines
 	+ In each server, enter tommyds-2.2/ and run `make staticlib` to compile TommyDS before `bash scripts/remote/makeserver.sh`
+- NOTE: use `git checkout -- <filename>` to cancel the changes of the above files
