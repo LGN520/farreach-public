@@ -12,13 +12,13 @@ fi
 
 ##### Part 0 #####
 
-if [ with_controller -eq 1 ]
+if [[ with_controller -eq 1 ]]
 then
 	# NOTE: if w/ in-switch cache, finish warmup phase by launching servers of correpsonding method + warmup_client + stopping servers
 	echo "[part 0] pre-admit hot keys into switch before server rotation"
 
 	echo "launch storage servers of ${DIRNAME}"
-	source scripts/remote/launchservertestebed.sh
+	source scripts/remote/launchservertestbed.sh
 	sleep 10s
 
 	echo "pre-admit hot keys"
@@ -35,12 +35,7 @@ fi
 
 echo "[part 1] run single bottleneck server thread"
 
-echo "clear tmp files in remote clients/servers and controller"
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/${DIRNAME}/benchmark/ycsb/; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out; rm tmp_controller_bwcost.out"
-ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part2*.out"
-
-source test_server_rotation_p1.sh 0
+source scripts/remote/test_server_rotation_p1.sh
 
 ##### Part 2 #####
 

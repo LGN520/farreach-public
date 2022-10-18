@@ -5,18 +5,10 @@ fi
 
 #set -x
 
-if [ $# -ne 1 ]
-then
-	echo "Usage: bash scripts/remote/test_server_rotation.sh <isSingleRotation>"
-	exit
-fi
-
-tmpsinglerotation=$1
-if [ ${tmpsinglerotation} -ne 1 ] && [ ${tmpsinglerotation} -ne 0 ]
-then
-	echo "isSingleRotation should be 1 or 0"
-	exit
-fi
+echo "clear tmp files in remote clients/servers and controller"
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out; rm tmp_controller_bwcost.out"
+ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part2*.out"
 
 echo "stop clients"
 source bash scripts/local/localstop.sh ./client >/dev/null 2>&1
@@ -60,8 +52,8 @@ sleep 15s # wait longer time for the first rotation, as rocksdb needs to load th
 echo "start clients"
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >tmp_serverrotation_part1_client.out 2>&1 &"
 sleep 1s
-cd benchmark/ycsb/
-./bin/ycsb run ${DIRNAME} -pi 0 -sr ${tmpsinglerotation}
+cd ${CLIENT_ROOTPATH}/benchmark/ycsb/
+./bin/ycsb run ${DIRNAME} -pi 0
 cd ../../
 
 # stop and kill server/controller/reflector

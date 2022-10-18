@@ -65,8 +65,8 @@ sleep 5s
 echo "start clients"
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >>tmp_serverrotation_part2_client.out 2>&1 &"
 sleep 1s
-cd benchmark/ycsb/
-./bin/ycsb run ${DIRNAME} -pi 0 -sr ${tmpsinglerotation}
+cd ${CLIENT_ROOTPATH}/benchmark/ycsb/
+./bin/ycsb run ${DIRNAME} -pi 0
 cd ../../
 
 # stop and kill server/controller/reflector
