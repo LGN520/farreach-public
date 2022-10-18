@@ -7,6 +7,8 @@
 #include <map>
 #include <boost/thread/shared_mutex.hpp>
 
+#include "helper.h"
+
 #ifdef USE_TOMMYDS_KVS
 #include "tommy.h"
 #endif
@@ -18,8 +20,6 @@
 //#include "rocksdb/utilities/transaction.h"
 //#include "rocksdb/utilities/transaction_db.h"
 #include "rocksdb/utilities/checkpoint.h"
-
-#include "helper.h"
 #include "key.h"
 #include "val.h"
 #include "deleted_set_impl.h"
@@ -67,17 +67,17 @@
 #define DISABLE_WAL false // disable WAL flush
 
 #ifdef USE_TOMMYDS_KVS
-struct TommydsObject {
+typedef struct TommydsObject {
 	netreach_key_t key;
 	val_t val;
 	uint32_t seq;
 	tommy_node node;
 } tommyds_object_t;
 
-int tommyds_compare(const void *arg, const void *obj) {
+static int tommyds_compare(const void *arg, const void *obj) {
 	const netreach_key_t *targetkey = (const netreach_key_t *)arg;
 	const tommyds_object_t *obj_to_compare = (const tommyds_object_t *)obj;
-	return *targetkey != obj->key;
+	return *targetkey != obj_to_compare->key;
 }
 #endif
 

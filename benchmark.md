@@ -162,7 +162,7 @@
 
 - Prepare TommyDS
 	+ Uncomment `USE_TOMMYDS_KVS` in helper.h
-	+ Use `TOMMYDS_LDLIBS` instead of `ROCKSDB_LDLIBS` in farreach/Makefile
+	+ Use `TOMMYDS_LDLIBS` instead of `ROCKSDB_LDLIBS` for `server` in farreach/Makefile
 	+ Uncomment `syncfiles_toall tommyds-2.2 \*` in sync.sh
 	+ Run `bash scripts/remote/sync.sh` to sync required files including tommyds-2.2/ to all machines
 	+ In each server, enter tommyds-2.2/ and run `make staticlib` to compile TommyDS before `bash scripts/remote/makeserver.sh`
