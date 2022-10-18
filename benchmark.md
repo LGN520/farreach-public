@@ -157,3 +157,12 @@
 | workloada | 32 | 29 |
 | workloada | 64 | 59 |
 | workloada | 128 | 118 |
+
+## Trial of in-memory KVS to reproduce NetCache
+
+- Prepare TommyDS
+	+ Uncomment `USE_TOMMYDS_KVS` in helper.h
+	+ Use `TOMMYDS_LDLIBS` instead of `ROCKSDB_LDLIBS` in farreach/Makefile
+	+ Uncomment `syncfiles_toall tommyds-2.2 \*` in sync.sh
+	+ Run `bash scripts/remote/sync.sh` to sync required files including tommyds-2.2/ to all machines
+	+ In each server, enter tommyds-2.2/ and run `make staticlib` to compile TommyDS before `bash scripts/remote/makeserver.sh`

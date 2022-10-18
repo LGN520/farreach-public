@@ -4,3 +4,4 @@ ycsb.iml
 *.d
 *.o
 *.a
+*.s

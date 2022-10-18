@@ -12,8 +12,8 @@
 - 10.18
 	+ Siyuan
 		* TODO: Prepare for in-memory KVS in TangLu's testbed
-			- TODO: Define USE_INMEMORY_KVS in helper.h (commented by default)
-			- TODO: If USE_INMEMORY_KVS, replace rocksdb with in-memory KVS
+			- Define USE_TOMMYDS_KVS in helper.h (commented by default)
+			- If USE_TOMMYDS_KVS, replace rocksdb with in-memory KVS
 			- TODO: Prepare configs/config.ini.inmemory for each method
 			- TODO: Provide scripts/local/change_testbed_inmemory.sh to replace config.ini as configs/config.ini.inmemory for each method, and
 		* TODO: Try in-memory KVS in TangLu's testbed
@@ -62,6 +62,7 @@
 				- TODO: Get correpsonding trace file based on workloadName
 				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
 				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
 			* Support range query
 				- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
 				- (Discuss first before implementation) update JNI for range query

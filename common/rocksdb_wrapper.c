@@ -64,10 +64,13 @@ RocksdbWrapper::RocksdbWrapper() {
 	db_ptr = NULL;
 
 	// for farreach/distfarreach
+#ifdef USE_TOMMYDS_KVS
+#else
 	snapshotid = -1;
 	sp_ptr = NULL;
 	snapshotdb_ptr = NULL;
 	latest_sp_ptr = NULL;
+#endif
 }
 
 RocksdbWrapper::RocksdbWrapper(method_t curmethodid) {
@@ -77,11 +80,17 @@ RocksdbWrapper::RocksdbWrapper(method_t curmethodid) {
 RocksdbWrapper::~RocksdbWrapper() {
 	// close runtime database
 	if (db_ptr != NULL) {
+#ifdef USE_TOMMYDS_KVS
+		tommy_hashdyn_done(db_ptr);
+#else
 		delete db_ptr;
+#endif
 		db_ptr = NULL;
 	}
 
 	// store runtime delete set into disk
+#ifdef USE_TOMMYDS_KVS
+#else
 	if (method_needsnapshot()) {
 		std::string deletedset_path;
 		get_server_deletedset_path(methodid, deletedset_path, workerid);
@@ -97,6 +106,7 @@ RocksdbWrapper::~RocksdbWrapper() {
 			rmfiles(snapshotdb_path.c_str());
 		}
 	}
+#endif
 }
 
 void RocksdbWrapper::init(method_t curmethodid) {
@@ -105,11 +115,14 @@ void RocksdbWrapper::init(method_t curmethodid) {
 
 	db_ptr = NULL;
 
+#ifdef USE_TOMMYDS_KVS
+#else
 	// for farreach/distfarreach
 	snapshotid = -1;
 	sp_ptr = NULL;
 	snapshotdb_ptr = NULL;
 	latest_sp_ptr = NULL;
+#endif
 }
 
 /*RocksdbWrapper::RocksdbWrapper(uint16_t tmpworkerid) {
@@ -122,6 +135,13 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 	workerid = tmpworkerid;
 
 	// open database
+#ifdef USE_TOMMYDS_KVS
+	INVARIANT(db_ptr == NULL);
+	db_ptr = new tommy_hashdyn;
+	INVARIANT(db_ptr != NULL);
+	tommy_hashdyn_init(db_ptr);
+	is_runtime_existing = true;
+#else
 	std::string db_path;
 	get_server_db_path(methodid, db_path, tmpworkerid);
 	is_runtime_existing = isexist(db_path);
@@ -132,7 +152,10 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 		exit(-1);
 	}
 	INVARIANT(db_ptr != NULL);
+#endif
 
+#ifdef USE_TOMMYDS_KVS
+#else
 	if (method_needsnapshot()) {
 		// load deleted set
 		std::string deletedset_path;
@@ -182,6 +205,7 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 			latest_snapshot_deleted_set.clear();
 		}
 	}
+#endif
 
 	return is_runtime_existing;
 }
@@ -189,6 +213,15 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 // loading phase
 
 bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxidx) {
+#ifdef USE_TOMMYDS_KVS
+	for (int i = 0; i < maxidx; i++) {
+		struct tommyds_object_t *tmpobj = new tommyds_object_t();
+		tmpobj.key = keys[i];
+		tmpobj.val = vals[i];
+		tmpobj.seq = 0;
+		tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj.key.hash_bycrc32());
+	}
+#else
 	rocksdb::Status s;
 	rocksdb::WriteOptions write_options;
 	write_options.sync = SYNC_WRITE; // Write through for persistency
@@ -203,6 +236,7 @@ bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxid
 	}
 	//s = txn->Commit();
 	INVARIANT(s.ok());
+#endif
 
 	//delete txn;
 	//txn = NULL;
@@ -210,6 +244,13 @@ bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxid
 }
 
 bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
+#ifdef USE_TOMMYDS_KVS
+	struct tommyds_object_t *tmpobj = new tommyds_object_t();
+	tmpobj.key = key;
+	tmpobj.val = val;
+	tmpobj.seq = 0;
+	tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj.key.hash_bycrc32());
+#else
 	rocksdb::Status s;
 	std::string valstr = val.to_string_for_rocksdb(0);
 
@@ -227,6 +268,7 @@ bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
 	//s = txn->Commit();
 	s = db_ptr->Put(write_options, keystr, valstr);
 	INVARIANT(s.ok());
+#endif
 
 	//delete txn;
 	//txn = NULL;
@@ -241,6 +283,23 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 		if (rwlock.try_lock_shared()) break;
 	}
 
+	bool stat = false;
+	uint32_t tmpseq = 0;
+
+#ifdef USE_TOMMYDS_KVS
+	struct tommyds_object_t *tmpobj = tommy_hashdyn_search(db_ptr, compare, &key, key.hash_bycrc32());
+	if (!tmpobj) {
+		val = tmpobj->val;
+		tmpseq = tmpobj->seq;
+		stat = true;
+	}
+
+	if (method_needseq()) {
+		if (seqptr != NULL) {
+			*seqptr = tmpseq;
+		}
+	}
+#else
 	rocksdb::Status s;
 	std::string valstr;
 	//rocksdb::Transaction* txn = db_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
@@ -253,10 +312,8 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 	//txn = NULL;
 	s = db_ptr->Get(rocksdb::ReadOptions(), key.to_string_for_rocksdb(), &valstr);
 
-	bool stat = false;
 	if (method_needseq()) {
 		//INVARIANT(seqptr != NULL);
-		uint32_t tmpseq = 0;
 		if (valstr != "") {
 			tmpseq = val.from_string_for_rocksdb(valstr);
 			INVARIANT(s.ok());
@@ -277,6 +334,7 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 			stat = true;
 		}
 	}
+#endif
 
 	//mutexlock.unlock();
 	rwlock.unlock_shared();
@@ -293,14 +351,37 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 	if (method_needsnapshot()) {
 		uint32_t deleted_seq = 0;
 		bool is_deleted = deleted_set.check_and_remove(key, seq, &deleted_seq);
-		if (is_deleted) {
-			INVARIANT(deleted_seq > seq);
+		if (is_deleted && deleted_seq > seq) {
 			//mutexlock.unlock();
 			rwlock.unlock();
 			return false;
 		}
 	}
+	// NOTE: by now, deleted_seq must <= seq
 
+	uint32_t tmp_seq = 0;
+
+#ifdef USE_TOMMYDS_KVS
+	// check seq of undeleted keys if necessary
+	if (method_needseq() && checkseq) {
+		struct tommyds_object_t *tmpobj = tommy_hashdyn_search(db_ptr, compare, &key, key.hash_bycrc32());
+		if (!tmpobj) {
+			tmp_seq = tmpobj->seq;
+		}
+		if (tmp_seq > seq) {
+			//mutexlock.unlock();
+			rwlock.unlock();
+			return true;
+		}
+	}
+
+	// put into in-memory KVS
+	struct tommyds_object_t *tmpobj = new tommyds_object_t();
+	tmpobj.key = key;
+	tmpobj.val = val;
+	tmpobj.seq = seq;
+	tommy_hashdyn_insert(db_ptr, &tmpobj->node, tmpobj, tmpobj.key.hash_bycrc32());
+#else
 	rocksdb::Status s;
 	std::string valstr;
 	if (method_needseq()) {
@@ -317,7 +398,6 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 
 	// check seq of undeleted keys if necessary
 	if (method_needseq() && checkseq) {
-		uint32_t tmp_seq = 0;
 		std::string tmp_valstr;
 		//s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
 		s = db_ptr->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
@@ -325,16 +405,6 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 			val_t tmp_val;
 			tmp_seq = tmp_val.from_string_for_rocksdb(tmp_valstr);
 		}
-
-		if (method_needsnapshot()) {
-			uint32_t deleted_seq = 0;
-			bool is_deleted = deleted_set.check_and_remove(key, tmp_seq, &deleted_seq);
-			if (is_deleted && deleted_seq > tmp_seq) {
-				//INVARIANT(deleted_seq > seq);
-				tmp_seq = deleted_seq;
-			}
-		}
-
 		if (tmp_seq > seq) {
 			//s = txn->Commit();
 			INVARIANT(s.ok());
@@ -373,6 +443,8 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 	}
 #endif
 
+#endif
+
 	//mutexlock.unlock();
 	rwlock.unlock();
 	return true;
@@ -388,14 +460,37 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 	if (method_needsnapshot()) {
 		uint32_t deleted_seq = 0;
 		bool is_deleted = deleted_set.check_and_remove(key, seq, &deleted_seq);
-		if (is_deleted) {
-			INVARIANT(deleted_seq > seq);
+		if (is_deleted && deleted_seq > seq) {
 			//mutexlock.unlock();
 			rwlock.unlock();
 			return false;
 		}
 	}
+	// NOTE: by now, deleted_seq must <= seq
 
+	uint32_t tmp_seq = 0;
+
+#ifdef USE_TOMMYDS_KVS
+	// check seq of undeleted keys if necessary
+	if (method_needseq() && checkseq) {
+		struct tommyds_object_t *tmpobj = tommy_hashdyn_search(db_ptr, compare, &key, key.hash_bycrc32());
+		if (!tmpobj) {
+			tmp_seq = tmpobj->seq;
+		}
+		if (tmp_seq > seq) {
+			//mutexlock.unlock();
+			rwlock.unlock();
+			return true;
+		}
+	}
+
+	// delete from in-memory KVS
+	struct tommyds_object_t *tmpobj = tommy_hashdyn_remove(db_ptr, compare, &key, key.hash_bycrc32());
+	if (!tmpobj) {
+		delete tmpobj;
+		tmpobj = NULL;
+	}
+#else
 	rocksdb::Status s;
 	rocksdb::WriteOptions write_options;
 	write_options.sync = SYNC_WRITE; // Write through for persistency
@@ -405,7 +500,6 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 
 	// check seq of undeleted keys if necessary
 	if (method_needseq() && checkseq) {
-		uint32_t tmp_seq = 0;
 		std::string tmp_valstr;
 		//s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
 		s = db_ptr->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
@@ -413,16 +507,6 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 			val_t tmp_val;
 			tmp_seq = tmp_val.from_string_for_rocksdb(tmp_valstr);
 		}
-
-		if (method_needsnapshot()) {
-			uint32_t deleted_seq = 0;
-			bool is_deleted = deleted_set.check_and_remove(key, tmp_seq, &deleted_seq);
-			if (is_deleted && deleted_seq > tmp_seq) {
-				//INVARIANT(deleted_seq > seq);
-				tmp_seq = deleted_seq;
-			}
-		}
-
 		if (tmp_seq > seq) {
 			//s = txn->Commit();
 			INVARIANT(s.ok());
@@ -442,6 +526,7 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 	INVARIANT(s.ok());
 	//delete txn;
 	//txn = NULL;
+#endif
 
 	if (method_needsnapshot()) {
 		deleted_set.add(key, seq);
@@ -453,6 +538,9 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 }
 
 size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support range query and ignore the request!\n");
+#else
 	//mutexlock.lock();
 	if (method_needsnapshot()) {
 		while (true) {
@@ -570,6 +658,8 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 	}
 #endif
 
+#endif
+
 	return results.size();
 }
 
@@ -595,6 +685,9 @@ int RocksdbWrapper::get_snapshotid() const {
 
 // invoked by WARMUPREQ after loading phase (only the first WARMUPREQ could success; create server-side snapshot of snapshot id 0)
 void RocksdbWrapper::init_snapshot() {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	if (snapshotid != -1) {
 		return;
@@ -646,10 +739,14 @@ void RocksdbWrapper::init_snapshot() {
 		is_snapshot.clear(std::memory_order_release);
 		return;
 	}
+#endif
 }
 
 // invoked by SNAPSHOT_CLEANUP
 void RocksdbWrapper::clean_snapshot(int tmpsnapshotid) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	if (snapshotid == -1) {
 		printf("[WARNING] you should run loadfinish_client after loading phase to create an initial server-side snapshot!\n");
@@ -692,11 +789,15 @@ void RocksdbWrapper::clean_snapshot(int tmpsnapshotid) {
 		// NOTE: we can unlock rwlock_for_snapshot after updating sp_ptr, snapshotdb_ptr, and snapshot_deleted_set -> limited effect on range_scan
 		rwlock_for_snapshot.unlock();
 	}
+#endif
 }
 
 // create a new server-side snapshot yet not used by range query (as in-switch snapshot is stale)
 // invoked by worker due to case3 (tmpsnapshotid == 0); invoked by SNAPSHOT_START (tmpsnapshotid == snapshotid/snapshotid+1)
 void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	INVARIANT(tmpsnapshotid >= 0);
 	
@@ -744,6 +845,7 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 		//COUT_VAR(GET_MICROSECOND(create_t3));
 		//COUT_VAR(GET_MICROSECOND(store_t3));
 	}
+#endif
 
 	return;
 }
@@ -751,6 +853,9 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 // use latest server-side and in-switch snapshot of snapshotid+1 for range query after receiving latest in-switch snapshot
 // invoked by SNAPSHOT_SENDDATA; (deprecated: or invoked by make_snapshot under rare case due to controller failure)
 void RocksdbWrapper::update_snapshot(std::map<netreach_key_t, snapshot_record_t> &tmp_inswitch_snapshot, int tmpsnapshotid) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	INVARIANT(tmpsnapshotid == snapshotid + 1);
 
@@ -808,12 +913,17 @@ void RocksdbWrapper::update_snapshot(std::map<netreach_key_t, snapshot_record_t>
 		int old_snapshotid = snapshotid - 2;
 		remove_snapshot_files(old_snapshotid);
 	}
+#endif
 }
 
 // invoked by SNAPSHOT_SENDDATA
 void RocksdbWrapper::stop_snapshot() {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	is_snapshot.clear(std::memory_order_release);
+#endif
 	return;
 }
 
@@ -822,6 +932,9 @@ void RocksdbWrapper::stop_snapshot() {
 // recover snapshot database on the dbseq by checkpoint (set snapshotdb_ptr)
 // invoked by constructor; or invoked by update_snapshot/clean_snapshot (rare case)
 void RocksdbWrapper::create_snapshotdb_checkpoint(uint64_t snapshotdbseq) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	INVARIANT(db_ptr != NULL);
 	rocksdb::Checkpoint *checkpoint_ptr = NULL;
@@ -844,10 +957,14 @@ void RocksdbWrapper::create_snapshotdb_checkpoint(uint64_t snapshotdbseq) {
 	s = rocksdb::DB::Open(rocksdb_options, snapshotdb_path, &snapshotdb_ptr);
 	INVARIANT(s.ok());
 	INVARIANT(snapshotdb_ptr != NULL);
+#endif
 	return;
 }
 
 void RocksdbWrapper::load_serverside_snapshot_files(int tmpsnapshotid) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	std::string snapshotdbseq_path;
 	get_server_snapshotdbseq_path(methodid, snapshotdbseq_path, workerid, tmpsnapshotid);
@@ -864,10 +981,14 @@ void RocksdbWrapper::load_serverside_snapshot_files(int tmpsnapshotid) {
 	get_server_snapshotdeletedset_path(methodid, snapshotdeletedset_path, workerid, tmpsnapshotid);
 	INVARIANT(isexist(snapshotdeletedset_path));
 	snapshot_deleted_set.load(snapshotdeletedset_path);
+#endif
 	return;
 }
 
 void RocksdbWrapper::load_inswitch_snapshot(int tmpsnapshotid) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	std::string inswitchsnapshot_path;
 	get_server_inswitchsnapshot_path(methodid, inswitchsnapshot_path, workerid, tmpsnapshotid);
@@ -900,19 +1021,27 @@ void RocksdbWrapper::load_inswitch_snapshot(int tmpsnapshotid) {
 
 		inswitch_snapshot.insert(std::pair<netreach_key_t, snapshot_record_t>(tmpkey, tmprecord));
 	}
-
 	munmap(tmpbuf, tmpfilesize);
+#endif
+
 	return;
 }
 
 void RocksdbWrapper::load_snapshot_files(int tmpsnapshotid) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	load_serverside_snapshot_files(tmpsnapshotid);
 	load_inswitch_snapshot(tmpsnapshotid);
+#endif
 	return;
 }
 
 void RocksdbWrapper::store_inswitch_snapshot(int tmpsnapshotid) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	std::string inswitchsnapshot_path;
 	get_server_inswitchsnapshot_path(methodid, inswitchsnapshot_path, workerid, tmpsnapshotid);
@@ -940,10 +1069,14 @@ void RocksdbWrapper::store_inswitch_snapshot(int tmpsnapshotid) {
 	store_buf(tmpbuf, tmpbuflen, inswitchsnapshot_path);
 	delete [] tmpbuf;
 	tmpbuf = NULL;
+#endif
 	return;
 }
 
 void RocksdbWrapper::remove_snapshot_files(int tmpsnapshotid) {
+#ifdef USE_TOMMYDS_KVS
+	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
+#else
 	INVARIANT(method_needsnapshot());
 	std::string snapshotdbseq_path;
 	get_server_snapshotdbseq_path(methodid, snapshotdbseq_path, workerid, tmpsnapshotid);
@@ -956,6 +1089,7 @@ void RocksdbWrapper::remove_snapshot_files(int tmpsnapshotid) {
 	std::string inswitchsnapshot_path;
 	get_server_inswitchsnapshot_path(methodid, inswitchsnapshot_path, workerid, tmpsnapshotid);
 	rmfiles(inswitchsnapshot_path.c_str());
+#endif
 	return;
 }
 

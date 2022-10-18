@@ -234,13 +234,13 @@ void Key::from_string_for_rocksdb(std::string& keystr) {
     return model_key;
 }*/
 
-int64_t Key::to_int_for_hash() const {
+/*int64_t Key::to_int_for_hash() const {
 #ifdef LARGE_KEY
 	return ((int64_t(keylohi)<<32) | int64_t(keylolo)) ^ ((int64_t(keyhihi)<<32) | int64_t(keyhilo));
 #else
 	return (int64_t(keyhi)<<32) | int64_t(keylo);
 #endif
-}
+}*/
 
 std::string Key::to_string_for_print() const {
 	std::stringstream ss;
@@ -491,10 +491,15 @@ uint32_t Key::dynamic_serialize(dynamic_array_t& buf, int offset) {
 #endif
 }
 
-uint32_t Key::get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum) {
+uint32_t Key::hash_bycrc32() {
 	char buf[16];
 	uint32_t tmp_keysize = this->serialize(buf, 16);
-	uint32_t hashresult = crc32((unsigned char *)buf, tmp_keysize) % partitionnum;
+	uint32_t hashresult = crc32((unsigned char *)buf, tmp_keysize);
+	return hashresult;
+}
+
+uint32_t Key::get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum) {
+	uint32_t hashresult = hash_bycrc32() % partitionnum;
 	uint32_t targetidx = hashresult / (partitionnum / servernum);
 	//printf("key: %x, crc32 result: %u, targetidx: %d\n", keyhihi, hashresult, targetidx);
 	INVARIANT(targetidx >=0 && targetidx < servernum);
@@ -515,11 +520,8 @@ uint32_t Key::get_rangepartition_idx(uint32_t servernum) {
 
 // NOTE: NOT rely on partition strategy
 uint32_t Key::get_spineswitch_idx(uint32_t partitionnum, uint32_t spineswitchnum) {
-	char buf[16];
-
 	// crc32
-	//uint32_t tmp_keysize = this->serialize(buf, 16);
-	//uint32_t hashresult = crc32((unsigned char *)buf, tmp_keysize) % partitionnum;
+	//uint32_t hashresult = hash_bycrc32() % partitionnum;
 
 	// identity	
 	uint16_t keyhihilo = uint16_t(keyhihi & 0xFFFF);
