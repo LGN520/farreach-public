@@ -12,13 +12,13 @@ fi
 
 ##### Part 0 #####
 
-if [ with_controller -eq 1 ]
+if [[ with_controller -eq 1 ]]
 then
 	# NOTE: if w/ in-switch cache, finish warmup phase by launching servers of correpsonding method + warmup_client + stopping servers
 	echo "[part 0] pre-admit hot keys into switch before server rotation"
 
 	echo "launch storage servers of ${DIRNAME}"
-	source scripts/remote/launchservertestebed.sh
+	source scripts/remote/launchservertestbed.sh
 	sleep 10s
 
 	echo "pre-admit hot keys"
