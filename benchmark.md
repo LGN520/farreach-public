@@ -53,7 +53,7 @@
 	+ Under the main client, perform the loading phase and backup for evaluation time reduction
 		* Disable server_rotation in common/helper.h
 		* Sync nocache/ including the new nocache/config.ini to all machines and re-compile
-		* In switch, launch and configure nocache switch by start_switch.sh and launchswitchtestebed.sh in nocache/
+		* In switch, launch and configure nocache switch by start_switch.sh and launchswitchtestbed.sh in nocache/
 		* Run `bash scripts/remote/load_and_backup.sh`, which will launch and kill servers automatically
 - Workload analysis for each workload (e.g., workloada)
 	+ Under the main client

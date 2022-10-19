@@ -30,7 +30,7 @@ fi
 echo "workloadmode: ${workloadmode}; server scale: ${serverscale}"
 
 echo "launch storage servers of ${DIRNAME}"
-source scripts/remote/launchservertestebed.sh
+source scripts/remote/launchservertestbed.sh
 sleep 10s
 
 echo "Launch recordload client"

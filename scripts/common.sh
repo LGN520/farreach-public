@@ -4,11 +4,11 @@ function readini() {
 	echo ${result}
 }
 
-DIRNAME="farreach"
-USER="ssy"
+DIRNAME="netcache"
+USER="theodorepuyang"
 
 #MAIN_CLIENT="dl11" # NOT used
-SECONDARY_CLIENT="dl15"
+SECONDARY_CLIENT="dl11"
 
 # NOTE: must be consistent with each config.ini
 SERVER0="dl16"
