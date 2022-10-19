@@ -5,10 +5,18 @@ fi
 
 #set -x
 
-echo "clear tmp files in remote clients/servers and controller"
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out; rm tmp_controller_bwcost.out"
-ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part2*.out"
+if [ $# -ne 1 ]
+then
+	echo "Usage: bash scripts/remote/test_server_rotation_p1.sh <isSingleRotation>"
+	exit
+fi
+
+tmpsinglerotation=$1
+if [ ${tmpsinglerotation} -ne 1 ] && [ ${tmpsinglerotation} -ne 0 ]
+then
+	echo "isSingleRotation should be 1 or 0"
+	exit
+fi
 
 echo "stop clients"
 source bash scripts/local/localstop.sh ycsb >/dev/null 2>&1
