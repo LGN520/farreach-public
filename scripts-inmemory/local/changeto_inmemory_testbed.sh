@@ -3,7 +3,7 @@ then
 	source scripts-inmemory/common.sh
 fi
 
-#set -x
+set -x
 set -e
 
 tmpdirname="farreach"
@@ -20,10 +20,10 @@ cd ${tmpdirname}
 rocksdb_server_line=$(sed -n '/^server: server.o $(ROCKSDB_OBJECTS)/=' Makefile)
 if [ "x${rocksdb_server_line}" != "x" ]
 then
-	sed -i ''${rocksdb_server_line}'s!^!#!g'
-	sed -i ''$(expr ${rocksdb_server_line} + 1)'s!^!#!g'
-	sed -i ''$(expr ${rocksdb_server_line} + 2)'s!^#!!g'
-	sed -i ''$(expr ${rocksdb_server_line} + 3)'s!^#!!g'
+	sed -i ''${rocksdb_server_line}'s!^!#!g' Makefile
+	sed -i ''$(expr ${rocksdb_server_line} + 1)'s!^!#!g' Makefile
+	sed -i ''$(expr ${rocksdb_server_line} + 2)'s!^#!!g' Makefile
+	sed -i ''$(expr ${rocksdb_server_line} + 3)'s!^#!!g' Makefile
 fi
 cd ..
 
@@ -43,5 +43,5 @@ cd ../../
 # Uncomment USE_BFSDE920 in farreach/tofino/netbufferv4.p4
 echo "update ${tmpdirname}/tofino/netbufferv4.p4"
 cd ${tmpdirname}
-sed -i 's!//#define USE_BFSDE920!#define USE_BFSDE920!g'
+sed -i 's!//#define USE_BFSDE920!#define USE_BFSDE920!g' tofino/netbufferv4.p4
 cd ..
