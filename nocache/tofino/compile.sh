@@ -1,5 +1,7 @@
-source ../../scripts/common.sh
 #!/usr/bin/env bash
+cd ../../
+source scripts/common.sh
+cd nocache/tofino
 
 cd $SDE/pkgsrc/p4-build/
 # NOTE: for tofino compiler 9.4.0, main.p4 in P4_PATH must have the same name as P4_NAME
