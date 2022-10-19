@@ -403,12 +403,16 @@ field_list_calculation ipv4_chksum_calc {
     input {
         ipv4_field_list;
     }
+#ifdef USE_BFSDE920
+    algorithm : csum16;
+#else
 #ifndef __p4c__
     algorithm : csum16;
 #else
     algorithm : crc16;
 #endif
     output_width: 16;
+#endif
 }
 
 // NOTE: verify means check the calculated_field at packet ingress (aka parser)

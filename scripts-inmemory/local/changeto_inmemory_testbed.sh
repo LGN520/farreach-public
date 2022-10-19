@@ -1,6 +1,6 @@
 if [ "x${is_common_included}" != "x1" ]
 then
-	source scripts/common.sh
+	source scripts-inmemory/common.sh
 fi
 
 #set -x
@@ -39,3 +39,9 @@ echo "update scripts/remote/sync.sh"
 cd scripts/remote
 sed -i 's!##syncfiles_toall tommyds!syncfiles_toall tommyds!g' sync.sh
 cd ../../
+
+# Uncomment USE_BFSDE920 in farreach/tofino/netbufferv4.p4
+echo "update ${tmpdirname}/tofino/netbufferv4.p4"
+cd ${tmpdirname}
+sed -i 's!//#define USE_BFSDE920!#define USE_BFSDE920!g'
+cd ..
