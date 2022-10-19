@@ -10,24 +10,29 @@
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
 
 - 10.19
-	+ TODO: Deploy FarReach in TangLu's testbed
-	+ TODO: Test dynamic workload performnace of FarReach
-		* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
-		* TODO: Disk bottleneck (still 2 logical servers): <20 MQPS with in-memory KVS instead of RocksDB
-			- Thpt under 256*2 logical clients: TODO MQPS
-			- Thpt under 512*2 logical clients: TODO MQPS
-		* TODO: Network bottleneck (with 128 logical servers): <40 MOPS under 1024*2 logical clients
-			- Thpt under 512*2 logical clients: TODO MQPS
-			- Thpt under 1024*2 logical clients: TODO MQPS
-		* Therefore, the reason of the difference (around 100X) between our absolute result and that in NetCache paper is disk
-			- Single-server RocksDB w/o cache: <0.1 MQPS; single-server TommyDS w/o cache: <10 MQPS
-			- Our static thpt based on RocksDB under 128 servers w/ cache: ~20 MOPS (TODO); that of NetCache: 2 GQPS
+	+ Siyuan
+		+ Fix a script issue of killing clients for server rotation
+		+ TODO: Deploy FarReach in TangLu's testbed
+		+ TODO: Test dynamic workload performnace of FarReach
+			* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
+			* TODO: Disk bottleneck (still 2 logical servers): <20 MQPS with in-memory KVS instead of RocksDB
+				- Thpt under 256*2 logical clients: TODO MQPS
+				- Thpt under 512*2 logical clients: TODO MQPS
+			* TODO: Network bottleneck (with 128 logical servers): <40 MOPS under 1024*2 logical clients
+				- Thpt under 512*2 logical clients: TODO MQPS
+				- Thpt under 1024*2 logical clients: TODO MQPS
+			* Therefore, the reason of the difference (around 100X) between our absolute result and that in NetCache paper is disk
+				- Single-server RocksDB w/o cache: <0.1 MQPS; single-server TommyDS w/o cache: <10 MQPS
+				- Our static thpt based on RocksDB under 128 servers w/ cache: ~20 MOPS (TODO); that of NetCache: 2 GQPS
 	+ HuanCheng
 		* Evaluation
-			* TODO: Make evaluation of experiment 1 on nocache/netcache
+			* TODO: Make evaluation of experiment 1 on netcache
+				- TODO: Check experiment 1 results -> if some results are invalid, we may re-run the entire experiment 1
 				- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
 			* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
 				- TODO: Check tmp_controller_bwcost.out
+			* TODO: Launch farreach with 128 servers under YCSB core workload A for experiment 2
+				- TODO: Use loading phase to pre-load 100M records into 128 storage servers
 			* Test new scripts if you need to use them (see benchmark.md for usage)
 				- TODO: Test test_server_rotation.sh, test_dynamic.sh, and load_and_backup.sh
 			* TODO: Make evaluation of experiment 2 with 16/32/64/128 servers under YCSB core workload A
@@ -60,11 +65,8 @@
 		* Get XMU machines topology information and login successfully
 	+ HuanCheng
 		* Evaluation
-			* TODO: Make evaluation of experiment 1 on nocache/netcache
-			* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
-				- TODO: Check tmp_controller_bwcost.out
-			* TODO: Launch farreach with 128 servers under YCSB core workload A for experiment 2
-				- TODO: Use loading phase to pre-load 100M records into 128 storage servers
+			* Make evaluation of experiment 1 on nocache
+			* Encounter a failure of killing client1 under timeouts
 
 - 10.17
 	+ Siyuan
