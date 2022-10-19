@@ -64,12 +64,12 @@ u
 #syncfiles_toall rocksdb-6.22.1 \*
 ##syncfiles_toall tommyds-2.2 \*
 
-#syncfiles_toall scripts-inmemory \*
+syncfiles_toall scripts-inmemory \*
 syncfiles_toclient benchmark/inswitchcache-java-lib/ \*
 syncfiles_toclient benchmark/ycsb/ \*
-#syncfiles_toall common \*
+syncfiles_toall common \*
 
-#syncfiles_toall ${DIRNAME} \*
+syncfiles_toall ${DIRNAME} \*
 
 # sync hotkey files to servers for netcache/distcache to resume cached keyset under server rotation
-#syncoutputfiles_toall benchmark/output \*-hotest.out
+syncoutputfiles_toall benchmark/output \*-hotest.out

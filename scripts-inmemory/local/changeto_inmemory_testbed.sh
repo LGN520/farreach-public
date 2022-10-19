@@ -3,7 +3,7 @@ then
 	source scripts-inmemory/common.sh
 fi
 
-set -x
+#set -x
 set -e
 
 tmpdirname="farreach"
