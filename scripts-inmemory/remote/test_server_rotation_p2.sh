@@ -7,7 +7,7 @@ fi
 
 if [ $# -ne 2 ]
 then
-	echo "Usage: bash scripts/remote/test_server_rotation_p2.sh <isSingleRotation> <rotationidx>"
+	echo "Usage: bash scripts-inmemory/remote/test_server_rotation_p2.sh <isSingleRotation> <rotationidx>"
 	exit
 fi
 
@@ -22,14 +22,14 @@ tmprotateidx=$2
 echo "tmprotateidx: "${tmprotateidx}
 
 echo "stop clients"
-source bash scripts/local/localstop.sh ycsb >/dev/null 2>&1
+source bash scripts-inmemory/local/localstop.sh ycsb >/dev/null 2>&1
 sleep 1s
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/local/localstop.sh ycsb >/dev/null 2>&1"
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts-inmemory/local/localstop.sh ycsb >/dev/null 2>&1"
 echo "kill clients"
-source scripts/local/localkill.sh ycsb >/dev/null 2>&1
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/local/localkill.sh ycsb >/dev/null 2>&1"
+source scripts-inmemory/local/localkill.sh ycsb >/dev/null 2>&1
+ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts-inmemory/local/localkill.sh ycsb >/dev/null 2>&1"
 # stop and kill server/controller/reflector
-source scripts/remote/stopservertestbed.sh
+source scripts-inmemory/remote/stopservertestbed.sh
 
 # TODO: only retrieve dl16.bottleneckserver to the state just after loading phase
 # NOTE: do NOT overwrite rocksdb files to avoid long time of loading overwritten files, which does NOT affect average performance
@@ -44,7 +44,7 @@ sed -i '1,$s/server_total_logical_num_for_rotation=TODO/server_total_logical_num
 sed -i '1,$s/bottleneck_serveridx_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
 sed -i '1,$s/server_logical_idxes=TODO0/server_logical_idxes='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
 sed -i '1,$s/server_logical_idxes=TODO1/server_logical_idxes='${tmprotateidx}/'' ${DIRNAME}/config.ini
-source scripts/remote/sync_file.sh ${DIRNAME} config.ini
+source scripts-inmemory/remote/sync_file.sh ${DIRNAME} config.ini
 
 echo "start servers"
 ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./server 0 >>tmp_serverrotation_part2_server.out 2>&1 &"
@@ -73,4 +73,4 @@ cd ${CLIENT_ROOTPATH}/benchmark/ycsb/
 cd ../../
 
 # stop and kill server/controller/reflector
-source scripts/remote/stopservertestbed.sh
+source scripts-inmemory/remote/stopservertestbed.sh

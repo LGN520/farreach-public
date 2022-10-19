@@ -41,8 +41,8 @@ function syncfiles_toall(){
 
 if [ $# -ne 0 ]
 then
-	echo "Usage: bash scripts/remote/deprecated/synckeydump.sh"
-	echo "Example: bash scripts/remote/deprecated/synckeydump.sh"
+	echo "Usage: bash scripts-inmemory/remote/deprecated/synckeydump.sh"
+	echo "Example: bash scripts-inmemory/remote/deprecated/synckeydump.sh"
 	exit
 fi
 

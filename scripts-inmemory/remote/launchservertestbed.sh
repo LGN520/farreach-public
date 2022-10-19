@@ -14,7 +14,7 @@ ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_server.out; rm 
 ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_server.out"
 
 cd ..
-source scripts/remote/stopservertestbed.sh
+source scripts-inmemory/remote/stopservertestbed.sh
 cd ${DIRNAME}
 
 #echo "clear system cache"

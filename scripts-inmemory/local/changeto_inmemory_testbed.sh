@@ -35,8 +35,8 @@ cp configs/config.ini.inmemory config.ini
 cd ..
 
 # Sync TommyDS
-echo "update scripts/remote/sync.sh"
-cd scripts/remote
+echo "update scripts-inmemory/remote/sync.sh"
+cd scripts-inmemory/remote
 sed -i 's!##syncfiles_toall tommyds!syncfiles_toall tommyds!g' sync.sh
 cd ../../
 

@@ -7,7 +7,7 @@ fi
 
 if [ $# -ne 2 ]
 then
-	echo "Usage: bash scripts/remote/sync_file.sh <dirname> <filename>"
+	echo "Usage: bash scripts-inmemory/remote/sync_file.sh <dirname> <filename>"
 	exit
 fi
 

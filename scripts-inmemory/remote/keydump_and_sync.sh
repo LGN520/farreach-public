@@ -41,8 +41,8 @@ function syncfiles_toall(){
 
 if [ $# -ne 0 ]
 then
-	echo "Usage: bash scripts/remote/keydump_and_sync.sh"
-	echo "Example: bash scripts/remote/keydump_and_sync.sh"
+	echo "Usage: bash scripts-inmemory/remote/keydump_and_sync.sh"
+	echo "Example: bash scripts-inmemory/remote/keydump_and_sync.sh"
 	exit
 fi
 

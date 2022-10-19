@@ -33,4 +33,4 @@ sed -i '1,$s/server_logical_idxes=TODO0/server_logical_idxes='${bottleneck_serve
 sed -i '1,$s/server_logical_idxes=TODO1/server_logical_idxes='${rotated_servers}/'' ${DIRNAME}/config.ini
 
 echo "Sync new ${DIRNAME}/config.ini to all machines"
-source scripts/remote/sync_file.sh ${DIRNAME} config.ini
+source scripts-inmemory/remote/sync_file.sh ${DIRNAME} config.ini

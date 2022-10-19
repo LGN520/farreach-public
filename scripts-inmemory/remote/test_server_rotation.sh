@@ -18,7 +18,7 @@ then
 	echo "[part 0] pre-admit hot keys into switch before server rotation"
 
 	echo "launch storage servers of ${DIRNAME}"
-	source scripts/remote/launchservertestbed.sh
+	source scripts-inmemory/remote/launchservertestbed.sh
 	sleep 10s
 
 	echo "pre-admit hot keys"
@@ -28,14 +28,14 @@ then
 	sleep 10s
 
 	echo "stop storage servers of ${DIRNAME}"
-	source scripts/remote/stopservertestbed.sh
+	source scripts-inmemory/remote/stopservertestbed.sh
 fi
 
 ##### Part 1 #####
 
 echo "[part 1] run single bottleneck server thread"
 
-source scripts/remote/test_server_rotation_p1.sh
+source scripts-inmemory/remote/test_server_rotation_p1.sh
 
 ##### Part 2 #####
 
@@ -48,7 +48,7 @@ do
 		continue
 	fi
 
-	source scripts/remote/test_server_rotation_p2.sh 0 ${rotateidx}
+	source scripts-inmemory/remote/test_server_rotation_p2.sh 0 ${rotateidx}
 
 	#read -p "Continue[y/n]: " is_continue
 	#if [ ${is_continue}x == nx ]

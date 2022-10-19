@@ -11,7 +11,7 @@ fi
 # (3) you need to finish setup phase by sync_file.sh method/config.ini + launching switch of corresponding method with setuping MAT rules
 
 echo "launch storage servers of ${DIRNAME}"
-source scripts/remote/launchservertestbed.sh
+source scripts-inmemory/remote/launchservertestbed.sh
 sleep 10s
 
 if [ ${with_controller} -eq 1 ]
@@ -31,4 +31,4 @@ cd benchmark/ycsb/
 cd ../../
 
 echo "stop storage servers of ${DIRNAME}"
-source scripts/remote/stopservertestbed.sh
+source scripts-inmemory/remote/stopservertestbed.sh

@@ -8,7 +8,7 @@ fi
 
 if [ $# -ne 0 ]
 then
-	echo "Usage: bash scripts/remote/load_and_backup.sh"
+	echo "Usage: bash scripts-inmemory/remote/load_and_backup.sh"
 	exit
 fi
 
@@ -17,7 +17,7 @@ fi
 
 if [ "x${DIRNAME}" != "xnocache" ]
 then
-	echo "[ERROR] DIRNAME (${DIRNAME}) is not nocache in scripts/common.sh; please update and sync scripts/common.sh, and re-launch switch"
+	echo "[ERROR] DIRNAME (${DIRNAME}) is not nocache in scripts-inmemory/common.sh; please update and sync scripts-inmemory/common.sh, and re-launch switch"
 	exit
 else
 	if [ "x${workloadmode}" == "x0" ] && [ "x${server_total_logical_num}" != "x${server_total_logical_num_for_rotation}" ]
@@ -30,7 +30,7 @@ fi
 echo "workloadmode: ${workloadmode}; server scale: ${serverscale}"
 
 echo "launch storage servers of ${DIRNAME}"
-source scripts/remote/launchservertestbed.sh
+source scripts-inmemory/remote/launchservertestbed.sh
 sleep 10s
 
 echo "Launch recordload client"
@@ -39,7 +39,7 @@ cd benchmark/ycsb
 cd ../../
 
 echo "stop storage servers of ${DIRNAME}"
-source scripts/remote/stopservertestbed.sh
+source scripts-inmemory/remote/stopservertestbed.sh
 
 echo "backup files from /tmp/${DIRNAME} to ${BACKUPS_ROOTPATH} in each physical server"
 ssh ${USER}@${SERVER0} "mkdir -p ${BACKUPS_ROOTPATH}/${serverscale}; mv /tmp/${DIRNAME}/* ${BACKUPS_ROOTPATH}/${serverscale}/"
