@@ -37,12 +37,20 @@
 				- TODO: Launch netcache for experiment 2 with 128 servers before demo
 			* TODO: Run experiment 3
 				- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
+			* TODO: Launch nocache for experiment 2 with 128 servers
 		* Coding
 			* TODO: Finish TraceReplay workload
 
 - 10.20 (Thursday)
 	+ Siyuan
-		+ TODO: Test dynamic workload performnace of FarReach
+		+ TODO: Test correctness of farreach P4 under 1M records
+			* TODO: Port 3/0 is always DWN
+			* TODO: Server's NIC RX errors (maybe due to incorrect ipv4 checksum re-calculated by Tofino)
+				- TODO: Use crc16 instead of csum16 for USE_BFSDE920
+				- TODO: Try 1 client + 1 server
+				- TODO: Try a simple P4 program to forward packets directly between the client and server
+				- TODO: Try to enable UDP checksum
+		+ TODO: Test dynamic workload performnace of FarReach under 100M records (TODO: re-run keydump)
 			* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
 			* TODO: Disk bottleneck (still 2 logical servers): <20 MQPS with in-memory KVS instead of RocksDB
 				- Thpt under 256*2 logical clients: TODO MQPS
@@ -60,8 +68,11 @@
 					+ NOTE: we need to keep Json files but not track them in git as they are too large
 					+ NOTE: keep the old numbers with deletion line temporarily
 			* TODO: Run nocache/farreach/netcache for experiment 2 with 32 and 64 servers
+				* TODO: For farreach, test preparefinish_client at withinBenchmark() to see if java can trigger snapshot successfully
+					- TODO: Check tmp_controller.out. tmp_switchos.out, and tmp_controller_bwcost.out
 				- TODO: Use loading phase to pre-load 100M records into 32 and 64 storage servers
-			* TODO: Launch nocache for experiment 2 with 128 servers
+			* TODO: Launch FarReach + 128 servers for experiment 2 under YCSB A
+				* TODO: Use loading phase to pre-load 100M records into 128 storage servers
 		* Coding
 			* TODO: Finish TraceReplay workload
 				- TODO: Get correpsonding trace file based on workloadName
@@ -79,15 +90,11 @@
 			* Pass compilation of P4 under bf_sde_9.2.0 by moving cache_lookup_tbl from stage 2 ingress to stage 3 ingress to save resources for access_latest_tbl in stage 2 egress
 			* Update hardware configuration
 				- Provide scripts/local/configure\<client/server/switchos\> to reduce redundant scripts
-				- TODO: Update macaddr in farreach/configs/config.ini.inmemory accordingly
-				- TODO: Update scripts-inmemory/local/configure\<client/server/switchos\> accordingly
-			* TODO: Test correctness of farreach P4
+				- Update macaddr in farreach/configs/config.ini.inmemory accordingly
+				- Update scripts-inmemory/local/configure\<client/server/switchos\> accordingly
+			* Update scripts-inmemory/local/changeto_inmemory_testbed.sh
 	+ HuanCheng
 		* Make evaluation of experiment 1 on netcache after fixing client killing issues
-		* TODO: Launch FarReach + 128 servers for experiment 2 under YCSB A
-			* TODO: Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
-				- TODO: Check tmp_controller_bwcost.out
-			* TODO: Use loading phase to pre-load 100M records into 128 storage servers
 
 - 10.18
 	+ Siyuan
