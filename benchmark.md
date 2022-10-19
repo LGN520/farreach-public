@@ -47,6 +47,11 @@
 
 ## Prepartion phase
 
+- Building your testbed
+	+ Modify scripts/local/configure_\<client/server/switchos\>.sh based on your own testbed settings
+	+ In each physical client, run `bash scripts/local/confiugre_client.sh`
+	+ In each physical server, run `bash scripts/local/confiugre_server.sh`
+	+ In each physical switch, run `bash scripts/local/confiugre_switchos.sh`
 - Loading phase for each server scale (e.g., 2/16/32/64/128 servers)
 	+ In nocache/config.ini, set workloadmode, server_physical_num, total_server_logical_num, and per-server logical_server_idxes accordingly
 		* If workloadmode=0, also set bottleneck_serveridx_for_rotation and total_server_logical_num_for_rotation accordingly (NOTE: total_server_logical_num_for_rotation must = total_server_logical_num here)

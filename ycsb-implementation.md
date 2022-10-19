@@ -9,10 +9,39 @@
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
 
-- 10.19
+- TODO
+	* Support range query
+		- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
+		- (Discuss first before implementation) update JNI for range query
+			- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
+				+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
+				+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
+					* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
+					* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
+			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+			- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+
+- 10.22 (Saturday)
 	+ Siyuan
-		+ Fix a script issue of killing clients for server rotation
-		+ TODO: Deploy FarReach in TangLu's testbed
+		* TODO: Support range query
+	+ HuanCheng
+		* TODO: Finish experiment 1 on Twitter Traces
+			- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
+
+- 10.21 (Friday)
+	+ Siyuan
+		* TODO: Update evaluation
+	+ HuanCheng
+		* Evaluation
+			* TODO: Finish experiment 2
+				- TODO: Launch netcache for experiment 2 with 128 servers before demo
+			* TODO: Run experiment 3
+				- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
+		* Coding
+			* TODO: Finish TraceReplay workload
+
+- 10.20 (Thursday)
+	+ Siyuan
 		+ TODO: Test dynamic workload performnace of FarReach
 			* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
 			* TODO: Disk bottleneck (still 2 logical servers): <20 MQPS with in-memory KVS instead of RocksDB
@@ -26,33 +55,39 @@
 				- Our static thpt based on RocksDB under 128 servers w/ cache: ~20 MOPS (TODO); that of NetCache: 2 GQPS
 	+ HuanCheng
 		* Evaluation
-			* TODO: Make evaluation of experiment 1 on netcache
-				- TODO: Check experiment 1 results -> if some results are invalid, we may re-run the entire experiment 1
-				- TODO: Maintain benchmark/results/, and update benchmark.md for each command detail and code/configuration change
-			* TODO: [IMPORTANT] Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
-				- TODO: Check tmp_controller_bwcost.out
-			* TODO: Launch farreach with 128 servers under YCSB core workload A for experiment 2
-				- TODO: Use loading phase to pre-load 100M records into 128 storage servers
-			* Test new scripts if you need to use them (see benchmark.md for usage)
-				- TODO: Test test_server_rotation.sh, test_dynamic.sh, and load_and_backup.sh
-			* TODO: Make evaluation of experiment 2 with 16/32/64/128 servers under YCSB core workload A
-				- TODO: Use loading phase to pre-load 100M records into 32, 64 storage servers if necessary
+			* TODO: Re-run some numbers of experiment 1
+				- TODO: Update thpt/latency numbers in benchmark/results/exp1/exp1.md, and also keep necessary data files in benchmark/results/exp1/
+					+ NOTE: we need to keep Json files but not track them in git as they are too large
+					+ NOTE: keep the old numbers with deletion line temporarily
+			* TODO: Run nocache/farreach/netcache for experiment 2 with 32 and 64 servers
+				- TODO: Use loading phase to pre-load 100M records into 32 and 64 storage servers
+			* TODO: Launch nocache for experiment 2 with 128 servers
 		* Coding
 			* TODO: Finish TraceReplay workload
 				- TODO: Get correpsonding trace file based on workloadName
 				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
 				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
 				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
-			* Support range query
-				- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
-				- (Discuss first before implementation) update JNI for range query
-					- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
-						+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
-						+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
-							* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
-							* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
-					- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-					- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+
+- 10.19
+	+ Siyuan
+		+ Fix a script issue of killing clients for server rotation
+		+ Configure XMU's testbed to make them communicatable in a single LAN
+		+ Deploy FarReach into XMU's testbed
+			* Pass compilation of client, switchos, and server
+				- NOTE: mvn 3.6.0 only support openjdk-8/11 instead of openjdk-17
+			* Pass compilation of P4 under bf_sde_9.2.0 by moving cache_lookup_tbl from stage 2 ingress to stage 3 ingress to save resources for access_latest_tbl in stage 2 egress
+			* Update hardware configuration
+				- Provide scripts/local/configure\<client/server/switchos\> to reduce redundant scripts
+				- TODO: Update macaddr in farreach/configs/config.ini.inmemory accordingly
+				- TODO: Update scripts-inmemory/local/configure\<client/server/switchos\> accordingly
+			* TODO: Test correctness of farreach P4
+	+ HuanCheng
+		* Make evaluation of experiment 1 on netcache after fixing client killing issues
+		* TODO: Launch FarReach + 128 servers for experiment 2 under YCSB A
+			* TODO: Test preparefinish_client at withinBenchmark() to see whether java can trigger snapshot successfully
+				- TODO: Check tmp_controller_bwcost.out
+			* TODO: Use loading phase to pre-load 100M records into 128 storage servers
 
 - 10.18
 	+ Siyuan

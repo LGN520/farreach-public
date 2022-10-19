@@ -72,7 +72,11 @@ pipeline_recirports_fromsingle = [None] * pipelinenum
 for i in range(pipelinenum):
     if i != single_ingress_pipeidx:
         pipeline_recirports_tosingle[i] = str(config.get("switch", "switch_recirport_pipeline{}to{}".format(i, single_ingress_pipeidx)))
+        if pipeline_recirports_tosingle[i] == "NONE":
+            pipeline_recirports_tosingle[i] = None
         pipeline_recirports_fromsingle[i] = str(config.get("switch", "switch_recirport_pipeline{}to{}".format(single_ingress_pipeidx, i)))
+        if pipeline_recirports_fromsingle[i] == "NONE":
+            pipeline_recirports_fromsingle[i] = None
 
 control_config = ConfigParser.ConfigParser()
 with open(os.path.join(os.path.dirname(this_dir), "control_type.ini"), "r") as f:

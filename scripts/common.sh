@@ -8,7 +8,7 @@ DIRNAME="netcache"
 USER="theodorepuyang"
 
 #MAIN_CLIENT="dl11" # NOT used
-SECONDARY_CLIENT="dl11"
+SECONDARY_CLIENT="dl15"
 
 # NOTE: must be consistent with each config.ini
 SERVER0="dl16"
@@ -36,6 +36,12 @@ with_reflector=0
 if [ "x${DIRNAME}" == "xdistfarreach" ] || [ "x${DIRNAME}" == "xdistcache" ]
 then
 	with_reflector=1
+fi
+
+is_distributed=0
+if [ "x${DIRNAME}" == "xdistfarreach" ] || [ "x${DIRNAME}" == "xdistcache" ] || [ "x${DIRNAME}" == "xdistnocache" ]
+then
+	is_distributed=1
 fi
 
 ##### Parse ${DRINAME}/config.ini #####
