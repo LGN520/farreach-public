@@ -16,75 +16,75 @@ else
 	if [ ${server_physical_idx} -eq 0 ]
 	then
 		sudo ifconfig enp59s0f0 10.0.1.3/24
-		sudo arp -s 10.0.1.1 b8:ce:f6:9a:02:56
-		sudo arp -s 10.0.1.2 b8:ce:f6:99:fe:06
-		sudo arp -s 10.0.1.3 b8:ce:f6:99:fb:0e
-		sudo arp -s 10.0.1.4 b8:ce:f6:9a:00:6e
-		sudo arp -s 10.0.1.5 08:c0:eb:24:6e:52
-		sudo arp -s 10.0.1.6 b8:ce:f6:e8:f5:3e
-		if [ ${is_distributed} -eq 1 ]
-		then
+		sudo arp -s 10.0.1.1 b8:ce:f6:9a:02:56 -i enp59s0f0
+		sudo arp -s 10.0.1.2 b8:ce:f6:99:fe:06 -i enp59s0f0
+		sudo arp -s 10.0.1.3 b8:ce:f6:99:fb:0e -i enp59s0f0
+		sudo arp -s 10.0.1.4 b8:ce:f6:9a:00:6e -i enp59s0f0
+		sudo arp -s 10.0.1.5 08:c0:eb:24:6e:52 -i enp59s0f0
+		sudo arp -s 10.0.1.6 b8:ce:f6:e8:f5:3e -i enp59s0f0
+		#if [ ${is_distributed} -eq 1 ]
+		#then
 			# bf2/bf3 as spine
 			#sudo ifconfig enp129s0f0 10.0.2.16/24
-			#sudo arp -s 10.0.2.11 3c:fd:fe:bb:ca:78
-			#sudo arp -s 10.0.2.13 3c:fd:fe:bb:c9:c9
-			#sudo arp -s 10.0.2.15 3c:fd:fe:b5:28:58
-			#sudo arp -s 10.0.2.16 3c:fd:fe:b5:1f:e0
-		fi
+			#sudo arp -s 10.0.2.11 3c:fd:fe:bb:ca:78 -i enp129s0f0
+			#sudo arp -s 10.0.2.13 3c:fd:fe:bb:c9:c9 -i enp129s0f0
+			#sudo arp -s 10.0.2.15 3c:fd:fe:b5:28:58 -i enp129s0f0
+			#sudo arp -s 10.0.2.16 3c:fd:fe:b5:1f:e0 -i enp129s0f0
+		#fi
 	elif [ ${server_physical_idx} -eq 1 ]
 	then
 		sudo ifconfig enp59s0f0 10.0.1.4/24
-		sudo arp -s 10.0.1.1 b8:ce:f6:9a:02:56
-		sudo arp -s 10.0.1.2 b8:ce:f6:99:fe:06
-		sudo arp -s 10.0.1.3 b8:ce:f6:99:fb:0e
-		sudo arp -s 10.0.1.4 b8:ce:f6:9a:00:6e
-		sudo arp -s 10.0.1.5 08:c0:eb:24:6e:52
-		sudo arp -s 10.0.1.6 b8:ce:f6:e8:f5:3e
-		if [ ${is_distributed} -eq 1 ]
-		then
+		sudo arp -s 10.0.1.1 b8:ce:f6:9a:02:56 -i enp59s0f0
+		sudo arp -s 10.0.1.2 b8:ce:f6:99:fe:06 -i enp59s0f0
+		sudo arp -s 10.0.1.3 b8:ce:f6:99:fb:0e -i enp59s0f0
+		sudo arp -s 10.0.1.4 b8:ce:f6:9a:00:6e -i enp59s0f0
+		sudo arp -s 10.0.1.5 08:c0:eb:24:6e:52 -i enp59s0f0
+		sudo arp -s 10.0.1.6 b8:ce:f6:e8:f5:3e -i enp59s0f0
+		#if [ ${is_distributed} -eq 1 ]
+		#then
 			# bf2/bf3 as spine
 			#sudo ifconfig enp129s0f1 10.0.2.13/24
 			#sudo arp -s 10.0.2.11 3c:fd:fe:bb:ca:78
 			#sudo arp -s 10.0.2.13 3c:fd:fe:bb:c9:c9
 			#sudo arp -s 10.0.2.15 3c:fd:fe:b5:28:58
 			#sudo arp -s 10.0.2.16 3c:fd:fe:b5:1f:e0
-		fi
+		#fi
 	elif [ ${server_physical_idx} -eq 2 ]
 	then
 		sudo ifconfig enp134s0f0 10.0.1.5/24
-		sudo arp -s 10.0.1.1 b8:ce:f6:9a:02:56
-		sudo arp -s 10.0.1.2 b8:ce:f6:99:fe:06
-		sudo arp -s 10.0.1.3 b8:ce:f6:99:fb:0e
-		sudo arp -s 10.0.1.4 b8:ce:f6:9a:00:6e
-		sudo arp -s 10.0.1.5 08:c0:eb:24:6e:52
-		sudo arp -s 10.0.1.6 b8:ce:f6:e8:f5:3e
-		if [ ${is_distributed} -eq 1 ]
-		then
+		sudo arp -s 10.0.1.1 b8:ce:f6:9a:02:56 -i enp134s0f0
+		sudo arp -s 10.0.1.2 b8:ce:f6:99:fe:06 -i enp134s0f0
+		sudo arp -s 10.0.1.3 b8:ce:f6:99:fb:0e -i enp134s0f0
+		sudo arp -s 10.0.1.4 b8:ce:f6:9a:00:6e -i enp134s0f0
+		sudo arp -s 10.0.1.5 08:c0:eb:24:6e:52 -i enp134s0f0
+		sudo arp -s 10.0.1.6 b8:ce:f6:e8:f5:3e -i enp134s0f0
+		#if [ ${is_distributed} -eq 1 ]
+		#then
 			# bf2/bf3 as spine
 			#sudo ifconfig enp129s0f1 10.0.2.13/24
-			#sudo arp -s 10.0.2.11 3c:fd:fe:bb:ca:78
-			#sudo arp -s 10.0.2.13 3c:fd:fe:bb:c9:c9
-			#sudo arp -s 10.0.2.15 3c:fd:fe:b5:28:58
-			#sudo arp -s 10.0.2.16 3c:fd:fe:b5:1f:e0
-		fi
+			#sudo arp -s 10.0.2.11 3c:fd:fe:bb:ca:78 -i enp129s0f1
+			#sudo arp -s 10.0.2.13 3c:fd:fe:bb:c9:c9 -i enp129s0f1
+			#sudo arp -s 10.0.2.15 3c:fd:fe:b5:28:58 -i enp129s0f1
+			#sudo arp -s 10.0.2.16 3c:fd:fe:b5:1f:e0 -i enp129s0f1
+		#fi
 	elif [ ${server_physical_idx} -eq 3 ]
 	then
 		sudo ifconfig enp134s0f0 10.0.1.6/24
-		sudo arp -s 10.0.1.1 b8:ce:f6:9a:02:56
-		sudo arp -s 10.0.1.2 b8:ce:f6:99:fe:06
-		sudo arp -s 10.0.1.3 b8:ce:f6:99:fb:0e
-		sudo arp -s 10.0.1.4 b8:ce:f6:9a:00:6e
-		sudo arp -s 10.0.1.5 08:c0:eb:24:6e:52
-		sudo arp -s 10.0.1.6 b8:ce:f6:e8:f5:3e
-		if [ ${is_distributed} -eq 1 ]
-		then
+		sudo arp -s 10.0.1.1 b8:ce:f6:9a:02:56 -i enp134s0f0
+		sudo arp -s 10.0.1.2 b8:ce:f6:99:fe:06 -i enp134s0f0
+		sudo arp -s 10.0.1.3 b8:ce:f6:99:fb:0e -i enp134s0f0
+		sudo arp -s 10.0.1.4 b8:ce:f6:9a:00:6e -i enp134s0f0
+		sudo arp -s 10.0.1.5 08:c0:eb:24:6e:52 -i enp134s0f0
+		sudo arp -s 10.0.1.6 b8:ce:f6:e8:f5:3e -i enp134s0f0
+		#if [ ${is_distributed} -eq 1 ]
+		#then
 			# bf2/bf3 as spine
 			#sudo ifconfig enp129s0f1 10.0.2.13/24
 			#sudo arp -s 10.0.2.11 3c:fd:fe:bb:ca:78
 			#sudo arp -s 10.0.2.13 3c:fd:fe:bb:c9:c9
 			#sudo arp -s 10.0.2.15 3c:fd:fe:b5:28:58
 			#sudo arp -s 10.0.2.16 3c:fd:fe:b5:1f:e0
-		fi
+		#fi
 	fi
 
 	sudo sysctl -w net.core.rmem_max=16777216
