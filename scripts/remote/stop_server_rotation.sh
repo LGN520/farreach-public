@@ -8,11 +8,11 @@ fi
 source scripts/local/localkill.sh ./test_server_rotation >/dev/null 2>&1
 
 echo "stop clients"
-source bash scripts/local/localstop.sh ./client >/dev/null 2>&1
+source bash scripts/local/localstop.sh ycsb >/dev/null 2>&1
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/local/localstop.sh ycsb >/dev/null 2>&1"
 
 echo "kill clients"
-source scripts/local/localkill.sh ./client >/dev/null 2>&1
+source scripts/local/localkill.sh ycsb >/dev/null 2>&1
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/local/localkill.sh ycsb >/dev/null 2>&1"
 
 # stop and kill server/controller/reflector
