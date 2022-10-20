@@ -189,6 +189,14 @@ header_type metadata_t {
 
 // Header instances
 
+#ifdef USE_BFSDE920
+@pragma pa_no_overlay ingress ethernet_hdr.dstAddr
+@pragma pa_no_overlay egress ethernet_hdr.dstAddr
+@pragma pa_no_overlay ingress ethernet_hdr.srcAddr
+@pragma pa_no_overlay egress ethernet_hdr.srcAddr
+@pragma pa_no_overlay ingress ethernet_hdr.etherType
+@pragma pa_no_overlay egress ethernet_hdr.etherType
+#endif
 header ethernet_t ethernet_hdr;
 /*@pragma pa_no_overlay ingress ipv4_hdr.srcAddr
 @pragma pa_no_overlay egress ipv4_hdr.srcAddr

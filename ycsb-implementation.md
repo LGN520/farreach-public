@@ -36,18 +36,23 @@
 
 - 10.21 (Friday)
 	+ Siyuan
+		* Test in-memory KVS under PKU's testbed
+			+ TODO: Wait for XMU's testbed to install 8.9.1 compiler
+				+ Test correctness of farreach P4 under 1M records
+					* TODO: Try warmup phase to check if the hot keys are cached
+					* TODO: Send some requests to see if cache hit rate is reasonable and all responses of the requests can be received
+			+ TODO: Test dynamic workload performnace of FarReach under 100M records (TODO: re-run keydump)
+				* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
+				* TODO: Disk bottleneck (still 2 logical servers): <20 MQPS with in-memory KVS instead of RocksDB
+					- Thpt under 256*2 logical clients: TODO MQPS
+					- Thpt under 512*2 logical clients: TODO MQPS
+				* TODO: Network bottleneck (with 64 logical servers): <40 MOPS under 1024*2 logical clients
+					- Thpt under 512*2 logical clients: TODO MQPS
+					- Thpt under 1024*2 logical clients: TODO MQPS
+				* Therefore, the reason of the difference (around 100X) between our absolute result and that in NetCache paper is disk
+					- Single-server RocksDB w/o cache: <0.1 MQPS; single-server TommyDS w/o cache: <10 MQPS
+					- Our static thpt based on RocksDB under 64 servers w/ cache: ~20 MOPS (TODO); that of NetCache: 2 GQPS
 		* TODO: Update evaluation
-		+ TODO: Test dynamic workload performnace of FarReach under 100M records (TODO: re-run keydump)
-			* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
-			* TODO: Disk bottleneck (still 2 logical servers): <20 MQPS with in-memory KVS instead of RocksDB
-				- Thpt under 256*2 logical clients: TODO MQPS
-				- Thpt under 512*2 logical clients: TODO MQPS
-			* TODO: Network bottleneck (with 128 logical servers): <40 MOPS under 1024*2 logical clients
-				- Thpt under 512*2 logical clients: TODO MQPS
-				- Thpt under 1024*2 logical clients: TODO MQPS
-			* Therefore, the reason of the difference (around 100X) between our absolute result and that in NetCache paper is disk
-				- Single-server RocksDB w/o cache: <0.1 MQPS; single-server TommyDS w/o cache: <10 MQPS
-				- Our static thpt based on RocksDB under 128 servers w/ cache: ~20 MOPS (TODO); that of NetCache: 2 GQPS
 	+ HuanCheng
 		* Evaluation
 			* TODO: Finish experiment 1
@@ -57,12 +62,19 @@
 			* TODO: Launch nocache for experiment 2 with 128 servers
 		* Coding
 			* TODO: Finish TraceReplay workload
+				- TODO: Get correpsonding trace file based on workloadName
+				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
+				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
+			* TODO: Fix retrieving issue of deleting /tmp/rocksdbbackups/16
+			* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 
 - 10.20 (Thursday)
 	+ Siyuan
+		+ Fix a bug in withinBenchmark: we only ./preparefinish_client in client 0 for farreach
 		+ Test correctness of farreach P4 under 1M records
-			* TODO: Port 3/0 is always DWN (other five ports are UP)
-			* TODO: Server's NIC RX errors
+			* Port 3/0 is always DWN (other five ports are UP) -> FIX
+			* Server's NIC RX errors due to compiler 9.2.0 bug
 				- NOTE: NOT due to ipv4 checksum which is correct under csum16
 					+ Observation: the standard P4 program chksum works with csum16
 				- Reason: ethernet.srcAddr loses one byte due to Tofino hardware bug
@@ -77,9 +89,12 @@
 					+ Retrieve all ingress MATs -> OK
 					+ Retrieve all egress MATs except values -> lost byte!
 						* Retrieve all egress MATs except values and MATs in stage 11 -> lost byte!
-						* Retrieve all egress MATs except values and MATs in stage 10 & 11 -> TODO!
-			* TODO: Try warmup phase to check if the hot keys are cached
-			* TODO: Send some requests to see if cache hit rate is reasonable and all responses of the requests can be received
+						* Retrieve all egress MATs except values and MATs in stage 10 & 11 -> lost byte!
+						* Retrieve all egress MATs except values and MATs in stage 9 & 10 & 11 -> lost byte!
+						* Retrieve all egress MATs except values and MATs in stage 8 & 9 & 10 & 11 -> OK!
+						* Retrieve all egress MATs except values and MATs in stage 8 & 10 & 11 -> lost byte!
+					+ Retrieve all egress MATs yet remove MATs of four ingress stages -> lost byte!
+				- [IMPORTANT] compiler 9.2.0 cannot correctly compile such a complex P4 program of our current implementation into Tofino, unless we remove sufficient MATs; however we have optimized our P4 code carefully for compiler 8.9.1
 	+ HuanCheng
 		* Evaluation
 			* Run nocache/farreach/netcache for experiment 2 with 32 servers
@@ -92,14 +107,6 @@
 					- TODO: Check tmp_controller.out. tmp_switchos.out, and tmp_controller_bwcost.out
 			* TODO: Launch FarReach + 128 servers for experiment 2 under YCSB A
 				* TODO: Use loading phase to pre-load 100M records into 128 storage servers
-		* Coding
-			* TODO: Finish TraceReplay workload
-				- TODO: Get correpsonding trace file based on workloadName
-				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
-				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
-			* TODO: Fix retrieving issue of deleting /tmp/rocksdbbackups/16
-			* TODO: Fix issue of not overwriting existing statistics in single rotation mode
 
 - 10.19
 	+ Siyuan

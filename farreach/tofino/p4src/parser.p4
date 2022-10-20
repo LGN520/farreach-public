@@ -411,8 +411,8 @@ field_list_calculation ipv4_chksum_calc {
 #else
     algorithm : crc16;
 #endif
-    output_width: 16;
 #endif
+    output_width: 16;
 }
 
 // NOTE: verify means check the calculated_field at packet ingress (aka parser)
