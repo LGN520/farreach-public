@@ -21,35 +21,22 @@
 			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
 			- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
 
+- 10.23 (Sunday)
+	+ Huancheng
+		* TODO: Finish experiment 1 on Twitter Traces
+			- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
+		* TODO: Start experiment 4
+
 - 10.22 (Saturday)
 	+ Siyuan
 		* TODO: Support range query
 	+ HuanCheng
-		* TODO: Finish experiment 1 on Twitter Traces
-			- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
+		* TODO: Run experiment 3
+			- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
 
 - 10.21 (Friday)
 	+ Siyuan
 		* TODO: Update evaluation
-	+ HuanCheng
-		* Evaluation
-			* TODO: Finish experiment 2
-				- TODO: Launch netcache for experiment 2 with 128 servers before demo
-			* TODO: Run experiment 3
-				- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
-			* TODO: Launch nocache for experiment 2 with 128 servers
-		* Coding
-			* TODO: Finish TraceReplay workload
-
-- 10.20 (Thursday)
-	+ Siyuan
-		+ TODO: Test correctness of farreach P4 under 1M records
-			* TODO: Port 3/0 is always DWN
-			* TODO: Server's NIC RX errors (maybe due to incorrect ipv4 checksum re-calculated by Tofino)
-				- TODO: Use crc16 instead of csum16 for USE_BFSDE920
-				- TODO: Try 1 client + 1 server
-				- TODO: Try a simple P4 program to forward packets directly between the client and server
-				- TODO: Try to enable UDP checksum
 		+ TODO: Test dynamic workload performnace of FarReach under 100M records (TODO: re-run keydump)
 			* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
 			* TODO: Disk bottleneck (still 2 logical servers): <20 MQPS with in-memory KVS instead of RocksDB
@@ -63,14 +50,46 @@
 				- Our static thpt based on RocksDB under 128 servers w/ cache: ~20 MOPS (TODO); that of NetCache: 2 GQPS
 	+ HuanCheng
 		* Evaluation
+			* TODO: Finish experiment 1
+			* TODO: Run nocache/farreach/netcache for experiment 2 with 64 servers
+				- TODO: Use loading phase to pre-load 100M records into 64 storage servers
+			* TODO: Launch netcache for experiment 2 with 128 servers before demo
+			* TODO: Launch nocache for experiment 2 with 128 servers
+		* Coding
+			* TODO: Finish TraceReplay workload
+
+- 10.20 (Thursday)
+	+ Siyuan
+		+ Test correctness of farreach P4 under 1M records
+			* TODO: Port 3/0 is always DWN (other five ports are UP)
+			* TODO: Server's NIC RX errors
+				- NOTE: NOT due to ipv4 checksum which is correct under csum16
+					+ Observation: the standard P4 program chksum works with csum16
+				- Reason: ethernet.srcAddr loses one byte due to Tofino hardware bug
+					+ (NOT work) Solution: add pa_no_overlay for ethernet.dstAddr/srcAddr/etherType
+				- Reason: miss output width for ipv4_hdr.checksum under USE_BFSDE920
+					+ (NOT work) Solution: move `width: 16` out of the #endif of USE_BFSDE920
+				- (NOT work) Trial: remove ipv4 checksum calculation from p4 code
+				- (NOT work) Trial: remove update_ipmac_srcport_tbl from ptf -> from p4 code
+					+ Observation: miss first byte of srcAddr before removing update_ipmac_srcport_tbl; miss first byte of dstAddr after that
+				- Debub by commenting P4 code
+					+ Remove all except l2l3_forward_tbl -> OK
+					+ Retrieve all ingress MATs -> OK
+					+ Retrieve all egress MATs except values -> lost byte!
+						* Retrieve all egress MATs except values and MATs in stage 11 -> lost byte!
+						* Retrieve all egress MATs except values and MATs in stage 10 & 11 -> TODO!
+			* TODO: Try warmup phase to check if the hot keys are cached
+			* TODO: Send some requests to see if cache hit rate is reasonable and all responses of the requests can be received
+	+ HuanCheng
+		* Evaluation
+			* Run nocache/farreach/netcache for experiment 2 with 32 servers
+				- TODO: Update benchmark/results
 			* TODO: Re-run some numbers of experiment 1
 				- TODO: Update thpt/latency numbers in benchmark/results/exp1/exp1.md, and also keep necessary data files in benchmark/results/exp1/
 					+ NOTE: we need to keep Json files but not track them in git as they are too large
 					+ NOTE: keep the old numbers with deletion line temporarily
-			* TODO: Run nocache/farreach/netcache for experiment 2 with 32 and 64 servers
 				* TODO: For farreach, test preparefinish_client at withinBenchmark() to see if java can trigger snapshot successfully
 					- TODO: Check tmp_controller.out. tmp_switchos.out, and tmp_controller_bwcost.out
-				- TODO: Use loading phase to pre-load 100M records into 32 and 64 storage servers
 			* TODO: Launch FarReach + 128 servers for experiment 2 under YCSB A
 				* TODO: Use loading phase to pre-load 100M records into 128 storage servers
 		* Coding
@@ -79,6 +98,8 @@
 				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
 				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
 				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
+			* TODO: Fix retrieving issue of deleting /tmp/rocksdbbackups/16
+			* TODO: Fix issue of not overwriting existing statistics in single rotation mode
 
 - 10.19
 	+ Siyuan
