@@ -62,7 +62,7 @@ u
 # NOTE: comment only if you have not copied databases to each machine and have not compiled databases in server.
 # 	Otherwise, it will overwrite databases in server and you have re-compiled them again.
 #syncfiles_toall rocksdb-6.22.1 \*
-##syncfiles_toall tommyds-2.2 \*
+syncfiles_toall tommyds-2.2 \*
 
 syncfiles_toall scripts-inmemory \*
 syncfiles_toclient benchmark/inswitchcache-java-lib/ \*

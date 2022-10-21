@@ -7,14 +7,19 @@ function readini() {
 DIRNAME="farreach"
 USER="ssy"
 
-#MAIN_CLIENT="node1" # NOT used
-SECONDARY_CLIENT="master"
+#MAIN_CLIENT="dl11" # NOT used
+SECONDARY_CLIENT="dl15"
+##MAIN_CLIENT="node1" # NOT used
+#SECONDARY_CLIENT="master"
 
 # NOTE: must be consistent with each config.ini
-SERVER0="slave01"
-SERVER1="slave02"
+SERVER0="dl16"
+SERVER1="dl13"
+#SERVER0="slave01"
+#SERVER1="slave02"
 
-LEAFSWITCH="xmutofino"
+LEAFSWITCH="bf1"
+#LEAFSWITCH="xmutofino"
 #SPINESWITCH="bf3"
 
 CLIENT_ROOTPATH="/home/${USER}/projects/NetBuffer"
@@ -22,7 +27,7 @@ SWITCH_ROOTPATH="/home/${USER}/NetBuffer"
 SERVER_ROOTPATH="/home/${USER}/projects/NetBuffer"
 
 # backup rocksdb after loading phase
-BACKUPS_ROOTPATH="/tmp/rocksdbbackups"
+BACKUPS_ROOTPATH="/tmp/inmemorybackups"
 
 ##### method-related variables #####
 

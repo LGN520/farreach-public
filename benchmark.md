@@ -16,6 +16,7 @@
 	+ `cat /sys/kernel/mm/transparent_hugepage/enabled` to check
 - Install Maven and Java
 	+ Please use openjdk-8/11 to avoid version-related issues
+- Tofino compiler version: 8.9.1
 
 ## Code compilation
 
@@ -174,10 +175,10 @@
 	+ Run `bash scripts-inmemory/local/changeto_inmemory_testbed.sh` to perform the following steps
 		+ In common/helper.h: uncomment `USE_TOMMYDS_KVS`
 		+ In farreach/Makefile: use `TOMMYDS_LDLIBS` instead of `ROCKSDB_LDLIBS` for `server`
-		+ Replace farreach/config.ini with farreach/configs/config.ini.inmemory
-		+ In scripts-inmemory/remote/sync.sh, uncomment `syncfiles_toall tommyds-2.2 \*`
-		+ In farreach/tofino/netbufferv4.p4, uncomment `USE_BFSDE920`
+		+ ~~Replace farreach/config.ini with farreach/configs/config.ini.inmemory~~
+		+ ~~In scripts-inmemory/remote/sync.sh, uncomment `syncfiles_toall tommyds-2.2 \*`~~
+		+ ~~In farreach/tofino/netbufferv4.p4, uncomment `USE_BFSDE920`~~
 	+ Run `bash scripts-inmemory/remote/sync.sh` to sync required files including tommyds-2.2/ to all machines
 	+ In each server, enter tommyds-2.2/ and run `make staticlib` to compile TommyDS before `bash scripts/remote/makeserver.sh`
-	+ In each switch, enter farreach/tofino and run `su; bash compile.sh` to compile switch code
+	+ ~~In each switch, enter farreach/tofino and run `su; bash compile.sh` to compile switch code~~
 - NOTE: use `git checkout -- <filename>` to cancel the changes of the above files

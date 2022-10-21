@@ -28,20 +28,20 @@ fi
 cd ..
 
 # Replace method/config.ini
-echo "update ${tmpdirname}/config.ini (backup original one as ${tmpdirname}/config.ini.bak)"
-cd ${tmpdirname}
-mv config.ini config.ini.bak
-cp configs/config.ini.inmemory config.ini
-cd ..
+#echo "update ${tmpdirname}/config.ini (backup original one as ${tmpdirname}/config.ini.bak)"
+#cd ${tmpdirname}
+#mv config.ini config.ini.bak
+#cp configs/config.ini.inmemory config.ini
+#cd ..
 
-# Sync TommyDS
-echo "update scripts-inmemory/remote/sync.sh"
-cd scripts-inmemory/remote
-sed -i 's!##syncfiles_toall tommyds!syncfiles_toall tommyds!g' sync.sh
-cd ../../
+## Sync TommyDS
+##echo "update scripts-inmemory/remote/sync.sh"
+##cd scripts-inmemory/remote
+##sed -i 's!##syncfiles_toall tommyds!syncfiles_toall tommyds!g' sync.sh
+##cd ../../
 
 # Uncomment USE_BFSDE920 in farreach/tofino/netbufferv4.p4
-echo "update ${tmpdirname}/tofino/netbufferv4.p4"
-cd ${tmpdirname}
-sed -i 's!//#define USE_BFSDE920!#define USE_BFSDE920!g' tofino/netbufferv4.p4
-cd ..
+#echo "update ${tmpdirname}/tofino/netbufferv4.p4"
+#cd ${tmpdirname}
+#sed -i 's!//#define USE_BFSDE920!#define USE_BFSDE920!g' tofino/netbufferv4.p4
+#cd ..
