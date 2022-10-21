@@ -23,19 +23,34 @@
 
 - 10.23 (Sunday)
 	+ Huancheng
-		* TODO: Finish experiment 1 on Twitter Traces
-			- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
-		* TODO: Start experiment 4
+		* Evaluation
+			* TODO: Launch nocache for experiment 2 with 128 servers under YCSB A
+			* TODO: Run experiment 3
+				- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
+			* TODO: Run experiment 1 on Twitter Traces
+				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
+			* TODO: Start experiment 4
 
 - 10.22 (Saturday)
 	+ Siyuan
-		* TODO: Support range query
+		* TODO: Update evaluation writing
 	+ HuanCheng
-		* TODO: Run experiment 3
-			- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
+		* Evaluation
+			* TODO: Run nocache/farreach/netcache for experiment 2 with 32/64 servers
+				- TODO: If not load before, use loading phase to pre-load 100M records into 32/64 storage servers
+			* TODO: Launch netcache for experiment 2 with 128 servers under YCSB A
+		* Coding
+			* TODO: Finish TraceReplay workload
+				- TODO: Get correpsonding trace file based on workloadName
+				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
+				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
+			* TODO: Fix retrieving issue of deleting /tmp/rocksdbbackups/16
+			* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 
 - 10.21 (Friday)
 	+ Siyuan
+		* Update statistics module to fix runtime variance under server rotation especially for large scale
 		* Test in-memory KVS under PKU's testbed
 			+ TODO: Wait for XMU's testbed to install 8.9.1 compiler
 				+ Test correctness of farreach P4 under 1M records
@@ -52,22 +67,18 @@
 				* Therefore, the reason of the difference (around 100X) between our absolute result and that in NetCache paper is disk
 					- Single-server RocksDB w/o cache: <0.1 MQPS; single-server TommyDS w/o cache: <10 MQPS
 					- Our static thpt based on RocksDB under 64 servers w/ cache: ~20 MOPS (TODO); that of NetCache: 2 GQPS
-		* TODO: Update evaluation
 	+ HuanCheng
 		* Evaluation
-			* TODO: Finish experiment 1
-			* TODO: Run nocache/farreach/netcache for experiment 2 with 64 servers
-				- TODO: Use loading phase to pre-load 100M records into 64 storage servers
-			* TODO: Launch netcache for experiment 2 with 128 servers before demo
-			* TODO: Launch nocache for experiment 2 with 128 servers
-		* Coding
-			* TODO: Finish TraceReplay workload
-				- TODO: Get correpsonding trace file based on workloadName
-				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
-				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
-			* TODO: Fix retrieving issue of deleting /tmp/rocksdbbackups/16
-			* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
+			* Enable server-side snapshot successfully
+				* For farreach, test preparefinish_client at withinBenchmark() to see if java can trigger snapshot successfully
+					- Check tmp_controller.out. tmp_switchos.out, and tmp_controller_bwcost.out
+			* TODO: Re-run all experiment 1 after fixing runtime variance
+				- NOTE: run farreach/netcache/nocache on workload C first
+				- TODO: Move original benchmark/results/exp1.md as benchmark/results/exp1_old.md; create a new exp1.md
+				- TODO: Update thpt/latency numbers in benchmark/results/exp1.md, and also keep necessary data files in benchmark/results/exp1/
+					+ NOTE: we need to keep Json files but not track them in git as they are too large
+			* TODO: Launch FarReach + 128 servers for experiment 2 under YCSB A
+				* TODO: Use loading phase to pre-load 100M records into 128 storage servers
 
 - 10.20 (Thursday)
 	+ Siyuan
@@ -98,15 +109,8 @@
 	+ HuanCheng
 		* Evaluation
 			* Run nocache/farreach/netcache for experiment 2 with 32 servers
-				- TODO: Update benchmark/results
-			* TODO: Re-run some numbers of experiment 1
-				- TODO: Update thpt/latency numbers in benchmark/results/exp1/exp1.md, and also keep necessary data files in benchmark/results/exp1/
-					+ NOTE: we need to keep Json files but not track them in git as they are too large
-					+ NOTE: keep the old numbers with deletion line temporarily
-				* TODO: For farreach, test preparefinish_client at withinBenchmark() to see if java can trigger snapshot successfully
-					- TODO: Check tmp_controller.out. tmp_switchos.out, and tmp_controller_bwcost.out
-			* TODO: Launch FarReach + 128 servers for experiment 2 under YCSB A
-				* TODO: Use loading phase to pre-load 100M records into 128 storage servers
+				- Update benchmark/results
+			* Re-run some numbers of farreach and netcache
 
 - 10.19
 	+ Siyuan

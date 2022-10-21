@@ -37,5 +37,5 @@ echo "copy statistics file ${remotefilename} from another client"
 scp ${USER}@${SECONDARY_CLIENT}:${remotefilepath} ${filedir}
 
 cd scripts/local/
-python calculate_statistics_helper.py ${workloadmode} ${localfilepath} ${remotefilepath}
+python calculate_statistics_helper.py ${workloadmode} ${localfilepath} ${remotefilepath} ${bottleneck_serveridx}
 cd ../../

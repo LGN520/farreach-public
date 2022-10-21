@@ -23,7 +23,7 @@ echo "tmprotateidx: "${tmprotateidx}
 
 echo "stop clients"
 source bash scripts/local/localstop.sh ycsb >/dev/null 2>&1
-sleep 1s
+sleep 5s
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/local/localstop.sh ycsb >/dev/null 2>&1"
 echo "kill clients"
 source scripts/local/localkill.sh ycsb >/dev/null 2>&1
