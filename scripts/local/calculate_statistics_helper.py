@@ -116,7 +116,7 @@ def calculate_perobjstat(aggjsonarray):
         tmptotaltime = tmpjsonobj[EXECUTION_MILLIS]
 
         tmp_cachemisscnt = 0
-        tmp_cahcehitcnt = 0
+        tmp_cachehitcnt = 0
         tmp_maxserverops = 0
         for j in range(len(tmp_perserverops)):
             tmp_cachemisscnt += tmp_perserverops[j]
@@ -141,14 +141,14 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
     print "[0th statistics] for {}: bottleneck thpt {}, rotated thpt 0, total thpt {}".format(bottleneckidx, bottleneckthpt, bottleneckthpt)
     for i in range(1, len(aggjsonarray)):
         tmpjsonobj = aggjsonarray[i]
-        tmpexectime = aggjsonobj[EXECUTIONS_MILLIS]
+        tmpexectime = tmpjsonobj[EXECUTION_MILLIS]
 
         tmp_bottleneckthpt = getmops((tmpjsonobj[PERSERVER_CACHEHITS][bottleneckidx] + tmpjsonobj[PERSERVER_OPSDONE][bottleneckidx]) / tmpexectime)
         if i <= bottleneckidx:
             tmp_rotateidx = i - 1
         else:
             tmp_rotateidx = i
-        tmp_rotatethpt = getmops((tmpjsonobj[PERSERVER_CACHEHITS][tmp_rotateidx] + tmpjsonobj[PERSERVER_OPSDONE][tmp_rotatedserveridx]) / tmpexectime)
+        tmp_rotatethpt = getmops((tmpjsonobj[PERSERVER_CACHEHITS][tmp_rotateidx] + tmpjsonobj[PERSERVER_OPSDONE][tmp_rotateidx]) / tmpexectime)
         if tmp_rotatethpt <= 0:
             print "[ERROR] {}th statistics for {}-{}: thpt of rotated server is 0!".format(i, bottleneckidx, tmp_rotateidx)
             exit(-1)
@@ -158,6 +158,7 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
         bottleneckthpt += tmp_bottleneckthpt
         totalthpt += tmp_rotatethpt
     bottleneckthpt /= float(len(aggjsonarray))
+    print "[STATIC] average bottleneck throughput: {} MOPS".format(bottleneckthpt)
     totalthpt += bottleneckthpt
     print "[STATIC] aggregate throughput: {} MOPS".format(totalthpt)
 
@@ -228,7 +229,7 @@ localfilepath = sys.argv[2]
 remotefilepath = sys.argv[3]
 print "Aggregate statistics between {} and {}".format(localfilepath, remotefilepath)
 
-bottleneckidx = sys.argv[4]
+bottleneckidx = int(sys.argv[4])
 
 if not os.path.exists(localfilepath):
     print "No such file {}".format(localfilepath)
