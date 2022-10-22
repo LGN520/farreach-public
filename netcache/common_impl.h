@@ -264,12 +264,17 @@ inline void parse_ini(const char* config_file) {
 	bottleneck_serveridx_for_rotation = ini.get_bottleneck_serveridx_for_rotation();
 	INVARIANT(bottleneck_serveridx_for_rotation < server_total_logical_num_for_rotation);
 
-	/*if (workload_mode == 0) { // static workload
+	if (workload_mode == 0) { // static workload
 #ifndef SERVER_ROTATION
-		printf("[ERROR] you should enable SERVER_ROTATION in helper.h for static workload mode\n");
+		printf("[ERROR] you should enable SERVER_ROTATION in common/helper.h for static workload mode\n");
 		exit(-1);
 #endif
-	}*/
+	} else {
+#ifdef SERVER_ROTATION
+		printf("[ERROR] you should disable SERVER_ROTATION in common/helper.h for dynamic workload mode\n");
+		exit(-1);
+#endif
+	}
 
 	printf("workload_name: %s\n", workload_name);
 	COUT_VAR(workload_mode);

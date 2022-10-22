@@ -297,7 +297,7 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 
 #ifdef USE_TOMMYDS_KVS
 	tommyds_object_t *tmpobj = (tommyds_object_t *) tommy_hashdyn_search(db_ptr, tommyds_compare, &key, key.hash_bycrc32());
-	if (!tmpobj) {
+	if (tmpobj != NULL) {
 		//val = tmpobj->val;
 		uint32_t tmpvallen = tmpobj->vallen;
 		char tmpbuf[tmpvallen];
@@ -378,7 +378,7 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 	// check seq of undeleted keys if necessary
 	if (method_needseq() && checkseq) {
 		tommyds_object_t *tmpobj = (tommyds_object_t *) tommy_hashdyn_search(db_ptr, tommyds_compare, &key, key.hash_bycrc32());
-		if (!tmpobj) {
+		if (tmpobj != NULL) {
 			tmp_seq = tmpobj->seq;
 		}
 		if (tmp_seq > seq) {
@@ -488,7 +488,7 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 	// check seq of undeleted keys if necessary
 	if (method_needseq() && checkseq) {
 		tommyds_object_t *tmpobj = (tommyds_object_t *) tommy_hashdyn_search(db_ptr, tommyds_compare, &key, key.hash_bycrc32());
-		if (!tmpobj) {
+		if (tmpobj != NULL) {
 			tmp_seq = tmpobj->seq;
 		}
 		if (tmp_seq > seq) {
@@ -500,7 +500,7 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 
 	// delete from in-memory KVS
 	tommyds_object_t *tmpobj = (tommyds_object_t *) tommy_hashdyn_remove(db_ptr, tommyds_compare, &key, key.hash_bycrc32());
-	if (!tmpobj) {
+	if (tmpobj != NULL) {
 		delete tmpobj;
 		tmpobj = NULL;
 	}
