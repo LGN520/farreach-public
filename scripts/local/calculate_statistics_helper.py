@@ -124,8 +124,11 @@ def calculate_perobjstat(aggjsonarray):
                 tmp_maxserverops = tmp_perserverops[j]
             tmp_cachehitcnt += tmp_perservercachehits[j]
         
-        tmp_normalizedthpt = float(tmptotalops) / float(tmp_maxserverops)
-        print "[{}] thpt {}; cache hit rate {}; cache miss rate {}; normalized thpt {}".format(tmpstrid, getmops(float(tmptotalops) / float(tmptotaltime)), float(tmp_cachehitcnt) / float(tmptotalops), float(tmp_cachemisscnt) / float(tmptotalops), tmp_normalizedthpt)
+        if tmp_maxserverops == 0:
+            print "[{}] tmp_maxserverops is 0, tmp_perserverops: {}".format(tmpstrid, tmp_perserverops)
+        else:
+            tmp_normalizedthpt = float(tmptotalops) / float(tmp_maxserverops)
+            print "[{}] thpt {}; cache hit rate {}; cache miss rate {}; normalized thpt {}".format(tmpstrid, getmops(float(tmptotalops) / float(tmptotaltime)), float(tmp_cachehitcnt) / float(tmptotalops), float(tmp_cachemisscnt) / float(tmptotalops), tmp_normalizedthpt)
 
 def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
     if (len(localjsonarray) != len(remotejsonarray)):
