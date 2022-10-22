@@ -411,6 +411,7 @@ void *run_server_worker(void * param) {
   char recvbuf[MAX_BUFSIZE];
 
   printf("[server.worker %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
+  fflush(stdout);
   transaction_ready_threads++;
 
   while (!transaction_running) {
@@ -1206,6 +1207,7 @@ void *run_server_evictserver(void *param) {
 	//bool with_controller_evictclient_addr = false;
 	
 	printf("[server.evictserver %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
+	fflush(stdout);
 	transaction_ready_threads++;
 
 	while (!transaction_running) {}
@@ -1334,6 +1336,7 @@ void *run_server_snapshotserver(void *param) {
 	//bool with_controller_snapshotclient_addr = false;
 
 	printf("[server.snapshotserver %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
+	fflush(stdout);
 	transaction_ready_threads += 1;
 
 	while (!transaction_running) {}
@@ -1411,6 +1414,7 @@ void *run_server_snapshotdataserver(void *param) {
 	dynamic_array_t recvbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 
 	printf("[server.snapshotdataserver %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
+	fflush(stdout);
 	transaction_ready_threads += 1;
 
 	while (!transaction_running) {}

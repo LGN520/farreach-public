@@ -165,6 +165,7 @@ void *run_server_worker(void * param) {
   char recvbuf[MAX_BUFSIZE];
 
   printf("[server.worker %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
+  fflush(stdout);
   transaction_ready_threads++;
 
   while (!transaction_running) {

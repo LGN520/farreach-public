@@ -560,6 +560,7 @@ void *run_transaction_loadfinishserver(void *param) {
 	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
 
 	printf("[transaction.main.loadfinishserver] ready\n");
+	fflush(stdout);
 	transaction_ready_threads++;
 
 	while(!transaction_running) {}

@@ -215,6 +215,7 @@ void *run_server_popserver(void *param) {
   socklen_t controller_popserver_popclient_addrlen = sizeof(struct sockaddr_in);
   
   printf("[server.popserver%d] ready\n", int(local_server_logical_idx));
+  fflush(stdout);
 
   transaction_ready_threads++;
 
@@ -371,6 +372,7 @@ void *run_server_worker(void * param) {
   polling_interrupt_for_blocking.tv_nsec = 1000; // 1ms = 1000ns
 
   printf("[server.worker %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
+  fflush(stdout);
   transaction_ready_threads++;
 
   while (!transaction_running) {
@@ -860,6 +862,7 @@ void *run_server_evictserver(void *param) {
 	//bool with_controller_evictclient_addr = false;
 	
 	printf("[server.evictserver %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
+	fflush(stdout);
 	transaction_ready_threads++;
 
 	while (!transaction_running) {}
@@ -923,6 +926,7 @@ void *run_server_valueupdateserver(void *param) {
 	socklen_t client_addrlen = sizeof(struct sockaddr_in);
 	
 	printf("[server.valueupdateserver %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
+	fflush(stdout);
 	transaction_ready_threads++;
 
 	while (!transaction_running) {}
