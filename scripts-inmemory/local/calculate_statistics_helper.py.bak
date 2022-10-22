@@ -139,25 +139,14 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
 
     calculate_perobjstat(aggjsonarray)
 
-    # Remove runtime variance
-
-    avgbottleneckthpt = getmops(aggjsonarray[0][TOTAL_OPSDONE] / aggjsonarray[0][EXECUTION_MILLIS])
+    totalthpt = 0
+    bottleneckthpt = getmops(aggjsonarray[0][TOTAL_OPSDONE] / aggjsonarray[0][EXECUTION_MILLIS])
+    print "[0th statistics] for {}: bottleneck thpt {}, rotated thpt 0, total thpt {}".format(bottleneckidx, bottleneckthpt, bottleneckthpt)
     for i in range(1, len(aggjsonarray)):
         tmpjsonobj = aggjsonarray[i]
         tmpexectime = tmpjsonobj[EXECUTION_MILLIS]
+
         tmp_bottleneckthpt = getmops((tmpjsonobj[PERSERVER_CACHEHITS][bottleneckidx] + tmpjsonobj[PERSERVER_OPSDONE][bottleneckidx]) / tmpexectime)
-
-        avgbottleneckthpt += tmp_bottleneckthpt
-    avgbottleneckthpt /= float(len(aggjsonarray))
-
-    totalthpt = avgbottleneckthpt
-    tmpbottleneckthpt = getmops(aggjsonarray[0][TOTAL_OPSDONE] / aggjsonarray[0][EXECUTION_MILLIS])
-    print "[0th statistics] for {}: bottleneck thpt {}, rotated thpt 0, total thpt {}".format(bottleneckidx, tmpbottleneckthpt, tmpbottleneckthpt)
-    for i in range(1, len(aggjsonarray)):
-        tmpjsonobj = aggjsonarray[i]
-        tmpexectime = tmpjsonobj[EXECUTION_MILLIS]
-        tmp_bottleneckthpt = getmops((tmpjsonobj[PERSERVER_CACHEHITS][bottleneckidx] + tmpjsonobj[PERSERVER_OPSDONE][bottleneckidx]) / tmpexectime)
-
         if i <= bottleneckidx:
             tmp_rotateidx = i - 1
         else:
@@ -168,9 +157,12 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
             exit(-1)
         else:
             print "[{}th statistics] for {}-{}: bottleneck thpt {}, rotated thpt {}, total thpt {}".format(i, bottleneckidx, tmp_rotateidx, tmp_bottleneckthpt, tmp_rotatethpt, getmops(tmpjsonobj[TOTAL_OPSDONE] / tmpexectime))
-        totalthpt += tmp_rotatethpt * (avgbottleneckthpt / tmp_bottleneckthpt)
 
-    print "[STATIC] average bottleneck throughput: {} MOPS".format(avgbottleneckthpt)
+        bottleneckthpt += tmp_bottleneckthpt
+        totalthpt += tmp_rotatethpt
+    bottleneckthpt /= float(len(aggjsonarray))
+    print "[STATIC] average bottleneck throughput: {} MOPS".format(bottleneckthpt)
+    totalthpt += bottleneckthpt
     print "[STATIC] aggregate throughput: {} MOPS".format(totalthpt)
 
     totallatency = 0
