@@ -9,6 +9,17 @@
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
 
+- [IMPORTANT] explanation of our results compared with NetCache paper -> reason: difference KVS
+	- Per FarReach KVS: 0.075 MOPS
+		+ Dynamic workload: 0.075*2*1.6=0.25MOPS
+		+ Static worklaod: 0.075*128*1.6=15.36MOPS
+			* NOTE: expected thpt of nocache is 1.5MOPS
+	- Per NetCache KVS: 10 MOPS
+		+ Dynamic workload: 10*2*1.6=32MOPS
+			* NOTE: NOT sure why NetCache has 40MOPS, maybe due to imprecise evaluation
+			* Based on its own arguments, the dynamic thpt should be 1/64 of static = 2*1000/64=31.3MOPS
+		+ Static workload: 10*128*1.6=2.04GOPS
+
 - TODO
 	* Support range query
 		- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
@@ -22,9 +33,11 @@
 			- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
 
 - 10.23 (Sunday)
+	+ Siyuan
+		* TODO: Update implementation and exp1&2 of evaluation in paper
 	+ Huancheng
 		* Evaluation
-			* TODO: Launch nocache for experiment 2 with 128 servers under YCSB A
+			* TODO: Finish experiment 2
 			* TODO: Run experiment 3
 				- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
 			* TODO: Run experiment 1 on Twitter Traces
@@ -33,52 +46,55 @@
 
 - 10.22 (Saturday)
 	+ Siyuan
-		* TODO: Update evaluation writing
+		* Fix a bug in TommyDS usage
+		* Add workload mode judgement in common_impl.h
+		* Test in-memory KVS under PKU's testbed
+			+ TODO: Wait for XMU's testbed to install 8.9.1 compiler
+				+ Test correctness of farreach P4 under 1M records
+					* TODO: Try warmup phase to check if the hot keys are cached
+					* TODO: Send some requests to see if cache hit rate is reasonable and all responses of the requests can be received
+			+ Test dynamic workload performnace of FarReach under 100M records (NOTE: re-run keydump if not)
+				* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
+				* NOTE: NetCache may implement a concurrent KVS based on TommyDS
+				* Disk bottleneck? (still 2 logical servers)
+					- Thpt under 128*2 logical clients: 0.5 MQPS (avg latency is ~200 us)
+					- Thpt under 1024*2 logical clients: 0.5 MQPS
+				* Network bottleneck? (with 32 logical servers)
+					- Thpt under 1024*2 logical clients: 1.5 MQPS (NOT saturate server)
+					- Thpt under 4096*2 logical clients: 1.5 MQPS (YCSB cannot launch too many subthreads -> still NOT saturate server)
+				* Therefore, the reason of the difference (around 100X) between our absolute result and NetCache is disk based on NetCache paper
+					- Single-server RocksDB w/o cache: <0.1 MQPS; single-server TommyDS (maybe modified as concurrent) w/o cache: <10 MQPS
+		* Test dynamic pattern of RocksDB under different # of clients
+			+ 128*2 logical clients: still 0.24 MOPS and server has been saturated -> using 64*2 logical clients is ok
+		* Update statistics calculation scripts to remove runtime variance
+		* Update part of exp1 in evaluation
 	+ HuanCheng
 		* Evaluation
-			* TODO: Run nocache/farreach/netcache for experiment 2 with 32/64 servers
+			* Re-run all experiment 1 after fixing runtime variance
+				- NOTE: run farreach/netcache/nocache on workload C first
+				- Move original benchmark/results/exp1.md as benchmark/results/exp1_old.md; create a new exp1.md
+				- Use new scripts to update thpt/latency numbers in benchmark/results/exp1.md, and also keep necessary data files in benchmark/results/exp1/
+					+ NOTE: we need to keep Json files but not track them in git as they are too large
+			* TODO: Run nocache/farreach/netcache for experiment 2 with 128/32/64 servers
 				- TODO: If not load before, use loading phase to pre-load 100M records into 32/64 storage servers
-			* TODO: Launch netcache for experiment 2 with 128 servers under YCSB A
 		* Coding
 			* TODO: Finish TraceReplay workload
 				- TODO: Get correpsonding trace file based on workloadName
 				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
 				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromString
+				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromBytes
 			* TODO: Fix retrieving issue of deleting /tmp/rocksdbbackups/16
 			* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 
 - 10.21 (Friday)
 	+ Siyuan
 		* Update statistics module to fix runtime variance under server rotation especially for large scale
-		* Test in-memory KVS under PKU's testbed
-			+ TODO: Wait for XMU's testbed to install 8.9.1 compiler
-				+ Test correctness of farreach P4 under 1M records
-					* TODO: Try warmup phase to check if the hot keys are cached
-					* TODO: Send some requests to see if cache hit rate is reasonable and all responses of the requests can be received
-			+ TODO: Test dynamic workload performnace of FarReach under 100M records (TODO: re-run keydump)
-				* NOTE: as our cache hit latency 30~40 us is lower than NetCache 5 us due to testbed difference, we need more client threads to saturate the system
-				* TODO: Disk bottleneck (still 2 logical servers): <20 MQPS with in-memory KVS instead of RocksDB
-					- Thpt under 256*2 logical clients: TODO MQPS
-					- Thpt under 512*2 logical clients: TODO MQPS
-				* TODO: Network bottleneck (with 64 logical servers): <40 MOPS under 1024*2 logical clients
-					- Thpt under 512*2 logical clients: TODO MQPS
-					- Thpt under 1024*2 logical clients: TODO MQPS
-				* Therefore, the reason of the difference (around 100X) between our absolute result and that in NetCache paper is disk
-					- Single-server RocksDB w/o cache: <0.1 MQPS; single-server TommyDS w/o cache: <10 MQPS
-					- Our static thpt based on RocksDB under 64 servers w/ cache: ~20 MOPS (TODO); that of NetCache: 2 GQPS
+		* Update methodology of evaluation in paper
 	+ HuanCheng
 		* Evaluation
 			* Enable server-side snapshot successfully
 				* For farreach, test preparefinish_client at withinBenchmark() to see if java can trigger snapshot successfully
 					- Check tmp_controller.out. tmp_switchos.out, and tmp_controller_bwcost.out
-			* TODO: Re-run all experiment 1 after fixing runtime variance
-				- NOTE: run farreach/netcache/nocache on workload C first
-				- TODO: Move original benchmark/results/exp1.md as benchmark/results/exp1_old.md; create a new exp1.md
-				- TODO: Update thpt/latency numbers in benchmark/results/exp1.md, and also keep necessary data files in benchmark/results/exp1/
-					+ NOTE: we need to keep Json files but not track them in git as they are too large
-			* TODO: Launch FarReach + 128 servers for experiment 2 under YCSB A
-				* TODO: Use loading phase to pre-load 100M records into 128 storage servers
 
 - 10.20 (Thursday)
 	+ Siyuan
