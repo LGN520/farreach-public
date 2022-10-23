@@ -9,12 +9,9 @@ TOTAL_OPSDONE = "totalOpsdone"
 PERSERVER_OPSDONE = "perserverOpsdone"
 PERSERVER_CACHEHITS = "perserverCachehits"
 EXECUTION_MILLIS = "executionMillis"
-#TOTAL_LATENCY = "totalLatency"
-#TOTAL_LATENCYNUM = "totalLatencynum"
-#TOTAL_HISTOGRAM = "totalHistogram"
-PERSERVER_TOTAL_LATENCY = "perservertotalLatency"
-PERSERVER_TOTAL_LATENCYNUM = "perservertotalLatencynum"
-PERSERVER_TOTAL_HISTOGRAM = "perservertotalHistogram"
+TOTAL_LATENCY = "totalLatency"
+TOTAL_LATENCYNUM = "totalLatencynum"
+TOTAL_HISTOGRAM = "totalHistogram"
 
 STATIC_PEROBJ_EXECUTION_MILLIS = 10 * 1000
 DYNAMIC_PEROBJ_EXECUTION_MILLIS = 1 * 1000
@@ -30,16 +27,6 @@ def getstrid(tmpjsonobj):
         tmpstrid = "NOSTRID"
     return tmpstrid
 
-def aggregate_1dlist(locallist, remotelist, objidx, role):
-    result = []
-    if (len(locallist) != len(remotelist)):
-        print "[ERROR][aggregate] for {}th obj, localjsonobj[{}] size {} != remotejsonobj[{}] size {}".format(objidx, role, len(locallist), role, len(remotelist))
-        print "localjsonobj[{}: {}".format(role, locallist)
-        print "remotejsonobj[{}]: {}".format(role, remotelist)
-        exit(-1)
-    for i in range(len(locallist)):
-        result.append(locallist[i] + remotelist[i])
-    return result
 
 def aggregate(localjsonarray, remotejsonarray, length):
     global GLOBAL_PEROBJ_EXECUTION_MILLIS
@@ -60,32 +47,34 @@ def aggregate(localjsonarray, remotejsonarray, length):
             exit(-1)
 
         aggobj[TOTAL_OPSDONE] = localjsonobj[TOTAL_OPSDONE] + remotejsonobj[TOTAL_OPSDONE]
-        aggobj[PERSERVER_OPSDONE] = aggregate_1dlist(localjsonobj[PERSERVER_OPSDONE], remotejsonobj[PERSERVER_OPSDONE], i, PERSERVER_OPSDONE)
-        aggobj[PERSERVER_CACHEHITS] = aggregate_1dlist(localjsonobj[PERSERVER_CACHEHITS], remotejsonobj[PERSERVER_CACHEHITS], i, PERSERVER_CACHEHITS)
-
+        aggobj[PERSERVER_OPSDONE] = []
+        if (len(localjsonobj[PERSERVER_OPSDONE]) != len(remotejsonobj[PERSERVER_OPSDONE])):
+            print "[ERROR][aggregate] for {}th obj, localjsonobj[PERSERVER_OPSDONE] size {} != remotejsonobj[PERSERVER_OPSDONE] size {}".format(i, len(localjsonobj[PERSERVER_OPSDONE]), len(remotejsonobj[PERSERVER_OPSDONE]))
+            print "localjsonobj[PERSERVER_OPSDONE]: {}".format(localjsonobj[PERSERVER_OPSDONE])
+            print "remotejsonobj[PERSERVER_OPSDONE]: {}".format(remotejsonobj[PERSERVER_OPSDONE])
+            exit(-1)
+        for j in range(len(localjsonobj[PERSERVER_OPSDONE])):
+            aggobj[PERSERVER_OPSDONE].append(localjsonobj[PERSERVER_OPSDONE][j] + remotejsonobj[PERSERVER_OPSDONE][j])
+        aggobj[PERSERVER_CACHEHITS] = []
+        if (len(localjsonobj[PERSERVER_CACHEHITS]) != len(remotejsonobj[PERSERVER_CACHEHITS])):
+            print "[ERROR][aggregate] for {}th obj, localjsonobj[PERSERVER_CACHEHITS] size {} != remotejsonobj[PERSERVER_CACHEHITS] size {}".format(i, len(localjsonobj[PERSERVER_CACHEHITS]), len(remotejsonobj[PERSERVER_CACHEHITS]))
+            print "localjsonobj[PERSERVER_CACHEHITS]: {}".format(localjsonobj[PERSERVER_CACHEHITS])
+            print "remotejsonobj[PERSERVER_CACHEHITS]: {}".format(remotejsonobj[PERSERVER_CACHEHITS])
+            exit(-1)
+        for j in range(len(localjsonobj[PERSERVER_CACHEHITS])):
+            aggobj[PERSERVER_CACHEHITS].append(localjsonobj[PERSERVER_CACHEHITS][j] + remotejsonobj[PERSERVER_CACHEHITS][j])
         aggobj[EXECUTION_MILLIS] = (localjsonobj[EXECUTION_MILLIS] + remotejsonobj[EXECUTION_MILLIS]) / 2
         #aggobj[EXECUTION_MILLIS] = GLOBAL_PEROBJ_EXECUTION_MILLIS
-
-        aggobj[PERSERVER_TOTAL_LATENCY] = aggregate_1dlist(localjsonobj[PERSERVER_TOTAL_LATENCY], remotejsonobj[PERSERVER_TOTAL_LATENCY], i, PERSERVER_TOTAL_LATENCY)
-        aggobj[PERSERVER_TOTAL_LATENCYNUM] = aggregate_1dlist(localjsonobj[PERSERVER_TOTAL_LATENCYNUM], remotejsonobj[PERSERVER_TOTAL_LATENCYNUM], i, PERSERVER_TOTAL_LATENCYNUM)
-
-        aggobj[PERSERVER_TOTAL_HISTOGRAM] = []
-        if len(localjsonobj[PERSERVER_TOTAL_HISTOGRAM]) != len(remotejsonobj[PERSERVER_TOTAL_HISTOGRAM]):
-            print "[ERROR][aggregate] for {}th obj, localjsonobj[PERSERVER_TOTAL_HISTOGRAM] size {} != remotejsonobj[PERSERVER_TOTAL_HISTOGRAM] size {}".format(i, len(localjsonobj[PERSERVER_TOTAL_HISTOGRAM]), len(remotejsonobj[PERSERVER_TOTAL_HISTOGRAM]))
+        aggobj[TOTAL_LATENCY] = localjsonobj[TOTAL_LATENCY] + remotejsonobj[TOTAL_LATENCY]
+        aggobj[TOTAL_LATENCYNUM] = localjsonobj[TOTAL_LATENCYNUM] + remotejsonobj[TOTAL_LATENCYNUM]
+        aggobj[TOTAL_HISTOGRAM] = []
+        if (len(localjsonobj[TOTAL_HISTOGRAM]) != len(remotejsonobj[TOTAL_HISTOGRAM])):
+            print "[ERROR][aggregate] for {}th obj, localjsonobj[TOTAL_HISTOGRAM] size {} != remotejsonobj[TOTAL_HISTOGRAM] size {}".format(i, len(localjsonobj[TOTAL_HISTOGRAM]), len(remotejsonobj[TOTAL_HISTOGRAM]))
+            print "localjsonobj[TOTAL_HISTOGRAM]: {}".format(localjsonobj[TOTAL_HISTOGRAM])
+            print "remotejsonobj[TOTAL_HISTOGRAM]: {}".format(remotejsonobj[TOTAL_HISTOGRAM])
             exit(-1)
-        for j in range(len(localjsonobj[PERSERVER_TOTAL_HISTOGRAM])):
-            tmplocalhist = localjsonobj[PERSERVER_TOTAL_HISTOGRAM][j]
-            tmpremotehist = remotejsonobj[PERSERVER_TOTAL_HISTOGRAM][j]
-            if len(tmplocalhist) != len(tmpremotehist):
-                print "[ERROR][aggregate] for {}th obj {}th histogram, local size {} != remote size {}".format(i, j, len(tmplocalhist), len(tmpremotehist))
-                print "localhist: {}".format(localhist)
-                print "remotehist: {}".format(remotehist)
-                exit(-1)
-            tmpagghist = []
-            for k in range(len(tmplocalhist)):
-                tmpagghist.append(tmplocalhist[k] + tmpremotehist[k])
-            aggobj[PERSERVER_TOTAL_HISTOGRAM].append(tmpagghist)
-
+        for j in range(len(localjsonobj[TOTAL_HISTOGRAM])):
+            aggobj[TOTAL_HISTOGRAM].append(localjsonobj[TOTAL_HISTOGRAM][j] + remotejsonobj[TOTAL_HISTOGRAM][j])
         aggjsonarray.append(aggobj)
     return aggjsonarray
 
@@ -117,6 +106,11 @@ def calculatelatency(totallatency, totallatencynum, totalhistogram):
     return avglatency, latencymedium, latency90p, latency95p, latency99p
 
 def calculate_perobjstat(aggjsonarray):
+    #tmp_avglatency_sum = 0
+    #tmp_latencymedium_sum = 0
+    #tmp_latency90p_sum = 0
+    #tmp_latency95p_sum = 0
+    #tmp_latency99p_sum = 0
     for i in range(len(aggjsonarray)):
         tmpjsonobj = aggjsonarray[i]
 
@@ -141,13 +135,21 @@ def calculate_perobjstat(aggjsonarray):
             tmp_normalizedthpt = float(tmptotalops) / float(tmp_maxserverops)
             print "[{}] thpt {} MOPS; cache hit rate {}; cache miss rate {}; normalized thpt {}".format(tmpstrid, getmops(float(tmptotalops) / float(tmptotaltime)), float(tmp_cachehitcnt) / float(tmptotalops), float(tmp_cachemisscnt) / float(tmptotalops), tmp_normalizedthpt)
 
-        for j in range(len(tmpjsonobj[PERSERVER_TOTAL_LATENCY])):
-            tmp_totallatency = tmpjsonobj[PERSERVER_TOTAL_LATENCY][j]
-            tmp_totallatencynum = tmpjsonobj[PERSERVER_TOTAL_LATENCYNUM][j]
-            tmp_totallatencyhist = tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][j]
-            tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p = calculatelatency(tmp_totallatency, tmp_totallatencynum, tmp_totallatencyhist)
-            print "[idx {}] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(j, tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p)
-    return
+        tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p = calculatelatency(tmpjsonobj[TOTAL_LATENCY], tmpjsonobj[TOTAL_LATENCYNUM], tmpjsonobj[TOTAL_HISTOGRAM])
+        print "[{}] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(tmpstrid, tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p)
+
+        #tmp_avglatency_sum += tmp_avglatency
+        #tmp_latencymedium_sum += tmp_latencymedium
+        #tmp_latency90p_sum += tmp_latency99p
+        #tmp_latency95p_sum += tmp_latency99p
+        #tmp_latency99p_sum += tmp_latency99p
+
+    #tmp_avglatency_sum /= float(len(aggjsonarray))
+    #tmp_latencymedium_sum /= float(len(aggjsonarray))
+    #tmp_latency90p_sum /= float(len(aggjsonarray))
+    ##tmp_latency95p_sum /= float(len(aggjsonarray))
+    #tmp_latency99p_sum /= float(len(aggjsonarray))
+    #print "average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(tmp_avglatency_sum, tmp_latencymedium_sum, tmp_latency90p_sum, tmp_latency95p_sum, tmp_latency99p_sum)
 
 def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
     if (len(localjsonarray) != len(remotejsonarray)):
@@ -158,7 +160,7 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
 
     calculate_perobjstat(aggjsonarray)
 
-    # (1) Remove runtime variance on thpt
+    # Remove runtime variance
 
     avgbottleneckthpt = getmops(aggjsonarray[0][TOTAL_OPSDONE] / aggjsonarray[0][EXECUTION_MILLIS])
     for i in range(1, len(aggjsonarray)):
@@ -192,56 +194,29 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
     print "[STATIC] average bottleneck throughput: {} MOPS".format(avgbottleneckthpt)
     print "[STATIC] aggregate throughput: {} MOPS".format(totalthpt)
 
-    # (2) Reduce runtime variance on latency
+    # Reduce latency variance under server rotation
 
-    totallatency = 0
-    totallatencynum = 0
-    totallatencyhist = []
-
-    # Get bottleneck latency statistics
-
-    avgbottleneckhist = [] # latency histogram for bottleneck partition
+    avglatency_sum = 0
+    latencymedium_sum = 0
+    latency90p_sum = 0
+    latency95p_sum = 0
+    latency99p_sum = 0
     for i in range(len(aggjsonarray)):
         tmpjsonobj = aggjsonarray[i]
-        tmpbottleneckhist = tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][0]
-        if len(avgbottleneckhist) == 0:
-            avgbottleneckhist = [0] * len(tmpbottleneckhist)
-        for j in range(len(avgbottleneckhist)):
-            avgbottleneckhist[j] += tmpbottleneckhist[j]
-    for i in range(len(avgbottleneckhist)):
-        avgbottleneckhist[i] /= len(aggjsonarray)
+        tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p = calculatelatency(tmpjsonobj[TOTAL_LATENCY], tmpjsonobj[TOTAL_LATENCYNUM], tmpjsonobj[TOTAL_HISTOGRAM])
 
-    avgbottlenecktotallatency = 0
-    avgbottlenecktotallatencynum = 0
-    for i in range(len(avgbottleneckhist)):
-        avgbottlenecktotallatency += i * avgbottleneckhist[i]
-        avgbottlenecktotallatencynum += avgbottleneckhist[i]
-    #avglatency, latencymedium, latency90p, latency95p, latency99p = calculatelatency(avgbottlenecktotallatency, avgbottlenecktotallatencynum, avgbottleneckhist)
-    #print "[average bottleneck latency] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency90p, latency95p, latency99p)
+        avglatency_sum += tmp_avglatency
+        latencymedium_sum += tmp_latencymedium
+        latency90p_sum += tmp_latency90p
+        latency95p_sum += tmp_latency95p
+        latency99p_sum += tmp_latency99p
 
-    totallatency = avgbottlenecktotallatency
-    totallatencynum = avgbottlenecktotallatencynum
-    totallatencyhist = [0] * len(avgbottleneckhist)
-    for i in range(len(avgbottleneckhist)):
-        totallatencyhist[i] = avgbottleneckhist[i]
-
-    # Get each rotated partition latency statistics
-
-    for i in range(1, len(aggjsonarray)):
-        tmpjsonobj = aggjsonarray[i]
-        tmprotatehist = tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][1]
-        tmprotatetotallatency = tmpjsonobj[PERSERVER_TOTAL_LATENCY][1]
-        tmprotatetotallatencynum = tmpjsonobj[PERSERVER_TOTAL_LATENCYNUM][1]
-
-        totallatency += tmprotatetotallatency
-        totallatencynum += tmprotatetotallatencynum
-        for j in range(len(totallatencyhist)):
-            totallatencyhist[j] += tmprotatehist[j]
-
-    # Get aggregated latency results
-
-    avglatency, latencymedium, latency90p, latency95p, latency99p = calculatelatency(totallatency, totallatencynum, totallatencyhist)
-    print "[STATIC] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency90p, latency95p, latency99p)
+    avglatency_sum /= float(len(aggjsonarray))
+    latencymedium_sum /= float(len(aggjsonarray))
+    latency90p_sum /= float(len(aggjsonarray))
+    latency95p_sum /= float(len(aggjsonarray))
+    latency99p_sum /= float(len(aggjsonarray))
+    print "[STATIC] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency_sum, latencymedium_sum, latency90p_sum, latency95p_sum, latency99p_sum)
 
 def dynamicprocess(localjsonarray, remotejsonarray):
     seconds = len(localjsonarray)
@@ -260,19 +235,9 @@ def dynamicprocess(localjsonarray, remotejsonarray):
     perseclatency95p = [0] * seconds
     perseclatency99p = [0] * seconds
     for i in range(seconds):
-        tmpjsonobj = aggjsonarray[i]
-        persecthpt[i] = getmops(tmpjsonobj[TOTAL_OPSDONE] / tmpjsonobj[EXECUTION_MILLIS])
-
-        tmp_totallatency = 0
-        tmp_totallatencynum = 0
-        tmp_totallatencyhist = [0] * len(tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][0])
-        for j in range(len(tmpjsonobj[PERSERVER_TOTAL_LATENCY])):
-            tmp_totallatency += tmpjsonobj[PERSERVER_TOTAL_LATENCY][j]
-            tmp_totallatencynum += tmpjsonobj[PERSERVER_TOTAL_LATENCYNUM][j]
-            for k in range(len(tmp_totallatencyhist)):
-                tmp_totallatencyhist[k] += tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][j][k]
+        persecthpt[i] = getmops(aggjsonarray[i][TOTAL_OPSDONE] / aggjsonarray[i][EXECUTION_MILLIS])
         perseclatencyavg[i], perseclatencymedium[i], perseclatency90p[i], perseclatency95p[i], perseclatency99p[i] = calculatelatency(\
-                tmp_totallatency, tmp_totallatencynum, tmp_totallatencyhist)
+                aggjsonarray[i][TOTAL_LATENCY], aggjsonarray[i][TOTAL_LATENCYNUM], aggjsonarray[i][TOTAL_HISTOGRAM])
     print "[DYNAMIC] per-second statistics:"
     print "thpt (MOPS): {}".format(persecthpt)
     print "avg latency (us): {}".format(perseclatencyavg)
@@ -285,12 +250,10 @@ def dynamicprocess(localjsonarray, remotejsonarray):
     totallatencynum = 0
     totalhistogram = [0] * len(aggjsonarray[0][TOTAL_HISTOGRAM])
     for i in range(len(aggjsonarray)):
-        tmpjsonobj = aggjsonarray[i]
-        for j in range(len(tmpjsonobj[PERSERVER_TOTAL_LATENCY])):
-            totallatency += tmpjsonobj[PERSERVER_TOTAL_LATENCY][j]
-            totallatencynum += tmpjsonobj[PERSERVER_TOTAL_LATENCYNUM][j]
-            for k in range(len(tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][j])):
-                totalhistogram[k] += tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][j][k]
+        totallatency += aggjsonarray[i][TOTAL_LATENCY]
+        totallatencynum += aggjsonarray[i][TOTAL_LATENCYNUM]
+        for j in range(len(aggjsonarray[i][TOTAL_HISTOGRAM])):
+            totalhistogram[j] += aggjsonarray[i][TOTAL_HISTOGRAM][j]
 
     avglatency, latencymedium, latency90p, latency95p, latency99p = calculatelatency(totallatency, totallatencynum, totalhistogram)
     print "[DYNAMIC][OVERALL] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency90p, latency95p, latency99p)

@@ -12,9 +12,9 @@ EXECUTION_MILLIS = "executionMillis"
 #TOTAL_LATENCY = "totalLatency"
 #TOTAL_LATENCYNUM = "totalLatencynum"
 #TOTAL_HISTOGRAM = "totalHistogram"
-PERSERVER_TOTAL_LATENCY = "perserverTotalLatency"
-PERSERVER_TOTAL_LATENCYNUM = "perserverTotalLatencynum"
-PERSERVER_TOTAL_HISTOGRAM = "perserverTotalHistogram"
+PERSERVER_TOTAL_LATENCY = "perservertotalLatency"
+PERSERVER_TOTAL_LATENCYNUM = "perservertotalLatencynum"
+PERSERVER_TOTAL_HISTOGRAM = "perservertotalHistogram"
 
 STATIC_PEROBJ_EXECUTION_MILLIS = 10 * 1000
 DYNAMIC_PEROBJ_EXECUTION_MILLIS = 1 * 1000
@@ -82,8 +82,8 @@ def aggregate(localjsonarray, remotejsonarray, length):
                 print "remotehist: {}".format(remotehist)
                 exit(-1)
             tmpagghist = []
-            for k in range(len(localhist)):
-                tmpagghist.append(localhist[k] + remotehist[k])
+            for k in range(len(tmplocalhist)):
+                tmpagghist.append(tmplocalhist[k] + tmpremotehist[k])
             aggobj[PERSERVER_TOTAL_HISTOGRAM].append(tmpagghist)
 
         aggjsonarray.append(aggobj)
@@ -205,7 +205,7 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
         tmpjsonobj = aggjsonarray[i]
         tmpbottleneckhist = tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][0]
         if len(avgbottleneckhist) == 0:
-            bottleneckhist = [0] * len(tmpbottleneckhist)
+            avgbottleneckhist = [0] * len(tmpbottleneckhist)
         for j in range(len(avgbottleneckhist)):
             avgbottleneckhist[j] += tmpbottleneckhist[j]
     for i in range(len(avgbottleneckhist)):
@@ -216,6 +216,8 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
     for i in range(len(avgbottleneckhist)):
         avgbottlenecktotallatency += i * avgbottleneckhist[i]
         avgbottlenecktotallatencynum += avgbottleneckhist[i]
+    #avglatency, latencymedium, latency90p, latency95p, latency99p = calculatelatency(avgbottlenecktotallatency, avgbottlenecktotallatencynum, avgbottleneckhist)
+    #print "[average bottleneck latency] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency90p, latency95p, latency99p)
 
     totallatency = avgbottlenecktotallatency
     totallatencynum = avgbottlenecktotallatencynum
