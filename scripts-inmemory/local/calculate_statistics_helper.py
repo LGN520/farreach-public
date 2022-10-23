@@ -106,6 +106,11 @@ def calculatelatency(totallatency, totallatencynum, totalhistogram):
     return avglatency, latencymedium, latency90p, latency95p, latency99p
 
 def calculate_perobjstat(aggjsonarray):
+    #tmp_avglatency_sum = 0
+    #tmp_latencymedium_sum = 0
+    #tmp_latency90p_sum = 0
+    #tmp_latency95p_sum = 0
+    #tmp_latency99p_sum = 0
     for i in range(len(aggjsonarray)):
         tmpjsonobj = aggjsonarray[i]
 
@@ -128,7 +133,23 @@ def calculate_perobjstat(aggjsonarray):
             print "[{}] tmp_maxserverops is 0, tmp_perserverops: {}".format(tmpstrid, tmp_perserverops)
         else:
             tmp_normalizedthpt = float(tmptotalops) / float(tmp_maxserverops)
-            print "[{}] thpt {}; cache hit rate {}; cache miss rate {}; normalized thpt {}".format(tmpstrid, getmops(float(tmptotalops) / float(tmptotaltime)), float(tmp_cachehitcnt) / float(tmptotalops), float(tmp_cachemisscnt) / float(tmptotalops), tmp_normalizedthpt)
+            print "[{}] thpt {} MOPS; cache hit rate {}; cache miss rate {}; normalized thpt {}".format(tmpstrid, getmops(float(tmptotalops) / float(tmptotaltime)), float(tmp_cachehitcnt) / float(tmptotalops), float(tmp_cachemisscnt) / float(tmptotalops), tmp_normalizedthpt)
+
+        tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p = calculatelatency(tmpjsonobj[TOTAL_LATENCY], tmpjsonobj[TOTAL_LATENCYNUM], tmpjsonobj[TOTAL_HISTOGRAM])
+        print "[{}] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(tmpstrid, tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p)
+
+        #tmp_avglatency_sum += tmp_avglatency
+        #tmp_latencymedium_sum += tmp_latencymedium
+        #tmp_latency90p_sum += tmp_latency99p
+        #tmp_latency95p_sum += tmp_latency99p
+        #tmp_latency99p_sum += tmp_latency99p
+
+    #tmp_avglatency_sum /= float(len(aggjsonarray))
+    #tmp_latencymedium_sum /= float(len(aggjsonarray))
+    #tmp_latency90p_sum /= float(len(aggjsonarray))
+    ##tmp_latency95p_sum /= float(len(aggjsonarray))
+    #tmp_latency99p_sum /= float(len(aggjsonarray))
+    #print "average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(tmp_avglatency_sum, tmp_latencymedium_sum, tmp_latency90p_sum, tmp_latency95p_sum, tmp_latency99p_sum)
 
 def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
     if (len(localjsonarray) != len(remotejsonarray)):
@@ -173,17 +194,29 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
     print "[STATIC] average bottleneck throughput: {} MOPS".format(avgbottleneckthpt)
     print "[STATIC] aggregate throughput: {} MOPS".format(totalthpt)
 
-    totallatency = 0
-    totallatencynum = 0
-    totalhistogram = [0] * len(aggjsonarray[0][TOTAL_HISTOGRAM])
-    for i in range(len(aggjsonarray)):
-        totallatency += aggjsonarray[i][TOTAL_LATENCY]
-        totallatencynum += aggjsonarray[i][TOTAL_LATENCYNUM]
-        for j in range(len(aggjsonarray[i][TOTAL_HISTOGRAM])):
-            totalhistogram[j] += aggjsonarray[i][TOTAL_HISTOGRAM][j]
+    # Reduce latency variance under server rotation
 
-    avglatency, latencymedium, latency90p, latency95p, latency99p = calculatelatency(totallatency, totallatencynum, totalhistogram)
-    print "[STATIC] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency90p, latency95p, latency99p)
+    avglatency_sum = 0
+    latencymedium_sum = 0
+    latency90p_sum = 0
+    latency95p_sum = 0
+    latency99p_sum = 0
+    for i in range(len(aggjsonarray)):
+        tmpjsonobj = aggjsonarray[i]
+        tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p = calculatelatency(tmpjsonobj[TOTAL_LATENCY], tmpjsonobj[TOTAL_LATENCYNUM], tmpjsonobj[TOTAL_HISTOGRAM])
+
+        avglatency_sum += tmp_avglatency
+        latencymedium_sum += tmp_latencymedium
+        latency90p_sum += tmp_latency90p
+        latency95p_sum += tmp_latency95p
+        latency99p_sum += tmp_latency99p
+
+    avglatency_sum /= float(len(aggjsonarray))
+    latencymedium_sum /= float(len(aggjsonarray))
+    latency90p_sum /= float(len(aggjsonarray))
+    latency95p_sum /= float(len(aggjsonarray))
+    latency99p_sum /= float(len(aggjsonarray))
+    print "[STATIC] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency_sum, latencymedium_sum, latency90p_sum, latency95p_sum, latency99p_sum)
 
 def dynamicprocess(localjsonarray, remotejsonarray):
     seconds = len(localjsonarray)
