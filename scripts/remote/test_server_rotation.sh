@@ -1,5 +1,4 @@
-if [ "x${is_common_included}" != "x1" ]
-then
+if [ "x${is_common_included}" != "x1" ]; then
 	source scripts/common.sh
 fi
 
@@ -11,9 +10,11 @@ fi
 # (3) you need to finish setup phase by prepare_server_rotation.sh + launching switch of corresponding method with setuping MAT rules
 
 ##### Part 0 #####
+echo "[part 0] clean up server storages"
+ssh ${USER}@${SERVER0} "rm -r /tmp/${DIRNAME}/*"
+ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*"
 
-if [[ ${with_controller} -eq 1 ]]
-then
+if [[ ${with_controller} -eq 1 ]]; then
 	# NOTE: if w/ in-switch cache, finish warmup phase by launching servers of correpsonding method + warmup_client + stopping servers
 	echo "[part 0] pre-admit hot keys into switch before server rotation"
 
@@ -46,14 +47,22 @@ source scripts/remote/test_server_rotation_p1.sh 0
 
 echo "[part 2] run bottleneck server thread + rotated server thread"
 
-for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1))
-do
-	if [ ${rotateidx} -eq ${bottleneck_serveridx} ]
-	then
+rotatecnt=1
+for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); do
+	if [ ${rotateidx} -eq ${bottleneck_serveridx} ]; then
 		continue
 	fi
 
+	if [ ${rotatecnt} -ne 0 ] && [ $((${rotatecnt}%16)) -eq 0 ]; then
+		echo "refresh bottleneck parition and rotated partition back to the state after loading phase"
+		ssh ${USER}@${SERVER0} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db" # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
+		ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${rotateidx}.db" # retrieve rocksdb and reset rotatedservers.snapshotid = 0
+	else
+		ssh ${USER}@${SERVER1} "mv /tmp/${DIRNAME}/worker*.db /tmp/${DIRNAME}/worker${rotateidx}.db"
+	fi
+
 	source scripts/remote/test_server_rotation_p2.sh 0 ${rotateidx}
+	rotatecnt=$((++rotatecnt))
 
 	#read -p "Continue[y/n]: " is_continue
 	#if [ ${is_continue}x == nx ]

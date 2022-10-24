@@ -29,9 +29,9 @@ ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/local/local
 source scripts/remote/stopservertestbed.sh
 
 # Retrieve both dl16.bottleneckserver and dl13.rotatedservers to the state just after loading phase
-echo "retrieve both bottleneck partition and rotated partitions back to the state after loading phase"
-ssh ${USER}@${SERVER0} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/${server_total_logical_num_for_rotation}/worker${bottleneck_serveridx}.* /tmp/${DIRNAME}/" # retrieve bottleneckserver rocksdb and reset bottleneckserver/controller.snapshotid = 0
-ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/${server_total_logical_num_for_rotation}/* /tmp/${DIRNAME}/" # retrieve rotatedservers' rocksdb and reset rotatedservers.snapshotid = 0
+echo "retrieve both bottleneck partition and rotated partition back to the state after loading phase"
+ssh ${USER}@${SERVER0} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db" # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
+ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker0.db}" # retrieve rocksdb and reset rotatedservers.snapshotid = 0
 
 echo "prepare and sync config.ini"
 cp ${DIRNAME}/configs/config.ini.static.1p ${DIRNAME}/config.ini
