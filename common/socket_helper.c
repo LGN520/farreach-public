@@ -891,9 +891,9 @@ bool udprecvlarge_multisrc(method_t methodid, int sockfd, dynamic_array_t **bufs
 			break;
 		}
 
-		optype_t tmptype = optype_t(get_packet_type(fragbuf, frag_recvsize));
+		packet_type_t tmptype = get_packet_type(fragbuf, frag_recvsize);
 		if (isfilter) {
-			if (tmptype != optype) {
+			if (optype_t(tmptype) != optype) {
 				continue; // filter the unmatched packet
 			}
 			tmpkey = get_packet_key(methodid, fragbuf, frag_recvsize);
@@ -1071,10 +1071,10 @@ bool udprecvlarge_multisrc_dist(method_t methodid, int sockfd, std::vector<std::
 			break;
 		}
 
-		optype_t tmptype = optype_t(get_packet_type(fragbuf, frag_recvsize));
+		packet_type_t tmptype = get_packet_type(fragbuf, frag_recvsize);
 		if (isfilter) {
 			//printf("received optype: %x, expected optype: %x\n", int(get_packet_type(fragbuf, frag_recvsize)), int(optype));
-			if (tmptype != optype) {
+			if (optype_t(tmptype) != optype) {
 				continue; // filter the unmatched packet
 			}
 			tmpkey = get_packet_key(methodid, fragbuf, frag_recvsize);
