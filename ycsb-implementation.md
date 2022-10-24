@@ -36,14 +36,21 @@
 				- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
 			* TODO: Start experiment 4
 			* TODO: Run experiment 1 on Twitter Traces
+				- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
 
 - 10.24
 	+ Siyuan
-		* Update inswitchcache-java-lib and benchmark.md for consistent loading phase
+		* For consistent loading phase
+			- Update inswitchcache-java-lib and benchmark.md
+			- Update prepare_load.sh and load_and_backup.sh
+		* Calculate normalized thpt in calculate_statistics_helper.py
+		* Prepare for quiz (Cypher)
 		* Support range query
-			- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
-			- (Discuss first before implementation) update JNI for range query
+			- Get frag_hdrsize, srcnum_off, and other scan-related metadata based on packet type and methodid dynamically instead of from function parameters in common module
+				+ Update the usage of udprecvlarge_multisrc\[_dist\] for scan response in C code
+			- TODO: Add SCANRES_SPLIT (use custom Pair)
+			- Update JNI for range query
 				- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
 					+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
 					+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
@@ -52,7 +59,7 @@
 				- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
 				- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
 	+ HuanCheng
-		* TODO: Update scripts: prepare_load.sh, load_and_backup.sh, test_server_rotation_p1.sh, test_dynamic.sh
+		* TODO: Update scripts: test_server_rotation_p1.sh, test_server_rotation_p2.sh, test_dynamic.sh
 		* Evaluation
 			* TODO: Re-run experiment 1 for reasonable medium latency
 			* TODO: Re-run experiment 2 on 32/64/128 servers for reasonable medium latency

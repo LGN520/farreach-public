@@ -1329,7 +1329,7 @@ void *run_client_worker(void *param) {
 				dynamic_array_t *scanbufs = NULL;
 				set_recvtimeout(client_udpsock_list[local_client_logical_idx], CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
 				//is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[local_client_logical_idx], scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(CURMETHOD_ID), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
-				is_timeout = udprecvlarge_multisrc_ipfrag(CURMETHOD_ID, client_udpsock_list[local_client_logical_idx], &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(CURMETHOD_ID), scan_response_split_t::get_srcnum_off(CURMETHOD_ID), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(CURMETHOD_ID), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, optype_t(packet_type_t::SCANRES_SPLIT), tmpkey);
+				is_timeout = udprecvlarge_multisrc_ipfrag(CURMETHOD_ID, client_udpsock_list[local_client_logical_idx], &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", true, optype_t(packet_type_t::SCANRES_SPLIT), tmpkey);
 				CUR_TIME(wait_t1);
 				set_recvtimeout(client_udpsock_list[local_client_logical_idx], CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
 				if (is_timeout) {

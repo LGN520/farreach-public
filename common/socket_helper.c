@@ -838,13 +838,13 @@ bool udprecvlarge(method_t methodid, int sockfd, dynamic_array_t &buf, int flags
 	return is_timeout;
 }
 
+// TODO: NOT supported yet
+//bool udprecvlarge_multisrc_udpfrag(method_t methodid, int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, bool isfilter, optype_t optype, netreach_key_t targetkey) {
+//	return udprecvlarge_multisrc(methodid, sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, UDP_FRAGMENT_MAXSIZE, UDP_FRAGTYPE, isfilter, optype, targetkey);
+//}
 
-bool udprecvlarge_multisrc_udpfrag(method_t methodid, int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	return udprecvlarge_multisrc(methodid, sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, 0, UDP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, isfilter, optype, targetkey);
-}
-
-bool udprecvlarge_multisrc_ipfrag(method_t methodid, int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	return udprecvlarge_multisrc(methodid, sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, isfilter, optype, targetkey);
+bool udprecvlarge_multisrc_ipfrag(method_t methodid, int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, bool isfilter, optype_t optype, netreach_key_t targetkey) {
+	return udprecvlarge_multisrc(methodid, sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, IP_FRAGMENT_MAXSIZE, IP_FRAGTYPE, isfilter, optype, targetkey);
 }
 
 // NOTE: receive large packet from multiple sources; used for SCANRES_SPLIT (IMPORTANT: srcid > 0 && srcid <= srcnum <= bufnum)
@@ -852,16 +852,24 @@ bool udprecvlarge_multisrc_ipfrag(method_t methodid, int sockfd, dynamic_array_t
 // bufnum: max_srcnum; if is_timeout = true, bufnum = 0;
 // src_addrs: NULL or bufnum; addrlens: NULL or bufnum
 // For example, srcnum for SCANRES_SPLIT is split_hdr.max_scannum; srcid for SCANRES_SPLIT is split_hdr.cur_scanidx
-bool udprecvlarge_multisrc(method_t methodid, int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
-	INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
-	INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
+bool udprecvlarge_multisrc(method_t methodid, int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_maxsize, int fragtype, bool isfilter, optype_t optype, netreach_key_t targetkey) {
+	INVARIANT(fragtype == IP_FRAGTYPE);
+
+	bool isfirst = true;
+	size_t frag_hdrsize = 0;
+	size_t srcnum_off = 0;
+	size_t srcnum_len = 0;
+	bool srcnum_conversion = false;
+	size_t srcid_off = 0;
+	size_t srcid_len = 0;
+	bool srcid_conversion = false;
+
+	size_t final_frag_hdrsize = 0;
+	size_t frag_bodysize = 0;
 
 	INVARIANT(Packet<key_t>::is_singleswitch(methodid));
 
 	bool is_timeout = false;
-	size_t final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
-	size_t frag_bodysize = frag_maxsize - final_frag_hdrsize;
 	struct sockaddr_in tmp_srcaddr;
 	socklen_t tmp_addrlen;
 
@@ -882,10 +890,10 @@ bool udprecvlarge_multisrc(method_t methodid, int sockfd, dynamic_array_t **bufs
 		if (is_timeout) {
 			break;
 		}
-		INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
 
+		optype_t tmptype = optype_t(get_packet_type(fragbuf, frag_recvsize));
 		if (isfilter) {
-			if (optype_t(get_packet_type(fragbuf, frag_recvsize)) != optype) {
+			if (tmptype != optype) {
 				continue; // filter the unmatched packet
 			}
 			tmpkey = get_packet_key(methodid, fragbuf, frag_recvsize);
@@ -893,6 +901,26 @@ bool udprecvlarge_multisrc(method_t methodid, int sockfd, dynamic_array_t **bufs
 				continue;
 			}
 		}
+
+		if (isfirst) {
+			frag_hdrsize = get_frag_hdrsize(methodid, tmptype);
+			srcnum_off = get_srcnum_off(methodid, tmptype);
+			srcnum_len = get_srcnum_len(tmptype);
+			srcnum_conversion = get_srcnum_conversion(tmptype);
+			srcid_off = get_srcid_off(methodid, tmptype);
+			srcid_len = get_srcid_len(tmptype);
+			srcid_conversion = get_srcid_conversion(tmptype);
+
+			final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
+			frag_bodysize = frag_maxsize - final_frag_hdrsize;
+			isfirst = false;
+
+			INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
+			INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
+			INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
+		}
+
+		INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
 
 		// set max_srcnum for the global first packet
 		if (global_isfirst) {
@@ -985,12 +1013,13 @@ bool udprecvlarge_multisrc(method_t methodid, int sockfd, dynamic_array_t **bufs
 	return is_timeout;
 }
 
-bool udprecvlarge_multisrc_udpfrag_dist(method_t methodid, int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, size_t srcswitchnum_off, size_t srcswitchnum_len, bool srcswitchnum_conversion, size_t srcswitchid_off, size_t srcswitchid_len, bool srcswitchid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	return udprecvlarge_multisrc_dist(methodid, sockfd, perswitch_perserver_bufs, flags, perswitch_perserver_addrs, perswitch_perserver_addrlens, role, 0, UDP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, srcswitchnum_off, srcswitchnum_len, srcswitchnum_conversion, srcswitchid_off, srcswitchid_len, srcswitchid_conversion, isfilter, optype, targetkey);
-}
+// TODO: NOT supported yet
+//bool udprecvlarge_multisrc_udpfrag_dist(method_t methodid, int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, bool isfilter, optype_t optype, netreach_key_t targetkey) {
+//	return udprecvlarge_multisrc_dist(methodid, sockfd, perswitch_perserver_bufs, flags, perswitch_perserver_addrs, perswitch_perserver_addrlens, role, UDP_FRAGMENT_MAXSIZE, UDP_FRAGTYPE, isfilter, optype, targetkey);
+//}
 
-bool udprecvlarge_multisrc_ipfrag_dist(method_t methodid, int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, size_t srcswitchnum_off, size_t srcswitchnum_len, bool srcswitchnum_conversion, size_t srcswitchid_off, size_t srcswitchid_len, bool srcswitchid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	return udprecvlarge_multisrc_dist(methodid, sockfd, perswitch_perserver_bufs, flags, perswitch_perserver_addrs, perswitch_perserver_addrlens, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, srcswitchnum_off, srcswitchnum_len, srcswitchnum_conversion, srcswitchid_off, srcswitchid_len, srcswitchid_conversion, isfilter, optype, targetkey);
+bool udprecvlarge_multisrc_ipfrag_dist(method_t methodid, int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, bool isfilter, optype_t optype, netreach_key_t targetkey) {
+	return udprecvlarge_multisrc_dist(methodid, sockfd, perswitch_perserver_bufs, flags, perswitch_perserver_addrs, perswitch_perserver_addrlens, role, IP_FRAGMENT_MAXSIZE, IP_FRAGTYPE, isfilter, optype, targetkey);
 }
 
 // NOTE: receive large packet from multiple sources; used for SCANRES_SPLIT
@@ -998,19 +1027,30 @@ bool udprecvlarge_multisrc_ipfrag_dist(method_t methodid, int sockfd, std::vecto
 // perswitch_perserver_bufs: srcswitchnum * srcnum dynamic arrays; if is_timeout = true, size = 0
 // perswitch_perserver_addrs/addrlens have the same shape as perswitch_perserver_bufs
 // For example, for SCANRES_SPLIT, srcswitchnum is split_hdr.max_scanswitchnum; srcswitchid is split_hdr.cur_scanswitchidx; srcnum is split_hdr.max_scannum; srcid is split_hdr.cur_scanidx
-bool udprecvlarge_multisrc_dist(method_t methodid, int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, size_t srcswitchnum_off, size_t srcswitchnum_len, bool srcswitchnum_conversion, size_t srcswitchid_off, size_t srcswitchid_len, bool srcswitchid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
-	INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
-	INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
-	INVARIANT(srcswitchnum_len == 1 || srcswitchnum_len == 2 || srcswitchnum_len == 4);
-	INVARIANT(srcswitchid_len == 1 || srcswitchid_len == 2 || srcswitchid_len == 4);
-	INVARIANT(srcswitchnum_off <= frag_hdrsize && srcswitchid_off <= frag_hdrsize);
+bool udprecvlarge_multisrc_dist(method_t methodid, int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, size_t frag_maxsize, int fragtype, bool isfilter, optype_t optype, netreach_key_t targetkey) {
+	INVARIANT(fragtype == IP_FRAGTYPE);
+
+	bool isfirst = true;
+	size_t frag_hdrsize = 0;
+	size_t srcnum_off = 0;
+	size_t srcnum_len = 0;
+	bool srcnum_conversion = false;
+	size_t srcid_off = 0;
+	size_t srcid_len = 0;
+	bool srcid_conversion = false;
+	size_t srcswitchnum_off = 0;
+	size_t srcswitchnum_len = 0;
+	bool srcswitchnum_conversion = false;
+	size_t srcswitchid_off = 0;
+	size_t srcswitchid_len = 0;
+	bool srcswitchid_conversion = false;
+
+	size_t final_frag_hdrsize = 0;
+	size_t frag_bodysize = 0;
 
 	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
 
 	bool is_timeout = false;
-	size_t final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
-	size_t frag_bodysize = frag_maxsize - final_frag_hdrsize;
 	struct sockaddr_in tmp_srcaddr;
 	socklen_t tmp_addrlen;
 
@@ -1030,11 +1070,11 @@ bool udprecvlarge_multisrc_dist(method_t methodid, int sockfd, std::vector<std::
 		if (is_timeout) {
 			break;
 		}
-		INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
 
+		optype_t tmptype = optype_t(get_packet_type(fragbuf, frag_recvsize));
 		if (isfilter) {
 			//printf("received optype: %x, expected optype: %x\n", int(get_packet_type(fragbuf, frag_recvsize)), int(optype));
-			if (optype_t(get_packet_type(fragbuf, frag_recvsize)) != optype) {
+			if (tmptype != optype) {
 				continue; // filter the unmatched packet
 			}
 			tmpkey = get_packet_key(methodid, fragbuf, frag_recvsize);
@@ -1043,6 +1083,37 @@ bool udprecvlarge_multisrc_dist(method_t methodid, int sockfd, std::vector<std::
 				continue;
 			}
 		}
+
+		if (isfirst) {
+			frag_hdrsize = get_frag_hdrsize(methodid, tmptype);
+			srcnum_off = get_srcnum_off(methodid, tmptype);
+			srcnum_len = get_srcnum_len(tmptype);
+			srcnum_conversion = get_srcnum_conversion(tmptype);
+			srcid_off = get_srcid_off(methodid, tmptype);
+			srcid_len = get_srcid_len(tmptype);
+			srcid_conversion = get_srcid_conversion(tmptype);
+			srcswitchnum_off = get_srcswitchnum_off(methodid, tmptype);
+			srcswitchnum_len = get_srcswitchnum_len(tmptype);
+			srcswitchnum_conversion = get_srcswitchnum_conversion(tmptype);
+			srcswitchid_off = get_srcswitchid_off(methodid, tmptype);
+			srcswitchid_len = get_srcswitchid_len(tmptype);
+			srcswitchid_conversion = get_srcswitchid_conversion(tmptype);
+
+			final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
+			frag_bodysize = frag_maxsize - final_frag_hdrsize;
+
+			INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
+			INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
+			INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
+			INVARIANT(srcswitchnum_len == 1 || srcswitchnum_len == 2 || srcswitchnum_len == 4);
+			INVARIANT(srcswitchid_len == 1 || srcswitchid_len == 2 || srcswitchid_len == 4);
+			INVARIANT(srcswitchnum_off <= frag_hdrsize && srcswitchid_off <= frag_hdrsize);
+
+			isfirst = false;
+		}
+
+		INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
+
 
 		if (global_isfirst) { // first packet in global -> get switchnum
 			size_t max_srcswitchnum = 0;

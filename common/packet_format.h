@@ -1171,5 +1171,18 @@ static uint16_t get_packet_clientlogicalidx(method_t methodid, const char * data
 static uint32_t get_packet_fragseq(method_t methodid, const char * data, uint32_t recvsize);
 static bool is_packet_with_largevalue(packet_type_t type); // whether the packet is large to be processed by udprecvlarge_ipfrag
 static bool is_packet_with_clientlogicalidx(packet_type_t type); // whether the large packet is sent to server
+// Utils for range query
+static size_t get_srcnum_off(method_t methodid, packet_type_t type);
+static size_t get_srcnum_len(packet_type_t type);
+static bool get_srcnum_conversion(packet_type_t type);
+static size_t get_srcid_off(method_t methodid, packet_type_t type);
+static size_t get_srcid_len(packet_type_t type);
+static bool get_srcid_conversion(packet_type_t type);
+static size_t get_srcswitchnum_off(method_t methodid, packet_type_t type);
+static size_t get_srcswitchnum_len(packet_type_t type);
+static bool get_srcswitchnum_conversion(packet_type_t type);
+static size_t get_srcswitchid_off(method_t methodid, packet_type_t type);
+static size_t get_srcswitchid_len(packet_type_t type);
+static bool get_srcswitchid_conversion(packet_type_t type);
 
 #endif

@@ -4021,4 +4021,126 @@ static bool is_packet_with_clientlogicalidx(packet_type_t type) {
 	return false;
 }
 
+// Utils for range query
+
+static size_t get_srcnum_off(method_t methodid, packet_type_t type) {
+	size_t result = 0;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcnum_off(methodid);
+	} else {
+		printf("[WARNING] get_srcnum_off: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static size_t get_srcnum_len(packet_type_t type) {
+	size_t result = 0;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcnum_len();
+	} else {
+		printf("[WARNING] get_srcnum_len: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static bool get_srcnum_conversion(packet_type_t type) {
+	bool result = false;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcnum_conversion();
+	} else {
+		printf("[WARNING] get_srcnum_conversion: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static size_t get_srcid_off(method_t methodid, packet_type_t type) {
+	size_t result = 0;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcid_off(methodid);
+	} else {
+		printf("[WARNING] get_srcid_off: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static size_t get_srcid_len(packet_type_t type) {
+	size_t result = 0;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcid_len();
+	} else {
+		printf("[WARNING] get_srcid_len: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static bool get_srcid_conversion(packet_type_t type) {
+	bool result = false;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcid_conversion();
+	} else {
+		printf("[WARNING] get_srcid_conversion: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static size_t get_srcswitchnum_off(method_t methodid, packet_type_t type) {
+	size_t result = 0;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcswitchnum_off(methodid);
+	} else {
+		printf("[WARNING] get_srcswitchnum_off: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static size_t get_srcswitchnum_len(packet_type_t type) {
+	size_t result = 0;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcswitchnum_len();
+	} else {
+		printf("[WARNING] get_srcswitchnum_len: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static bool get_srcswitchnum_conversion(packet_type_t type) {
+	bool result = false;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcswitchnum_conversion();
+	} else {
+		printf("[WARNING] get_srcswitchnum_conversion: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static size_t get_srcswitchid_off(method_t methodid, packet_type_t type) {
+	size_t result = 0;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcswitchid_off(methodid);
+	} else {
+		printf("[WARNING] get_srcswitchid_off: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static size_t get_srcswitchid_len(packet_type_t type) {
+	size_t result = 0;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcswitchid_len();
+	} else {
+		printf("[WARNING] get_srcswitchid_len: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
+static bool get_srcswitchid_conversion(packet_type_t type) {
+	bool result = false;
+	if (type == packet_type_t::SCANRES_SPLIT) {
+		result = ScanResponseSplit<netreach_key_t, val_t>::get_srcswitchid_conversion();
+	} else {
+		printf("[WARNING] get_srcswitchid_conversion: no matched optype: %x\n", type);
+	}
+	return result;
+}
+
 #endif
