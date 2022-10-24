@@ -8,6 +8,7 @@
 		- [IMPORTANT] current distributed extension is a single discussion instead of a critical design -> NOT need to evaluate
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
+	* TODO: Fix retrieving issue of deleting /tmp/rocksdbbackups/16
 
 - [IMPORTANT] explanation of our results compared with NetCache paper -> reason: difference KVS
 	- Per FarReach KVS: 0.075 MOPS
@@ -21,28 +22,56 @@
 		+ Static workload: 10*128*1.6=2.04GOPS
 
 - TODO
-	* Support range query
-		- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
-		- (Discuss first before implementation) update JNI for range query
-			- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
-				+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
-				+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
-					* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
-					* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
-			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-			- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+	* Others
+		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
+
+- 10.25
+	+ Siyuan
+		* TODO: Implement crash recovery time
+			- TODO: In-switch recovery vs. cache size
+			- TODO: Server-side recovery vs. rocksdb size
+	+ HuanCheng
+		* Evaluation
+			* TODO: Run experiment 3
+				- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
+			* TODO: Start experiment 4
+			* TODO: Run experiment 1 on Twitter Traces
+				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
+
+- 10.24
+	+ Siyuan
+		* Update inswitchcache-java-lib and benchmark.md for consistent loading phase
+		* Support range query
+			- TODO: Add SCANRES_SPLIT (maybe use Map::Entry as pair)
+			- (Discuss first before implementation) update JNI for range query
+				- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
+					+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
+					+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
+						* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
+						* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
+				- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+				- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+	+ HuanCheng
+		* TODO: Update scripts: prepare_load.sh, load_and_backup.sh, test_server_rotation_p1.sh, test_dynamic.sh
+		* Evaluation
+			* TODO: Re-run experiment 1 for reasonable medium latency
+			* TODO: Re-run experiment 2 on 32/64/128 servers for reasonable medium latency
+				- If not load before, use loading phase to pre-load 100M records into 32/64/128 storage servers
+		* TODO: Finish TraceReplay workload
+			- TODO: Get correpsonding trace file based on workloadName
+			- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
+			- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+			- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromBytes
 
 - 10.23 (Sunday)
 	+ Siyuan
-		* TODO: Update implementation and exp1&2 of evaluation in paper
+		* Use new scripts to update latency statistics of exp 1 and exp 2
+		* Update implementation and exp1 of evaluation in paper
 	+ Huancheng
 		* Evaluation
-			* TODO: Finish experiment 2
-			* TODO: Run experiment 3
-				- TODO: Use loading phase to pre-load 100M records into 2 storage servers (w/ workload_mode=1)
-			* TODO: Run experiment 1 on Twitter Traces
-				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
-			* TODO: Start experiment 4
+			* Get expected thpt results of exp1 and exp2
+		* Others
+			* Prepare for assignment 2
 
 - 10.22 (Saturday)
 	+ Siyuan
@@ -75,16 +104,7 @@
 				- Move original benchmark/results/exp1.md as benchmark/results/exp1_old.md; create a new exp1.md
 				- Use new scripts to update thpt/latency numbers in benchmark/results/exp1.md, and also keep necessary data files in benchmark/results/exp1/
 					+ NOTE: we need to keep Json files but not track them in git as they are too large
-			* TODO: Run nocache/farreach/netcache for experiment 2 with 128/32/64 servers
-				- TODO: If not load before, use loading phase to pre-load 100M records into 32/64 storage servers
-		* Coding
-			* TODO: Finish TraceReplay workload
-				- TODO: Get correpsonding trace file based on workloadName
-				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
-				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-				- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromBytes
-			* TODO: Fix retrieving issue of deleting /tmp/rocksdbbackups/16
-			* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
+			* Run farreach/netcache for experiment 2 with 128/32/64 servers
 
 - 10.21 (Friday)
 	+ Siyuan

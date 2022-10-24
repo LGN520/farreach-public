@@ -53,14 +53,14 @@
 	+ In each physical client, run `bash scripts/local/confiugre_client.sh`
 	+ In each physical server, run `bash scripts/local/confiugre_server.sh`
 	+ In each physical switch, run `bash scripts/local/confiugre_switchos.sh`
-- Loading phase for each server scale (e.g., 2/16/32/64/128 servers)
-	+ In nocache/config.ini, set workloadmode, server_physical_num, total_server_logical_num, and per-server logical_server_idxes accordingly
-		* If workloadmode=0, also set bottleneck_serveridx_for_rotation and total_server_logical_num_for_rotation accordingly (NOTE: total_server_logical_num_for_rotation must = total_server_logical_num here)
+- Loading phase (execute only once)
 	+ Under the main client, perform the loading phase and backup for evaluation time reduction
-		* Disable server_rotation in common/helper.h
-		* Sync nocache/ including the new nocache/config.ini to all machines and re-compile
+		* ~~Disable server_rotation in common/helper.h~~
+		* ~~Sync nocache/ including the new nocache/config.ini to all machines and re-compile~~
+		* Run `bash scripts/remote/prepare_load.sh`, which will copy recordload/config.ini to switch/server::nocache/config.ini
 		* In switch, launch and configure nocache switch by start_switch.sh and launchswitchtestbed.sh in nocache/
 		* Run `bash scripts/remote/load_and_backup.sh`, which will launch and kill servers automatically
+			- NOTE: at the end of load_and_backup.sh, we copy nocache/config.ini to resume switch/server::nocache/config.ini
 - Workload analysis for each workload (e.g., workloada)
 	+ Under the main client
 		* Update workload_name with the workload in keydump/config.ini
