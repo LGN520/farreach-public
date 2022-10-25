@@ -170,6 +170,14 @@ def get_total_switch_server_thpts(jsonarray, rotationidx, physicalidx, workloadm
     tmpserverthpt = getmops(tmpjsonobj[PERSERVER_OPSDONE][tmp_logical_serveridx] / tmptotaltime)
     return tmptotalthpt, tmpswitchthpt, tmpserverthpt
 
+def get_total_cachehit_cachemiss_latencyhist(jsonarray, rotationidx, physicalidx):
+    tmp_cachehit_totallatencyhist = jsonarray[rotationidx][PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][physicalidx]
+    tmp_cachemiss_totallatencyhist = jsonarray[rotationidx][PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][physicalidx]
+    tmp_totallatencyhist = [0] * len(tmp_cachehit_totallatencyhist)
+    for i in range(len(tmp_totallatencyhist)):
+        tmp_totallatencyhist[i] = tmp_cachehit_totallatencyhist[i] + tmp_cachemiss_totallatencyhist[i]
+    return tmp_totallatencyhist, tmp_cachehit_totallatencyhist, tmp_cachemiss_totallatencyhist
+
 def get_total_latency_and_latencynum(latencyhist):
     totallatency = 0.0
     totallatencynum = 0.0
@@ -178,46 +186,46 @@ def get_total_latency_and_latencynum(latencyhist):
         totallatencynum += latencyhist[i]
     return totallatency, totallatencynum
 
-def reduce_static_simulation_overhead(latencyhist, weight, iscachehit):
-    resulthist = [0.0] * len(latencyhist)
-
-    if iscachehit:
-        for i in range(len(latencyhist)):
-            resulthist[i] = latencyhist[i] * weight
-    else:
-        # Method 1
-        #for i in range(len(latencyhist)):
-        #    resulthist[i] = latencyhist[i] * weight
-
-        # Method 2
-        # NOTE: ququing latency = in-queue pkts / processing thpt
-        #minlatency = 0
-        #for i in range(len(latencyhist)):
-        #    if latencyhist[i] != 0:
-        #        minlatency = i
-        #        break
-        #maxlatency = 0
-        #for i in range(len(latencyhist)):
-        #    idx = len(latencyhist) - 1 - i
-        #    if latencyhist[idx] != 0:
-        #        maxlatency = idx
-        #        break
-        ##valid_maxlatency = minlatency + ((maxlatency - minlatency) * weight)
-        #valid_maxlatency = minlatency + ((maxlatency - minlatency) * weight)
-        #for i in range(len(latencyhist)):
-        #    if i <= valid_maxlatency:
-        #        resulthist[i] = latencyhist[i]
-
-        # Method 3
-        totallatency, totallatencynum = get_total_latency_and_latencynum(latencyhist)
-        curlatencynum = 0.0
-        for i in range(len(latencyhist)):
-            curlatencynum += latencyhist[i]
-            if (curlatencynum / totallatencynum) >= weight:
-                break
-            resulthist[i] = latencyhist[i]
-
-    return resulthist
+#def reduce_static_simulation_overhead(latencyhist, weight, iscachehit):
+#    resulthist = [0.0] * len(latencyhist)
+#
+#    if iscachehit:
+#        for i in range(len(latencyhist)):
+#            resulthist[i] = latencyhist[i] * weight
+#    else:
+#        # Method 1
+#        #for i in range(len(latencyhist)):
+#        #    resulthist[i] = latencyhist[i] * weight
+#
+#        # Method 2
+#        # NOTE: ququing latency = in-queue pkts / processing thpt
+#        #minlatency = 0
+#        #for i in range(len(latencyhist)):
+#        #    if latencyhist[i] != 0:
+#        #        minlatency = i
+#        #        break
+#        #maxlatency = 0
+#        #for i in range(len(latencyhist)):
+#        #    idx = len(latencyhist) - 1 - i
+#        #    if latencyhist[idx] != 0:
+#        #        maxlatency = idx
+#        #        break
+#        ##valid_maxlatency = minlatency + ((maxlatency - minlatency) * weight)
+#        #valid_maxlatency = minlatency + ((maxlatency - minlatency) * weight)
+#        #for i in range(len(latencyhist)):
+#        #    if i <= valid_maxlatency:
+#        #        resulthist[i] = latencyhist[i]
+#
+#        # Method 3
+#        totallatency, totallatencynum = get_total_latency_and_latencynum(latencyhist)
+#        curlatencynum = 0.0
+#        for i in range(len(latencyhist)):
+#            curlatencynum += latencyhist[i]
+#            if (curlatencynum / totallatencynum) >= weight:
+#                break
+#            resulthist[i] = latencyhist[i]
+#
+#    return resulthist
 
 def calculate_perobjstat(aggjsonarray, workloadmode, bottleneckidx):
     for i in range(len(aggjsonarray)):
@@ -249,21 +257,17 @@ def calculate_perobjstat(aggjsonarray, workloadmode, bottleneckidx):
 
             #tmp_cachehit_totallatency = tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCY][j]
             #tmp_cachehit_totallatencynum = tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCYNUM][j]
-            tmp_cachehit_totallatencyhist = tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][j]
-            tmp_cachehit_avglatency, tmp_cachehit_latencymedium, tmp_cachehit_latency90p, tmp_cachehit_latency95p, tmp_cachehit_latency99p, tmp_cachehit_minlatency, tmp_cachehit_maxlatency = calculatelatency(tmp_cachehit_totallatencyhist)
-            print "cache hits: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_cachehit_avglatency, tmp_cachehit_latencymedium, tmp_cachehit_latency90p, tmp_cachehit_latency95p, tmp_cachehit_latency99p, tmp_cachehit_minlatency, tmp_cachehit_maxlatency)
-
             #tmp_cachemiss_totallatency = tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_LATENCY][j]
             #tmp_cachemiss_totallatencynum = tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_LATENCYNUM][j]
-            tmp_cachemiss_totallatencyhist = tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][j]
-            tmp_cachemiss_avglatency, tmp_cachemiss_latencymedium, tmp_cachemiss_latency90p, tmp_cachemiss_latency95p, tmp_cachemiss_latency99p, tmp_cachemiss_minlatency, tmp_cachemiss_maxlatency = calculatelatency(tmp_cachemiss_totallatencyhist)
-            print "cache misses: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_cachemiss_avglatency, tmp_cachemiss_latencymedium, tmp_cachemiss_latency90p, tmp_cachemiss_latency95p, tmp_cachemiss_latency99p, tmp_cachemiss_minlatency, tmp_cachemiss_maxlatency)
-
             #tmp_totallatency = tmp_cachehit_totallatency + tmp_cachemiss_totallatency
             #tmp_totallatencynum = tmp_cachehit_totallatencynum + tmp_cachemiss_totallatencynum
-            tmp_totallatencyhist = [0] * len(tmp_cachehit_totallatencyhist)
-            for k in range(len(tmp_cachehit_totallatencyhist)):
-                tmp_totallatencyhist[k] = tmp_cachehit_totallatencyhist[k] + tmp_cachemiss_totallatencyhist[k]
+
+            tmp_totallatencyhist, tmp_cachehit_totallatencyhist, tmp_cachemiss_totallatencyhist = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, j)
+
+            tmp_cachehit_avglatency, tmp_cachehit_latencymedium, tmp_cachehit_latency90p, tmp_cachehit_latency95p, tmp_cachehit_latency99p, tmp_cachehit_minlatency, tmp_cachehit_maxlatency = calculatelatency(tmp_cachehit_totallatencyhist)
+            print "cache hits: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_cachehit_avglatency, tmp_cachehit_latencymedium, tmp_cachehit_latency90p, tmp_cachehit_latency95p, tmp_cachehit_latency99p, tmp_cachehit_minlatency, tmp_cachehit_maxlatency)
+            tmp_cachemiss_avglatency, tmp_cachemiss_latencymedium, tmp_cachemiss_latency90p, tmp_cachemiss_latency95p, tmp_cachemiss_latency99p, tmp_cachemiss_minlatency, tmp_cachemiss_maxlatency = calculatelatency(tmp_cachemiss_totallatencyhist)
+            print "cache misses: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_cachemiss_avglatency, tmp_cachemiss_latencymedium, tmp_cachemiss_latency90p, tmp_cachemiss_latency95p, tmp_cachemiss_latency99p, tmp_cachemiss_minlatency, tmp_cachemiss_maxlatency)
             tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p, tmp_minlatency, tmp_maxlatency = calculatelatency(tmp_totallatencyhist)
             print "cache hits+misses: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p, tmp_minlatency, tmp_maxlatency)
 
@@ -300,13 +304,13 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
 
     totalthpt = avgbottleneck_totalthpt
     max_serverthpt = avgbottleneck_serverthpt
-    # prepare for latency statistics (as server rotation only has two servers which over-estimates server-side latency, we use a simulate ratio to reduce the simulation variance)
-    #latency_weights = [avgbottleneck_totalthpt]
-    cachehit_latency_weights = [avgbottleneck_switchthpt]
-    cachemiss_latency_weights = [avgbottleneck_serverthpt]
-    latency_totalweight = avgbottleneck_totalthpt
-    rotate_switchthpts = [0]
-    rotate_serverthpts = [0]
+    ## prepare for latency statistics (as server rotation only has two servers which over-estimates server-side latency, we use a simulate ratio to reduce the simulation variance)
+    ##latency_weights = [avgbottleneck_totalthpt]
+    #cachehit_latency_weights = [avgbottleneck_switchthpt]
+    #cachemiss_latency_weights = [avgbottleneck_serverthpt]
+    #latency_totalweight = avgbottleneck_totalthpt
+    #rotate_switchthpts = [0]
+    #rotate_serverthpts = [0]
 
     for i in range(1, len(aggjsonarray)):
         tmp_bottleneck_totalthpt, tmp_bottleneck_switchthpt, tmp_bottleneck_serverthpt = get_total_switch_server_thpts(aggjsonarray, i, 0, workloadmode, bottleneckidx)
@@ -320,18 +324,18 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
         totalthpt += tmp_rotate_totalthpt
         if tmp_rotate_serverthpt > max_serverthpt:
             max_serverthpt = tmp_rotate_serverthpt
-        #latency_weights.append(tmp_rotate_totalthpt + tmp_bottleneck_totalthpt)
-        cachehit_latency_weights.append(tmp_rotate_switchthpt)
-        cachemiss_latency_weights.append(tmp_rotate_serverthpt)
-        latency_totalweight += (tmp_rotate_totalthpt + tmp_bottleneck_totalthpt)
-        rotate_switchthpts.append(tmp_rotate_switchthpt)
-        rotate_serverthpts.append(tmp_rotate_serverthpt)
+        ##latency_weights.append(tmp_rotate_totalthpt + tmp_bottleneck_totalthpt)
+        #cachehit_latency_weights.append(tmp_rotate_switchthpt)
+        #cachemiss_latency_weights.append(tmp_rotate_serverthpt)
+        #latency_totalweight += (tmp_rotate_totalthpt + tmp_bottleneck_totalthpt)
+        #rotate_switchthpts.append(tmp_rotate_switchthpt)
+        #rotate_serverthpts.append(tmp_rotate_serverthpt)
     normalized_thpt = float(totalthpt) / float(max_serverthpt)
     print "[STATIC] aggregate throughput: {} MOPS; normalized throughput: {}".format(totalthpt, normalized_thpt)
 
-    for i in range(len(cachehit_latency_weights)):
-        cachehit_latency_weights[i] = float(cachehit_latency_weights[i]) / float(latency_totalweight)
-        cachemiss_latency_weights[i] = float(cachemiss_latency_weights[i]) / float(latency_totalweight)
+    #for i in range(len(cachehit_latency_weights)):
+    #    cachehit_latency_weights[i] = float(cachehit_latency_weights[i]) / float(latency_totalweight)
+    #    cachemiss_latency_weights[i] = float(cachemiss_latency_weights[i]) / float(latency_totalweight)
 
     #for i in range(len(latency_weights)):
     #    latency_weights[i] = float(latency_weights[i]) / float(latency_totalweight)
@@ -341,48 +345,74 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
 
     # Get bottleneck latency statistics
 
-    avgbottleneckhist = [] # latency histogram for bottleneck partition
-    for i in range(len(aggjsonarray)):
-        tmpjsonobj = aggjsonarray[i]
-        #tmpcachehit_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][0], latency_weights[i], avgbottleneck_switchthpt)
-        #tmpcachehit_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][0], latency_weights[i], True)
-        tmpcachehit_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][0], cachehit_latency_weights[i], True)
-        #tmpcachemiss_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][0], latency_weights[i], avgbottleneck_serverthpt)
-        #tmpcachemiss_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][0], latency_weights[i], False)
-        tmpcachemiss_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][0], cachemiss_latency_weights[i], False)
-        if len(avgbottleneckhist) == 0:
-            avgbottleneckhist = [0.0] * len(tmpcachehit_bottleneckhist)
-        for j in range(len(avgbottleneckhist)):
-            avgbottleneckhist[j] += float(tmpcachehit_bottleneckhist[j] + tmpcachemiss_bottleneckhist[j])
-    for i in range(len(avgbottleneckhist)):
-        avgbottleneckhist[i] = float(avgbottleneckhist[i]) / float(len(aggjsonarray))
+    #avgbottleneckhist = [] # latency histogram for bottleneck partition
+    #for i in range(len(aggjsonarray)):
+    #    tmpjsonobj = aggjsonarray[i]
+    #    #tmpcachehit_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][0], latency_weights[i], avgbottleneck_switchthpt)
+    #    #tmpcachehit_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][0], latency_weights[i], True)
+    #    tmpcachehit_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][0], cachehit_latency_weights[i], True)
+    #    #tmpcachemiss_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][0], latency_weights[i], avgbottleneck_serverthpt)
+    #    #tmpcachemiss_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][0], latency_weights[i], False)
+    #    tmpcachemiss_bottleneckhist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][0], cachemiss_latency_weights[i], False)
+    #    if len(avgbottleneckhist) == 0:
+    #        avgbottleneckhist = [0.0] * len(tmpcachehit_bottleneckhist)
+    #    for j in range(len(avgbottleneckhist)):
+    #        avgbottleneckhist[j] += float(tmpcachehit_bottleneckhist[j] + tmpcachemiss_bottleneckhist[j])
+    #for i in range(len(avgbottleneckhist)):
+    #    avgbottleneckhist[i] = float(avgbottleneckhist[i]) / float(len(aggjsonarray))
 
-    totallatencyhist = [0] * len(avgbottleneckhist)
-    for i in range(len(avgbottleneckhist)):
-        totallatencyhist[i] = avgbottleneckhist[i]
+    #totallatencyhist = [0] * len(avgbottleneckhist)
+    #for i in range(len(avgbottleneckhist)):
+    #    totallatencyhist[i] = avgbottleneckhist[i]
+
+    perrotation_avglatency = [0] * len(aggjsonarray)
+    perrotation_mediumlatency = [0] * len(aggjsonarray)
+    perrotation_90platency = [0] * len(aggjsonarray)
+    perrotation_95platency = [0] * len(aggjsonarray)
+    perrotation_99platency = [0] * len(aggjsonarray)
+
+    tmp_bottleneckhist, _, _ = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, 0, 0)
+    perrotation_avglatency[0], perrotation_mediumlatency[0], perrotation_90platency[0], perrotation_95platency[0], perrotation_99platency[0], _, _ = calculatelatency(tmp_bottleneckhist)
 
     # Get each rotated partition latency statistics
 
     #avgrotatehist = [] # latency histogram for rotate partition
     for i in range(1, len(aggjsonarray)):
-        tmpjsonobj = aggjsonarray[i]
-        #tmpcachehit_rotatehist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][1], latency_weights[i], rotate_switchthpts[i])
-        #tmpcachehit_rotatehist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][1], latency_weights[i], True)
-        tmpcachehit_rotatehist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][1], cachehit_latency_weights[i], True)
-        #tmpcachehit_rotatetotallatency = tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCY][1]
-        #tmpcachehit_rotatetotallatencynum = tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCYNUM][1]
-        #tmpcachemiss_rotatehist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][1], latency_weights[i], rotate_serverthpts[i])
-        #tmpcachemiss_rotatehist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][1], latency_weights[i], False)
-        tmpcachemiss_rotatehist = reduce_static_simulation_overhead(tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][1], cachemiss_latency_weights[i], False)
-        #tmpcachemiss_rotatetotallatency = tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_LATENCY][1]
-        #tmpcachemiss_rotatetotallatencynum = tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_LATENCYNUM][1]
+        tmp_bottleneckhist, tmpcachehit_bottleneckhist, tmpcachemiss_bottleneckhist = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 0)
+        tmp_rotatehist, tmpcachehit_rotatehist, tmpcachemiss_rotatehist = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 1)
 
-        for j in range(len(totallatencyhist)):
-            totallatencyhist[j] += float(tmpcachehit_rotatehist[j] + tmpcachemiss_rotatehist[j])
+        tmp_totalhist = [0] * len(tmp_bottleneckhist)
+        for j in range(len(tmp_totalhist)):
+            tmp_totalhist[j] = tmp_bottleneckhist[j] + tmp_rotatehist[j]
+        perrotation_avglatency[i], perrotation_mediumlatency[i], perrotation_90platency[i], perrotation_95platency[i], perrotation_99platency[i], _, _ = calculatelatency(tmp_totalhist)
+
+        ##tmpcachehit_rotatehist = reduce_static_simulation_overhead(tmpcachehit_rotatehist, latency_weights[i], rotate_switchthpts[i])
+        ##tmpcachehit_rotatehist = reduce_static_simulation_overhead(tmpcachehit_rotatehist, latency_weights[i], True)
+        #tmpcachehit_rotatehist = reduce_static_simulation_overhead(tmpjsonobj[tmpcachehit_rotatehist, cachehit_latency_weights[i], True)
+        ##tmpcachemiss_rotatehist = reduce_static_simulation_overhead(tmpcachemiss_rotatehist, latency_weights[i], rotate_serverthpts[i])
+        ##tmpcachemiss_rotatehist = reduce_static_simulation_overhead(tmpcachemiss_rotatehist, latency_weights[i], False)
+        #tmpcachemiss_rotatehist = reduce_static_simulation_overhead(tmpcachemiss_rotatehist, cachemiss_latency_weights[i], False)
+
+        #for j in range(len(totallatencyhist)):
+        #    totallatencyhist[j] += float(tmpcachehit_rotatehist[j] + tmpcachemiss_rotatehist[j])
 
     # Get aggregated latency results
 
-    avglatency, latencymedium, latency90p, latency95p, latency99p, _, _ = calculatelatency(totallatencyhist)
+    #avglatency, latencymedium, latency90p, latency95p, latency99p, _, _ = calculatelatency(totallatencyhist)
+
+    avglatency, latencymedium, latency90p, latency95p, latency99p = 0, 0, 0, 0, 0
+    for i in range(len(perrotation_avglatency)):
+        avglatency += perrotation_avglatency[i]
+        latencymedium += perrotation_mediumlatency[i]
+        latency90p += perrotation_90platency[i]
+        latency95p += perrotation_95platency[i]
+        latency99p += perrotation_99platency[i]
+    avglatency /= float(len(perrotation_avglatency))
+    latencymedium /= float(len(perrotation_mediumlatency))
+    latency90p /= float(len(perrotation_90platency))
+    latency95p /= float(len(perrotation_95platency))
+    latency99p /= float(len(perrotation_99platency))
+
     print "[STATIC] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency90p, latency95p, latency99p)
 
 def dynamicprocess(localjsonarray, remotejsonarray):
@@ -407,16 +437,12 @@ def dynamicprocess(localjsonarray, remotejsonarray):
         tmpjsonobj = aggjsonarray[i]
         persecthpt[i] = getmops(tmpjsonobj[TOTAL_OPSDONE] / tmpjsonobj[EXECUTION_MILLIS])
 
-        tmp_totallatency = 0
-        tmp_totallatencynum = 0
-        tmp_totallatencyhist = [0] * len(tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][0])
-        for j in range(len(tmpjsonobj[PERSERVER_TOTAL_LATENCY])):
-            #tmp_totallatency += (tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCY][j] + tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_LATENCY][j])
-            #tmp_totallatencynum += (tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCYNUM][j] + tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_LATENCYNUM][j])
-            for k in range(len(tmp_totallatencyhist)):
-                tmp_totallatencyhist[k] += (tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][j][k] + tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][j][k])
-        perseclatencyavg[i], perseclatencymedium[i], perseclatency90p[i], perseclatency95p[i], perseclatency99p[i] = calculatelatency(\
-                tmp_totallatencyhist)
+        tmp_server0_totallatencyhist, _, _ = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 0)
+        tmp_server1_totallatencyhist, _, _ = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 1)
+        tmp_totallatencyhist = [0] * len(tmp_server0_totallatencyhist)
+        for j in range(len(tmp_server0_totallatencyhist)):
+            tmp_totallatencyhist[j] = tmp_server0_totallatencyhist[j] + tmp_server1_totallatencyhist[j]
+        perseclatencyavg[i], perseclatencymedium[i], perseclatency90p[i], perseclatency95p[i], perseclatency99p[i] = calculatelatency(tmp_totallatencyhist)
     print "[DYNAMIC] per-second statistics:"
     print "thpt (MOPS): {}".format(persecthpt)
     print "avg latency (us): {}".format(perseclatencyavg)
@@ -425,16 +451,12 @@ def dynamicprocess(localjsonarray, remotejsonarray):
     print "95P latency (us): {}".format(perseclatency95p)
     print "99P latency (us): {}".format(perseclatency99p)
 
-    #totallatency = 0
-    #totallatencynum = 0
     totalhistogram = [0] * len(aggjsonarray[0][PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][0])
     for i in range(len(aggjsonarray)):
-        tmpjsonobj = aggjsonarray[i]
+        tmp_server0_totallatencyhist, _, _ = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 0)
+        tmp_server1_totallatencyhist, _, _ = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 1)
         for j in range(len(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCY])):
-            #totallatency += (tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCY][j] + tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_LATENCY][j])
-            #totallatencynum += (tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCYNUM][j] + tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_LATENCYNUM][j])
-            for k in range(len(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCYNUM][j])):
-                totalhistogram[k] += (tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][j][k] + tmpjsonobj[PERSERVER_CACHEMISS_TOTAL_HISTOGRAM][j][k])
+            totalhistogram[j] += (tmp_server0_totallatencyhist[j] + tmp_server1_totallatencyhist[j])
 
     avglatency, latencymedium, latency90p, latency95p, latency99p, _, _ = calculatelatency(totalhistogram)
     print "[DYNAMIC][OVERALL] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency90p, latency95p, latency99p)
