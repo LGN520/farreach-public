@@ -49,12 +49,12 @@ def aggregate_1dlist(locallist, remotelist, objidx, role):
 
 def aggregate_2dlist(locallist, remotelist, objidx, role):
     result = []
-    if len(locallist) != len(reotelist):
+    if len(locallist) != len(remotelist):
         print "[ERROR][aggregate] for {}th obj, localjsonobj[{}}] size {} != remotejsonobj[{}}] size {}".format(objidx, role, len(locallist), role, len(remotelist))
         exit(-1)
     for i in range(len(locallist)):
-        tmplocalsublist = localjsonobj[role][i]
-        tmpremotesublist = remotejsonobj[role][i]
+        tmplocalsublist = locallist[i]
+        tmpremotesublist = remotelist[i]
         if len(tmplocalsublist) != len(tmpremotesublist):
             print "[ERROR][aggregate] for {}th obj {}th histogram, localsublist size {} != remotesublist size {}".format(objidx, i, len(tmplocalsublist), len(tmpremotesublist))
             print "localsublist: {}".format(tmplocalsublist)
