@@ -267,7 +267,7 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
     bottleneck_simulationratio = latency_simulation_ratios[0] # latency simulation ratio of bottleneck partition
     for i in range(len(avgcachehit_bottleneckhist)):
         avgcachehit_bottleneckhist[i] = float(avgcachehit_bottleneckhist[i]) / float(len(aggjsonarray))
-        avgcachemiss_bottleneckhist[i] = float(avgcachemiss_bottleneckhist[i]) / float(len(aggjsonarray)) / float(bottleneck_simulationratio)
+        avgcachemiss_bottleneckhist[i] = float(avgcachemiss_bottleneckhist[i]) / float(len(aggjsonarray)) * float(bottleneck_simulationratio)
 
     avgbottleneckhist = []
     for i in range(len(avgcachehit_bottleneckhist)):
@@ -300,7 +300,7 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
         #totallatency += (tmpcachehit_rotatehist + tmpcachemiss_rotatehist / tmpsimulationratio)
         #totallatencynum += (tmpcachehit_rotatetotallatencynum + tmpcachemiss_rotatetotallatencynum / tmpsimulationratio)
         for j in range(len(totallatencyhist)):
-            totallatencyhist[j] += (tmpcachehit_rotatehist[j] + float(tmpcachemiss_rotatehist[j]) / tmpsimulationratio)
+            totallatencyhist[j] += (tmpcachehit_rotatehist[j] + float(tmpcachemiss_rotatehist[j]) * tmpsimulationratio)
 
     totallatency = 0.0
     totallatencynum = 0.0
