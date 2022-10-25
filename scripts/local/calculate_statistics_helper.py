@@ -229,16 +229,16 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
         tmpjsonobj = aggjsonarray[i]
         tmpbottleneckhist = tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][0]
         if len(avgbottleneckhist) == 0:
-            avgbottleneckhist = [0] * len(tmpbottleneckhist)
+            avgbottleneckhist = [0.0] * len(tmpbottleneckhist)
         for j in range(len(avgbottleneckhist)):
             avgbottleneckhist[j] += tmpbottleneckhist[j]
     for i in range(len(avgbottleneckhist)):
-        avgbottleneckhist[i] /= len(aggjsonarray)
+        avgbottleneckhist[i] = float(avgbottleneckhist[i]) / float(len(aggjsonarray))
 
-    avgbottlenecktotallatency = 0
-    avgbottlenecktotallatencynum = 0
+    avgbottlenecktotallatency = 0.0
+    avgbottlenecktotallatencynum = 0.0
     for i in range(len(avgbottleneckhist)):
-        avgbottlenecktotallatency += i * avgbottleneckhist[i]
+        avgbottlenecktotallatency += float(i) * avgbottleneckhist[i]
         avgbottlenecktotallatencynum += avgbottleneckhist[i]
     #avglatency, latencymedium, latency90p, latency95p, latency99p = calculatelatency(avgbottlenecktotallatency, avgbottlenecktotallatencynum, avgbottleneckhist)
     #print "[average bottleneck latency] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency90p, latency95p, latency99p)
@@ -251,16 +251,36 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
 
     # Get each rotated partition latency statistics
 
+    #avgrotatehist = [] # latency histogram for rotate partition
+    theoretical_serverscale = len(aggjsonarray)
+    runtime_serverscale = 2
+    simulation_ratio = theoretical_serverscale / runtime_serverscale
     for i in range(1, len(aggjsonarray)):
         tmpjsonobj = aggjsonarray[i]
         tmprotatehist = tmpjsonobj[PERSERVER_TOTAL_HISTOGRAM][1]
         tmprotatetotallatency = tmpjsonobj[PERSERVER_TOTAL_LATENCY][1]
         tmprotatetotallatencynum = tmpjsonobj[PERSERVER_TOTAL_LATENCYNUM][1]
-
-        totallatency += tmprotatetotallatency
-        totallatencynum += tmprotatetotallatencynum
+        #if (len(avgrotatehist) == 0):
+        #    avgrotatehist = [0.0] * len(tmprotatehist)
+        #for j in range(len(tmprotatehist)):
+        #    avgrotatehist[j] += tmprotatehist[j]
+        totallatency += tmprotatetotallatency / simulation_ratio
+        totallatencynum += tmprotatetotallatencynum / simulation_ratio
         for j in range(len(totallatencyhist)):
-            totallatencyhist[j] += tmprotatehist[j]
+            totallatencyhist[j] += (float(tmprotatehist[j]) / simulation_ratio)
+    #for i in range(len(avgrotatehist)):
+    #    avgrotatehist[i] = float(avgrotatehist[i]) / float(theoretical_serverscale / runtime_serverscale)
+
+    #avgrotatetotallatency = 0.0
+    #avgrotatetotallatencynum = 0.0
+    #for i in range(len(avgrotatehist)):
+    #    avgrotatetotallatency += float(i) * avgrotatehist[i]
+    #    avgrotatetotallatencynum += avgrotatehist[i]
+
+    #totallatency += avgrotatetotallatency
+    #totallatencynum += avgrotatetotallatencynum
+    #for i in range(len(avgrotatehist)):
+    #    totallatencyhist[i] += avgrotatehist[i]
 
     # Get aggregated latency results
 
