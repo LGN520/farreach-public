@@ -27,6 +27,18 @@
 
 - 10.25
 	+ Siyuan
+		- Dump more latency info and update latency calculation script to consider server rotation simulation effect
+		- Update JNI for range query
+			- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
+				+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
+				+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
+					* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
+					* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
+			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
+			- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+		* TODO: Support different snapshot interrupts during server rotation
+			- TODO: Provide calculate_bwusage.sh for bandwidth calculation
+			- TODO: Update benchmark.md for each experiment
 		* TODO: Implement crash recovery time
 			- TODO: In-switch recovery vs. cache size
 			- TODO: Server-side recovery vs. rocksdb size
@@ -49,15 +61,7 @@
 		* Support range query
 			- Get frag_hdrsize, srcnum_off, and other scan-related metadata based on packet type and methodid dynamically instead of from function parameters in common module
 				+ Update the usage of udprecvlarge_multisrc\[_dist\] for scan response in C code
-			- TODO: Add SCANRES_SPLIT (use custom Pair)
-			- Update JNI for range query
-				- TODO: Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
-					+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon by Siyuan)
-					+ TODO: Pass one Java dyanmic array as a parameter to store the encoded result
-						* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
-						* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
-				- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-				- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+			- Add SCANRES_SPLIT (use custom Pair)
 	+ HuanCheng
 		* TODO: Update scripts: test_server_rotation_p1.sh, test_server_rotation_p2.sh, test_dynamic.sh
 		* Evaluation
