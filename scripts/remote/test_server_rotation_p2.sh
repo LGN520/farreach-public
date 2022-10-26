@@ -66,13 +66,12 @@ fi
 
 justloaded=0
 if [ ${tmprotateidx} -lt ${bottleneck_serveridx} ]; then
-	justloaded=$((${tmprotateidx}+1))
+	justloaded=${tmprotateidx}
 else
-	justloaded=$((${tmprotateidx}+2))
+	justloaded=$((${tmprotateidx}-1))
 fi
 
-justloaded=$((${justloaded}%16))
-if [ ${justloaded} -eq 0 ]; then
+if [ $((${justloaded}%16)) -eq 0 ]; then
 	echo "sleep 120s"
 	sleep 120s
 else

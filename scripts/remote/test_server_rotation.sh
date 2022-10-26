@@ -47,7 +47,7 @@ source scripts/remote/test_server_rotation_p1.sh 0
 
 echo "[part 2] run bottleneck server thread + rotated server thread"
 
-rotatecnt=1
+rotatecnt=0
 for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); do
 	if [ ${rotateidx} -eq ${bottleneck_serveridx} ]; then
 		continue
