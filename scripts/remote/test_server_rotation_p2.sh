@@ -62,7 +62,23 @@ then
 	sudo nohup ./reflector spine >>tmp_serverrotation_part2_reflector.out 2>&1 &
 	cd ..
 fi
-sleep 5s
+
+
+justloaded=0
+if [ ${tmprotateidx} -lt ${bottleneck_serveridx} ]; then
+	justloaded=$((${tmprotateidx}+1))
+else
+	justloaded=$((${tmprotateidx}+2))
+fi
+
+justloaded=$((${justloaded}%16))
+if [ ${justloaded} -eq 0 ]; then
+	echo "sleep 120s"
+	sleep 120s
+else
+	echo "sleep 5s"
+	sleep 5s
+fi
 
 echo "start clients"
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >>tmp_serverrotation_part2_client.out 2>&1 &"
