@@ -26,6 +26,7 @@
 
 - 10.27
 	+ Siyuan
+		* TODO: Try new design of exponential moving average of cache access frequency
 		* TODO: Update paper including implementation, methodology, and exp1
 		* TODO: Support different snapshot interrupts during server rotation
 			- TODO: Provide calculate_bwusage.sh for bandwidth calculation
@@ -35,14 +36,17 @@
 			- TODO: Server-side recovery vs. rocksdb size
 	+ Huancheng
 		- Implement evaluation for static latency
-			- TODO: Scripts: test_server_rotation_latency.sh and calculate_latency_statistics.sh static latency
-				+ TODO: test_server_rotation_latency.py uses thpt results of server rotation to calculate the expected target for the current method for the fixed 1MOPS aggregate thpt, and then invoke test_server_rotation_latency.sh
+			- TODO: Scripts: remote/test_server_rotation_latency.sh and remote/calculate_latency_statistics.sh for static latency
+				+ NOTE: test_server_rotation_latency.sh uses per-rotation target (i.e., OPS per physical client) to start clients
+				+ NOTE: calculate_latency_statistics.sh still invokes local/calculate_statistics_helper.py yet with benchmark/output/<workloadname>-statistics/<methodname>-static<scale>-latency-client<0/1>.out, which is different from the thpt statistics
 			- TODO: YCSB: limit target (# of operations of all client threads per second) for static latency of corresponding method
 			- TODO: YCSB: save statistics file with different name from that of static thpt
 			- TODO: Update benchmark.md to give details of static latency under server rotation as a module in exp1, which is referred by the following exps (except exp3)
+			- TODO: Think about how we set target thpt in exp2 with different storage servers (maybe 1MOPS per 16 servers -> change TARGET_AGGTHPT in local/calculate_target_helper.py)?
 		* Evaluation
 			* TODO: Finish experiment 2
 			* TODO: Finish experiment 4
+			* TODO: Update benchmark.md for each exp including code change and configuration change
 			* TODO: Run experiment 1 on Twitter Traces
 				- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
@@ -57,8 +61,16 @@
 					* In JAVA, decode the single Java dynamic array into multiple dynamic arrays
 			- Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
 				+ Invoke DbUdpNative::scanNative in farreach/nocache/netcache-client
-		- TODO: Think about exponential moving average of CM and access frequency
-		- TODO: Provide test_server_rotation_latency.py
+		- Provide part of remote/test_server_rotation_latency.sh and local/calculate_target_helper.py
+			- NOTE: calculate_target_helper.py uses thpt results of server rotation to calculate the expected target for the current method for the fixed 1MOPS aggregate thpt
+		- Think about exponential moving average of CM and access frequency
+			- For CM, we cannot use exponential moving average
+				+ As data plane cannot support moving average calculation, we must perform it in control plane
+				+ However, as CM is accessed by data plane to trigger cache admission, which cannot wait for the long delay of control plane within each period to update the history CM
+				+ We also do not have sufficient stateful ALUs to maintain another CM sketch
+			- For per-cached-record access frequency, we have the opportunity to use exponential moving average
+				+ As access frequency is used by the controller to make cache eviction decision instead of the data plane, we can allow the control plane to update the history access frequency periodically
+				+ Two concers: (1) correctly compile into Tofino due to limited hardware resources; (2) periodically load-calculate-update within limited time in control plane
 	+ Huancheng
 		* Evaluation
 			* TODO: Finish experiment 1
