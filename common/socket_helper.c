@@ -979,10 +979,14 @@ bool udprecvlarge_multisrc(method_t methodid, int sockfd, dynamic_array_t **bufs
 		cur_fragnums[tmp_bufidx] += 1;
 		INVARIANT(cur_fragnums[tmp_bufidx] <= max_fragnums[tmp_bufidx]);
 		if (cur_fragnums[tmp_bufidx] == max_fragnums[tmp_bufidx]) {
+#ifdef SERVER_ROTATION
+			break; // return as long as receiving all fragments of the ScanResponseSplit from one server for server rotation
+#else
 			cur_srcnum += 1;
 			if (cur_srcnum >= max_srcnum) {
 				break;
 			}
+#endif
 		}
 	}
 
@@ -1207,6 +1211,9 @@ bool udprecvlarge_multisrc_dist(method_t methodid, int sockfd, std::vector<std::
 		perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] += 1;
 		INVARIANT(perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] <= perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]);
 		if (perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] == perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]) {
+#ifdef SERVER_ROTATION
+			break; // return as long as receiving all fragments of the ScanResponseSplit from one server under one switch for server rotation
+#else
 			perswitch_cur_srcnums[tmp_switchidx] += 1;
 			if (perswitch_cur_srcnums[tmp_switchidx] >= perswitch_perserver_bufs[tmp_switchidx].size()) {
 				cur_srcswitchnum += 1;
@@ -1214,6 +1221,7 @@ bool udprecvlarge_multisrc_dist(method_t methodid, int sockfd, std::vector<std::
 					break;
 				}
 			}
+#endif
 		}
 	}
 

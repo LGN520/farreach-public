@@ -3,8 +3,7 @@
 - FUTURE
 	* TODO: For synthetic workload, add write ratio, skewness, and value size into StaticStatisticsFilepath -> introduce too many CLI parameters into scripts/remote/calculate_statistics.sh and change too many lines of code in YCSB
 	* TODO: Reduce redundant switch-related scripts in method/localscripts/
-	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient in YCSB (just with different methodids)
-		- NOTE: Add preparefinish_client in prebenchmark of distfarreach to trigger snapshot
+	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient (send pkt for power-of-two-choices for sampled GETRES) in YCSB (just with different methodids)
 		- [IMPORTANT] current distributed extension is a single discussion instead of a critical design -> NOT need to evaluate
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
@@ -25,31 +24,50 @@
 	* Others
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 
-- 10.26
+- 10.27
 	+ Siyuan
-		- Update JNI for range query
-			- Invoke _udprecvlarge_multisrc_ipfrag and TODO _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
-				+ TODO: If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon)
-				+ Pass one Java dyanmic array as a parameter to store the encoded result
-					* TODO: In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
-					* TODO: In JAVA, decode the single Java dynamic array into multiple dynamic arrays
-			- TODO: Add parsebufs_multisrc_ipfrag(_dist) for udprecvlarge_multisrc_ipfrag(_dist) in Java
-			- TODO: Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+		* TODO: Update paper including implementation, methodology, and exp1
 		* TODO: Support different snapshot interrupts during server rotation
 			- TODO: Provide calculate_bwusage.sh for bandwidth calculation
 			- TODO: Update benchmark.md for each experiment
 		* TODO: Implement crash recovery time
 			- TODO: In-switch recovery vs. cache size
 			- TODO: Server-side recovery vs. rocksdb size
-		* TODO: Update evaluation
 	+ Huancheng
+		- Implement evaluation for static latency
+			- TODO: Scripts: test_server_rotation_latency.sh and calculate_latency_statistics.sh static latency
+				+ TODO: test_server_rotation_latency.py uses thpt results of server rotation to calculate the expected target for the current method for the fixed 1MOPS aggregate thpt, and then invoke test_server_rotation_latency.sh
+			- TODO: YCSB: limit target (# of operations of all client threads per second) for static latency of corresponding method
+			- TODO: YCSB: save statistics file with different name from that of static thpt
+			- TODO: Update benchmark.md to give details of static latency under server rotation as a module in exp1, which is referred by the following exps (except exp3)
 		* Evaluation
 			* TODO: Finish experiment 2
-			* TODO: Run experiment 3
-			* TODO: Start experiment 4
+			* TODO: Finish experiment 4
 			* TODO: Run experiment 1 on Twitter Traces
 				- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
+
+- 10.26
+	+ Siyuan
+		- Update JNI for range query
+			- Invoke _udprecvlarge_multisrc_ipfrag and _udprecvlarge_multisrc_ipfrag_dist of libcommon in JNI-based socket
+				+ If under server rotation, directly return after receiving all SCANRES_SPLITs of one src (one server / one server + one switch) (change libcommon)
+				+ Pass one Java dyanmic array as a parameter to store the encoded result
+					* In JNI, encode all C dynamic arrays as one dynamic array, copy it to the Java dynamic array
+					* In JAVA, decode the single Java dynamic array into multiple dynamic arrays
+			- Update DbUdpNative to invoke the native function to receive SCANRES_SPLIT
+				+ Invoke DbUdpNative::scanNative in farreach/nocache/netcache-client
+		- TODO: Think about exponential moving average of CM and access frequency
+		- TODO: Provide test_server_rotation_latency.py
+	+ Huancheng
+		* Evaluation
+			* TODO: Finish experiment 1
+			* TODO: Run most experiment 2
+			* TODO: Finish experiment 3
+		* TODO: Update benchmark.md: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
+			* For exp1, give details of static server rotation as a module
+				- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
+			* For exp3, give details of dynamic pattern
 		* TODO: Finish TraceReplay workload
 			- TODO: Get correpsonding trace file based on workloadName
 			- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
@@ -64,8 +82,7 @@
 			+ -> Present latency statistics under 2 storage servers under dynamic patterns
 	+ HuanCheng
 		* Evaluation
-			* TODO: Finish experiment 1
-			* TODO: Re-run experiment 2 on 32/64/128 servers
+			* Run most experiment 1
 
 - 10.24
 	+ Siyuan
