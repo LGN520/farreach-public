@@ -151,7 +151,7 @@ def get_logical_serveridx(rotationidx, physicalidx, workloadmode, bottleneckidx)
             else:
                 tmp_logical_serveridx = rotationidx
     else:
-        tmp_logical_serveridx = j
+        tmp_logical_serveridx = physicalidx
     return tmp_logical_serveridx
 
 def get_total_switch_server_thpts(jsonarray, rotationidx, physicalidx, workloadmode, bottleneckidx):

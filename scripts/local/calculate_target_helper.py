@@ -21,33 +21,35 @@ def calculate_targets(localjsonarray, remotejsonarray, bottleneckidx):
 
     # (1) Get aggregate thpt and per-rotation thpt
 
+    perrotation_thpts = []
+
     avgbottleneck_totalthpt, avgbottleneck_switchthpt, avgbottleneck_serverthpt = get_total_switch_server_thpts(aggjsonarray, 0, 0, workloadmode, bottleneckidx)
     for i in range(1, len(aggjsonarray)):
         tmp_bottleneck_totalthpt, _, _ = get_total_switch_server_thpts(aggjsonarray, i, 0, workloadmode, bottleneckidx)
 
         avgbottleneck_totalthpt += tmp_bottleneck_totalthpt
+        perrotation_thpts.append(tmp_bottleneck_totalthpt)
     avgbottleneck_totalthpt /= float(len(aggjsonarray))
 
     totalthpt = avgbottleneck_totalthpt
-    totalthpt_list = [avgbottleneck_totalthpt]
 
     for i in range(1, len(aggjsonarray)):
         tmp_bottleneck_totalthpt, _, _ = get_total_switch_server_thpts(aggjsonarray, i, 0, workloadmode, bottleneckidx)
         tmp_rotate_totalthpt, _, _ = get_total_switch_server_thpts(aggjsonarray, i, 1, workloadmode, bottleneckidx)
 
-        tmp_rotate_totalthpt *= (avgbottleneck_totalthpt / tmp_bottleneck_totalthpt)
+        perrotation_thpts.append(tmp_bottleneck_totalthpt + tmp_rotate_totalthpt)
 
+        tmp_rotate_totalthpt *= (avgbottleneck_totalthpt / tmp_bottleneck_totalthpt)
         totalthpt += tmp_rotate_totalthpt
-        totalthpt_list.append(tmp_rotate_totalthpt)
 
     weight = TARGET_AGGTHPT / float(totalthpt)
     output = ""
-    for i in range(len(totalthpt_list)):
-        totalthpt_list[i] *= weight
+    for i in range(len(perrotation_thpts)):
+        perrotation_thpts[i] *= weight
         if i == 0:
-            output = "{}".format(totalthpt_list[i])
+            output = "{}".format(perrotation_thpts[i] * 1000000)
         else:
-            output = "{} {}".format(output, totalthpt_list[i])
+            output = "{} {}".format(output, perrotation_thpts[i] * 1000000)
     print output
 
 

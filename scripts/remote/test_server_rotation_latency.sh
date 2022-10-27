@@ -42,5 +42,5 @@ cd ../../
 
 set +e
 
-# TODO: invoke test_server_rotation_latency_<p1/p2>.sh (similar as test_server_rotation.sh)
+# TODO: invoke test_server_rotation_latency_<p0/p1/p2>.sh (similar as test_server_rotation.sh)
 # NOTE: pass perrotation_targets[i] to the i-th rotation when starting clients

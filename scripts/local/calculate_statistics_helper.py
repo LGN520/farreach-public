@@ -96,6 +96,7 @@ def dynamicprocess(localjsonarray, remotejsonarray):
     calculate_perobjstat(aggjsonarray, workloadmode, -1)
 
     persecthpt = [0] * seconds
+    persec_normalizedthpt = [0] * seconds
     perseclatencyavg = [0] * seconds
     perseclatencymedium = [0] * seconds
     perseclatency90p = [0] * seconds
@@ -105,19 +106,35 @@ def dynamicprocess(localjsonarray, remotejsonarray):
         tmpjsonobj = aggjsonarray[i]
         persecthpt[i] = getmops(tmpjsonobj[TOTAL_OPSDONE] / tmpjsonobj[EXECUTION_MILLIS])
 
+        tmp_maxserverthpt = 0
+        for j in range(len(tmpjsonobj[PERSERVER_OPSDONE])):
+            tmp_serverthpt = getmops(tmpjsonobj[PERSERVER_OPSDONE][j] / tmpjsonobj[EXECUTION_MILLIS])
+            if tmp_serverthpt > tmp_maxserverthpt:
+                tmp_maxserverthpt = tmp_serverthpt
+        if tmp_maxserverthpt != 0:
+            persec_normalizedthpt[i] = persecthpt[i] / float(tmp_maxserverthpt)
+        else:
+            persec_normalizedthpt[i] = 0
+
         tmp_server0_totallatencyhist, _, _ = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 0)
         tmp_server1_totallatencyhist, _, _ = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 1)
         tmp_totallatencyhist = [0] * len(tmp_server0_totallatencyhist)
         for j in range(len(tmp_server0_totallatencyhist)):
             tmp_totallatencyhist[j] = tmp_server0_totallatencyhist[j] + tmp_server1_totallatencyhist[j]
-        perseclatencyavg[i], perseclatencymedium[i], perseclatency90p[i], perseclatency95p[i], perseclatency99p[i] = calculatelatency(tmp_totallatencyhist)
+        perseclatencyavg[i], perseclatencymedium[i], perseclatency90p[i], perseclatency95p[i], perseclatency99p[i], _, _ = calculatelatency(tmp_totallatencyhist)
     print "[DYNAMIC] per-second statistics:"
     print "thpt (MOPS): {}".format(persecthpt)
+    print "normalized thpt: {}".format(persec_normalizedthpt)
     print "avg latency (us): {}".format(perseclatencyavg)
     print "medium latency (us): {}".format(perseclatencymedium)
     print "90P latency (us): {}".format(perseclatency90p)
     print "95P latency (us): {}".format(perseclatency95p)
     print "99P latency (us): {}".format(perseclatency99p)
+
+    avgthpt = 0.0
+    for i in range(len(persecthpt)):
+        avgthpt += persecthpt[i]
+    avgthpt /= float(len(persecthpt))
 
     totalhistogram = [0] * len(aggjsonarray[0][PERSERVER_CACHEHIT_TOTAL_HISTOGRAM][0])
     for i in range(len(aggjsonarray)):
@@ -127,7 +144,7 @@ def dynamicprocess(localjsonarray, remotejsonarray):
             totalhistogram[j] += (tmp_server0_totallatencyhist[j] + tmp_server1_totallatencyhist[j])
 
     avglatency, latencymedium, latency90p, latency95p, latency99p, _, _ = calculatelatency(totalhistogram)
-    print "[DYNAMIC][OVERALL] average latency {} us, medium latency {} us, 90P latency {} us, 95P latency {} us, 99P latency {} us".format(avglatency, latencymedium, latency90p, latency95p, latency99p)
+    print "[DYNAMIC][OVERALL] avgthpt {} MOPS, avelat {} us, medlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us".format(avgthpt, avglatency, latencymedium, latency90p, latency95p, latency99p)
 
 if len(sys.argv) != 5:
     print "Invalid usage of calculate_statistics_helper.py"
