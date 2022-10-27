@@ -39,6 +39,7 @@ typedef PutRequestSeqInswitchCase1<netreach_key_t, val_t> put_request_seq_inswit
 typedef PutRequestSeqCase3<netreach_key_t, val_t> put_request_seq_case3_t;
 typedef PutRequestPopSeqCase3<netreach_key_t, val_t> put_request_pop_seq_case3_t;
 typedef DelRequestSeq<netreach_key_t> del_request_seq_t;
+typedef GetRequestLargevalueblockSeq<netreach_key_t> get_request_largevalueblock_seq_t;
 typedef DelRequestSeqInswitchCase1<netreach_key_t, val_t> del_request_seq_inswitch_case1_t;
 typedef DelRequestSeqCase3<netreach_key_t> del_request_seq_case3_t;
 typedef ScanRequestSplit<netreach_key_t> scan_request_split_t;

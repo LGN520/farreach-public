@@ -165,7 +165,6 @@ header_type metadata_t {
 		//validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
 #ifdef ENABLE_LARGEVALUEBLOCK
-		largevalueseq: 32;
 		is_largevalueblock: 1;
 #endif
 		is_deleted: 1; // if the entry is deleted
