@@ -12,11 +12,11 @@ fi
 
 echo "retrieve both servers back to the state after loading phase"
 ssh ${USER}@${SERVER0} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker0.db"
-ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker1.db}"
+ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker1.db"
 
 echo "launch storage servers of ${DIRNAME}"
 source scripts/remote/launchservertestbed.sh
-sleep 10s
+sleep 90s
 
 if [ ${with_controller} -eq 1 ]
 then

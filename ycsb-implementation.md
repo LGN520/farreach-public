@@ -1,13 +1,13 @@
 # Implementation log of YCSB
 
 - FUTURE
+	* TODO: SYNC largevalueseq_reg and is_largevalueblock to DistFarreach
 	* TODO: For synthetic workload, add write ratio, skewness, and value size into StaticStatisticsFilepath -> introduce too many CLI parameters into scripts/remote/calculate_statistics.sh and change too many lines of code in YCSB
 	* TODO: Reduce redundant switch-related scripts in method/localscripts/
 	* TODO: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient (send pkt for power-of-two-choices for sampled GETRES) in YCSB (just with different methodids)
 		- [IMPORTANT] current distributed extension is a single discussion instead of a critical design -> NOT need to evaluate
 	* TODO: Encapsulate GET/PUT/DEL/SCAN in inswitchcache-c-lib/ for remote_client.c
 		- [IMPORTANT] NOT need to provide c-lib for db_bench
-	* TODO: Fix retrieving issue of deleting /tmp/rocksdbbackups/16
 
 - [IMPORTANT] explanation of our results compared with NetCache paper -> reason: difference KVS
 	- Per FarReach KVS: 0.075 MOPS
@@ -26,14 +26,52 @@
 
 - 10.27
 	+ Siyuan
-		* TODO: Try new design of exponential moving average of cache access frequency
+		* Try to introduce read blocking for PUTREQ_LARGEVALUE of cached keys
+			- Introduce ENABLE_LARGEVALUEBLOCK (files: farreach/tofino/main.p4 and farreach/tofino/common.py)
+			- Introduce largevalueseq_reg (files: farreach/tofino/p4src/regs/largevalueseq.p4, farreach/tofino/main.p4, farreach/tofino/p4src/header.p4, farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py)
+				- For largevalueseq_reg
+					- If cached=1 and valid=1, GETREQ_INSWITCH reads largevalueseq
+					- If cached=1 and valid=1, PUTREQ/DELREQ_INSWITCH and GETRES_LATEST/DELETED_SEQ_INSWITCH sets latest=1 and largevalueseq=0 and is_largevalueblock=0
+					- CACHE_POP_INSWITCH sets latest=0 and largevalueseq=0 and is_largevalueblock=0
+					- If cached=1 and valid=1, PUTREQ_LARGEVALUE_INSWITCH sets latest=0 and largevalueseq=assignedseq and is_largevalueblock=0
+				- For is_largevalueblock_tbl (keyless), set meta.is_largevalueblock = 1 only if meta.largevalueseq != 0
+				- For another_eg_port_forward_tbl
+					+ If cached=1 and valid=1 and latest=0 and largevalueblock=1, convert GETREQ_INSWITCH into GETREQ_LARGEVALUEBLOCK_SEQ, set seq_hdr as meta.largevalueseq, and keep shadowtype_hdr and add seq_hdr
+				- For other egress processing
+					+ Update pktlen as DELREQ_SEQ and ipmacport as client2server for GETREQ_LARGEVALUEBLOCK_SEQ (including shadowtype and seq)
+			- TODO: Pass P4 compilation
+				+ Move meta.is_largevalueblock field and GETREQ-related actions of eg_port_forward_tbl to another_eg_port_forward_tbl (files: farreach/p4src/egress_mat.p4, farreach/configure/table_configure.py)
+			- Maintain per-server largevalue blockinfo list
+				- For PUTREQ_LARGEVALUE_SEQ
+					+ TODO: If the key does not exist in largevalue blockinfo list, add the key
+					+ TODO: For the blockinfo, mark blocked = false, update seq, and clear read blockings list if any
+				- For GETREQ_LARGEVALUEBLOCK_SEQ
+					+ TODO: If the key does not exist in largevalue blockinfo list, add the key, mark blocked = true, and block
+					+ TODO: If the key exists and req.seq = blockinfo.seq and blocked = true, block
+					+ TODO: If the key exists and req.seq > blockinfo.seq, mark blocked = true and block
+					+ TODO: Otherwise, process as usual without blocking
+			- Introduce GETREQ_LARGEVALUEBLOCK_SEQ (files: farreach/tofino/main.p4, farreach/tofino/common.py, common/packet_format.h, TODO farreeach/common_impl.h, common/packet_format_impl.h)
+		* Scripts issues
+			* Fix issue of calculate_statistics_helper.py in dynamic pattern
+				- Add persec normalized thpt and agg thpt
+			* Fix totalthpt_list and target in calculate_target_helper.py
+		* TODO: Survey and think about upstream backup (snapshot for consistency and backup for durability)
+			- ICDE'05 upstream backup
+			- SIGCOMM rollback-recovery for middleboxes -> output commit (may not necessary for us)
+			- Reference 31 in SIGCOMM (survey of replay-basd approach)
 		* TODO: Update paper including implementation, methodology, and exp1
+			- TODO: Split YCSB and Twitter traces
+			- TODO: Add normalized thpt if tail latency is not correct
+			- TODO: Use Tucana to verity our resullts; use RocksDB for server-side persistence
 		* TODO: Support different snapshot interrupts during server rotation
 			- TODO: Provide calculate_bwusage.sh for bandwidth calculation
 			- TODO: Update benchmark.md for each experiment
+		* TODO: Implement client-side upstream backup
+			- TODO: Add seq into PUT/DELRES for FarReach such that snapshot can release part of client-side backup
+			- TODO: Dump client-side backup in TerminatorThread
 		* TODO: Implement crash recovery time
 			- TODO: In-switch recovery vs. cache size
-			- TODO: Server-side recovery vs. rocksdb size
+			- TODO: Server-side recovery vs. rocksdb size (NOT necessary if w/ client-side upstream backup)
 	+ Huancheng
 		- Implement evaluation for static latency
 			- TODO: Scripts: remote/test_server_rotation_latency.sh and remote/calculate_latency_statistics.sh for static latency
@@ -43,10 +81,21 @@
 			- TODO: YCSB: save statistics file with different name from that of static thpt
 			- TODO: Update benchmark.md to give details of static latency under server rotation as a module in exp1, which is referred by the following exps (except exp3)
 			- TODO: Think about how we set target thpt in exp2 with different storage servers (maybe 1MOPS per 16 servers -> change TARGET_AGGTHPT in local/calculate_target_helper.py)?
+		* TODO: Finish TraceReplay workload
+			- TODO: Get correpsonding trace file based on workloadName
+			- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
+			- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+			- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromBytes
 		* Evaluation
-			* TODO: Finish experiment 2
+			* Finish experiment 2
+			* TODO: Update latency statistics and normalized thpt for exp1 and exp2
+				- TODO: Update per-second thpt and normalized thpt for exp3
 			* TODO: Finish experiment 4
 			* TODO: Update benchmark.md for each exp including code change and configuration change
+				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
+				* For exp1, give details of static server rotation as a module
+					- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
+				* For exp3, give details of dynamic pattern
 			* TODO: Run experiment 1 on Twitter Traces
 				- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
@@ -73,18 +122,9 @@
 				+ Two concers: (1) correctly compile into Tofino due to limited hardware resources; (2) periodically load-calculate-update within limited time in control plane
 	+ Huancheng
 		* Evaluation
-			* TODO: Finish experiment 1
-			* TODO: Run most experiment 2
-			* TODO: Finish experiment 3
-		* TODO: Update benchmark.md: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
-			* For exp1, give details of static server rotation as a module
-				- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
-			* For exp3, give details of dynamic pattern
-		* TODO: Finish TraceReplay workload
-			- TODO: Get correpsonding trace file based on workloadName
-			- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
-			- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-			- TODO: Twitter key -> keystring by md5 -> inswitchcache.core.Key by fromBytes
+			* Finish experiment 1
+			* Run most experiment 2
+			* Finish experiment 3
 
 - 10.25
 	+ Siyuan
