@@ -7,7 +7,7 @@
 //#define USE_BFSDE920
 
 // read blocking for pktloss of PUTREQ_LARGEVALUE of cached keys
-#define ENABLE_LARGEVALUEBLOCK
+//#define ENABLE_LARGEVALUEBLOCK
 
 // Uncomment it if support range query, or comment it otherwise
 // Change netbufferv4.p4, common.py, and helper.h accordingly
@@ -230,7 +230,7 @@
 #include "p4src/regs/case1.p4"
 
 #ifdef ENABLE_LARGEVALUEBLOCK
-#include "p4src/regs/largevalueseq.p4"
+#include "p4src/regs/largevalueblock.p4"
 #endif
 
 #include "p4src/ingress_mat.p4"
@@ -323,7 +323,7 @@ control egress {
 	// Stage 2
 	apply(access_latest_tbl);
 #ifdef ENABLE_LARGEVALUEBLOCK
-	apply(access_largevalueseq_tbl); // used for invalidation of PUTREQ_LARGEVALUE
+	apply(access_largevalueblock_tbl); // used for invalidation of PUTREQ_LARGEVALUE
 #endif
 	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
 
@@ -334,11 +334,6 @@ control egress {
 	// TODO: apply(serverstatus_tbl);
 
 	// Stage 3
-#ifdef ENABLE_LARGEVALUEBLOCK
-	if (meta.largevalueseq != 0) {
-		apply(is_largevalueblock_tbl); // used for invalidation of PUTREQ_LARGEVALUE
-	}
-#endif
 	apply(access_deleted_tbl);
 	apply(update_vallen_tbl);
 	apply(access_savedseq_tbl);

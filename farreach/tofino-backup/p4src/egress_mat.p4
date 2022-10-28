@@ -94,21 +94,6 @@ table save_client_udpport_tbl {
 	size: 4;
 }
 
-// Stage 3
-
-action set_is_largevalueblock() {
-	modify_field(meta.is_largevalueblock, 1);
-}
-
-@pragma stage 3
-table is_largevalueblock_tbl {
-	actions {
-		set_is_largevalueblock;
-	}
-	default_action: set_is_largevalueblock();
-	size: 1;
-}
-
 // Stage 7
 
 #ifdef DEBUG
@@ -163,86 +148,6 @@ table lastclone_lastscansplit_tbl {
 }
 
 // Stage 8
-
-action update_getreq_inswitch_to_getreq() {
-	modify_field(op_hdr.optype, GETREQ);
-
-	remove_header(shadowtype_hdr);
-	remove_header(inswitch_hdr);
-
-	//modify_field(eg_intr_md.egress_port, eport);
-}
-
-action update_getreq_inswitch_to_getreq_beingevicted() {
-	modify_field(op_hdr.optype, GETREQ_BEINGEVICTED);
-
-	remove_header(shadowtype_hdr);
-	remove_header(inswitch_hdr);
-}
-
-#ifdef ENABLE_LARGEVALUEBLOCK
-action update_getreq_inswitch_to_getreq_largevalueblock_seq() {
-	modify_field(op_hdr.optype, GETREQ_LARGEVALUEBLOCK_SEQ);
-
-	modify_field(seq_hdr.seq, meta.largevalueseq);
-
-	//remove_header(shadowtype_hdr);
-	add_header(seq_hdr);
-
-	remove_header(inswitch_hdr);
-}
-#endif
-
-action update_getreq_inswitch_to_getreq_pop() {
-	modify_field(op_hdr.optype, GETREQ_POP);
-
-	remove_header(shadowtype_hdr);
-	remove_header(inswitch_hdr);
-
-	//modify_field(eg_intr_md.egress_port, eport);
-}
-
-action update_getreq_inswitch_to_getreq_nlatest() {
-	modify_field(op_hdr.optype, GETREQ_NLATEST);
-
-	remove_header(shadowtype_hdr);
-	remove_header(inswitch_hdr);
-
-	//modify_field(eg_intr_md.egress_port, eport);
-}
-
-action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
-	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
-	modify_field(stat_hdr.stat, stat);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
-	modify_field(udp_hdr.srcPort, server_port);
-	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
-
-	remove_header(inswitch_hdr);
-	/*add_header(vallen_hdr);
-	add_header(val1_hdr);
-	add_header(val2_hdr);
-	add_header(val3_hdr);
-	add_header(val4_hdr);
-	add_header(val5_hdr);
-	add_header(val6_hdr);
-	add_header(val7_hdr);
-	add_header(val8_hdr);
-	add_header(val9_hdr);
-	add_header(val10_hdr);
-	add_header(val11_hdr);
-	add_header(val12_hdr);
-	add_header(val13_hdr);
-	add_header(val14_hdr);
-	add_header(val15_hdr);
-	add_header(val16_hdr);*/
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
-}
 
 action update_getres_latest_seq_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
@@ -376,9 +281,6 @@ table another_eg_port_forward_tbl {
 		meta.is_hot: exact;
 		validvalue_hdr.validvalue: exact;
 		meta.is_latest: exact;
-#ifdef ENABLE_LARGEVALUEBLOCK
-		meta.is_largevalueblock: exact;
-#endif
 		meta.is_deleted: exact;
 		inswitch_hdr.client_sid: exact;
 		meta.is_lastclone_for_pktloss: exact;
@@ -386,14 +288,6 @@ table another_eg_port_forward_tbl {
 		meta.is_case1: exact;
 	}
 	actions {
-		update_getreq_inswitch_to_getreq;
-		update_getreq_inswitch_to_getreq_beingevicted;
-#ifdef ENABLE_LARGEVALUEBLOCK
-		update_getreq_inswitch_to_getreq_largevalueblock_seq;
-#endif
-		update_getreq_inswitch_to_getreq_pop;
-		update_getreq_inswitch_to_getreq_nlatest;
-		update_getreq_inswitch_to_getres_by_mirroring;
 		update_getres_latest_seq_to_getres; // GETRES_LATEST_SEQ must be cloned from ingress to egress
 		update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss; // drop original packet of GETRES_LATEST_SEQ -> clone for first GETRES_LATEST_SEQ_INSWITCH_CASE1
 		//drop_getres_latest_seq_inswitch; // drop original packet of GETRES_LATEST_SEQ
@@ -411,14 +305,88 @@ table another_eg_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-#ifdef ENABLE_LARGEVALUEBLOCK
-	size: 512;
-#else
 	size: 256;
-#endif
 }
 
 // Stage 9
+
+action update_getreq_inswitch_to_getreq() {
+	modify_field(op_hdr.optype, GETREQ);
+
+	remove_header(shadowtype_hdr);
+	remove_header(inswitch_hdr);
+
+	//modify_field(eg_intr_md.egress_port, eport);
+}
+
+#ifdef ENABLE_LARGEVALUEBLOCK
+action update_getreq_inswitch_to_getreq_beingevicted() {
+	modify_field(op_hdr.optype, GETREQ_BEINGEVICTED);
+
+	remove_header(shadowtype_hdr);
+	remove_header(inswitch_hdr);
+}
+#endif
+
+action update_getreq_inswitch_to_getreq_largevalueblock_seq() {
+	modify_field(op_hdr.optype, GETREQ_LARGEVALUEBLOCK_SEQ);
+
+	//remove_header(shadowtype_hdr);
+	add_header(seq_hdr);
+
+	remove_header(inswitch_hdr);
+}
+
+action update_getreq_inswitch_to_getreq_pop() {
+	modify_field(op_hdr.optype, GETREQ_POP);
+
+	remove_header(shadowtype_hdr);
+	remove_header(inswitch_hdr);
+
+	//modify_field(eg_intr_md.egress_port, eport);
+}
+
+action update_getreq_inswitch_to_getreq_nlatest() {
+	modify_field(op_hdr.optype, GETREQ_NLATEST);
+
+	remove_header(shadowtype_hdr);
+	remove_header(inswitch_hdr);
+
+	//modify_field(eg_intr_md.egress_port, eport);
+}
+
+action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
+	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
+	modify_field(stat_hdr.stat, stat);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
+	modify_field(udp_hdr.srcPort, server_port);
+	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
+
+	remove_header(inswitch_hdr);
+	/*add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);*/
+	add_header(stat_hdr);
+
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
+}
 
 /*action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(switchos_sid, reflector_port) {
 	modify_field(op_hdr.optype, CACHE_POP_INSWITCH_ACK);
@@ -968,6 +936,9 @@ table eg_port_forward_tbl {
 		//debug_hdr.is_hot: exact;
 		validvalue_hdr.validvalue: exact;
 		meta.is_latest: exact;
+#ifdef ENABLE_LARGEVALUEBLOCK
+		meta.is_largevalueblock: exact;
+#endif
 		meta.is_deleted: exact;
 		//inswitch_hdr.is_wrong_pipeline: exact;
 		inswitch_hdr.client_sid: exact;
@@ -981,6 +952,14 @@ table eg_port_forward_tbl {
 #endif
 	}
 	actions {
+		update_getreq_inswitch_to_getreq;
+		update_getreq_inswitch_to_getreq_beingevicted;
+#ifdef ENABLE_LARGEVALUEBLOCK
+		update_getreq_inswitch_to_getreq_largevalueblock_seq;
+#endif
+		update_getreq_inswitch_to_getreq_pop;
+		update_getreq_inswitch_to_getreq_nlatest;
+		update_getreq_inswitch_to_getres_by_mirroring;
 		//update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // clone for first CACHE_POP_INSWITCH_ACK
 		//forward_cache_pop_inswitch_ack_clone_for_pktloss; // not last clone of CACHE_POP_INSWITCH_ACK
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
@@ -1124,7 +1103,7 @@ action update_stat_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 52);
 }
 
-// DELREQ_SEQ, DELREQ_SEQ_CASE3, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ
+// DELREQ_SEQ, DELREQ_SEQ_CASE3, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED
 action update_seq_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 4(seq) + 1(debug_hdr)
 	//modify_field(udp_hdr.hdrlen, 33);
