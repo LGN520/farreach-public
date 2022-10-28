@@ -1,25 +1,28 @@
-if [ "x${is_common_included}" != "x1" ]
-then
+if [ "x${is_common_included}" != "x1" ]; then
 	source scripts/common.sh
 fi
 
 #set -x
 
-if [ $# -ne 2 ]
-then
-	echo "Usage: bash scripts/remote/test_server_rotation_p2.sh <isSingleRotation> <rotationidx>"
+if [ $# -lt 2 ]; then
+	echo "Usage: bash scripts/remote/test_server_rotation_p2.sh <isSingleRotation> <rotationidx> [targetthpt]"
 	exit
 fi
 
 tmpsinglerotation=$1
-if [ ${tmpsinglerotation} -ne 1 ] && [ ${tmpsinglerotation} -ne 0 ]
-then
+if [ ${tmpsinglerotation} -ne 1 ] && [ ${tmpsinglerotation} -ne 0 ]; then
 	echo "isSingleRotation should be 1 or 0"
 	exit
 fi
 
 tmprotateidx=$2
 echo "tmprotateidx: "${tmprotateidx}
+
+tmptargetthpt=-1
+if [ $# -eq 3 ]; then
+	tmptargetthpt=$3
+fi
+tmptargetthpt=${tmptargetthpt%.*}
 
 echo "stop clients"
 source bash scripts/local/localstop.sh ycsb >/dev/null 2>&1
@@ -49,13 +52,11 @@ source scripts/remote/sync_file.sh ${DIRNAME} config.ini
 echo "start servers"
 ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./server 0 >>tmp_serverrotation_part2_server.out 2>&1 &"
 ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./server 1 >>tmp_serverrotation_part2_server.out 2>&1 &"
-if [ ${with_controller} -eq 1 ]
-then
+if [ ${with_controller} -eq 1 ]; then
 	echo "start controller"
 	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./controller >>tmp_serverrotation_part2_controller.out 2>&1 &"
 fi
-if [ ${with_reflector} -eq 1 ]
-then
+if [ ${with_reflector} -eq 1 ]; then
 	echo "start reflectors"
 	ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./reflector leaf >>tmp_serverrotation_part2_reflector.out 2>&1 &"
 	cd ${DIRNAME}
@@ -63,15 +64,14 @@ then
 	cd ..
 fi
 
-
 justloaded=0
 if [ ${tmprotateidx} -lt ${bottleneck_serveridx} ]; then
 	justloaded=${tmprotateidx}
 else
-	justloaded=$((${tmprotateidx}-1))
+	justloaded=$((${tmprotateidx} - 1))
 fi
 
-if [ $((${justloaded}%16)) -eq 0 ]; then
+if [ $((${justloaded} % 16)) -eq 0 ]; then
 	echo "sleep 120s"
 	sleep 120s
 else
@@ -80,11 +80,19 @@ else
 fi
 
 echo "start clients"
-ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >>tmp_serverrotation_part2_client.out 2>&1 &"
+if [ $# -eq 3 ]; then
+	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} -target ${tmptargetthpt} >>tmp_serverrotation_part2_client.out 2>&1 &"
+else
+	ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >>tmp_serverrotation_part2_client.out 2>&1 &"
+fi
 sleep 1s
 pwd
 cd ${CLIENT_ROOTPATH}/benchmark/ycsb/
-./bin/ycsb run ${DIRNAME} -pi 0
+if [ $# -eq 3 ]; then
+	./bin/ycsb run ${DIRNAME} -pi 0 -sr ${tmpsinglerotation} -target ${tmptargetthpt}
+else
+	./bin/ycsb run ${DIRNAME} -pi 0 -sr ${tmpsinglerotation}
+fi
 cd ../../
 
 # stop and kill server/controller/reflector

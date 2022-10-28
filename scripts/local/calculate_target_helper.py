@@ -24,11 +24,11 @@ def calculate_targets(localjsonarray, remotejsonarray, bottleneckidx):
     perrotation_thpts = []
 
     avgbottleneck_totalthpt, avgbottleneck_switchthpt, avgbottleneck_serverthpt = get_total_switch_server_thpts(aggjsonarray, 0, 0, workloadmode, bottleneckidx)
+    perrotation_thpts.append(avgbottleneck_totalthpt)
     for i in range(1, len(aggjsonarray)):
         tmp_bottleneck_totalthpt, _, _ = get_total_switch_server_thpts(aggjsonarray, i, 0, workloadmode, bottleneckidx)
-
         avgbottleneck_totalthpt += tmp_bottleneck_totalthpt
-        perrotation_thpts.append(tmp_bottleneck_totalthpt)
+        
     avgbottleneck_totalthpt /= float(len(aggjsonarray))
 
     totalthpt = avgbottleneck_totalthpt
@@ -47,9 +47,9 @@ def calculate_targets(localjsonarray, remotejsonarray, bottleneckidx):
     for i in range(len(perrotation_thpts)):
         perrotation_thpts[i] *= weight
         if i == 0:
-            output = "{}".format(perrotation_thpts[i] * 1000000)
+            output = "{}".format(perrotation_thpts[i] * 1000000 / 2)
         else:
-            output = "{} {}".format(output, perrotation_thpts[i] * 1000000)
+            output = "{} {}".format(output, perrotation_thpts[i] * 1000000 / 2)
     print output
 
 
