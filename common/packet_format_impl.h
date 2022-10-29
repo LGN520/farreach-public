@@ -1566,7 +1566,7 @@ void DelRequestSeq<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 GetRequestLargevalueblockSeq<key_t>::GetRequestLargevalueblockSeq() 
-	: Packet<key_t>(), _seq(0)
+	: DelRequestSeq<key_t>()
 {
 }
 
@@ -3674,7 +3674,7 @@ template<class key_t>
 GetRequestBeingevicted<key_t>::GetRequestBeingevicted(method_t methodid, key_t key)
 	: GetRequest<key_t>(methodid, key)
 {
-	this->_type = PacketType::GETREQ_BEINGEVICTED;
+	this->_type = optype_t(PacketType::GETREQ_BEINGEVICTED);
 	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
 }
 

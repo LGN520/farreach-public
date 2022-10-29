@@ -4,6 +4,7 @@
 // Transaction phase for ycsb_server
 
 #include <vector>
+#include <utility> // pair
 #include "../common/helper.h"
 #include "../common/key.h"
 #include "../common/val.h"
@@ -119,14 +120,14 @@ void prepare_server() {
 	}
 
 	// For read-blocking under rare case of cache eviction
-	server_blockinfo_for_readblocking_list = new blockinfo_t[current_server_logical_num];
-	for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
+	server_blockinfo_for_readblocking_list = new blockinfo_t[current_server_logical_num]();
+	/*for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
 		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedkey = netreach_key_t::min();
 		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._isblocked = false;
 		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedreq_list.resize(0);
 		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedaddr_list.resize(0);
 		server_blockinfo_for_readblocking_list[tmp_local_server_logical_idx]._blockedaddrlen_list.resize(0);
-	}
+	}*/
 
 	// For read-blocking under rare case of PUTREQ_LARGEVALUE
 	server_blockinfomap_for_largevalueblock_list = new std::map<netreach_key_t, blockinfo_t>[current_server_logical_num];
@@ -553,7 +554,7 @@ void *run_server_worker(void * param) {
 
 					tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(req.key(), tmp_blockinfo));
 				} else { // with existing blockinfo for rare case of PUTREQ_LARGEVALUE
-					blockinfo_t &tmp_blockinfo = iter->second;
+					blockinfo_t &tmp_blockinfo = tmpiter->second;
 					if (tmp_blockinfo._largevalueseq == req.seq() & tmp_blockinfo._isblocked == true) {
 						printf("[WARN][LARGEVALUEBLOCK] existing blockinfo of key %x: seq matches and is blocked -> block the GETREQ_LARGEVALUEBLOCK_SEQ\n", req.key().keyhihi);
 						fflush(stdout);
@@ -719,7 +720,7 @@ void *run_server_worker(void * param) {
 					tmp_blockinfo._blockedaddrlen_list.resize(0);
 					tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(req.key(), tmp_blockinfo));
 				} else {
-					blockinfo_t &tmp_blockinfo = iter->second;
+					blockinfo_t &tmp_blockinfo = tmpiter->second;
 					if (req.seq() > tmp_blockinfo._largevalueseq) {
 						tmp_blockinfo._largevalueseq = req.seq();
 					}
@@ -965,7 +966,7 @@ void *run_server_worker(void * param) {
 					tmp_blockinfo._blockedaddrlen_list.resize(0);
 					tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(req.key(), tmp_blockinfo));
 				} else {
-					blockinfo_t &tmp_blockinfo = iter->second;
+					blockinfo_t &tmp_blockinfo = tmpiter->second;
 					if (req.seq() > tmp_blockinfo._largevalueseq) {
 						tmp_blockinfo._largevalueseq = req.seq();
 					}
@@ -1345,7 +1346,7 @@ void *run_server_worker(void * param) {
 					tmp_blockinfo._blockedaddrlen_list.resize(0);
 					tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(tmp_key, tmp_blockinfo));
 				} else {
-					blockinfo_t &tmp_blockinfo = iter->second;
+					blockinfo_t &tmp_blockinfo = tmpiter->second;
 					if (tmp_seq > tmp_blockinfo._largevalueseq) {
 						tmp_blockinfo._largevalueseq = tmp_seq;
 					}
@@ -1529,7 +1530,7 @@ void *run_server_evictserver(void *param) {
 			tmp_blockinfo._blockedaddrlen_list.resize(0);
 			tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(tmp_cache_evict_ptr->key(), tmp_blockinfo));
 		} else {
-			blockinfo_t &tmp_blockinfo = iter->second;
+			blockinfo_t &tmp_blockinfo = tmpiter->second;
 			if (tmp_cache_evict_ptr->seq() > tmp_blockinfo._largevalueseq) {
 				tmp_blockinfo._largevalueseq = tmp_cache_evict_ptr->seq();
 			}

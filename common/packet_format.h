@@ -463,7 +463,7 @@ class GetRequestLargevalueblockSeq : public DelRequestSeq<key_t> { // ophdr + sh
 	public:
 		GetRequestLargevalueblockSeq();
 		GetRequestLargevalueblockSeq(method_t methodid, const char * data, uint32_t recv_size);
-}
+};
 
 template<class key_t, class val_t>
 class DelRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr + clone_hdr
