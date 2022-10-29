@@ -65,4 +65,11 @@ bottleneck_serveridx=$(readini ${configfile} "global" "bottleneck_serveridx_for_
 server_total_logical_num=$(readini ${configfile} "global" "server_total_logical_num")
 server_total_logical_num_for_rotation=$(readini ${configfile} "global" "server_total_logical_num_for_rotation")
 
+if [ "x${DIRNAME}" == "xfarreach" ]
+then
+	snapshot_period=$(readini ${configfile} "controller" "controller_snapshot_period") # in units of ms
+else
+	snapshot_period=0
+fi
+
 is_common_included=1

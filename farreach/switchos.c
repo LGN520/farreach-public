@@ -958,14 +958,16 @@ void *run_switchos_snapshotserver(void *param) {
 
 		INVARIANT(recvsize == 2*sizeof(int));
 		// Fix duplicate packet
-		if (control_type == *((int *)recvbuf) && snapshotid == *((int *)(recvbuf + sizeof(int)))) {
+		if (control_type != SNAPSHOT_CLEANUP && control_type == *((int *)recvbuf) && snapshotid == *((int *)(recvbuf + sizeof(int)))) {
 			printf("[switchos.snapshotserver] receive duplicate control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+			fflush(stdout);
 			continue;
 		}
 		else {
 			control_type = *((int *)recvbuf);
 			snapshotid = *((int *)(recvbuf + sizeof(int)));
 			printf("[switchos.snapshotserver] receive control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+			fflush(stdout);
 		}
 
 		if (control_type == SNAPSHOT_CLEANUP) {
@@ -985,6 +987,20 @@ void *run_switchos_snapshotserver(void *param) {
 				for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
 					INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] != NULL && switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] != NULL);
 				}
+
+				// clear stale in-switch state
+				
+				// disable single path
+				memcpy(ptfbuf, &SWITCHOS_DISABLE_SINGLEPATH, sizeof(int));
+				udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+				udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+				INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_DISABLE_SINGLEPATH_ACK);
+
+				// reset snapshot flag as false in data plane
+				memcpy(ptfbuf, &SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG, sizeof(int));
+				udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+				udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+				INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK);
 
 				// notify to end stale snapshot
 				memory_fence();
@@ -1006,19 +1022,25 @@ void *run_switchos_snapshotserver(void *param) {
 				specialcaseserver_know_snapshot_end = false;
 				memory_fence();
 
-				INVARIANT(switchos_perpipeline_snapshot_values != NULL && switchos_perpipeline_snapshot_seqs != NULL && switchos_perpipeline_snapshot_stats != NULL);
+				//INVARIANT(switchos_perpipeline_snapshot_values != NULL && switchos_perpipeline_snapshot_seqs != NULL && switchos_perpipeline_snapshot_stats != NULL);
 				for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
 					// free stale special cases
 					// NOTE: popserver/specialcaseserver will not touch speicalcases_ptr now, as both is_snapshot/is_snapshot_end are false
-					delete switchos_perpipeline_specialcases_ptr[tmp_pipeidx];
-					switchos_perpipeline_specialcases_ptr[tmp_pipeidx] = NULL;
+					if (switchos_perpipeline_specialcases_ptr[tmp_pipeidx] != NULL) {
+						delete switchos_perpipeline_specialcases_ptr[tmp_pipeidx];
+						switchos_perpipeline_specialcases_ptr[tmp_pipeidx] = NULL;
+					}
 
 					// free backuped metadata
 					// NOTE: popserver/specialcaseserver will not touch backuped metadata now, as both is_snapshot/is_snapshot_end are false
-					delete [] switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx];
-					switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] = NULL;
-					delete [] switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx];
-					switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] = NULL;
+					if (switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] != NULL) {
+						delete [] switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx];
+						switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] = NULL;
+					}
+					if (switchos_perpipeline_cached_serveridx_array_backup[tmp_pipeidx] != NULL) {
+						delete [] switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx];
+						switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] = NULL;
+					}
 					switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx] = 0;
 
 					// free snapshot data
@@ -1146,6 +1168,7 @@ void *run_switchos_snapshotserver(void *param) {
 			DELTA_TIME(enable_singlepath_t2, enable_singlepath_t1, enable_singlepath_t3);
 			printf("Time of stopping cache population: %f ms\n", GET_MICROSECOND(stop_cachepop_t3) / 1000.0);
 			printf("Time of enabling single path: %f ms\n", GET_MICROSECOND(enable_singlepath_t3) / 1000.0);
+			fflush(stdout);
 			
 
 #ifdef DEBUG_SNAPSHOT
@@ -1219,6 +1242,7 @@ void *run_switchos_snapshotserver(void *param) {
 			DELTA_TIME(load_snapshotdata_t2, load_snapshotdata_t1, load_snapshotdata_t3);
 			//printf("Time of loading snapshot data by ptf: %f s\n", GET_MICROSECOND(load_snapshotdata_t3) / 1000.0 / 1000.0);
 			printf("Time of loading snapshot data by reflector: %f s\n", GET_MICROSECOND(load_snapshotdata_t3) / 1000.0 / 1000.0);
+			fflush(stdout);
 
 			// sendback SNAPSHOT_START_ACK
 			udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_START_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
@@ -1257,6 +1281,7 @@ void *run_switchos_snapshotserver(void *param) {
 #ifdef DEBUG_SNAPSHOT
 				// TMPDEBUG
 				printf("[before rollback] snapshot size of pipeline %d: %d\n", tmp_pipeidx, switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
+				fflush(stdout);
 				/*for (size_t debugi = 0; debugi < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; debugi++) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
@@ -1292,6 +1317,7 @@ void *run_switchos_snapshotserver(void *param) {
 #ifdef DEBUG_SNAPSHOT
 				// TMPDEBUG
 				printf("[after rollback] snapshot size of pipeline %d: %d\n", tmp_pipeidx, switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
+				fflush(stdout);
 				/*for (size_t debugi = 0; debugi < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; debugi++) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
@@ -1349,6 +1375,7 @@ void *run_switchos_snapshotserver(void *param) {
 
 			// send rollbacked snapshot data to controller.snapshotserver
 			printf("[switchos.snapshotserver] send snapshot data to controller\n"); // TMPDEBUG
+			fflush(stdout);
 			udpsendlarge_udpfrag(switchos_snapshotserver_udpsock, sendbuf.array(), total_bytes, 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
 		else {
