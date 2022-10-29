@@ -36,7 +36,9 @@
 ## TODO list
 
 - TODO
-	* TODO: Discuss how to set target aggregate throughput next meeting
+	* TODO: Discuss how to evaluate latency statistics
+		* TODO: Update latency statistics for all exps (without thpt limit)
+			- TODO: For exp1, mark original latency statistic with the delete line, if the latest latency statistic is reasonable
 	* Client-side upstream backup (before exp9 recovery time)
 		* TODO: Debug and test client-side upstream backup colleborating with periodic snapshot
 		* TODO: Re-run exp7 on w/ or w/o snapshot for FarReach
@@ -47,26 +49,11 @@
 
 - 10.30
 	+ Siyuan
-		* TODO: Debug and test read blocking for rare case of PUTREQ_LARGEVALUE (before exp1 Twitter traces)
-		* TODO: Update implementation
-	+ HuanCheng
-		* TODO: Run experiment 1 on Twitter Traces
-			- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
-			- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
-
-- 10.29
-	+ Siyuan
-		* Support different snapshot interrupts during server rotation
-			- Provide calculate_bwcost.sh for bandwidth calculation
-		* TODO: Run experiment 11 by compiling nocache, netcache, and farreach in bf3
-		* Update paper including methodology and finished exps
-			- Split YCSB and Twitter traces
+		* TODO: Update evaluation and implementation
 			- TODO: Add normalized thpt if tail latency is not correct
-			- Use Tucana to verity our resullts; use RocksDB for server-side persistence
-			- Update evaluation, including methodology and all finished exps
+		* TODO: Debug and test read blocking for rare case of PUTREQ_LARGEVALUE (before exp1 Twitter traces)
 		* Survey for upstream backup
 			- TODO: Reference 31 in SIGCOMM (survey of replay-basd approach)
-
 		* TODO: Implement client-side record preservations
 			- TODO: Add seq into PUT/DELRES for FarReach such that snapshot can release part of client-side backup
 			- TODO: Maintain client-side record preservations in a concurrent map
@@ -80,24 +67,39 @@
 			- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations
 			- TODO: Exp 9: in-switch and server-side recovery time vs. cache size
 	+ HuanCheng
+		* TODO: Update benchmark.md for each exp including code change and configuration change
+			* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
+			* For exp1, give details of static server rotation as a module and latency evaluation as another module
+				- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
+			* For exp3, give details of dynamic pattern
+		* TODO: Run experiment 1 on Twitter Traces
+			- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
+			- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
+
+- 10.29
+	+ Siyuan
+		* Support different snapshot interrupts during server rotation
+			- Provide calculate_bwcost.sh for bandwidth calculation
+		* Run experiment 11 by compiling nocache, netcache, and farreach in bf3
+		* Update paper including methodology and finished exps
+			- Split YCSB and Twitter traces
+			- Use Tucana to verity our resullts; use RocksDB for server-side persistence
+			- Update evaluation, including methodology and all finished exps
+	+ HuanCheng
 		* Evaluation
-			* TODO: Finish experiment 6 on value size 16/32/64
+			* Finish experiment 6 on value size 16/32/64
 			* TODO: Finish experiment 7 on w/o snapshot for FarReach
 			* TODO: Finish experiment 8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
 				- TODO: If encounter any issue in controller/switchos, let Siyuan fix first
 		* Parallel with evaluation
-			* TODO: Update latency statistics and normalized thpt for all exps
-				- TODO: Update per-second thpt and per-second normalized thpt for exp3
+			* Update normalized thpt for all exps
 			* TODO: Double-check write stall in experiment 3 on dynamic pattern
 				- TODO: Try to disable flushing&compaction in RocksDB first by modifying common/rocksdb_wrapper.h (sync and re-compile)
 					+ TODO: Try to set GLOBAL_MAX_FLUSH_THREAD_NUM and GLOBAL_MAX_COMPACTION_THREAD_NUM as zero -> rollback if not work
 					+ TODO: Increase MAX_MEMTABLE_IMMUTABLE_NUM and MIN_IMMUTABLE_FLUSH_NUM to 400 and 160 -> rollback if not work
 					+ TODO: Rollback changes, sync, and re-compile
-			* TODO: Update benchmark.md for each exp including code change and configuration change
-				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
-				* For exp1, give details of static server rotation as a module and latency evaluation as another module
-					- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
-				* For exp3, give details of dynamic pattern
+				- TODO: Update per-second thpt and per-second normalized thpt for exp3
+				- TODO: If disabling flushing&compactino works, use SERVER_ROTATION to change common/rocksdb_wrapper.h
 			* TODO: Finish TraceReplay workload
 				- TODO: Get correpsonding trace file based on workloadName
 				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
@@ -118,7 +120,7 @@
 			- SIGCOMM'15 Rollback-Recovery for Middleboxes
 	+ HuanCheng
 		- Implement evaluation for static latency
-			- Scripts: remote/test_server_rotation_latency.sh and TODO remote/calculate_latency_statistics.sh for static latency
+			- Scripts: remote/test_server_rotation_latency.sh and remote/calculate_latency_statistics.sh for static latency
 				+ NOTE: test_server_rotation_latency.sh uses per-rotation target (i.e., OPS per physical client) to start clients
 				+ NOTE: calculate_latency_statistics.sh still invokes local/calculate_statistics_helper.py yet with benchmark/output/<workloadname>-statistics/<methodname>-static<scale>-latency-client<0/1>.out, which is different from the thpt statistics
 			- YCSB: limit target (# of operations of all client threads per second) for static latency of corresponding method
@@ -127,7 +129,6 @@
 			* Check if latency is reasonable with methodology of fixing aggregate throughput
 				- Try farreach + A (target: 1MOPS): avglat = 113us
 				- Try nocache + A (target: 0.8MOPS): avglat = 315us
-				- TODO: Mark original latency statistic with the delete line, if the latest latency statistic is reasonable
 			* Fix exp5 issue of unchanged request distribution -> finish exp5 on skewness 0.9 and 0.95
 
 - 10.27

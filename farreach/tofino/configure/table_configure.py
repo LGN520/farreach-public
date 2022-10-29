@@ -868,42 +868,43 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_largevalueseq_tbl (default: reset_meta_largevalueseq; size: TODO)
-            print "Configuring access_largevaluebseq_tbl"
-            for is_cached in cached_list:
-                for validvalue in validvalue_list:
-                    matchspec0 = netbufferv4_access_largevalueseq_tbl_match_spec_t(\
-                            op_hdr_optype = GETREQ_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            validvalue_hdr_validvalue = validvalue,
-                            fraginfo_hdr_cur_fragidx = 0)
-                    if is_cached == 1 and validvalue == 1:
-                        self.client.access_largevalueseq_tbl_table_add_with_get_largevalueseq(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
-                    for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+            if ENABLE_LARGEVALUEBLOCK:
+                print "Configuring access_largevaluebseq_tbl"
+                for is_cached in cached_list:
+                    for validvalue in validvalue_list:
                         matchspec0 = netbufferv4_access_largevalueseq_tbl_match_spec_t(\
-                                op_hdr_optype = tmpoptype,
+                                op_hdr_optype = GETREQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
                                 validvalue_hdr_validvalue = validvalue,
                                 fraginfo_hdr_cur_fragidx = 0)
                         if is_cached == 1 and validvalue == 1:
-                            self.client.access_largevalueseq_tbl_table_add_with_reset_largevalueseq(\
+                            self.client.access_largevalueseq_tbl_table_add_with_get_largevalueseq(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                    matchspec0 = netbufferv4_access_largevalueseq_tbl_match_spec_t(\
-                            op_hdr_optype = CACHE_POP_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            validvalue_hdr_validvalue = validvalue,
-                            fraginfo_hdr_cur_fragidx = 0)
-                    self.client.access_largevalueseq_tbl_table_add_with_reset_largevalueseq(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
-                    # on-path in-switch invalidation for fragment 0 of PUTREQ_LARGEVALUE_INSWITCH
-                    matchspec0 = netbufferv4_access_largevalueseq_tbl_match_spec_t(\
-                            op_hdr_optype = PUTREQ_LARGEVALUE_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            validvalue_hdr_validvalue = validvalue,
-                            fraginfo_hdr_cur_fragidx = 0)
-                    if is_cached == 1 and validvalue == 1:
-                        self.client.access_largevalueseq_tbl_table_add_with_set_largevalueseq(\
+                        for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+                            matchspec0 = netbufferv4_access_largevalueseq_tbl_match_spec_t(\
+                                    op_hdr_optype = tmpoptype,
+                                    inswitch_hdr_is_cached = is_cached,
+                                    validvalue_hdr_validvalue = validvalue,
+                                    fraginfo_hdr_cur_fragidx = 0)
+                            if is_cached == 1 and validvalue == 1:
+                                self.client.access_largevalueseq_tbl_table_add_with_reset_largevalueseq(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                        matchspec0 = netbufferv4_access_largevalueseq_tbl_match_spec_t(\
+                                op_hdr_optype = CACHE_POP_INSWITCH,
+                                inswitch_hdr_is_cached = is_cached,
+                                validvalue_hdr_validvalue = validvalue,
+                                fraginfo_hdr_cur_fragidx = 0)
+                        self.client.access_largevalueseq_tbl_table_add_with_reset_largevalueseq(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
+                        # on-path in-switch invalidation for fragment 0 of PUTREQ_LARGEVALUE_INSWITCH
+                        matchspec0 = netbufferv4_access_largevalueseq_tbl_match_spec_t(\
+                                op_hdr_optype = PUTREQ_LARGEVALUE_INSWITCH,
+                                inswitch_hdr_is_cached = is_cached,
+                                validvalue_hdr_validvalue = validvalue,
+                                fraginfo_hdr_cur_fragidx = 0)
+                        if is_cached == 1 and validvalue == 1:
+                            self.client.access_largevalueseq_tbl_table_add_with_set_largevalueseq(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 3
 
