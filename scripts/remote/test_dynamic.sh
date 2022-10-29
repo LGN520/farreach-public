@@ -10,6 +10,9 @@ fi
 # (2) you need to finish keydump phase by keydump_and_sync.sh
 # (3) you need to finish setup phase by sync_file.sh method/config.ini + launching switch of corresponding method with setuping MAT rules
 
+echo "clear tmp files of controller"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_controller_bwcost.out"
+
 echo "retrieve both servers back to the state after loading phase"
 ssh ${USER}@${SERVER0} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker0.db"
 ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker1.db"

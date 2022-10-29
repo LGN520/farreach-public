@@ -530,18 +530,18 @@ void *run_controller_snapshotclient(void *param) {
 	bool is_timeout = false;
 	struct timespec snapshot_t1, snapshot_t2, snapshot_t3;
 	while (controller_running) {
-#ifndef SERVER_ROTATION
-		usleep(controller_snapshot_period * 1000); // ms -> us
-#endif
-
 		// TMPDEBUG
 		//printf("Type to send SNAPSHOT_START...\n");
 		//getchar();
 
 		CUR_TIME(snapshot_t1);
 
+		printf("Snapshotid: %d\n", controller_snapshotid);
+		fflush(stdout);
+
 		// (1) send SNAPSHOT_CLEANUP to each switchos and server concurrently
 		printf("[controller.snapshotclient] send SNAPSHOT_CLEANUPs to each switchos and server\n");
+		fflush(stdout);
 		pthread_create(&cleanup_subthread_for_switchos, nullptr, run_controller_snapshotclient_cleanup_subthread, &cleanup_subthread_param_for_switchos);
 		for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
@@ -556,6 +556,7 @@ void *run_controller_snapshotclient(void *param) {
 
 		// (2) send SNAPSHOT_PREPARE to each switch os to enable single path for snapshot atomicity
 		printf("[controller.snapshotclient] send SNAPSHOT_PREPARE to each switchos\n");
+		fflush(stdout);
 		memcpy(sendbuf, &SNAPSHOT_PREPARE, sizeof(int));
 		memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
 		while (true) {
@@ -580,6 +581,7 @@ void *run_controller_snapshotclient(void *param) {
 
 		// (3) send SNAPSHOT_SETFLAG to each switch os to set snapshot flag
 		printf("[controller.snapshotclient] send SNAPSHOT_SETFLAG to each switchos\n");
+		fflush(stdout);
 		memcpy(sendbuf, &SNAPSHOT_SETFLAG, sizeof(int));
 		memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
 		while (true) {
@@ -598,6 +600,7 @@ void *run_controller_snapshotclient(void *param) {
 
 		// (4) send SNAPSHOT_START to each switchos and server concurrently
 		printf("[controller.snapshotclient] send SNAPSHOT_STARTs to each switchos and server\n");
+		fflush(stdout);
 		pthread_create(&start_subthread_for_switchos, nullptr, run_controller_snapshotclient_start_subthread, &start_subthread_param_for_switchos);
 		for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
@@ -632,6 +635,7 @@ void *run_controller_snapshotclient(void *param) {
 
 		// (5) send SNAPSHOT_GETDATA to each switch os to get consistent snapshot data
 		printf("[controller.snapshotclient] send SNAPSHOT_GETDATA to each switchos\n");
+		fflush(stdout);
 		memcpy(sendbuf, &SNAPSHOT_GETDATA, sizeof(int));
 		memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
 		while (true) {
@@ -703,6 +707,7 @@ void *run_controller_snapshotclient(void *param) {
 
 		// (6) send SNAPSHOT_SENDDATA to each server concurrently
 		printf("[controller.snapshotclient] send SNAPSHOT_SENDDATAs to each server\n");
+		fflush(stdout);
 		for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
 			// NOTE: even if databuf_list[i].size() == default_perserverbytes, we still need to notify the server that snapshot is end by SNAPSHOT_SENDDATA
@@ -724,7 +729,8 @@ void *run_controller_snapshotclient(void *param) {
 		//printf("bandwidth cost: %f MiB/s\n", bwcost_rate);
 		//fflush(stdout);
 		FILE *tmpfd = fopen("tmp_controller_bwcost.out", "a+");
-		fprintf(tmpfd, "total bwcost: %f MiB/s (including local bwcost %f MiB/s)\n", bwcost_rate, localcp_bwcost_rate);
+		// NOTE: totalbwcost means bwcost of both local and global control plane, while localbwcost means bwcost of local control plane
+		fprintf(tmpfd, "totalbwcost: %f MiB/s; localbwcost: %f MiB/s\n", bwcost_rate, localcp_bwcost_rate);
 		fflush(tmpfd);
 		fclose(tmpfd);
 
@@ -734,9 +740,13 @@ void *run_controller_snapshotclient(void *param) {
 		
 		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databuf) for controller failure recovery
 		controller_update_snapshotid(databuf.array(), databuf.size());
-#ifdef SERVER_ROTATION
-		break;
-#endif
+//#ifdef SERVER_ROTATION
+//		break;
+//#else
+		usleep(controller_snapshot_period * 1000); // ms -> us
+//#endif
+
+//#endif
 	}
 
 	close(controller_snapshotclient_for_switchos_udpsock);

@@ -48,6 +48,7 @@
 - 10.30
 	+ Siyuan
 		* TODO: Debug and test read blocking for rare case of PUTREQ_LARGEVALUE (before exp1 Twitter traces)
+		* TODO: Update implementation
 	+ HuanCheng
 		* TODO: Run experiment 1 on Twitter Traces
 			- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
@@ -55,16 +56,17 @@
 
 - 10.29
 	+ Siyuan
-		* TODO: Support different snapshot interrupts during server rotation
-			- TODO: Provide calculate_bwusage.sh for bandwidth calculation
-		* TODO: Update paper including implementation, methodology, and exp1
-			- TODO: Split YCSB and Twitter traces
+		* Support different snapshot interrupts during server rotation
+			- Provide calculate_bwcost.sh for bandwidth calculation
+		* TODO: Run experiment 11 by compiling nocache, netcache, and farreach in bf3
+		* Update paper including methodology and finished exps
+			- Split YCSB and Twitter traces
 			- TODO: Add normalized thpt if tail latency is not correct
-			- TODO: Use Tucana to verity our resullts; use RocksDB for server-side persistence
-			- TODO: Update evaluation, including methodology
-			- TODO: Update implementation
+			- Use Tucana to verity our resullts; use RocksDB for server-side persistence
+			- Update evaluation, including methodology and all finished exps
 		* Survey for upstream backup
 			- TODO: Reference 31 in SIGCOMM (survey of replay-basd approach)
+
 		* TODO: Implement client-side record preservations
 			- TODO: Add seq into PUT/DELRES for FarReach such that snapshot can release part of client-side backup
 			- TODO: Maintain client-side record preservations in a concurrent map
@@ -82,6 +84,7 @@
 			* TODO: Finish experiment 6 on value size 16/32/64
 			* TODO: Finish experiment 7 on w/o snapshot for FarReach
 			* TODO: Finish experiment 8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+				- TODO: If encounter any issue in controller/switchos, let Siyuan fix first
 		* Parallel with evaluation
 			* TODO: Update latency statistics and normalized thpt for all exps
 				- TODO: Update per-second thpt and per-second normalized thpt for exp3
