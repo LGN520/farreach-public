@@ -6,15 +6,23 @@ fi
 #set -x
 set -e
 
-if [ $# -ne 0 ]
+if [ $# -ne 1 ]
 then
-	echo "Usage: bash scripts-inmemory/remote/calculate_statistics.sh"
+	echo "Usage: bash scripts-inmemory/remote/calculate_statistics.sh <isCalculatingLatency>"
 	exit
 fi
 
+isLatency=$1
+
 if [ "x${workloadmode}" == "x0" ]
 then
-	midstr="static${server_total_logical_num_for_rotation}"
+	if [ "x${isLatency}" == "x0" ]; then
+		midstr="static${server_total_logical_num_for_rotation}"
+	elif [ "x${isLatency}" == "x1" ]; then
+		midstr="latency-static${server_total_logical_num_for_rotation}"
+	else
+		echo "Invalid isLatency: ${isLatency}"
+	fi
 elif [ "x${workloadmode}" == "x1" ]
 then
 	midstr=${dynamicpattern}
