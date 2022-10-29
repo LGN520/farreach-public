@@ -61,6 +61,8 @@
 			- TODO: Split YCSB and Twitter traces
 			- TODO: Add normalized thpt if tail latency is not correct
 			- TODO: Use Tucana to verity our resullts; use RocksDB for server-side persistence
+			- TODO: Update evaluation, including methodology
+			- TODO: Update implementation
 		* Survey for upstream backup
 			- TODO: Reference 31 in SIGCOMM (survey of replay-basd approach)
 		* TODO: Implement client-side record preservations
@@ -76,20 +78,35 @@
 			- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations
 			- TODO: Exp 9: in-switch and server-side recovery time vs. cache size
 	+ HuanCheng
-		* TODO: Finish TraceReplay workload
-			- TODO: Get correpsonding trace file based on workloadName
-			- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
-			- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-			- TODO: Twitter key -> 16B keybytes by md5 -> inswitchcache.core.Key by fromBytes
-				+ How to implement it more reasonable? -> possible solution:
-					* Change toString() to dump key as two 8B longs, which is "<8B long> <8B long>"
-					* Change fromString() to extract key from "<8B long> <8B long>"
-					* Add a static function Key::convertYcsbString() to convert "user<8B long>" as "<8B long> 0", before invoking fromString()
-					* Add fromBytes() to parse 16B keybytes for Twitter traces
-					* Re-run keydump to generate hot keys, dynamic rules, and pre-generated workloads
-					* NOTE: check affected modules -> ycsb::PregeneratedWorkload, ycsb::DynamicRulemap, common/workloadparser
-		* TODO: Finish experiment 7 on w/o snapshot for FarReach
-		* TODO: Finish experiment 8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+		* Evaluation
+			* TODO: Finish experiment 6 on value size 16/32/64
+			* TODO: Finish experiment 7 on w/o snapshot for FarReach
+			* TODO: Finish experiment 8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+		* Parallel with evaluation
+			* TODO: Update latency statistics and normalized thpt for all exps
+				- TODO: Update per-second thpt and per-second normalized thpt for exp3
+			* TODO: Double-check write stall in experiment 3 on dynamic pattern
+				- TODO: Try to disable flushing&compaction in RocksDB first by modifying common/rocksdb_wrapper.h (sync and re-compile)
+					+ TODO: Try to set GLOBAL_MAX_FLUSH_THREAD_NUM and GLOBAL_MAX_COMPACTION_THREAD_NUM as zero -> rollback if not work
+					+ TODO: Increase MAX_MEMTABLE_IMMUTABLE_NUM and MIN_IMMUTABLE_FLUSH_NUM to 400 and 160 -> rollback if not work
+					+ TODO: Rollback changes, sync, and re-compile
+			* TODO: Update benchmark.md for each exp including code change and configuration change
+				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
+				* For exp1, give details of static server rotation as a module and latency evaluation as another module
+					- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
+				* For exp3, give details of dynamic pattern
+			* TODO: Finish TraceReplay workload
+				- TODO: Get correpsonding trace file based on workloadName
+				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
+				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+				- TODO: Twitter key -> 16B keybytes by md5 -> inswitchcache.core.Key by fromBytes
+					+ How to implement it more reasonable? -> possible solution:
+						* Change toString() to dump key as two 8B longs, which is "<8B long> <8B long>"
+						* Change fromString() to extract key from "<8B long> <8B long>"
+						* Add a static function Key::convertYcsbString() to convert "user<8B long>" as "<8B long> 0", before invoking fromString()
+						* Add fromBytes() to parse 16B keybytes for Twitter traces
+						* Re-run keydump to generate hot keys, dynamic rules, and pre-generated workloads
+						* NOTE: check affected modules -> ycsb::PregeneratedWorkload, ycsb::DynamicRulemap, common/workloadparser
 
 - 10.28
 	+ Siyuan
@@ -102,22 +119,13 @@
 				+ NOTE: test_server_rotation_latency.sh uses per-rotation target (i.e., OPS per physical client) to start clients
 				+ NOTE: calculate_latency_statistics.sh still invokes local/calculate_statistics_helper.py yet with benchmark/output/<workloadname>-statistics/<methodname>-static<scale>-latency-client<0/1>.out, which is different from the thpt statistics
 			- YCSB: limit target (# of operations of all client threads per second) for static latency of corresponding method
-			- TODO: YCSB: save statistics file with different name from that of static thpt
+			- YCSB: save statistics file with different name from that of static thpt
 		* Evaluation
-			* TODO: Update latency statistics and normalized thpt for all exps
-				- TODO: Update per-second thpt and per-second normalized thpt for exp3
-			* TODO: Double-check write stall in experiment 3 on dynamic pattern
 			* Check if latency is reasonable with methodology of fixing aggregate throughput
 				- Try farreach + A (target: 1MOPS): avglat = 113us
 				- Try nocache + A (target: 0.8MOPS): avglat = 315us
 				- TODO: Mark original latency statistic with the delete line, if the latest latency statistic is reasonable
-			* Fix exp5 issue of unchanged request distribution -> TODO finish exp5 on skewness 0.9 and 0.95
-			* TODO: Finish experiment 6 on value size 16/32/64
-			* TODO: Update benchmark.md for each exp including code change and configuration change
-				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
-				* For exp1, give details of static server rotation as a module and latency evaluation as another module
-					- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
-				* For exp3, give details of dynamic pattern
+			* Fix exp5 issue of unchanged request distribution -> finish exp5 on skewness 0.9 and 0.95
 
 - 10.27
 	+ Siyuan
