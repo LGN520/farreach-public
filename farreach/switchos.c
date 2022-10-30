@@ -1037,7 +1037,7 @@ void *run_switchos_snapshotserver(void *param) {
 						delete [] switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx];
 						switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] = NULL;
 					}
-					if (switchos_perpipeline_cached_serveridx_array_backup[tmp_pipeidx] != NULL) {
+					if (switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] != NULL) {
 						delete [] switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx];
 						switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] = NULL;
 					}

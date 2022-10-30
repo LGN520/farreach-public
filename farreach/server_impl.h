@@ -537,6 +537,8 @@ void *run_server_worker(void * param) {
 				server_mutex_for_largevalueblock_list[local_server_logical_idx].lock();
 				std::map<netreach_key_t, blockinfo_t> &tmp_blockinfomap = server_blockinfomap_for_largevalueblock_list[local_server_logical_idx];
 				std::map<netreach_key_t, blockinfo_t>::iterator tmpiter = tmp_blockinfomap.find(req.key());
+				//printf("GETREQ_LARGEVALUEBLOCK_SEQ: key %x; seq %d\n", req.key().keyhihi, req.seq()); // TMPDEBUG
+				//fflush(stdout);
 				if (tmpiter == tmp_blockinfomap.end()) {
 					printf("[WARN][LARGEVALUEBLOCK] blockinfomap does not contain key %x -> block the GETREQ_LARGEVALUEBLOCK_SEQ\n", req.key().keyhihi);
 					fflush(stdout);
@@ -710,6 +712,8 @@ void *run_server_worker(void * param) {
 				server_mutex_for_largevalueblock_list[local_server_logical_idx].lock();
 				std::map<netreach_key_t, blockinfo_t> &tmp_blockinfomap = server_blockinfomap_for_largevalueblock_list[local_server_logical_idx];
 				std::map<netreach_key_t, blockinfo_t>::iterator tmpiter = tmp_blockinfomap.find(req.key());
+				//printf("PUTREQ_LARGEVALUE_SEQ: key %x; seq %d\n", req.key().keyhihi, req.seq()); // TMPDEBUG
+				//fflush(stdout);
 				if (tmpiter == tmp_blockinfomap.end()) {
 					blockinfo_t tmp_blockinfo;
 					tmp_blockinfo._largevalueseq = req.seq();

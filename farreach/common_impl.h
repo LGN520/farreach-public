@@ -345,11 +345,11 @@ inline void parse_ini(const char* config_file) {
 		server_total_corenums.push_back(ini.get_server_total_corenum(server_physical_idx));
 		server_logical_idxes_list.push_back(ini.get_server_logical_idxes(server_physical_idx));
 		if (server_worker_corenums[server_physical_idx] > server_total_corenums[server_physical_idx]) {
-			printf("[ERROR] server[%d] worker corenum %d must <= total corenum %d\n", server_physical_idx, server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx]);
+			printf("[ERROR] server[%d] worker corenum %d must <= total corenum %d\n", int(server_physical_idx), server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx]);
 			exit(-1);
 		}
 		if (server_worker_corenums[server_physical_idx] < server_logical_idxes_list[server_physical_idx].size()) {
-			printf("[ERROR] server[%d] worker corenum %d < thread num %d, which could incur CPU contention!\n", server_physical_idx, server_worker_corenums[server_physical_idx], server_logical_idxes_list[server_physical_idx].size());
+			printf("[ERROR] server[%d] worker corenum %d < thread num %d, which could incur CPU contention!\n", int(server_physical_idx), server_worker_corenums[server_physical_idx], int(server_logical_idxes_list[server_physical_idx].size()));
 		}
 		for (size_t i = 0; i < server_logical_idxes_list[server_physical_idx].size(); i++) {
 			if (server_logical_idxes_list[server_physical_idx][i] >= max_server_total_logical_num) {

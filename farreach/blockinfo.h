@@ -25,6 +25,7 @@ class BlockInfo {
 
 		BlockInfo(const BlockInfo& other) {
 			_largevalueseq = other._largevalueseq;
+			_blockedkey = other._blockedkey;
 			_isblocked = other._isblocked;
 			_blockedreq_list = other._blockedreq_list;
 			_blockedaddr_list = other._blockedaddr_list;
