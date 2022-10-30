@@ -41,13 +41,13 @@
 			- TODO: For exp1, mark original latency statistic with the delete line, if the latest latency statistic is reasonable
 	* Client-side upstream backup (before exp9 recovery time)
 		* TODO: Debug and test client-side upstream backup colleborating with periodic snapshot
-		* TODO: Re-run exp7 on w/ or w/o snapshot for FarReach
-		* TODO: Re-run exp8 on control plane bandwidth cost vs. snapshot interrupt for FarReach
-		* TODO: Finish exp9 on recovery time vs. cache size for FarReach
+		* TODO: Re-run exp8 on w/ or w/o snapshot for FarReach
+		* TODO: Re-run exp9 on control plane bandwidth cost vs. snapshot interrupt for FarReach
+		* TODO: Finish exp10 on recovery time vs. cache size for FarReach
 	* Others
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 
-- 10.30
+- 10.30 (using new exp order in paper)
 	+ Siyuan
 		* Add imbalance ratio and update part of evaluation
 		* TODO: Update imbalance ratio results of exp5.md
@@ -66,16 +66,16 @@
 		* TODO: Implement replay-based recovery
 			- TODO: Replay cache admissions for in-switch cache based on in-switch snapshot
 			- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations
-			- TODO: Exp 9: in-switch and server-side recovery time vs. cache size
+			- TODO: Exp 10: in-switch and server-side recovery time vs. cache size
 	+ HuanCheng
-		* TODO: Double-check write stall in experiment 3 on dynamic pattern
+		* TODO: Double-check write stall in experiment 4 on dynamic pattern
 			- TODO: Try to disable flushing&compaction in RocksDB first by modifying common/rocksdb_wrapper.h (sync and re-compile)
 				+ TODO: Try to set GLOBAL_MAX_FLUSH_THREAD_NUM and GLOBAL_MAX_COMPACTION_THREAD_NUM as zero -> rollback if not work
 				+ TODO: Increase MAX_MEMTABLE_IMMUTABLE_NUM and MIN_IMMUTABLE_FLUSH_NUM to 400 and 160 -> rollback if not work
 				+ TODO: Rollback changes, sync, and re-compile
 			- TODO: Update per-second thpt and per-second normalized thpt for exp3
 			- TODO: If disabling flushing&compactino works, use SERVER_ROTATION to change common/rocksdb_wrapper.h
-		* TODO: Finish experiment 8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+		* TODO: Finish experiment 9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
 			- TODO: If encounter any issue in controller/switchos, let Siyuan fix first
 		* TODO: Run experiment 1 on Twitter Traces
 			- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
@@ -97,8 +97,8 @@
 			* TODO: Update benchmark.md for each exp including code change and configuration change
 				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
 				* For exp1, give details of static server rotation as a module and latency evaluation as another module
-					- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
-				* For exp3, give details of dynamic pattern
+					- For exp2, exp3, exp5, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
+				* For exp4, give details of dynamic pattern
 
 - 10.29
 	+ Siyuan
