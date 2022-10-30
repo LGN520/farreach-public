@@ -49,8 +49,9 @@
 
 - 10.30
 	+ Siyuan
+		* Add imbalance ratio and update part of evaluation
+		* TODO: Update imbalance ratio results of exp5.md
 		* TODO: Update evaluation and implementation
-			- TODO: Add normalized thpt if tail latency is not correct
 		* TODO: Debug and test read blocking for rare case of PUTREQ_LARGEVALUE (before exp1 Twitter traces)
 		* Survey for upstream backup
 			- TODO: Reference 31 in SIGCOMM (survey of replay-basd approach)
@@ -67,39 +68,20 @@
 			- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations
 			- TODO: Exp 9: in-switch and server-side recovery time vs. cache size
 	+ HuanCheng
-		* TODO: Update benchmark.md for each exp including code change and configuration change
-			* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
-			* For exp1, give details of static server rotation as a module and latency evaluation as another module
-				- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
-			* For exp3, give details of dynamic pattern
+		* TODO: Double-check write stall in experiment 3 on dynamic pattern
+			- TODO: Try to disable flushing&compaction in RocksDB first by modifying common/rocksdb_wrapper.h (sync and re-compile)
+				+ TODO: Try to set GLOBAL_MAX_FLUSH_THREAD_NUM and GLOBAL_MAX_COMPACTION_THREAD_NUM as zero -> rollback if not work
+				+ TODO: Increase MAX_MEMTABLE_IMMUTABLE_NUM and MIN_IMMUTABLE_FLUSH_NUM to 400 and 160 -> rollback if not work
+				+ TODO: Rollback changes, sync, and re-compile
+			- TODO: Update per-second thpt and per-second normalized thpt for exp3
+			- TODO: If disabling flushing&compactino works, use SERVER_ROTATION to change common/rocksdb_wrapper.h
+		* TODO: Finish experiment 8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+			- TODO: If encounter any issue in controller/switchos, let Siyuan fix first
 		* TODO: Run experiment 1 on Twitter Traces
 			- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
 			- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
-
-- 10.29
-	+ Siyuan
-		* Support different snapshot interrupts during server rotation
-			- Provide calculate_bwcost.sh for bandwidth calculation
-		* Run experiment 11 by compiling nocache, netcache, and farreach in bf3
-		* Update paper including methodology and finished exps
-			- Split YCSB and Twitter traces
-			- Use Tucana to verity our resullts; use RocksDB for server-side persistence
-			- Update evaluation, including methodology and all finished exps
-	+ HuanCheng
-		* Evaluation
-			* Finish experiment 6 on value size 16/32/64
-			* TODO: Finish experiment 7 on w/o snapshot for FarReach
-			* TODO: Finish experiment 8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
-				- TODO: If encounter any issue in controller/switchos, let Siyuan fix first
 		* Parallel with evaluation
-			* Update normalized thpt for all exps
-			* TODO: Double-check write stall in experiment 3 on dynamic pattern
-				- TODO: Try to disable flushing&compaction in RocksDB first by modifying common/rocksdb_wrapper.h (sync and re-compile)
-					+ TODO: Try to set GLOBAL_MAX_FLUSH_THREAD_NUM and GLOBAL_MAX_COMPACTION_THREAD_NUM as zero -> rollback if not work
-					+ TODO: Increase MAX_MEMTABLE_IMMUTABLE_NUM and MIN_IMMUTABLE_FLUSH_NUM to 400 and 160 -> rollback if not work
-					+ TODO: Rollback changes, sync, and re-compile
-				- TODO: Update per-second thpt and per-second normalized thpt for exp3
-				- TODO: If disabling flushing&compactino works, use SERVER_ROTATION to change common/rocksdb_wrapper.h
+			* TODO: Print ratio of write requests with >128B values in keydump
 			* TODO: Finish TraceReplay workload
 				- TODO: Get correpsonding trace file based on workloadName
 				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
@@ -112,6 +94,29 @@
 						* Add fromBytes() to parse 16B keybytes for Twitter traces
 						* Re-run keydump to generate hot keys, dynamic rules, and pre-generated workloads
 						* NOTE: check affected modules -> ycsb::PregeneratedWorkload, ycsb::DynamicRulemap, common/workloadparser
+			* TODO: Update benchmark.md for each exp including code change and configuration change
+				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
+				* For exp1, give details of static server rotation as a module and latency evaluation as another module
+					- For exp2, exp4, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
+				* For exp3, give details of dynamic pattern
+
+- 10.29
+	+ Siyuan
+		* Support different snapshot interrupts during server rotation
+			- Provide calculate_bwcost.sh for bandwidth calculation
+		* Run experiment 11 by compiling nocache, netcache, and farreach in bf3
+		* Update paper including methodology and finished exps
+			- Split YCSB and Twitter traces
+			- Use Tucana to verity our resullts; use RocksDB for server-side persistence
+			- Update evaluation, including methodology and all finished exps
+	+ HuanCheng
+		* Others
+			- TODO: Miss one rotation in farreach skewness 0.95 -> update exp5.md
+		* Evaluation
+			* Finish experiment 6 on value size 16/32/64
+			* Finish experiment 7 on w/o snapshot for FarReach -> TODO: update imbalance ratio
+		* Parallel with evaluation
+			* Update normalized thpt for all exps
 
 - 10.28
 	+ Siyuan
