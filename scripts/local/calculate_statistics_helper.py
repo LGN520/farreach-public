@@ -35,6 +35,7 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
 
     totalthpt = avgbottleneck_totalthpt
     max_serverthpt = avgbottleneck_serverthpt
+    total_serverthpt = avgbottleneck_serverthpt
 
     for i in range(1, len(aggjsonarray)):
         tmp_bottleneck_totalthpt, tmp_bottleneck_switchthpt, tmp_bottleneck_serverthpt = get_total_switch_server_thpts(aggjsonarray, i, 0, workloadmode, bottleneckidx)
@@ -48,8 +49,10 @@ def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
         totalthpt += tmp_rotate_totalthpt
         if tmp_rotate_serverthpt > max_serverthpt:
             max_serverthpt = tmp_rotate_serverthpt
+        total_serverthpt += tmp_rotate_serverthpt
     normalized_thpt = float(totalthpt) / float(max_serverthpt)
-    print "[STATIC] aggregate throughput: {} MOPS; normalized throughput: {}".format(totalthpt, normalized_thpt)
+    normalized_serverthpt = float(total_serverthpt) / float(max_serverthpt)
+    print "[STATIC] aggregate throughput: {} MOPS; normalized throughput: {}, normalized serverthpt: {}".format(totalthpt, normalized_thpt, normalized_serverthpt)
 
     # (2) Reduce runtime variance on latency
 
@@ -97,6 +100,7 @@ def dynamicprocess(localjsonarray, remotejsonarray):
 
     persecthpt = [0] * seconds
     persec_normalizedthpt = [0] * seconds
+    persec_normalizedserverthpt = [0] * seconds
     perseclatencyavg = [0] * seconds
     perseclatencymedium = [0] * seconds
     perseclatency90p = [0] * seconds
@@ -107,14 +111,18 @@ def dynamicprocess(localjsonarray, remotejsonarray):
         persecthpt[i] = getmops(tmpjsonobj[TOTAL_OPSDONE] / tmpjsonobj[EXECUTION_MILLIS])
 
         tmp_maxserverthpt = 0
+        tmp_totalserverthpt = 0
         for j in range(len(tmpjsonobj[PERSERVER_OPSDONE])):
             tmp_serverthpt = getmops(tmpjsonobj[PERSERVER_OPSDONE][j] / tmpjsonobj[EXECUTION_MILLIS])
             if tmp_serverthpt > tmp_maxserverthpt:
                 tmp_maxserverthpt = tmp_serverthpt
+            tmp_totalserverthpt += tmp_serverthpt
         if tmp_maxserverthpt != 0:
             persec_normalizedthpt[i] = persecthpt[i] / float(tmp_maxserverthpt)
+            persec_normalizedserverthpt[i] = tmp_totalserverthpt / float(tmp_maxserverthpt)
         else:
             persec_normalizedthpt[i] = 0
+            persec_normalizedserverthpt[i] = 0
 
         tmp_server0_totallatencyhist, _, _ = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 0)
         tmp_server1_totallatencyhist, _, _ = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, 1)
@@ -125,6 +133,7 @@ def dynamicprocess(localjsonarray, remotejsonarray):
     print "[DYNAMIC] per-second statistics:"
     print "thpt (MOPS): {}".format(persecthpt)
     print "normalized thpt: {}".format(persec_normalizedthpt)
+    print "normalized serverthpt: {}".format(persec_normalizedserverthpt)
     print "avg latency (us): {}".format(perseclatencyavg)
     print "medium latency (us): {}".format(perseclatencymedium)
     print "90P latency (us): {}".format(perseclatency90p)
