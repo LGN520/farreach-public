@@ -87,8 +87,8 @@
 		* TODO: Update implementation
 	+ Huancheng
 		* Others
-			- TODO: Rename benchmark/results/exp\*.md
-			- TODO: Miss one rotation in farreach skewness 0.95 -> update exp5.md
+			- Rename benchmark/results/exp\*.md
+			- Miss one rotation in farreach skewness 0.95 -> update exp5.md
 		* Evaluation
 			* Double-check write stall in exp4 on dynamic pattern
 				- Try to disable flushing&compaction in RocksDB first by modifying common/rocksdb_wrapper.h (sync and re-compile)
