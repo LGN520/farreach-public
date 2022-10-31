@@ -127,6 +127,7 @@ header_type clone_t {
 	fields {
 		clonenum_for_pktloss: 16;
 		client_udpport: 16;
+		assignedseq_for_farreach: 32;
 	}
 }
 
@@ -164,10 +165,10 @@ header_type metadata_t {
 		is_hot: 1;
 		//validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
-#ifdef ENABLE_LARGEVALUEBLOCK
+//#ifdef ENABLE_LARGEVALUEBLOCK
 		largevalueseq: 32;
 		is_largevalueblock: 1;
-#endif
+//#endif
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;
 		is_lastclone_for_pktloss: 1;

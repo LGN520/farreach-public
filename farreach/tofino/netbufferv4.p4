@@ -6,8 +6,8 @@
 // Uncomment it for XMU testbed
 //#define USE_BFSDE920
 
-// read blocking for pktloss of PUTREQ_LARGEVALUE of cached keys
-#define ENABLE_LARGEVALUEBLOCK
+// DEPRECATED: read blocking for pktloss of PUTREQ_LARGEVALUE of cached keys
+////#define ENABLE_LARGEVALUEBLOCK
 
 // Uncomment it if support range query, or comment it otherwise
 // Change netbufferv4.p4, common.py, and helper.h accordingly
@@ -229,9 +229,9 @@
 #include "p4src/regs/val.p4"
 #include "p4src/regs/case1.p4"
 
-#ifdef ENABLE_LARGEVALUEBLOCK
+//#ifdef ENABLE_LARGEVALUEBLOCK
 #include "p4src/regs/largevalueseq.p4"
-#endif
+//#endif
 
 #include "p4src/ingress_mat.p4"
 #include "p4src/egress_mat.p4"
@@ -322,10 +322,12 @@ control egress {
 
 	// Stage 2
 	apply(access_latest_tbl);
-#ifdef ENABLE_LARGEVALUEBLOCK
-	apply(access_largevalueseq_tbl); // used for invalidation of PUTREQ_LARGEVALUE
-#endif
-	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
+//#ifdef ENABLE_LARGEVALUEBLOCK
+	// save seq_hdr.seq into clone_hdr.assignedseq_for_farreach for PUT/DELREQ_INSWITCH, which is used by cache hit response of PUT/DELREQ_INSWITCH and PUT/DELREQ_SEQ_INSWITCH_CASE1 -> [IMPORTANT] must be placed between access_seq_tbl and access_savedseq_tbl
+	apply(access_largevalueseq_and_save_assignedseq_tbl); // used for invalidation of PUTREQ_LARGEVALUE
+//#endif
+	// save udp.dstport (client port) for GET/PUT/DELREQ_INSWITCH, which is used by cache hit response of GET/PUT/DELREQ_INSWITCH and PUTREQ/DELREQ_SEQ_INSWITCH_CASE1
+	apply(save_client_udpport_tbl);
 
 	// NOTE: we do NOT need seq and savedseq now if using serverstatus
 	// CACHEPOP_INSWITCH always sets it as 1, while PUT/DELREQ set it as 0 if cached=1 and valid=1
@@ -334,11 +336,11 @@ control egress {
 	// TODO: apply(serverstatus_tbl);
 
 	// Stage 3
-#ifdef ENABLE_LARGEVALUEBLOCK
+//#ifdef ENABLE_LARGEVALUEBLOCK
 	if (meta.largevalueseq != 0) {
 		apply(is_largevalueblock_tbl); // used for invalidation of PUTREQ_LARGEVALUE
 	}
-#endif
+//#endif
 	apply(access_deleted_tbl);
 	apply(update_vallen_tbl);
 	apply(access_savedseq_tbl);

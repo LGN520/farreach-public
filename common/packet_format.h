@@ -26,7 +26,7 @@ enum class PacketType {
 	PUTREQ_SEQ=0x0003, PUTREQ_POP_SEQ=0x0013, PUTREQ_SEQ_CASE3=0x0023, PUTREQ_POP_SEQ_CASE3=0x0033, NETCACHE_PUTREQ_SEQ_CACHED=0x0043, PUTREQ_SEQ_BEINGEVICTED=0x0053, PUTREQ_SEQ_CASE3_BEINGEVICTED=0x0063, PUTREQ_SEQ_BEINGEVICTED_SPINE=0x0073, PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE=0x0083,
 	//CACHE_POP_INSWITCH=0x0007,
 	GETRES_LATEST_SEQ_INSWITCH=0x000f, GETRES_DELETED_SEQ_INSWITCH=0x001f, GETRES_LATEST_SEQ_INSWITCH_CASE1=0x002f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x003f, PUTREQ_SEQ_INSWITCH_CASE1=0x004f, DELREQ_SEQ_INSWITCH_CASE1=0x005f, LOADSNAPSHOTDATA_INSWITCH_ACK=0x006f, CACHE_POP_INSWITCH=0x007f, NETCACHE_VALUEUPDATE_INSWITCH=0x008f, GETRES_LATEST_SEQ_SERVER_INSWITCH=0x009f, GETRES_DELETED_SEQ_SERVER_INSWITCH=0x010f, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH=0x011f, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH=0x012f, DISTCACHE_VALUEUPDATE_INSWITCH=0x013f, DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN=0x014f, NETCACHE_CACHE_POP_INSWITCH_NLATEST=0x015f,
-	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b, NETCACHE_VALUEUPDATE=0x003b, GETRES_LATEST_SEQ_SERVER=0x004b, GETRES_DELETED_SEQ_SERVER=0x005b,
+	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b, NETCACHE_VALUEUPDATE=0x003b, GETRES_LATEST_SEQ_SERVER=0x004b, GETRES_DELETED_SEQ_SERVER=0x005b, GETRES_SEQ=0x006b,
 	GETRES=0x0009, GETRES_SERVER=0x0019, DISTCACHE_GETRES_SPINE=0x0029,
 	PUTREQ_INSWITCH=0x0005,
 	DELREQ_SEQ_INSWITCH=0x0006, PUTREQ_LARGEVALUE_SEQ_INSWITCH=0x0016,
@@ -34,7 +34,8 @@ enum class PacketType {
 	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034, LOADSNAPSHOTDATA_INSWITCH=0x0044, SETVALID_INSWITCH=0x0054, NETCACHE_WARMUPREQ_INSWITCH=0x0064, NETCACHE_WARMUPREQ_INSWITCH_POP=0x0074, DISTCACHE_INVALIDATE_INSWITCH=0x0084, DISTCACHE_VALUEUPDATE_INSWITCH_ACK=0x0094, PUTREQ_LARGEVALUE_INSWITCH=0x00a4,
 	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012, NETCACHE_DELREQ_SEQ_CACHED=0x0022, PUTREQ_LARGEVALUE_SEQ=0x0032, PUTREQ_LARGEVALUE_SEQ_CACHED=0x0042, PUTREQ_LARGEVALUE_SEQ_CASE3=0x0052, DELREQ_SEQ_BEINGEVICTED=0x0062, DELREQ_SEQ_CASE3_BEINGEVICTED=0x0072, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED=0x0082, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED=0x0092, DELREQ_SEQ_BEINGEVICTED_SPINE=0x00a2, DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE=0x00b2, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED_SPINE=0x00c2, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED_SPINE=0x00d2, GETREQ_LARGEVALUEBLOCK_SEQ=0x00e2,
 	PUTRES=0x0008, DELRES=0x0018, PUTRES_SERVER=0x0028, DELRES_SERVER=0x0038,
-	WARMUPREQ=0x0000, SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100, SETVALID_INSWITCH_ACK=0x0110, NETCACHE_GETREQ_POP=0x0120, NETCACHE_CACHE_POP=0x0130, NETCACHE_CACHE_POP_ACK=0x0140, NETCACHE_CACHE_POP_FINISH=0x0150, NETCACHE_CACHE_POP_FINISH_ACK=0x0160, NETCACHE_CACHE_EVICT=0x0170, NETCACHE_CACHE_EVICT_ACK=0x0180, NETCACHE_VALUEUPDATE_ACK=0x0190, GETREQ_SPINE=0x0200, SCANRES_SPLIT_SERVER=0x0210, WARMUPREQ_SPINE=0x0220, WARMUPACK_SERVER=0x0230, LOADACK_SERVER=0x0240, DISTCACHE_CACHE_EVICT_VICTIM=0x0250, DISTCACHE_CACHE_EVICT_VICTIM_ACK=0x0260, DISTNOCACHE_DELREQ_SPINE=0x0270, DISTCACHE_INVALIDATE=0x0280, DISTCACHE_INVALIDATE_ACK=0x0290, DISTCACHE_UPDATE_TRAFFICLOAD=0x02a0, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK=0x02b0, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK=0x02c0, PUTREQ_LARGEVALUE=0x02d0, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE=0x02e0, GETRES_LARGEVALUE_SERVER=0x02f0, GETRES_LARGEVALUE=0x0300, LOADREQ=0x0310, LOADREQ_SPINE=0x0320, NETCACHE_CACHE_POP_ACK_NLATEST=0x0330, GETREQ_BEINGEVICTED=0x0340
+	PUTRES_SEQ=0x000a, DELRES_SEQ=0x001a,
+	WARMUPREQ=0x0000, SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100, SETVALID_INSWITCH_ACK=0x0110, NETCACHE_GETREQ_POP=0x0120, NETCACHE_CACHE_POP=0x0130, NETCACHE_CACHE_POP_ACK=0x0140, NETCACHE_CACHE_POP_FINISH=0x0150, NETCACHE_CACHE_POP_FINISH_ACK=0x0160, NETCACHE_CACHE_EVICT=0x0170, NETCACHE_CACHE_EVICT_ACK=0x0180, NETCACHE_VALUEUPDATE_ACK=0x0190, GETREQ_SPINE=0x0200, SCANRES_SPLIT_SERVER=0x0210, WARMUPREQ_SPINE=0x0220, WARMUPACK_SERVER=0x0230, LOADACK_SERVER=0x0240, DISTCACHE_CACHE_EVICT_VICTIM=0x0250, DISTCACHE_CACHE_EVICT_VICTIM_ACK=0x0260, DISTNOCACHE_DELREQ_SPINE=0x0270, DISTCACHE_INVALIDATE=0x0280, DISTCACHE_INVALIDATE_ACK=0x0290, DISTCACHE_UPDATE_TRAFFICLOAD=0x02a0, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH_ACK=0x02b0, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH_ACK=0x02c0, PUTREQ_LARGEVALUE=0x02d0, DISTNOCACHE_PUTREQ_LARGEVALUE_SPINE=0x02e0, GETRES_LARGEVALUE_SERVER=0x02f0, GETRES_LARGEVALUE=0x0300, LOADREQ=0x0310, LOADREQ_SPINE=0x0320, NETCACHE_CACHE_POP_ACK_NLATEST=0x0330, GETREQ_BEINGEVICTED=0x0340, GETRES_LARGEVALUE_SEQ=0x0350
 };
 /*enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
@@ -49,9 +50,9 @@ typedef PacketType packet_type_t;
 
 // For large value -> NOTE: update the util APIs for large value (at the bottom of packet_format.h)
 // (1) server/client does NOT know whether the request or get response has large value -> use optype_for_udprecvlarge_ipfrag_list to juduge if it needs to return from udprecvlarge_ipfrag in advance
-static const uint32_t optype_for_udprecvlarge_ipfrag_num = 8;
+static const uint32_t optype_for_udprecvlarge_ipfrag_num = 9;
 // NOTE: NOT including SCANRES_SPLIT which is processed by udprecvlarge_multisrc_ipfrag instead of udprecvlarge_ipfrag
-static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_udprecvlarge_ipfrag_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3, packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED, packet_type_t::LOADREQ, packet_type_t::GETRES_LARGEVALUE};
+static const packet_type_t optype_for_udprecvlarge_ipfrag_list[optype_for_udprecvlarge_ipfrag_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3, packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED, packet_type_t::LOADREQ, packet_type_t::GETRES_LARGEVALUE, packet_type_t::GETRES_LARGEVALUE_SEQ};
 // (2) server may receive other requests when waiting for a large request -> use optype_with_clientlogicalidx_list to judge whether server needs to extract clientlogicalidx from the current packet to push/update PktRingBuffer
 static const uint32_t optype_with_clientlogicalidx_num = 7;
 static const packet_type_t optype_with_clientlogicalidx_list[optype_with_clientlogicalidx_num] = {packet_type_t::PUTREQ_LARGEVALUE, packet_type_t::PUTREQ_LARGEVALUE_SEQ, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3, packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED, packet_type_t::LOADREQ};
@@ -210,6 +211,25 @@ class GetResponseServer : public GetResponse<key_t, val_t> { // ophdr + val + sh
 		GetResponseServer(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload);
 };
 
+
+template<class key_t, class val_t>
+class GetResponseSeq : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr
+	public: 
+		GetResponseSeq();
+		GetResponseSeq(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
+		GetResponseSeq(method_t methodid, const char *data, uint32_t recv_size);
+		virtual ~GetResponseSeq(){}
+
+		uint32_t seq() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint32_t _seq;
+};
+
 template<class key_t>
 class PutResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 	public: 
@@ -226,6 +246,21 @@ class PutResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 	private:
 		bool _stat;
 		uint16_t _nodeidx_foreval;
+};
+
+template<class key_t>
+class PutResponseSeq : public PutResponse<key_t> { // ophdr + shadowtype + seq + stat_hdr
+	public:
+		PutResponseSeq(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t nodeidx_foreval);
+		PutResponseSeq(method_t methodid, const char * data, uint32_t recv_size);
+
+		uint32_t seq() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint32_t _seq;
 };
 
 template<class key_t>
@@ -250,6 +285,13 @@ class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 	private:
 		bool _stat;
 		uint16_t _nodeidx_foreval;
+};
+
+template<class key_t>
+class DelResponseSeq : public PutResponseSeq<key_t> { // ophdr + shadowtype + seq + stat_hdr
+	public:
+		PutResponseSeq(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t nodeidx_foreval);
+		PutResponseSeq(method_t methodid, const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
@@ -1071,6 +1113,25 @@ class GetResponseLargevalue : public Packet<key_t> { // ophdr + val&stat_hdr&swi
 		uint16_t _nodeidx_foreval;
 		uint32_t _spineload;
 		uint32_t _leafload;
+};
+
+template<class key_t, class val_t>
+class GetResponseLargevalueSeq : public GetResponseLargevalue<key_t, val_t> { // ophdr + val&seq&stat_hdr in payload (NOT parsed by switch -> NOT need shadowtype_hdr)
+	public:
+		GetResponseLargevalueSeq(method_t methodid, key_t key, val_t val, uint32_t seq, bool stat, uint16_t nodeidx_foreval);
+		//GetResponseLargevalueSeq(method_t methodid, switchidx_t spineswitchidx, switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, bool stat, uint16_t nodeidx_foreval, uint32_t spineload, uint32_t leafload);
+		GetResponseLargevalueSeq(method_t methodid, const char * data, uint32_t recv_size);
+
+		uint32_t seq() const;
+
+		static size_t get_frag_hdrsize(method_t methodid);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint32_t _seq;
 };
 
 template<class key_t, class val_t>

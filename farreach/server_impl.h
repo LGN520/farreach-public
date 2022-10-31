@@ -312,7 +312,7 @@ void send_cachepop(const int &sockfd, const char *buf, const int &buflen, const 
 }
 
 // For read-blocking under rare case of cache eviction
-void clear_blocklist(const int &sockfd, blockinfo_t &tmp_blockinfo, const val_t &tmp_val, const bool &tmp_stat, const uint16_t &global_server_logical_idx) {
+void clear_blocklist(const int &sockfd, blockinfo_t &tmp_blockinfo, const val_t &tmp_val, const uint32_t &tmp_seq, const bool &tmp_stat, const uint16_t &global_server_logical_idx) {
 	char buf[MAX_BUFSIZE];
 	dynamic_array_t dynamicbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 
@@ -320,7 +320,7 @@ void clear_blocklist(const int &sockfd, blockinfo_t &tmp_blockinfo, const val_t 
 	bool is_largevalue = false;
 	int rsp_size = 0;
 	if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-		get_response_t rsp(CURMETHOD_ID, tmp_blockinfo._blockedkey, tmp_val, tmp_stat, global_server_logical_idx);
+		get_response_seq_t rsp(CURMETHOD_ID, tmp_blockinfo._blockedkey, tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 		rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 		is_largevalue = false;
 #ifdef DUMP_BUF
@@ -328,7 +328,7 @@ void clear_blocklist(const int &sockfd, blockinfo_t &tmp_blockinfo, const val_t 
 #endif
 	}
 	else {
-		get_response_largevalue_t rsp(CURMETHOD_ID, tmp_blockinfo._blockedkey, tmp_val, tmp_stat, global_server_logical_idx);
+		get_response_largevalue_seq_t rsp(CURMETHOD_ID, tmp_blockinfo._blockedkey, tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 		dynamicbuf.clear();
 		rsp_size = rsp.dynamic_serialize(dynamicbuf);
 		is_largevalue = true;
@@ -503,7 +503,7 @@ void *run_server_worker(void * param) {
 #endif
 
 				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-					get_response_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					get_response_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -511,10 +511,10 @@ void *run_server_worker(void * param) {
 #endif
 				}
 				else {
-					get_response_largevalue_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					get_response_largevalue_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 					dynamicbuf.clear();
 					rsp_size = rsp.dynamic_serialize(dynamicbuf);
-					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_frag_hdrsize(CURMETHOD_ID));
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
 #ifdef DUMP_BUF
 					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
@@ -585,7 +585,8 @@ void *run_server_worker(void * param) {
 #endif
 
 						if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-							get_response_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+							// NOTE: GETREQ_LARGEVALUEBLOCK_SEQ.seq() is the seq of the latest PUTREQ_LARGEVALUE, which cannot be used for GETRES_SEQ
+							get_response_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 							udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -593,10 +594,10 @@ void *run_server_worker(void * param) {
 #endif
 						}
 						else {
-							get_response_largevalue_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+							get_response_largevalue_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 							dynamicbuf.clear();
 							rsp_size = rsp.dynamic_serialize(dynamicbuf);
-							udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_frag_hdrsize(CURMETHOD_ID));
+							udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
 #ifdef DUMP_BUF
 							dump_buf(dynamicbuf.array(), rsp_size);
 #endif
@@ -643,10 +644,10 @@ void *run_server_worker(void * param) {
 #endif
 				}
 				else {
-					get_response_largevalue_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					get_response_largevalue_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 					dynamicbuf.clear();
 					rsp_size = rsp.dynamic_serialize(dynamicbuf);
-					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_frag_hdrsize(CURMETHOD_ID));
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
 #ifdef DUMP_BUF
 					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
@@ -673,7 +674,7 @@ void *run_server_worker(void * param) {
 				CUR_TIME(rocksdb_t2);
 #endif
 				
-				put_response_t rsp(CURMETHOD_ID, req.key(), true, global_server_logical_idx);
+				put_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -701,7 +702,7 @@ void *run_server_worker(void * param) {
 				CUR_TIME(rocksdb_t2);
 #endif
 				
-				put_response_t rsp(CURMETHOD_ID, req.key(), true, global_server_logical_idx);
+				put_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -736,7 +737,7 @@ void *run_server_worker(void * param) {
 						fflush(stdout);
 
 						// answer the blocklist and resize as 0
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, req.val(), true, global_server_logical_idx);
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, req.val(), req.seq(), true, global_server_logical_idx);
 					}
 				}
 				server_mutex_for_largevalueblock_list[local_server_logical_idx].unlock();
@@ -753,7 +754,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].remove(req.key(), req.seq());
 				UNUSED(tmp_stat);
 				//COUT_THIS("[server] stat = " << tmp_stat)
-				del_response_t rsp(CURMETHOD_ID, req.key(), true, global_server_logical_idx);
+				del_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -818,7 +819,7 @@ void *run_server_worker(void * param) {
 #endif
 				
 				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-					get_response_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					get_response_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -845,10 +846,10 @@ void *run_server_worker(void * param) {
 					}
 				}
 				else {
-					get_response_largevalue_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+					get_response_largevalue_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 					dynamicbuf.clear();
 					rsp_size = rsp.dynamic_serialize(dynamicbuf);
-					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_t::get_frag_hdrsize(CURMETHOD_ID));
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
 #ifdef DUMP_BUF
 					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
@@ -874,7 +875,7 @@ void *run_server_worker(void * param) {
 				CUR_TIME(rocksdb_t2);
 #endif
 				
-				put_response_t rsp(CURMETHOD_ID, req.key(), true, global_server_logical_idx);
+				put_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -916,7 +917,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				UNUSED(tmp_stat);
 				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				put_response_t rsp(CURMETHOD_ID, req.key(), true, global_server_logical_idx);
+				put_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -949,7 +950,7 @@ void *run_server_worker(void * param) {
 				CUR_TIME(rocksdb_t2);
 #endif
 				
-				put_response_t rsp(CURMETHOD_ID, req.key(), true, global_server_logical_idx);
+				put_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -982,7 +983,7 @@ void *run_server_worker(void * param) {
 						fflush(stdout);
 
 						// answer the blocklist and resize as 0
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, req.val(), true, global_server_logical_idx);
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, req.val(), req.seq(), true, global_server_logical_idx);
 					}
 				}
 				server_mutex_for_largevalueblock_list[local_server_logical_idx].unlock();
@@ -1004,7 +1005,7 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				put_response_t rsp(CURMETHOD_ID, req.key(), true, global_server_logical_idx);
+				put_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -1046,7 +1047,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].remove(req.key(), req.seq());
 				UNUSED(tmp_stat);
 				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				del_response_t rsp(CURMETHOD_ID, req.key(), true, global_server_logical_idx);
+				del_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -1154,7 +1155,7 @@ void *run_server_worker(void * param) {
 
 						// send back read response
 						if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-							get_response_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+							get_response_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 							udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -1162,10 +1163,10 @@ void *run_server_worker(void * param) {
 #endif
 						}
 						else {
-							get_response_largevalue_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+							get_response_largevalue_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 							dynamicbuf.clear();
 							rsp_size = rsp.dynamic_serialize(dynamicbuf);
-							udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_server_t::get_frag_hdrsize(CURMETHOD_ID));
+							udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
 #ifdef DUMP_BUF
 							dump_buf(dynamicbuf.array(), rsp_size);
 #endif
@@ -1185,7 +1186,7 @@ void *run_server_worker(void * param) {
 						val_t tmp_val_for_blockedkey;
 						uint32_t tmp_seq_for_blockedkey = 0;
 						bool tmp_stat_for_blockedkey = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val_for_blockedkey, &tmp_seq_for_blockedkey);
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_seq_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
 					}
 
 					// update blockinfo
@@ -1280,7 +1281,7 @@ void *run_server_worker(void * param) {
 					CUR_TIME(rocksdb_t2);
 #endif
 					// send back put response
-					put_response_t rsp(CURMETHOD_ID, tmp_key, true, global_server_logical_idx);
+					put_response_seq_t rsp(CURMETHOD_ID, tmp_key, tmp_seq, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -1293,7 +1294,7 @@ void *run_server_worker(void * param) {
 					CUR_TIME(rocksdb_t2);
 #endif
 					// send back delete response
-					del_response_t rsp(CURMETHOD_ID, tmp_key, true, global_server_logical_idx);
+					del_response_seq_t rsp(CURMETHOD_ID, tmp_key, tmp_seq, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -1313,7 +1314,7 @@ void *run_server_worker(void * param) {
 						fflush(stdout);
 
 						// answer the blocklist and resize as 0
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val, !tmp_isdelete, global_server_logical_idx);
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val, tmp_seq, !tmp_isdelete, global_server_logical_idx);
 					}
 				}
 				else { // first write_BEINGEVICTED
@@ -1326,7 +1327,7 @@ void *run_server_worker(void * param) {
 						val_t tmp_val_for_blockedkey;
 						uint32_t tmp_seq_for_blockedkey = 0;
 						bool tmp_stat_for_blockedkey = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val_for_blockedkey, &tmp_seq_for_blockedkey);
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_seq_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
 					}
 
 					// update blockinfo
@@ -1362,7 +1363,7 @@ void *run_server_worker(void * param) {
 						fflush(stdout);
 
 						// answer the blocklist and resize as 0
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val, !tmp_isdelete, global_server_logical_idx);
+						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val, tmp_seq, !tmp_isdelete, global_server_logical_idx);
 					}
 				}
 				server_mutex_for_largevalueblock_list[local_server_logical_idx].unlock();
@@ -1493,10 +1494,10 @@ void *run_server_evictserver(void *param) {
 
 				// answer the blocklist and resize as 0
 				if (tmp_cache_evict_ptr->stat()) { // put
-					clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_cache_evict_ptr->val(), true, global_server_logical_idx);
+					clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq(), true, global_server_logical_idx);
 				}
 				else { // delete
-					clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, val_t(), false, global_server_logical_idx);
+					clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, val_t(), tmp_cache_evict_ptr->seq(), false, global_server_logical_idx);
 				}
 			}
 		}
@@ -1510,7 +1511,7 @@ void *run_server_evictserver(void *param) {
 				val_t tmp_val_for_blockedkey;
 				uint32_t tmp_seq_for_blockedkey = 0;
 				bool tmp_stat_for_blockedkey = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val_for_blockedkey, &tmp_seq_for_blockedkey);
-				clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
+				clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_seq_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
 			}
 
 			// update blockinfo
@@ -1546,7 +1547,7 @@ void *run_server_evictserver(void *param) {
 				fflush(stdout);
 
 				// answer the blocklist and resize as 0
-				clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->stat(), global_server_logical_idx);
+				clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq(), tmp_cache_evict_ptr->stat(), global_server_logical_idx);
 			}
 		}
 		server_mutex_for_largevalueblock_list[local_server_logical_idx].unlock();

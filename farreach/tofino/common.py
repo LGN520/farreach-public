@@ -4,8 +4,8 @@ hot_threshold = 20 # for 200 keys under 2 server threads for YCSB-based workload
 #hot_threshold = 100 # for 200/500 keys under 16/2 server threads (around from 125) for NetCache synthetic workload
 #hot_threshold = 200 # for 500 keys under 16/2 server threads w/o WAL or 1000 keys under 16/2 server threads
 
-#ENABLE_LARGEVALUEBLOCK = False
-ENABLE_LARGEVALUEBLOCK = True
+##ENABLE_LARGEVALUEBLOCK = False
+#ENABLE_LARGEVALUEBLOCK = True
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -160,6 +160,9 @@ GETRES_LATEST_SEQ = 0x000b
 GETRES_DELETED_SEQ = 0x001b
 CACHE_EVICT_LOADDATA_INSWITCH_ACK = 0x002b
 NETCACHE_VALUEUPDATE = 0x003b
+GETRES_LATEST_SEQ_SERVER=0x004b
+GETRES_DELETED_SEQ_SERVER=0x005b
+GETRES_SEQ=0x006b
 # 0b1001
 GETRES = 0x0009
 # 0b0101
@@ -196,6 +199,9 @@ GETREQ_LARGEVALUEBLOCK_SEQ = 0x00e2
 # 0b1000
 PUTRES = 0x0008
 DELRES = 0x0018
+# 0b1010
+PUTRES_SEQ = 0x000a
+DELRES_SEQ = 0x001a
 # 0b0000
 WARMUPREQ = 0x0000
 SCANREQ = 0x0010
@@ -232,6 +238,7 @@ LOADREQ = 0x0310
 LOADREQ_SPINE = 0x0320
 NETCACHE_CACHE_POP_ACK_NLATEST = 0x0330
 GETREQ_BEINGEVICTED = 0x0340
+GETRES_LARGEVALUE_SEQ = 0x0350
 
 #GETREQ = 0x00
 #PUTREQ = 0x01

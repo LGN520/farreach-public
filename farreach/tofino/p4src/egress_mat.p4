@@ -180,7 +180,7 @@ action update_getreq_inswitch_to_getreq_beingevicted() {
 	remove_header(inswitch_hdr);
 }
 
-#ifdef ENABLE_LARGEVALUEBLOCK
+//#ifdef ENABLE_LARGEVALUEBLOCK
 action update_getreq_inswitch_to_getreq_largevalueblock_seq() {
 	modify_field(op_hdr.optype, GETREQ_LARGEVALUEBLOCK_SEQ);
 
@@ -191,7 +191,7 @@ action update_getreq_inswitch_to_getreq_largevalueblock_seq() {
 
 	remove_header(inswitch_hdr);
 }
-#endif
+//#endif
 
 action update_getreq_inswitch_to_getreq_pop() {
 	modify_field(op_hdr.optype, GETREQ_POP);
@@ -211,16 +211,15 @@ action update_getreq_inswitch_to_getreq_nlatest() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
-	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
+action update_getreq_inswitch_to_getres_seq_by_mirroring(client_sid, server_port, stat) {
+	modify_field(op_hdr.optype, GETRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_SEQ);
 	modify_field(stat_hdr.stat, stat);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
-	remove_header(inswitch_hdr);
 	/*add_header(vallen_hdr);
 	add_header(val1_hdr);
 	add_header(val2_hdr);
@@ -238,18 +237,22 @@ action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, st
 	add_header(val14_hdr);
 	add_header(val15_hdr);
 	add_header(val16_hdr);*/
+
+	add_header(seq_hdr);
+	remove_header(inswitch_hdr);
 	add_header(stat_hdr);
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
 }
 
-action update_getres_latest_seq_to_getres() {
-	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
+action update_getres_latest_seq_to_getres_seq() {
+	modify_field(op_hdr.optype, GETRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_SEQ);
 	modify_field(stat_hdr.stat, 1);
 
-	remove_header(seq_hdr);
+	//remove_header(seq_hdr);
+	add_header(seq_hdr);
 	add_header(stat_hdr);
 }
 
@@ -286,12 +289,13 @@ action forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(switchos_sid) 
 //action forward_getres_latest_seq_inswitch_case1() {
 //}
 
-action update_getres_deleted_seq_to_getres() {
-	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
+action update_getres_deleted_seq_to_getres_seq() {
+	modify_field(op_hdr.optype, GETRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_SEQ);
 	modify_field(stat_hdr.stat, 0);
 
-	remove_header(seq_hdr);
+	//remove_header(seq_hdr);
+	add_header(seq_hdr);
 	add_header(stat_hdr);
 }
 
@@ -376,9 +380,9 @@ table another_eg_port_forward_tbl {
 		meta.is_hot: exact;
 		validvalue_hdr.validvalue: exact;
 		meta.is_latest: exact;
-#ifdef ENABLE_LARGEVALUEBLOCK
+//#ifdef ENABLE_LARGEVALUEBLOCK
 		meta.is_largevalueblock: exact;
-#endif
+//#endif
 		meta.is_deleted: exact;
 		inswitch_hdr.client_sid: exact;
 		meta.is_lastclone_for_pktloss: exact;
@@ -388,18 +392,18 @@ table another_eg_port_forward_tbl {
 	actions {
 		update_getreq_inswitch_to_getreq;
 		update_getreq_inswitch_to_getreq_beingevicted;
-#ifdef ENABLE_LARGEVALUEBLOCK
+//#ifdef ENABLE_LARGEVALUEBLOCK
 		update_getreq_inswitch_to_getreq_largevalueblock_seq;
-#endif
+//#endif
 		update_getreq_inswitch_to_getreq_pop;
 		update_getreq_inswitch_to_getreq_nlatest;
-		update_getreq_inswitch_to_getres_by_mirroring;
-		update_getres_latest_seq_to_getres; // GETRES_LATEST_SEQ must be cloned from ingress to egress
+		update_getreq_inswitch_to_getres_seq_by_mirroring;
+		update_getres_latest_seq_to_getres_seq; // GETRES_LATEST_SEQ must be cloned from ingress to egress
 		update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss; // drop original packet of GETRES_LATEST_SEQ -> clone for first GETRES_LATEST_SEQ_INSWITCH_CASE1
 		//drop_getres_latest_seq_inswitch; // drop original packet of GETRES_LATEST_SEQ
 		forward_getres_latest_seq_inswitch_case1_clone_for_pktloss; // not last clone of GETRES_LATEST_SEQ_INSWITCH_CASE1
 		//forward_getres_latest_seq_inswitch_case1; // last clone of GETRES_LATEST_SEQ_INSWITCH_CASE1
-		update_getres_deleted_seq_to_getres; // GETRES_DELETED_SEQ must be cloned from ingress to egress
+		update_getres_deleted_seq_to_getres_seq; // GETRES_DELETED_SEQ must be cloned from ingress to egress
 		update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss; // drop original packet of GETRES_DELETED_SEQ -> clone for first GETRES_DELETED_SEQ_INSWITCH_CASE1
 		//drop_getres_deleted_seq_inswitch; // original packet of GETRES_DELETED_SEQ
 		forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss; // not last clone of GETRES_DELETED_SEQ_INSWITCH_CASE1
@@ -411,9 +415,9 @@ table another_eg_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-#ifdef ENABLE_LARGEVALUEBLOCK
+//#ifdef ENABLE_LARGEVALUEBLOCK
 	size: 512;
-#else
+//#else
 	size: 256;
 #endif
 }
@@ -506,45 +510,16 @@ action update_putreq_inswitch_to_putreq_pop_seq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-/*action update_putreq_inswitch_to_putres() {
-	modify_field(op_hdr.optype, PUTRES);
-	modify_field(shadowtype_hdr.shadowtype, PUTRES);
-	modify_field(stat_hdr.stat, 1);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-
-	remove_header(inswitch_hdr);
-	remove_header(vallen_hdr);
-	remove_header(val1_hdr);
-	remove_header(val2_hdr);
-	remove_header(val3_hdr);
-	remove_header(val4_hdr);
-	remove_header(val5_hdr);
-	remove_header(val6_hdr);
-	remove_header(val7_hdr);
-	remove_header(val8_hdr);
-	remove_header(val9_hdr);
-	remove_header(val10_hdr);
-	remove_header(val11_hdr);
-	remove_header(val12_hdr);
-	remove_header(val13_hdr);
-	remove_header(val14_hdr);
-	remove_header(val15_hdr);
-	remove_header(val16_hdr);
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
-}*/
-
-action update_putreq_inswitch_to_putres_by_mirroring(client_sid, server_port) {
-	modify_field(op_hdr.optype, PUTRES);
-	modify_field(shadowtype_hdr.shadowtype, PUTRES);
+action update_putreq_inswitch_to_putres_seq_by_mirroring(client_sid, server_port) {
+	modify_field(op_hdr.optype, PUTRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, PUTRES_SEQ);
+	modify_field(seq_hdr.seq, clone_hdr.assignedseq_for_farreach);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
-	remove_header(inswitch_hdr);
 	/*remove_header(vallen_hdr);
 	remove_header(val1_hdr);
 	remove_header(val2_hdr);
@@ -562,6 +537,9 @@ action update_putreq_inswitch_to_putres_by_mirroring(client_sid, server_port) {
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
 	remove_header(val16_hdr);*/
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
 	add_header(stat_hdr);
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
@@ -604,39 +582,10 @@ action forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(switchos_s
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 }
 
-/*action update_putreq_seq_inswitch_case1_to_putres() {
-	modify_field(op_hdr.optype, PUTRES);
-	modify_field(shadowtype_hdr.shadowtype, PUTRES);
-	modify_field(stat_hdr.stat, 1);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-
-	remove_header(vallen_hdr);
-	remove_header(val1_hdr);
-	remove_header(val2_hdr);
-	remove_header(val3_hdr);
-	remove_header(val4_hdr);
-	remove_header(val5_hdr);
-	remove_header(val6_hdr);
-	remove_header(val7_hdr);
-	remove_header(val8_hdr);
-	remove_header(val9_hdr);
-	remove_header(val10_hdr);
-	remove_header(val11_hdr);
-	remove_header(val12_hdr);
-	remove_header(val13_hdr);
-	remove_header(val14_hdr);
-	remove_header(val15_hdr);
-	remove_header(val16_hdr);
-	remove_header(seq_hdr);
-
-	remove_header(inswitch_hdr);
-
-	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
-}*/
-
-action update_putreq_seq_inswitch_case1_to_putres_by_mirroring(client_sid, server_port) {
-	modify_field(op_hdr.optype, PUTRES);
-	modify_field(shadowtype_hdr.shadowtype, PUTRES);
+action update_putreq_seq_inswitch_case1_to_putres_seq_by_mirroring(client_sid, server_port) {
+	modify_field(op_hdr.optype, PUTRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, PUTRES_SEQ);
+	modify_field(seq_hdr.seq, clone_hdr.assignedseq_for_farreach);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
@@ -660,7 +609,9 @@ action update_putreq_seq_inswitch_case1_to_putres_by_mirroring(client_sid, serve
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
 	remove_header(val16_hdr);*/
-	remove_header(seq_hdr);
+
+	//remove_header(seq_hdr);
+	add_header(seq_hdr);
 
 	remove_header(inswitch_hdr);
 	remove_header(clone_hdr);
@@ -715,21 +666,10 @@ action update_delreq_inswitch_to_delreq_seq_beingevicted() {
 	add_header(seq_hdr);
 }
 
-/*action update_delreq_inswitch_to_delres() {
-	modify_field(op_hdr.optype, DELRES);
-	modify_field(shadowtype_hdr.shadowtype, DELRES);
-	modify_field(stat_hdr.stat, 1);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-
-	remove_header(inswitch_hdr);
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
-}*/
-
-action update_delreq_inswitch_to_delres_by_mirroring(client_sid, server_port) {
-	modify_field(op_hdr.optype, DELRES);
-	modify_field(shadowtype_hdr.shadowtype, DELRES);
+action update_delreq_inswitch_to_delres_seq_by_mirroring(client_sid, server_port) {
+	modify_field(op_hdr.optype, DELRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, DELRES_SEQ);
+	modify_field(seq_hdr.seq, clone_hdr.assignedseq_for_farreach);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
@@ -737,6 +677,7 @@ action update_delreq_inswitch_to_delres_by_mirroring(client_sid, server_port) {
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
 	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
 	add_header(stat_hdr);
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
@@ -787,39 +728,10 @@ action forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(switchos_s
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 }
 
-/*action update_delreq_seq_inswitch_case1_to_delres() {
-	modify_field(op_hdr.optype, DELRES);
-	modify_field(shadowtype_hdr.shadowtype, DELRES);
-	modify_field(stat_hdr.stat, 1);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-
-	remove_header(vallen_hdr);
-	remove_header(val1_hdr);
-	remove_header(val2_hdr);
-	remove_header(val3_hdr);
-	remove_header(val4_hdr);
-	remove_header(val5_hdr);
-	remove_header(val6_hdr);
-	remove_header(val7_hdr);
-	remove_header(val8_hdr);
-	remove_header(val9_hdr);
-	remove_header(val10_hdr);
-	remove_header(val11_hdr);
-	remove_header(val12_hdr);
-	remove_header(val13_hdr);
-	remove_header(val14_hdr);
-	remove_header(val15_hdr);
-	remove_header(val16_hdr);
-	remove_header(seq_hdr);
-
-	remove_header(inswitch_hdr);
-
-	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
-}*/
-
-action update_delreq_seq_inswitch_case1_to_delres_by_mirroring(client_sid, server_port) {
-	modify_field(op_hdr.optype, DELRES);
-	modify_field(shadowtype_hdr.shadowtype, DELRES);
+action update_delreq_seq_inswitch_case1_to_delres_seq_by_mirroring(client_sid, server_port) {
+	modify_field(op_hdr.optype, DELRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, DELRES_SEQ);
+	modify_field(seq_hdr.seq, clone_hdr.assignedseq_for_farreach);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
@@ -843,7 +755,9 @@ action update_delreq_seq_inswitch_case1_to_delres_by_mirroring(client_sid, serve
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
 	remove_header(val16_hdr);*/
-	remove_header(seq_hdr);
+
+	//remove_header(seq_hdr);
+	add_header(seq_hdr);
 
 	remove_header(inswitch_hdr);
 	remove_header(clone_hdr);
@@ -988,23 +902,19 @@ table eg_port_forward_tbl {
 		update_putreq_inswitch_to_putreq_seq;
 		update_putreq_inswitch_to_putreq_seq_beingevicted;
 		update_putreq_inswitch_to_putreq_pop_seq;
-		//update_putreq_inswitch_to_putres;
-		update_putreq_inswitch_to_putres_by_mirroring;
+		update_putreq_inswitch_to_putres_seq_by_mirroring;
 		update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
 		forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
-		//update_putreq_seq_inswitch_case1_to_putres;
-		update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
+		update_putreq_seq_inswitch_case1_to_putres_seq_by_mirroring;
 		update_putreq_inswitch_to_putreq_seq_case3;
 		update_putreq_inswitch_to_putreq_seq_case3_beingevicted;
 		update_putreq_inswitch_to_putreq_pop_seq_case3;
 		update_delreq_inswitch_to_delreq_seq;
 		update_delreq_inswitch_to_delreq_seq_beingevicted;
-		//update_delreq_inswitch_to_delres;
-		update_delreq_inswitch_to_delres_by_mirroring;
+		update_delreq_inswitch_to_delres_seq_by_mirroring;
 		update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
 		forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
-		//update_delreq_seq_inswitch_case1_to_delres;
-		update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
+		update_delreq_seq_inswitch_case1_to_delres_seq_by_mirroring;
 		update_delreq_inswitch_to_delreq_seq_case3;
 		update_delreq_inswitch_to_delreq_seq_case3_beingevicted;
 #ifdef RANGE_SUPPORT
@@ -1097,6 +1007,13 @@ action update_val_stat_pktlen(aligned_vallen) {
 	add(ipv4_hdr.totalLen, aligned_vallen, 54);
 }
 
+// GETRES_SEQ
+action update_val_stat_seq_pktlen(aligned_vallen) {
+	// 20[iphdr] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 4(stat)
+	add(udp_hdr.hdrlen, aligned_vallen, 38);
+	add(ipv4_hdr.totalLen, aligned_vallen, 58);
+}
+
 // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 action update_val_seq_inswitch_stat_clone_pktlen(aligned_vallen) {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 16(inswitch) + 4(stat) + 4(clone_hdr) + 1(debug_hdr)
@@ -1122,6 +1039,13 @@ action update_stat_pktlen() {
 	//modify_field(ipv4_hdr.totalLen, 53);
 	modify_field(udp_hdr.hdrlen, 32);
 	modify_field(ipv4_hdr.totalLen, 52);
+}
+
+// PUTRES_SEQ, DELRES_SEQ
+action update_seq_stat_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 4(seq) + 4(stat)
+	modify_field(udp_hdr.hdrlen, 36);
+	modify_field(ipv4_hdr.totalLen, 56);
 }
 
 // DELREQ_SEQ, DELREQ_SEQ_CASE3, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ

@@ -39,6 +39,7 @@ action reset_largevalueseq() {
 	reset_largevalueseq_alu.execute_stateful_alu(inswitch_hdr.idx);
 	modify_field(meta.largevalueseq, 0);
 	modify_field(meta.is_largevalueblock, 0);
+	modify_field(clone_hdr.assignedseq_for_farreach, seq_hdr.seq);
 }
 
 action reset_meta_largevalueseq() {
@@ -47,7 +48,7 @@ action reset_meta_largevalueseq() {
 }
 
 @pragma stage 2
-table access_largevalueseq_tbl {
+table access_largevalueseq_and_save_assignedseq_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
@@ -57,7 +58,7 @@ table access_largevalueseq_tbl {
 	actions {
 		get_largevalueseq;
 		set_largevalueseq;
-		reset_largevalueseq;
+		reset_largevalueseq; // PUT/DELREQ_INSWITCH will invoke resset_largevalueseq() and save the assignedseq into clone_hdr
 		reset_meta_largevalueseq; // not touch largevalueseq_reg
 	}
 	default_action: reset_meta_largevalueseq();
