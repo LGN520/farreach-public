@@ -33,9 +33,15 @@
 
 // Default configuration as in rocksdb tuning guide
 // (1) parallism options
+// NOTE: we disable flush/compaction in dynamic workloads to avoid the confusion of write stalls, which does not affect the average throughput of all methods as most requests are processed by Memtable
 //#define WRITE_PARALLISM 16
+//#ifdef SERVER_ROTATION
 #define GLOBAL_MAX_FLUSH_THREAD_NUM 8
 #define GLOBAL_MAX_COMPACTION_THREAD_NUM 8
+//#else
+//#define GLOBAL_MAX_FLUSH_THREAD_NUM 0
+//#define GLOBAL_MAX_COMPACTION_THREAD_NUM 0
+//#endif
 // (2) general options
 #define BLOOMFILTER_BITS_PER_KEY 10 // larger bits per key -> fewer false positives to lookup key yet larger space cost
 #define BLOCKCACHE_SIZE 1 * 1024 * 1024 * 1024 // larger blockcache size -> better read performance yet larger space cost

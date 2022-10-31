@@ -36,9 +36,8 @@
 ## TODO list
 
 - TODO
-	* TODO: Discuss how to evaluate latency statistics
-		* TODO: Update latency statistics for all exps (without thpt limit)
-			- TODO: For exp1, mark original latency statistic with the delete line, if the latest latency statistic is reasonable
+	* Discuss how to evaluate latency statistics -> show latency and imbalance ratio in an individual experiment
+	* TODO: Add YCSB-E in exp2 on different workloads
 	* Client-side upstream backup (before exp9 recovery time)
 		* TODO: Debug and test client-side upstream backup colleborating with periodic snapshot
 		* TODO: Re-run exp8 on w/ or w/o snapshot for FarReach -> replace 1.02 imbalance ratio
@@ -47,10 +46,32 @@
 		* TODO: Finish exp10 on recovery time vs. cache size for FarReach
 	* Others
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
+	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
-- 10.31
+- 11.1
 	+ Siyuan
-		* TODO: Update implementation
+		* TODO: Use student-T distribution to calculate the error bars of each experiment
+		* TODO: Survey write-back cache (not related with switch) as related work
+			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
+	+ HuanCheng
+		* Evaluation
+			* TODO: Finish latency statistics for exp1 on overall analysis
+			* TODO: Add LOAD in exp2 on different worklads
+				- TODO: Still retrieve loading phase files, yet use `./bin/ycsb load` instead of `./bin/ycsb run`
+			* TODO: Run multiple times of each experiment (as many times as we can)
+				- [IMPORTANT] keep all raw data of each time for each experiment
+				- NOTE: if you use a script to run each experiment multiple times, you can give an iteration number of the current running time, and backup the statistics files to the directory related with the iteration number
+		* Coding
+			* TODO: Take a look at TPC-C benchmark especially for the following concerns
+				- (1) Whether TPC-C benchmark has a version based on Java
+				- (2) Whether TPC-C benchmark can provide/generate skewed workloads
+				- (3) Whether TPC-C benchmark is open-source such that we can integrate our inswitchcache-lib into TPC-C
+				- (4) One alternative way is to dump TPC-C skewed workload and use YCSB to replay it, yet may be tricky
+
+- 10.31 (using new exp order in slides; add exp1 for latency statistics)
+	+ Siyuan
+		* Update to-do list and evaluation plan slides
+		* TODO: Add doInsert for PregeneratedWorklad
 		* TODO: Implement client-side record preservations
 			- TODO: Add seq into PUT/DELRES for FarReach such that snapshot can release part of client-side backup
 			- TODO: Maintain client-side record preservations in a concurrent map
@@ -63,41 +84,29 @@
 			- TODO: Replay cache admissions for in-switch cache based on in-switch snapshot
 			- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations
 			- TODO: Exp 10: in-switch and server-side recovery time vs. cache size
+		* TODO: Update implementation
 	+ Huancheng
+		* Others
+			- TODO: Rename benchmark/results/exp\*.md
+			- TODO: Miss one rotation in farreach skewness 0.95 -> update exp5.md
 		* Evaluation
+			* Double-check write stall in exp4 on dynamic pattern
+				- Try to disable flushing&compaction in RocksDB first by modifying common/rocksdb_wrapper.h (sync and re-compile)
+					+ Try to set GLOBAL_MAX_FLUSH_THREAD_NUM and GLOBAL_MAX_COMPACTION_THREAD_NUM as zero -> work yet tricky
+					+ TODO: Increase MAX_MEMTABLE_IMMUTABLE_NUM and MIN_IMMUTABLE_FLUSH_NUM to 400 and 160 -> rollback if not work
+					+ TODO: Rollback changes, sync, and re-compile
+				- TODO: If disabling flushing&compactino works, use SERVER_ROTATION to change common/rocksdb_wrapper.h
+				- TODO: Update per-second thpt for exp4
+			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+				- TODO: If encounter any issue in controller/switchos, let Siyuan fix first
+			* TODO: Add Twitter Traces for exp2 on different workloads
+				- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
+				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
 			* TODO: Update benchmark.md for each exp including code change and configuration change
 				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
 				* For exp1, give details of static server rotation as a module and latency evaluation as another module
 					- For exp2, exp3, exp5, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
 				* For exp4, give details of dynamic pattern
-			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
-				- TODO: If encounter any issue in controller/switchos, let Siyuan fix first
-			* TODO: Run exp1 on Twitter Traces
-				- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
-				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
-		* Others
-			- TODO: Rename benchmark/results/exp\*.md
-			- TODO: Miss one rotation in farreach skewness 0.95 -> update exp5.md
-		* Coding
-			* TODO: Print ratio of write requests with >128B values in keydump
-
-- 10.30 (using new exp order in paper)
-	+ Siyuan
-		* Add imbalance ratio and update part of evaluation
-		* Update imbalance ratio results of exp5.md
-		* Debug and test read blocking for rare case of PUTREQ_LARGEVALUE (before exp1 Twitter traces) -> comment TMPDEBUG in server_impl.h
-		* Update evaluation
-		* Survey for upstream backup
-			- Reference 31 in SIGCOMM (ACM Computing Survey'02 of checkpoint/log-based methods)
-	+ HuanCheng
-		* Evaluation
-			* TODO: Double-check write stall in exp4 on dynamic pattern
-				- TODO: Try to disable flushing&compaction in RocksDB first by modifying common/rocksdb_wrapper.h (sync and re-compile)
-					+ TODO: Try to set GLOBAL_MAX_FLUSH_THREAD_NUM and GLOBAL_MAX_COMPACTION_THREAD_NUM as zero -> rollback if not work
-					+ TODO: Increase MAX_MEMTABLE_IMMUTABLE_NUM and MIN_IMMUTABLE_FLUSH_NUM to 400 and 160 -> rollback if not work
-					+ TODO: Rollback changes, sync, and re-compile
-				- TODO: Update per-second thpt and per-second normalized thpt for exp3
-				- TODO: If disabling flushing&compactino works, use SERVER_ROTATION to change common/rocksdb_wrapper.h
 		* Coding
 			* TODO: Finish TraceReplay workload
 				- TODO: Get correpsonding trace file based on workloadName
@@ -111,6 +120,16 @@
 						* Add fromBytes() to parse 16B keybytes for Twitter traces
 						* Re-run keydump to generate hot keys, dynamic rules, and pre-generated workloads
 						* NOTE: check affected modules -> ycsb::PregeneratedWorkload, ycsb::DynamicRulemap, common/workloadparser
+			* TODO: Print ratio of write requests with >128B values in keydump
+
+- 10.30 (using new exp order in paper; add exp3 as latency statistics)
+	+ Siyuan
+		* Add imbalance ratio and update part of evaluation
+		* Update imbalance ratio results of exp5.md
+		* Debug and test read blocking for rare case of PUTREQ_LARGEVALUE (before exp1 Twitter traces) -> comment TMPDEBUG in server_impl.h
+		* Update evaluation
+		* Survey for upstream backup
+			- Reference 31 in SIGCOMM (ACM Computing Survey'02 of checkpoint/log-based methods)
 
 - 10.29
 	+ Siyuan
