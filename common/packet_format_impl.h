@@ -684,7 +684,7 @@ GetResponseSeq<key_t, val_t>::GetResponseSeq()
 {}
 
 template<class key_t, class val_t>
-GetResponseSeq<key_t, val_t>::GetResponseSeq(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
+GetResponseSeq<key_t, val_t>::GetResponseSeq(method_t methodid, key_t key, val_t val, uint32_t seq, bool stat, uint16_t nodeidx_foreval)
 	: GetResponse<key_t, val_t>(methodid, key, val, stat, nodeidx_foreval), _seq(seq)
 {
 	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
@@ -845,7 +845,7 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 PutResponseSeq<key_t>::PutResponseSeq(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t nodeidx_foreval) 
-	: PutResponse(methodid, key, stat, nodeidx_foreval), _seq(seq)
+	: PutResponse<key_t>(methodid, key, stat, nodeidx_foreval), _seq(seq)
 {	
 	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
 	this->_type = optype_t(packet_type_t::PUTRES_SEQ);
@@ -988,7 +988,7 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 DelResponseSeq<key_t>::DelResponseSeq(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t nodeidx_foreval) 
-	: PutResponseSeq(methodid, key, seq, stat, nodeidx_foreval)
+	: PutResponseSeq<key_t>(methodid, key, seq, stat, nodeidx_foreval)
 {	
 	this->_type = optype_t(packet_type_t::DELRES_SEQ);
 	INVARIANT(seq >= 0);

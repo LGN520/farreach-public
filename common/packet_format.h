@@ -216,7 +216,7 @@ template<class key_t, class val_t>
 class GetResponseSeq : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr
 	public: 
 		GetResponseSeq();
-		GetResponseSeq(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
+		GetResponseSeq(method_t methodid, key_t key, val_t val, uint32_t seq, bool stat, uint16_t nodeidx_foreval);
 		GetResponseSeq(method_t methodid, const char *data, uint32_t recv_size);
 		virtual ~GetResponseSeq(){}
 
@@ -243,7 +243,6 @@ class PutResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-	private:
 		bool _stat;
 		uint16_t _nodeidx_foreval;
 };
@@ -290,8 +289,8 @@ class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 template<class key_t>
 class DelResponseSeq : public PutResponseSeq<key_t> { // ophdr + shadowtype + seq + stat_hdr
 	public:
-		PutResponseSeq(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t nodeidx_foreval);
-		PutResponseSeq(method_t methodid, const char * data, uint32_t recv_size);
+		DelResponseSeq(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t nodeidx_foreval);
+		DelResponseSeq(method_t methodid, const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
