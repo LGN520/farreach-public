@@ -47,6 +47,10 @@ sed -i '1,$s/server_total_logical_num_for_rotation=TODO/server_total_logical_num
 sed -i '1,$s/bottleneck_serveridx_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
 sed -i '1,$s/server_logical_idxes=TODO0/server_logical_idxes='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
 sed -i '1,$s/server_logical_idxes=TODO1/server_logical_idxes='${tmprotateidx}/'' ${DIRNAME}/config.ini
+if [ "x${DIRNAME}" == "xfarreach" ]
+then
+	sed -i '1,$s/controller_snapshot_period=TODO/controller_snapshot_period='${snapshot_period}/'' ${DIRNAME}/config.ini
+fi
 source scripts/remote/sync_file.sh ${DIRNAME} config.ini
 
 echo "start servers"
@@ -66,13 +70,15 @@ fi
 
 justloaded=0
 if [ ${tmprotateidx} -lt ${bottleneck_serveridx} ]; then
-	justloaded=${tmprotateidx}
+	# 0, 1, 2, ..., 13 -> 1, 2, 3, ..., 14
+	justloaded=$(expr ${tmprotateidx} + 1)
 else
-	justloaded=$((${tmprotateidx} - 1))
+	# 15 -> 15
+	justloaded=$(expr ${tmprotateidx})
 fi
 
 if [ $((${justloaded} % 16)) -eq 0 ]; then
-	echo "sleep 120s"
+	echo "sleep 120s after retrieving database files"
 	sleep 120s
 else
 	echo "sleep 5s"

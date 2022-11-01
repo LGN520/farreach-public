@@ -47,13 +47,14 @@ source scripts/remote/test_server_rotation_p1.sh 0
 
 echo "[part 2] run bottleneck server thread + rotated server thread"
 
-rotatecnt=0
+rotatecnt=1
 for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); do
 	if [ ${rotateidx} -eq ${bottleneck_serveridx} ]; then
 		continue
 	fi
 
-	if [ ${rotatecnt} -ne 0 ] && [ $((${rotatecnt}%16)) -eq 0 ]; then
+	#if [ ${rotatecnt} -ne 0 ] && [ $((${rotatecnt}%16)) -eq 0 ]; then
+	if [ $((${rotatecnt}%16)) -eq 0 ]; then
 		echo "refresh bottleneck parition and rotated partition back to the state after loading phase"
 		ssh ${USER}@${SERVER0} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db" # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
 		ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${rotateidx}.db" # retrieve rocksdb and reset rotatedservers.snapshotid = 0
