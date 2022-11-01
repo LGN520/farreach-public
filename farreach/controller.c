@@ -661,6 +661,10 @@ void *run_controller_snapshotclient(void *param) {
 				uint64_t cur_specialcase_bwcost = *((uint64_t *)(databuf.array() + sizeof(int) + sizeof(int32_t)));
 				bandwidthcost += cur_specialcase_bwcost;
 				localcp_bandwidthcost += cur_specialcase_bwcost;
+
+				// TMPDEBUG
+				printf("total_bytes: %dB, cur_specialcase_bwcost: %dB\n", total_bytes, cur_specialcase_bwcost);
+				fflush(stdout);
 				
 				// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
 				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>

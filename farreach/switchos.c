@@ -1375,6 +1375,7 @@ void *run_switchos_snapshotserver(void *param) {
 
 			// send rollbacked snapshot data to controller.snapshotserver
 			printf("[switchos.snapshotserver] send snapshot data to controller\n"); // TMPDEBUG
+			printf("total_bytes: %dB, cur_specialcase_bwcost: %dB\n", total_bytes, cur_specialcase_bwcost); // TMPDEBUG
 			fflush(stdout);
 			udpsendlarge_udpfrag(switchos_snapshotserver_udpsock, sendbuf.array(), total_bytes, 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
