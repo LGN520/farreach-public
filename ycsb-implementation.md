@@ -15,15 +15,32 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.1
+- 11.2
 	+ Siyuan
+		* TODO: Implement controller part of upstream backup
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 		* TODO: Survey write-back cache (not related with switch) as related work
 			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
-		* TODO: Update exp4 and exp9 of evaluation
+		* TODO: Update exp4 dynamic, exp6 skewness and exp9 bandwidth of evaluation
 		* TODO: Update implementation
+
+- 11.1
+	+ Siyuan
+		* Fix issue exp9 on bandwidth cost; update scripts to support changes of snapshot period
+		* Implement client part of upstream backup
 	+ HuanCheng
 		* Evaluation
+			* TODO: Finish exp4 on dynamic pattern
+			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
+			* TODO: Add Twitter Traces for exp2 on different workloads
+				- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
+				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
+			* TODO: Update benchmark.md for each exp including code change and configuration change
+				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
+				* For exp1, give details of static server rotation as a module and latency evaluation as another module
+					- For exp2, exp3, exp5, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
+				* For exp4, give details of dynamic pattern
 			* TODO: Finish latency statistics for exp1 on overall analysis
 			* TODO: Add LOAD in exp2 on different worklads
 				- TODO: Add doInsert for PregeneratedWorklad
@@ -33,6 +50,19 @@
 				- NOTE: if you use an individual script to run a given experiment multiple times, you can give an iteration number of the current running time, and backup the statistics files to the directory related with the iteration number in the script before next time of running
 				- NOTE: to login Tofino as root in the script such that you can launch and configure switch automatically, you can use `ssh -i <private-key-for-switch> root@bf1 "<command>"`
 		* Coding
+			* TODO: Finish TraceReplay workload
+				- TODO: Get correpsonding trace file based on workloadName
+				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
+				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+				- TODO: Twitter key -> 16B keybytes by md5 -> inswitchcache.core.Key by fromBytes
+					+ How to implement it more reasonable? -> possible solution:
+						* Change toString() to dump key as two 8B longs, which is "<8B long> <8B long>"
+						* Change fromString() to extract key from "<8B long> <8B long>"
+						* Add a static function Key::convertYcsbString() to convert "user<8B long>" as "<8B long> 0", before invoking fromString()
+						* Add fromBytes() to parse 16B keybytes for Twitter traces
+						* Re-run keydump to generate hot keys, dynamic rules, and pre-generated workloads
+						* NOTE: check affected modules -> ycsb::PregeneratedWorkload, ycsb::DynamicRulemap, common/workloadparser
+			* TODO: Print ratio of write requests with >128B values in keydump
 			* TODO: Take a look at TPC-C benchmark especially for the following concerns
 				- (1) Whether TPC-C benchmark has a version based on Java
 				- (2) Whether TPC-C benchmark can provide/generate skewed workloads
@@ -55,30 +85,6 @@
 					+ Use DEBUG_ROCKSDB to locate issue -> write_wal has large time (>0.5s)
 					+ Set DISABLE_WAL as true only alleviates write stalls yet cannot avoid, not to speak of achieving the same results as no loading phase
 				- NOTE: test exp4 still with loading phase -> argue that throughput variation is due to runtime variance of RocksDB, mainly use normalized thpt and cache hit rate to present dynamic results
-			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
-				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
-			* TODO: Add Twitter Traces for exp2 on different workloads
-				- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
-				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
-			* TODO: Update benchmark.md for each exp including code change and configuration change
-				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
-				* For exp1, give details of static server rotation as a module and latency evaluation as another module
-					- For exp2, exp3, exp5, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
-				* For exp4, give details of dynamic pattern
-		* Coding
-			* TODO: Finish TraceReplay workload
-				- TODO: Get correpsonding trace file based on workloadName
-				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
-				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-				- TODO: Twitter key -> 16B keybytes by md5 -> inswitchcache.core.Key by fromBytes
-					+ How to implement it more reasonable? -> possible solution:
-						* Change toString() to dump key as two 8B longs, which is "<8B long> <8B long>"
-						* Change fromString() to extract key from "<8B long> <8B long>"
-						* Add a static function Key::convertYcsbString() to convert "user<8B long>" as "<8B long> 0", before invoking fromString()
-						* Add fromBytes() to parse 16B keybytes for Twitter traces
-						* Re-run keydump to generate hot keys, dynamic rules, and pre-generated workloads
-						* NOTE: check affected modules -> ycsb::PregeneratedWorkload, ycsb::DynamicRulemap, common/workloadparser
-			* TODO: Print ratio of write requests with >128B values in keydump
 
 - 10.30 (using new exp order in paper; add exp3 as latency statistics)
 	+ Siyuan
@@ -609,7 +615,7 @@
 			* Set seq_hdr.seq=clone_hdr.assignedseq_for_farreach when converting PUT/DELREQ_INSWITCH and PUT/DELREQ_SEQ_INSWITCH_CASE1 into PUT/DELRES_SEQ (files: farreach/tofino/p4src/egress_mat.p4)
 		+ Add GETRES_SEQ, GETRES_LARGEVALUE_SEQ, PUTRES_SEQ, DELRES_SEQ including the following files
 			* Server: common/packet_format\*, farreach/common_impl.h, farreach/server_impl.h
-			* Client: TODO new files in inswitchcache-java-lib/core/packets/, farreach/FarreachClient.java
+			* Client: new files in inswitchcache-java-lib/core/packets/, TODO inswitchcache-java-lib/core/db/UdpNative.java
 			* Switch: farreach/tofino/common.py, farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py
 				- GETRES_SEQ, GETREQ_INSWITCH, GETRES_LATEST/DELETED_SEQ -> GETRES_SEQ (including ipv4_forward_tbl, access_savedseq_tbl, another_eg_port_forward_tbl, update_pktlen_tbl, update_ipmac_srcport_tbl, add_and_remove_value_header_hdr)
 					+ NOTE: GETREQ_INSWITCH needs to read savedseq
@@ -618,16 +624,23 @@
 					+ NOTE: PUTREQ_INSWITCH needs to update clone_hdr.assignedseq_for_farreach
 				- DELRES_SEQ, DELREQ_INSWITCH, DELREQ_SEQ_INSWITCH_CASE1 -> GETRES_SEQ (including ipv4_forward_tbl, eg_port_forward_tbl, update_pktlen_tbl, update_ipmac_srcport_tbl)
 					+ NOTE: DELREQ_INSWITCH needs to update clone_hdr.assignedseq_for_farreach
-		+ TODO: Fix server-side compilation errors
+		+ Fix server-side compilation errors
 		+ TODO: Pass compilation under range partition
 		+ TODO: Pass compilation under hash partition
-	- TODO: Maintain client-side record preservations in a concurrent map
-	- TODO: Add each record (key, value, seq) into the map for each PUT/DELRES of a cache hit
-	- TODO: Release record preservations whose seq < snapshotseq after receiving in-switch snapshot (keys and seqs) from controller
-		+ TODO: Implement snapshot-related packets into outband_packet_format.h and outband_packet_format_impl.h
-	- TODO: Dump client-side backup in TerminatorThread
-	- TODO: Count the notification of releasing snapshotted data from upstream backup into bandwidth cost
+	- Maintain client-side record preservations in a concurrent map for each logical client
+		+ Update the record preservation of (key, value, seq) into the map for each GET/PUT/DELRES of a cache hit
+	- Each client releases record preservations whose seq < snapshotseq after receiving upstream backup notification (keys and seqs) from controller
+		+ TODO: Implement snapshot-related packets into outband_packet_format.h and outband_packet_format_impl.h for controller
+		+ TODO: Controller sends upstream backup notification to each physical client
+		+ TODO: Count the notification of releasing snapshotted data from upstream backup into bandwidth cost
+		+ For speical case bwcost
+			* TODO: Switchos embeds a map of <serveridx, special case bwcost> into snapshot data
+			* TODO: Controller dumps localbwcost as well as serveridx
+			* TODO: Script calculates average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
+	- Dump client-side backup in TerminatorThread
 * TODO: Implement replay-based recovery
 	- TODO: Replay cache admissions for in-switch cache based on in-switch snapshot
 	- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations
+		+ TODO: For dynamic pattern, directly use the upstream backups
+		+ TODO: For static pattern, aggreagate per-rotation upstream backups and then use the aggregated upstream backups for recovery
 	- TODO: Exp 10: in-switch and server-side recovery time vs. cache size

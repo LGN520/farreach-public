@@ -37,6 +37,7 @@ client_sendpktserver_port_start=1026
 client_rulemapserver_port_start=1036
 ; [client_worker_port_start, client_worker_port_start + local client logical num - 1]
 client_worker_port_start=8888
+client_upstreambackupreleaser_port=1046
 
 [client0]
 ; client thread num for transaction phase in remote client
