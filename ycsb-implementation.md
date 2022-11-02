@@ -4,6 +4,7 @@
 
 - TODO
 	* TODO: Add YCSB-E in exp2 on different workloads after running all experiments
+		- TODO: Test ScanResponseSplit of range query
 	* Client-side upstream backup (before exp9 recovery time)
 		* TODO: Debug and test client-side upstream backup colleborating with periodic snapshot
 			- TODO: Check whether the seq of GET/PUT/DELRES_SEQ and GETRES_LARGEVALUE_SEQ > 0
@@ -17,7 +18,7 @@
 
 - 11.2
 	+ Siyuan
-		* TODO: Implement controller part of upstream backup
+		* Implement controller part of upstream backup
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 		* TODO: Survey write-back cache (not related with switch) as related work
 			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
@@ -34,7 +35,6 @@
 			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
 				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
 			* TODO: Add Twitter Traces for exp2 on different workloads
-				- TODO: Test ScanResponseSplit of range query and GetResponseLargevalue for large value
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
 			* TODO: Update benchmark.md for each exp including code change and configuration change
 				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
@@ -630,12 +630,12 @@
 	- Each client releases record preservations whose seq < snapshotseq after receiving upstream backup notification (keys and seqs) from controller
 		+ Add outband_packet_format.h and outband_packet_format.c for switchos/controller/server
 			+ Implement snapshot-related packets including snapshot signal, snapshot getdata ack, and snapshot senddata
-			+ TODO: Implement upstream-backup-related packets
-		+ TODO: Controller sends upstream backup notification to each physical client
-			* TODO: Count the notification of releasing snapshotted data from upstream backup into bandwidth cost
+			+ Implement upstream-backup-related packets
+		+ Controller sends upstream backup notification to each physical client
+			* Count the notification of releasing snapshotted data from upstream backup into bandwidth cost
 		+ For speical case bwcost
-			* TODO: Switchos embeds a map of <serveridx, special case bwcost> into snapshot data
-			* TODO: Controller dumps localbwcost as well as serveridx
+			* Switchos maintains and embeds per-server speical case bandwidth cost into snapshot data
+			* Controller dumps localbwcost as well as serveridx
 			* TODO: Script calculates average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
 	- Dump client-side backup in TerminatorThread
 	- Debug and test

@@ -117,6 +117,7 @@ short client_rotationdataserver_port = 0;
 short client_sendpktserver_port_start = 0;
 short client_rulemapserver_port_start = 0;
 short client_worker_port_start = 0;
+short client_upstreambackupreleaser_port = 0;
 
 // each physical client
 std::vector<uint32_t> client_logical_nums;
@@ -295,10 +296,12 @@ inline void parse_ini(const char* config_file) {
 	client_sendpktserver_port_start = ini.get_client_sendpktserver_port_start();
 	client_rulemapserver_port_start = ini.get_client_rulemapserver_port_start();
 	client_worker_port_start = ini.get_client_worker_port_start();
+	client_upstreambackupreleaser_port = ini.get_client_upstreambackupreleaser_port();
 	COUT_VAR(client_rotationdataserver_port);
 	COUT_VAR(client_sendpktserver_port_start);
 	COUT_VAR(client_rulemapserver_port_start);
 	COUT_VAR(client_worker_port_start);
+	COUT_VAR(client_upstreambackupreleaser_port);
 	printf("\n");
 
 	// each physical client

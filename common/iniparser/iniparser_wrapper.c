@@ -172,6 +172,15 @@ short IniparserWrapper::get_client_worker_port_start() {
 	return short(tmp);
 }
 
+short IniparserWrapper::get_client_upstreambackupreleaser_port() {
+	int tmp = iniparser_getint(ini, "client:client_upstreambackupreleaser_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [client:client_upstreambackupreleaser_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 // each physical client
 
 uint32_t IniparserWrapper::get_client_logical_num(uint32_t client_physical_idx) {

@@ -245,9 +245,11 @@ static int dynamic_serialize_snapshot_senddata(dynamic_array_t &dynamic_buf, int
 
 	// go back to update perserver_bytes
 	dynamic_buf.dynamic_memcpy(sizeof(int) + sizeof(int), (char *)&offset, sizeof(int32_t));
+
+	return offset;
 }
 
-static int deserialize_snapshot_senddata(dynamic_array_t &dynamic_buf, const int control_type, int &snapshotid, int &tmpserver_bytes, uint16_t &tmpserver_serveridx, int &tmpserver_recordcnt, std::vector<netreach_key_t> &tmpserver_keyarray, std::vector<val_t> &tmpserver_valarray, std::vector<uint32_t> &tmpserver_seqarray, std::vector<bool> &tmpserver_statarray) {
+static void deserialize_snapshot_senddata(dynamic_array_t &dynamic_buf, const int control_type, int &snapshotid, int &tmpserver_bytes, uint16_t &tmpserver_serveridx, int &tmpserver_recordcnt, std::vector<netreach_key_t> &tmpserver_keyarray, std::vector<val_t> &tmpserver_valarray, std::vector<uint32_t> &tmpserver_seqarray, std::vector<bool> &tmpserver_statarray) {
 	// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
 	// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 
@@ -300,4 +302,35 @@ static int deserialize_snapshot_senddata(dynamic_array_t &dynamic_buf, const int
 		tmpserver_statarray.push_back(tmpstat);
 		offset += sizeof(bool);
 	}
+}
+
+// FORMAT: <int num>, <Key k0, int seq0>, <Key k1, int seq1>, ...
+static int dynamic_serialize_upstream_backup_notification(dynamic_array_t &dynamic_buf, std::vector<std::vector<netreach_key_t>> &perserver_keyarray, std::vector<std::vector<uint32_t>> &perserver_seqarray) {
+	int offset = 0;
+
+	// skip num
+	offset += sizeof(int);
+
+	int tmpnum = 0;
+	for (int i = 0; i < perserver_keyarray.size(); i++) {
+		for (int j = 0; j < perserver_keyarray[i].size(); j++) {
+			netreach_key_t tmpkey = perserver_keyarray[i][j];
+			uint32_t tmpseq = perserver_seqarray[i][j];
+
+			// key
+			int tmpkeysize = tmpkey.dynamic_serialize(dynamic_buf, offset);
+			offset += tmpkeysize;
+
+			// seq
+			dynamic_buf.dynamic_memcpy(offset, (char *)&tmpseq, sizeof(uint32_t));
+			offset += sizeof(uint32_t);
+
+			tmpnum++;
+		}
+	}
+
+	// go back to update num
+	dynamic_buf.dynamic_memcpy(0, (char *)&tmpnum, sizeof(int));
+
+	return offset;
 }

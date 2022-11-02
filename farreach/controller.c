@@ -74,8 +74,8 @@ int *controller_snapshotclient_for_server_udpsock_list = NULL;
 dynamic_array_t *controller_snapshotclient_for_server_databuf_list = NULL;
 
 // control plane bandwidth usage
-std::atomic<uint64_t> bandwidthcost(0); // in unit of byte (cleared per snapshot period); including local control plane BW cost
-std::atomic<uint64_t> localcp_bandwidthcost(0); // in unit of byte; only for local control plane BW cost (speical cases)
+std::atomic<uint64_t> bandwidthcost(0); // in unit of byte (cleared per snapshot period); including local control plane BW cost; accessed by snapshotclient/popserver/evictserver
+uint64_t *perserver_localcp_bandwidthcost = NULL; // in unit of byte; only for local control plane BW cost (speical cases); accessed only by snapshotclient
 
 void prepare_controller();
 void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
@@ -231,6 +231,9 @@ void prepare_controller() {
 		create_udpsock(controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx], true, "controller.snapshotclient_for_server", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 		controller_snapshotclient_for_server_databuf_list[tmp_global_server_logical_idx].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
+
+	perserver_localcp_bandwidthcost = new uint64_t[max_server_total_logical_num];
+	memset(perserver_localcp_bandwidthcost, 0, sizeof(uint64_t) * max_server_total_logical_num);
 
 	memory_fence();
 
@@ -510,6 +513,18 @@ void *run_controller_snapshotclient(void *param) {
 	// prepare for SNAPSHOT_GETDATA_ACK
 	dynamic_array_t databuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 
+	// prepare for UPSTREAM_BACKUP_NOTIFICATION
+	dynamic_array_t notificationbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
+	int controller_snapshotclient_for_upstreamnotification_udpsocks[client_physical_num];
+	struct sockaddr_in client_backupreleaser_addr_list[client_physical_num];
+	socklen_t client_backupreleaser_addrlen_list[client_physical_num];
+	for (int i = 0; i < client_physical_num; i++) {
+		create_udpsock(controller_snapshotclient_for_upstreamnotification_udpsocks[i], false, "controller.snapshotclient_for_upstreamnotification");
+		const char *tmp_clientip = client_ip_for_client0_list[i];
+		set_sockaddr(client_backupreleaser_addr_list[i], inet_addr(tmp_clientip), client_upstreambackupreleaser_port);
+		client_backupreleaser_addrlen_list[i] = sizeof(struct sockaddr_in);
+	}
+
 	printf("[controller.snapshotclient] ready\n");
 	controller_ready_threads++;
 
@@ -661,7 +676,9 @@ void *run_controller_snapshotclient(void *param) {
 				bandwidthcost += total_bytes;
 				for (int tmp_bwcostidx = 0; tmp_bwcostidx < perserver_specialcase_bwcost.size(); tmp_bwcostidx++) {
 					bandwidthcost += perserver_specialcase_bwcost[tmp_bwcostidx];
-					perserver_localcp_bandwidthcost += perserver_specialcase_bwcost[tmp_bwcostidx]; // TODO
+
+					uint16_t tmp_serveridx = perserver_serveridx[tmp_bwcostidx];
+					perserver_localcp_bandwidthcost[tmp_serveridx] += perserver_specialcase_bwcost[tmp_bwcostidx];
 				}
 
 				// prepare per-server snapshot data
@@ -685,6 +702,15 @@ void *run_controller_snapshotclient(void *param) {
 
 					dynamic_serialize_snapshot_senddata(controller_snapshotclient_for_server_databuf_list[tmp_serveridx], SNAPSHOT_SENDDATA, controller_snapshotid, tmp_serveridx, perserver_recordcnt[i], perserver_keyarray[i], perserver_valarray[i], perserver_seqarray[i], perserver_statarray[i]);
 				}
+
+				// send upstream backup notifications to clients and update bandwidth cost
+				notificationbuf.clear();
+				int notificationbytes = dynamic_serialize_upstream_backup_notification(notificationbuf, perserver_keyarray, perserver_seqarray);
+				for (int i = 0; i < client_physical_num; i++) {
+					udpsendlarge_udpfrag(controller_snapshotclient_for_upstreamnotification_udpsocks[i], notificationbuf.array(), notificationbytes, 0, &client_backupreleaser_addr_list[i], client_backupreleaser_addrlen_list[i], "controller.snapshotclient");
+				}
+				printf("upstream backup notification bytes: %f MiB\n", float(notificationbytes * client_physical_num) / 1024.0 / 1024.0);
+				bandwidthcost += notificationbytes * client_physical_num;
 				
 				break;
 			}
@@ -710,18 +736,26 @@ void *run_controller_snapshotclient(void *param) {
 
 		// NOTE: append bandwidthcost into tmp_controller_bwcost.out
 		double bwcost_rate = bandwidthcost / (controller_snapshot_period / 1000.0) / 1024.0 / 1024.0; // MiB/s
-		double localcp_bwcost_rate = localcp_bandwidthcost / (controller_snapshot_period / 1000.0) / 1024.0 / 1024.0; // MiB/s
+		double localcp_bwcost_rates[max_server_total_logical_num];
+		for (int i = 0; i < max_server_total_logical_num; i++) {
+			localcp_bwcost_rates[i] = perserver_localcp_bandwidthcost[i] / (controller_snapshot_period / 1000.0) / 1024.0 / 1024.0; // MiB/s
+		}
 		//printf("bandwidth cost: %f MiB/s\n", bwcost_rate);
 		//fflush(stdout);
 		FILE *tmpfd = fopen("tmp_controller_bwcost.out", "a+");
 		// NOTE: totalbwcost means bwcost of both local and global control plane, while localbwcost means bwcost of local control plane
-		fprintf(tmpfd, "totalbwcost: %f MiB/s; localbwcost: %f MiB/s\n", bwcost_rate, localcp_bwcost_rate);
+		fprintf(tmpfd, "totalbwcost(MiB/s): %f\n", bwcost_rate);
+		fprintf(tmpfd, "localbwcost(MiB/s):");
+		for (int i = 0; i < max_server_total_logical_num; i++) {
+			printf(tmpfd, " %f", localcp_bwcost_rates[i]);
+		}
+		printf(tmpfd, "\n");
 		fflush(tmpfd);
 		fclose(tmpfd);
 
 		// clear to count the next period
 		bandwidthcost = 0; 
-		localcp_bandwidthcost = 0;
+		memset(perserver_localcp_bandwidthcost, 0, sizeof(uint64_t) * max_server_total_logical_num);
 		
 		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databuf) for controller failure recovery
 		controller_update_snapshotid(databuf.array(), databuf.size());
@@ -848,5 +882,9 @@ void close_controller() {
 	if (controller_snapshotclient_for_server_databuf_list != NULL) {
 		delete [] controller_snapshotclient_for_server_databuf_list;
 		controller_snapshotclient_for_server_databuf_list = NULL;
+	}
+	if (perserver_localcp_bandwidthcost != NULL) {
+		delete [] perserver_localcp_bandwidthcost;
+		perserver_localcp_bandwidthcost = NULL;
 	}
 }
