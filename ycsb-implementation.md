@@ -16,19 +16,23 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
+- 11.4
+	+ Siyuan
+		* TODO: Implement server-side replay-based recovery
+		* TODO: Use student-T distribution to calculate the error bars of each experiment
+		* TODO: Update implementation
+
+- 11.3
+	+ Siyuan
+		* TODO: Fix compilations errors of upstream backup
+		* TODO: Merge into main branch of NetBuffer/ and benchmark/
+		* TODO: Survey write-back cache (not related with switch) and update related work
+			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
+		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
+
 - 11.2
 	+ Siyuan
 		* Implement controller part of upstream backup
-		* TODO: Use student-T distribution to calculate the error bars of each experiment
-		* TODO: Survey write-back cache (not related with switch) as related work
-			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
-		* TODO: Update exp4 dynamic, exp6 skewness and exp9 bandwidth of evaluation
-		* TODO: Update implementation
-
-- 11.1
-	+ Siyuan
-		* Fix issue exp9 on bandwidth cost; update scripts to support changes of snapshot period
-		* Implement client part of upstream backup
 	+ HuanCheng
 		* Evaluation
 			* TODO: Finish exp4 on dynamic pattern
@@ -68,6 +72,11 @@
 				- (2) Whether TPC-C benchmark can provide/generate skewed workloads
 				- (3) Whether TPC-C benchmark is open-source such that we can integrate our inswitchcache-lib into TPC-C
 				- (4) One alternative way is to dump TPC-C skewed workload and use YCSB to replay it, yet may be tricky
+
+- 11.1
+	+ Siyuan
+		* Fix issue exp9 on bandwidth cost; update scripts to support changes of snapshot period
+		* Implement client part of upstream backup
 
 - 10.31 (using new exp order in slides; add exp1 overall analysis for latency statistics)
 	+ Siyuan
