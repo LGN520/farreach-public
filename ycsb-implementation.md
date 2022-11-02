@@ -615,7 +615,7 @@
 			* Set seq_hdr.seq=clone_hdr.assignedseq_for_farreach when converting PUT/DELREQ_INSWITCH and PUT/DELREQ_SEQ_INSWITCH_CASE1 into PUT/DELRES_SEQ (files: farreach/tofino/p4src/egress_mat.p4)
 		+ Add GETRES_SEQ, GETRES_LARGEVALUE_SEQ, PUTRES_SEQ, DELRES_SEQ including the following files
 			* Server: common/packet_format\*, farreach/common_impl.h, farreach/server_impl.h
-			* Client: new files in inswitchcache-java-lib/core/packets/, TODO inswitchcache-java-lib/core/db/UdpNative.java
+			* Client: new files in inswitchcache-java-lib/core/packets/, inswitchcache-java-lib/core/db/UdpNative.java
 			* Switch: farreach/tofino/common.py, farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py
 				- GETRES_SEQ, GETREQ_INSWITCH, GETRES_LATEST/DELETED_SEQ -> GETRES_SEQ (including ipv4_forward_tbl, access_savedseq_tbl, another_eg_port_forward_tbl, update_pktlen_tbl, update_ipmac_srcport_tbl, add_and_remove_value_header_hdr)
 					+ NOTE: GETREQ_INSWITCH needs to read savedseq
@@ -625,19 +625,25 @@
 				- DELRES_SEQ, DELREQ_INSWITCH, DELREQ_SEQ_INSWITCH_CASE1 -> GETRES_SEQ (including ipv4_forward_tbl, eg_port_forward_tbl, update_pktlen_tbl, update_ipmac_srcport_tbl)
 					+ NOTE: DELREQ_INSWITCH needs to update clone_hdr.assignedseq_for_farreach
 		+ Fix server-side compilation errors
-		+ TODO: Pass compilation under range partition
-		+ TODO: Pass compilation under hash partition
 	- Maintain client-side record preservations in a concurrent map for each logical client
 		+ Update the record preservation of (key, value, seq) into the map for each GET/PUT/DELRES of a cache hit
 	- Each client releases record preservations whose seq < snapshotseq after receiving upstream backup notification (keys and seqs) from controller
-		+ TODO: Implement snapshot-related packets into outband_packet_format.h and outband_packet_format_impl.h for controller
+		+ Add outband_packet_format.h and outband_packet_format.c for switchos/controller/server
+			+ Implement snapshot-related packets including snapshot signal, snapshot getdata ack, and snapshot senddata
+			+ TODO: Implement upstream-backup-related packets
 		+ TODO: Controller sends upstream backup notification to each physical client
-		+ TODO: Count the notification of releasing snapshotted data from upstream backup into bandwidth cost
+			* TODO: Count the notification of releasing snapshotted data from upstream backup into bandwidth cost
 		+ For speical case bwcost
 			* TODO: Switchos embeds a map of <serveridx, special case bwcost> into snapshot data
 			* TODO: Controller dumps localbwcost as well as serveridx
 			* TODO: Script calculates average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
 	- Dump client-side backup in TerminatorThread
+	- Debug and test
+		+ TODO: Fix compilation errors of client and server
+		+ TODO: Pass p4 compilation under range partition
+		+ TODO: Pass p4 compilation under hash partition
+		+ TODO: Send PUT + READ to check if client-side seq is correct
+* TODO: Update related work
 * TODO: Implement replay-based recovery
 	- TODO: Replay cache admissions for in-switch cache based on in-switch snapshot
 	- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations

@@ -1575,6 +1575,8 @@ void *run_server_snapshotserver(void *param) {
 
 	while (!transaction_running) {}
 
+	char sendbuf[MAX_BUFSIZE];
+	int sendsize = 0;
 	char recvbuf[MAX_BUFSIZE];
 	int recvsize = 0;
 	bool is_timeout = false;
@@ -1598,14 +1600,16 @@ void *run_server_snapshotserver(void *param) {
 			continue;
 		}
 
+		snapshot_signal_t cur_signal(recvbuf, recvsize);
+
 		// Fix duplicate packet
-		if (control_type == *((int *)recvbuf) && snapshotid == *((int *)(recvbuf + sizeof(int)))) {
+		if (control_type != SNAPSHOT_CLEANUP && control_type == cur_signal.control_type() && snapshotid == cur_signal.snapshotid()) {
 			printf("[server.snapshotserver] receive duplicate control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
 			continue;
 		}
 		else {
-			control_type = *((int *)recvbuf);
-			snapshotid = *((int *)(recvbuf + sizeof(int)));
+			control_type = cur_signal.control_type();
+			snapshotid = cur_signal.snapshotid();
 		}
 
 		if (control_type == SNAPSHOT_CLEANUP) {
@@ -1617,14 +1621,18 @@ void *run_server_snapshotserver(void *param) {
 			db_wrappers[local_server_logical_idx].stop_snapshot();
 			
 			// sendback SNAPSHOT_CLEANUP_ACK to controller
-			udpsendto(server_snapshotserver_udpsock_list[local_server_logical_idx], &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
+			snapshot_signal_t snapshot_cleanupack_signal(SNAPSHOT_CLEANUP_ACK, snapshotid);
+			sendsize = snapshot_cleanupack_signal.serialize(sendbuf, MAX_BUFSIZE);
+			udpsendto(server_snapshotserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
 		}
 		else if (control_type == SNAPSHOT_START) {
 			INVARIANT(!server_issnapshot_list[local_server_logical_idx]);
 			db_wrappers[local_server_logical_idx].make_snapshot(snapshotid);
 			
 			// sendback SNAPSHOT_START_ACK to controller
-			udpsendto(server_snapshotserver_udpsock_list[local_server_logical_idx], &SNAPSHOT_START_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
+			snapshot_signal_t snapshot_startack_signal(SNAPSHOT_START_ACK, snapshotid);
+			sendsize = snapshot_startack_signal.serialize(sendbuf, MAX_BUFSIZE);
+			udpsendto(server_snapshotserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
 		}
 		else {
 			printf("[server.snapshotserver] invalid control type: %d\n", control_type);
@@ -1653,6 +1661,8 @@ void *run_server_snapshotdataserver(void *param) {
 
 	while (!transaction_running) {}
 
+	char sendbuf[MAX_BUFSIZE];
+	int sendsize = 0;
 	bool is_timeout = false;
 	int control_type = -1;
 	int snapshotid = -1;
@@ -1687,32 +1697,37 @@ void *run_server_snapshotdataserver(void *param) {
 
 		if (control_type == SNAPSHOT_SENDDATA) {
 			// sendback SNAPSHOT_SENDDATA_ACK to controller
-			udpsendto(server_snapshotdataserver_udpsock_list[local_server_logical_idx], &SNAPSHOT_SENDDATA_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotdataserver");
+			snapshot_signal_t snapshot_senddataack_signal(SNAPSHOT_SENDDATA_ACK, snapshotid);
+			sendsize = snapshot_senddataack_signal.serialize(sendbuf, MAX_BUFSIZE);
+			udpsendto(server_snapshotdataserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotdataserver");
 
-			// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
-			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
+			// mark snapshot data is being processed
 			server_issnapshot_list[local_server_logical_idx] = true;
 
 			// parse in-switch snapshot data
-			int32_t tmp_serverbytes = *((int32_t *)(recvbuf.array() + sizeof(int) + sizeof(int)));
+			int tmp_snapshotid = 0;
+			int32_t tmp_serverbytes = 0;
+			uint16_t tmp_serveridx = 0;
+			int32_t tmp_recordcnt = 0;
+			std::vector<netreach_key_t> tmp_keyarray;
+			std::vector<val_t> tmp_valarray;
+			std::vector<uint32_t> tmp_seqarray;
+			std::vector<bool> tmp_statarray;
+
+			deserialize_snapshot_senddata(recvbuf, SNAPSHOT_SENDDATA, tmp_snapshotid, tmp_serverbytes, tmp_serveridx. tmp_recordcnt, tmp_keyarray, tmp_valarray, tmp_seqarray, tmp_statarray);
+
 			INVARIANT(recvbuf.size() == tmp_serverbytes);
-			uint16_t tmp_serveridx = *((uint16_t *)(recvbuf.array() + sizeof(int) + sizeof(int) + sizeof(int32_t)));
 			INVARIANT(tmp_serveridx == global_server_logical_idx);
-			int32_t tmp_recordcnt = *((int32_t *)(recvbuf.array() + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
 
 			std::map<netreach_key_t, snapshot_record_t> tmp_inswitch_snapshot;
-			int tmp_offset = sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
-			for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
-				netreach_key_t tmp_key;
+			for (int tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
 				snapshot_record_t tmp_record;
-				uint32_t tmp_keysize = tmp_key.deserialize(recvbuf.array() + tmp_offset, recvbuf.size() - tmp_offset);
-				tmp_offset += tmp_keysize;
-				uint32_t tmp_valsize = tmp_record.val.deserialize(recvbuf.array() + tmp_offset, recvbuf.size() - tmp_offset);
-				tmp_offset += tmp_valsize;
-				tmp_record.seq = *((uint32_t *)(recvbuf.array() + tmp_offset));
-				tmp_offset += sizeof(uint32_t);
-				tmp_record.stat = *((bool *)(recvbuf.array() + tmp_offset));
-				tmp_offset += sizeof(bool);
+
+				netreach_key_t tmp_key = tmp_keyarray[tmp_recordidx];
+				tmp_record.val = tmp_valarray[tmp_recordidx];
+				tmp_record.seq = tmp_seqarray[tmp_recordidx];
+				tmp_record.stat = tmp_statarray[tmp_recordidx];
+
 				tmp_inswitch_snapshot.insert(std::pair<netreach_key_t, snapshot_record_t>(tmp_key, tmp_record));
 			}
 
