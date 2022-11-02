@@ -1,8 +1,41 @@
 # README for benchmark (running guide)
 
-- method: farreach / nocache / netcache / distfarreach / distnocache / distcache
+### Method
+farreach / nocache / netcache / distfarreach / distnocache / distcache
 
-## Environment installation
+### Machine Requirements:</br>
+- 1 Main Client </br>
+- 1 Secondary Client </br>
+- 2 Servers </br>
+- 1 Physical Switch </br>
+
+</br>
+
+Table of Contents
+====================================
+1. System Preperation
+   1. [Environment Installation](#11-environment-installation)
+   2. [Code Compilation](#12-code-compilation)
+   3. [Testbed Configuration](#13-testbed-configuration)
+
+</br>
+
+2. Data Preperation
+   1. [Loading Procedure](#21-loading-phase)
+   2. [Keydump Procedure](#22-workload-analysis--dump-keys)
+
+</br>
+
+3. Running Workloads
+   1. [Dynamic Workload](#31-evaluate-dynamic-workloads)
+   2. [Static Workload](#32-evaluate-static-workload-single-switch)
+
+
+</br></br>
+
+Contents
+====================================
+## 1.1 Environment Installation
 
 - Install boost
 	+ `sudo apt-get install libboost-all-dev`
@@ -18,7 +51,9 @@
 	+ Please use openjdk-8/11 to avoid version-related issues
 - Tofino compiler version: 8.9.1
 
-## Code compilation
+</br>
+
+## 1.2 Code compilation
 
 - Update scripts/common.sh for your testbed accordingly
 	+ Set specific USER (username), SECONDARY_CLIENT, and XXX_PATH (directory path)
@@ -46,121 +81,152 @@
 		* Under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
 			- `bash compile.sh` (NOTE: if we have already compiled for all methods, we do NOT need to run this command unless we change in-switch implementation)
 
-## Prepartion phase
+</br>
 
+## 1.3 Testbed Configuration
 - Building your testbed
 	+ Modify scripts/local/configure_\<client/server/switchos\>.sh based on your own testbed settings
 	+ In each physical client, run `bash scripts/local/confiugre_client.sh`
 	+ In each physical server, run `bash scripts/local/confiugre_server.sh`
 	+ In each physical switch, run `bash scripts/local/confiugre_switchos.sh`
-- Loading phase (execute only once)
-	+ Under the main client, perform the loading phase and backup for evaluation time reduction
-		* ~~Disable server_rotation in common/helper.h~~
-		* ~~Sync nocache/ including the new nocache/config.ini to all machines and re-compile~~
-		* Run `bash scripts/remote/prepare_load.sh`, which will copy recordload/config.ini to switch/server::nocache/config.ini
-		* In switch, launch and configure nocache switch by start_switch.sh and launchswitchtestbed.sh in nocache/
-		* Run `bash scripts/remote/load_and_backup.sh`, which will launch and kill servers automatically
-			- NOTE: at the end of load_and_backup.sh, we copy nocache/config.ini to resume switch/server::nocache/config.ini
-- Workload analysis for each workload (e.g., workloada)
-	+ Under the main client
-		* Update workload_name with the workload in keydump/config.ini
-		* Automatic way
-			- Run `bash scripts/remote/keydump_and_sync.sh`, which will sync required files to clients/server after keydump
-		* ~~Manual way (DEPRECATED)~~
-			- ~~`cd benchmark/ycsb; ./bin/ycsb run keydump; cd ../../`~~
-				+ Dump hottest/nearhot/coldest keys into benchmark/output/<workloadname>-\*.out for warmup phase later
-				+ Dump bottleneckt serveridx for different server rotation scales for server rotation later
-				+ Pre-generate workload files in benchmark/output/<workloadname>-pregeneration/ for server rotation later
-			- ~~`cd benchmark/ycsb; python generate_dynamicrules.py <workloadname>; cd ../../`~~
-				+ Generates key popularity changing rules in benchmark/output/<workloadname>-\*rules/ for dynamic pattern later
-			- ~~`bash scripts/remote/synckeydump.sh <workloadname>` to sync the above files of the workload to another client~~
 
-## Dynamic running
+</br></br>
 
-- Given a method (e.g., farreach) and a workload (e.g., workloada)
-	* Set workload_mode = 1 and workload_name = workload in method/config.ini
-		- Keep server_physical_num=2, server0::server_logical_idxes=0, and server1:;server_logical_idxes=1
-	* Set scripts/common.sh accordingly
-- Re-compile code for server rotation if necessary
-	+ Disable server_rotation in common/helper.h
-	+ `bash scripts/remote/sync.sh` to sync code to all machines
-	+ Re-compile clients/servers/switchos as mentioned before
-- Under each physical switch
-	+ Create a terminal and run `cd method/tofino; su; bash start_switch.sh`
-	+ Create a terminal and run `cd method; su; bash localscripts/launchswitchtestbed.sh`
-	+ NOTE: if encounter any problem, check tmp_\*.out and tofino/tmp_\*.out in switch first
-		* Run `cd method; su; bash localscripts/stopswitchtestbed.sh` before next time of running
+## 2.1 Loading Phase
+- Under the main client, perform the loading phase and backup for evaluation time reduction
+	+ Run `bash scripts/remote/prepare_load.sh`, which will copy recordload/config.ini to switch/server::nocache/config.ini
+	+ In switch, launch and configure nocache switch by start_switch.sh and launchswitchtestbed.sh in nocache/
+	+ Run `bash scripts/remote/load_and_backup.sh`, which will launch and kill servers automatically
+    	+ NOTE: at the end of load_and_backup.sh, we copy nocache/config.ini to resume switch/server::nocache/config.ini
+
+</br>
+
+## 2.2 Workload Analysis & Dump Keys
 - Under the main client
-	+ Run `bash scripts/remote/test_dynamic.sh` to evaluate under dynamic pattern
-	+ ~~Manual way (DEPRECATED)~~
-		+ ~~Run `bash scripts/remotes/launchservertestbed.sh`~~
-			* ~~Run `cd method; ./warmup_client; cd ..` to pre-admit hot keys~~
-		+ ~~NOTE: if encounter nay problem, check tmp_\*.out in each server first~~
-			* ~~Run `bash scripts/remote/stopservertestbed.sh` before next time of running~~
-		+ ~~Launch clients~~
-			- ~~Under client 1~~
-				+ ~~Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 1`~~
-			- ~~Under client 0~~
-				+ ~~Run `cd benchmark/ycsb; ./bin/ycsb run method -pi 0`~~
-	- NOTE: each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-<dynamicpattern>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-hotin-client0.out)
-- After running
-	+ Under each physical switch, run `cd method; su; bash localscripts/stopswitchtestbed.sh`
-	+ Under main client, run `bash scripts/remote/stopservertestbed.sh`
-- Aggregate statistics
-	+ Run `bash scripts/remote/calculate_statistics.sh` to get aggregated statistics
+  - Update `<workload_name>` with the workload in file `keydump/config.ini`
+  - (Recommend)Automatic way
+    - Run `bash scripts/remote/keydump_and_sync.sh`, which will sync required files to clients/server after keydump
+  - (DEPRECATED) Manual way 
+    - `cd benchmark/ycsb; ./bin/ycsb run keydump; cd ../../`
+  		+ Dump hottest/nearhot/coldest keys into `benchmark/output/<workloadname>-\*.out` for warmup phase later
+  		+ Dump bottleneckt serveridx for different server rotation scales for server rotation later
+  		+ Pre-generate workload files in `benchmark/output/<workloadname>-pregeneration/` for server rotation later
+  	- `cd benchmark/ycsb; python generate_dynamicrules.py <workloadname>; cd ../../`
+  		+ Generates key popularity changing rules in `benchmark/output/<workloadname>-\*rules/` for dynamic pattern later
+  	- `bash scripts/remote/deprecated/synckeydump.sh <workloadname>` to sync the above files of the workload to another client
 
-## Static running of single-switch method (e.g., farreach/nocache/netcache)
+</br></br>
 
-- Given a method (e.g., farreach) and a workload (e.g., workloada)
-	+ In method/config.ini
-		* Set workload_name = workload, workload_mode = 0
-		* Set bottleneck_serveridx_for_rotation and server_total_logical_num_for_rotation accordingly
-			- NOTE: config.ini must have the correct bottleneckidx and rotationscal, otherwise PregeneratedWorkload will choose the incorrect requests of non-running servers and hence timeout
-	+ Set scripts/common.sh accordingly
-- Re-compile code for server rotation if necessary
-	+ Enable server_rotation in common/helper.h
-	+ `bash scripts/remote/sync.sh` to sync code to all machines
-	+ Re-compile clients/servers/switchos as mentioned before
-- Phase 0: setup hot keys and forwarding rules into switch
-	+ `bash scripts/remote/prepare_server_rotation.sh` to generate and sync config.ini for setup phase
-	+ Launch switch based on the new config.ini as mentioned in dynamic running
-	+ ~~Manual way (DEPRECATED)~~
-		+ ~~Launch server and controller based on the new config.ini as mentioned in dynamic running~~
-		+ ~~If the method is not nocache/distnocache, `cd method; ./warmup_client` to pre-admit hot keys into switch~~
-		+ ~~`bash scripts/remote/stopservertestbed.sh` to stop server and controller~~
-- Server rotation
-	+ `bash scripts/remote/test_server_rotation.sh`
-		* Phase 1: the first rotation (physical server 0 runs the bottleneck server)
-		* Phase 2: each subsequent rotation (physical server 0 runs the bottleneck server; physical server 1 runs each non-bottleneck server)
-		* NOTE: each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-static<staticscale>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out)
-			- NOTE: you can check the statistics during server rotation to see whether the result is reasonable
-	+ `bash scripts/remote/stop_server_rotation.sh`
-	+ NOTE: if some rotation is failed, you can use scripts/remote/test_server_rotation_\<p1/p2\>.sh to get the result of the rotation
-		* [IMPORTANT] backup the existing statistics file first to avoid mis-overwriting
-		* For example, if strid=server-x is missed, run `bash scripts/remote/test_server_rotation_p1.sh 1`
-		* For example, if strid=server-x-y is missed, run `bash scripts/remote/test_server_rotation_p2.sh 1 y`
-	+ NOTE: we limit the execution time of each rotation as 10 seconds in all methods for fair comparisons
-		* Involved files: ycsb/core/Client.java
-		* DEPRECATED: ycsb/core/TerminatorThread.java, scripts/local/calculate_statistics_helper.py
-- Aggregate statistics
-	+ Run `bash scripts/remote/calculate_statistics.sh` to get aggregated statistics
+## 3.1 Evaluate Dynamic Workloads
+Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.
 
-## Parameter sensitivity
+1.  <u>[Under Main Client]</u> Prepare config files
+    - Set file {method}/config.ini:
+      - `workload_mode`=1
+      - `workload_name`={workload} 
+      - `server_physical_num`=2
+      - `server0::server_logical_idxes`=0
+      - `server1::server_logical_idxes`=1
+    - Set file scripts/common.sh accordingly
 
-- Change parameters
-	+ For write ratio, change read/updateproportion in benchmark/ycsb/workloads/synthetic
-	+ For value size, change fieldlength in benchmark/ycsb/workloads/synthetic
-	+ For skewness, change ZIPFIAN_CONSTANT in benchmark/ycsb/core/generator/ZipfianGenerator + sync_file.sh + re-compile ycsb
-- IMPORTANT NOTE
-	- Under static pattern, each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-static<staticscale>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out) without parameter info
-	- NOTE: before changing parameter for the next time of experiment
-		+ Run `bash scripts/remote/calculate_statistics.sh` to get results of the current parameter
-		+ Backup the statistics files of the current parameter if necessary, which will be overwritten next time
-	- ~~(NOT run dynamic pattern here) under dynamic pattern, each physical client should dump statistics into benchmark/output/<workloadname>-statistics/<method>-<dynamicpattern>-client<physicalidx>.out (e.g., benchmark/output/workloada-statistics/farreach-hotin-client0.out)~~
 
-## Appendix
+2. <u>[Under Main Client]</u> Check SERVER_ROTATION option
+   - In common/helper.h, disable `SERVER_ROTATION` 
+   - Sync code to all machines: `bash scripts/remote/sync.sh`
+   - Re-compile clients/servers/switchos as mentioned before
 
-- Static server idx for different workloads and scale
+
+3. <u>[Under Physical Switch]</u> Start switch services
+   - Create two connection to switch machine
+   - Start switch on connection 1 by: 
+     - `cd {method}/tofino` 
+     - `su`
+     - `bash start_switch.sh`
+   - Launch switch testbed on connection 2 by:
+     - `cd {method}`
+     - `su`
+     - `bash localscripts/launchswitchtestbed.sh`
+
+	*NOTE: if encounter any problem, check tmp_\*.out and tofino/tmp_\*.out in switch first*
+
+
+4. <u>[Under Main Client]</u> Start dynamic evaluation
+   - Evaluate by: `bash scripts/remote/test_dynamic.sh` </br>
+
+
+5. <u>[Under Main Client & Physical Switch]</u> Evaluation cleanup
+   - Under physcial switch, stop service by:
+     - `cd method`
+     - `su`
+     - `bash localscripts/stopswitchtestbed.sh`
+   - Under main client, run `bash scripts/remote/stopservertestbed.sh`
+
+
+6. <u>[Under Main Client]</u> Aggregate statistics
+   - Calculate aggregated statistics by `bash scripts/remote/calculate_statistics.sh` 
+
+</br></br>
+
+## 3.2 Evaluate Static Workload (Single-Switch)
+Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.
+
+1. <u>[Under Main Client]</u> Prepare Config Files
+   - Set file {method}/config.ini:
+     - `workload_name`={workload}
+     - `workload_mode`=0
+     - `bottleneck_serveridx_for_rotation`
+     - `server_total_logical_num_for_rotation`
+
+		*NOTE: config.ini must have the correct bottleneckidx and rotationscal, otherwise PregeneratedWorkload will choose the incorrect requests of non-running servers and hence timeout*
+   - Set scripts/common.sh accordingly
+
+2. <u>[Under Main Client]</u> Check SERVER_ROTATION option
+   - In common/helper.h, disable `SERVER_ROTATION` 
+   - Sync code to all machines: `bash scripts/remote/sync.sh`
+   - Re-compile clients/servers/switchos as mentioned before
+
+3. <u>[Under Main Client]</u> Setup hot keys and forwarding rules into switch
+   - Generate and sync config.ini for setup phase by: `bash scripts/remote/prepare_server_rotation.sh`
+
+4. <u>[Under Physical Switch]</u> Start switch services
+   - Create two connection to switch machine
+   - Start switch on connection 1 by: 
+     - `cd {method}/tofino` 
+     - `su`
+     - `bash start_switch.sh`
+   - Launch switch testbed on connection 2 by:
+     - `cd {method}`
+     - `su`
+     - `bash localscripts/launchswitchtestbed.sh`
+
+	*NOTE: if encounter any problem, check tmp_\*.out and tofino/tmp_\*.out in switch first*
+
+5. <u>[Under Main Client]</u> Start static evaluation by server rotation
+   - Start evaluation by `bash scripts/remote/test_server_rotation.sh`
+      - Phase 1: the first rotation (physical server 0 runs the bottleneck server)
+      - Phase 2: each subsequent rotation (physical server 0 runs the bottleneck server; physical server 1 runs each non-bottleneck server) </br>
+   - Make up failed iteration
+     - If strid=server-x is missed, run: `bash scripts/remote/test_server_rotation_p1.sh 1`
+     - If strid=server-x-y is missed, run: `bash scripts/remote/test_server_rotation_p2.sh 1 y`
+
+6. <u>[Under Main Client & Physical Switch]</u> Evaluation cleanup
+   - Under physcial switch, stop service by:
+     - `cd method`
+     - `su`
+     - `bash localscripts/stopswitchtestbed.sh`
+   - Under main client, run `bash scripts/remote/stop_server_rotation.sh`
+
+7. <u>[Under Main Client]</u> Aggregate statistics
+   - Calculate aggregated statistics by `bash scripts/remote/calculate_statistics.sh` 
+
+
+</br>
+</br>
+
+Appendix
+====================================
+
+## Static server idx for different workloads and scale
 
 | Workload Name | Scale | Bottleneck Serveridx |
 | --- | --- | --- |
@@ -169,16 +235,28 @@
 | workloada | 64 | 59 |
 | workloada | 128 | 118 |
 
+</br>
+
+## Parameter sensitivity
+
+- Change parameters
+	+ For write ratio, change read/updateproportion in benchmark/ycsb/workloads/synthetic
+	+ For value size, change fieldlength in benchmark/ycsb/workloads/synthetic
+	+ For skewness, change ZIPFIAN_CONSTANT in benchmark/ycsb/core/generator/ZipfianGenerator + sync_file.sh + re-compile ycsb
+- IMPORTANT NOTE
+	- Under static pattern, each physical client should dump statistics into benchmark/output/{workloadname}-statistics/{method}-static{staticscale}-client{physicalidx}.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out) without parameter info
+	- NOTE: before changing parameter for the next time of experiment
+		+ Run `bash scripts/remote/calculate_statistics.sh` to get results of the current parameter
+		+ Backup the statistics files of the current parameter if necessary, which will be overwritten next time
+
+</br>
+
 ## Trial of in-memory KVS to reproduce NetCache
 
 - Prepare TommyDS
 	+ Run `bash scripts-inmemory/local/changeto_inmemory_testbed.sh` to perform the following steps
 		+ In common/helper.h: uncomment `USE_TOMMYDS_KVS`
 		+ In farreach/Makefile: use `TOMMYDS_LDLIBS` instead of `ROCKSDB_LDLIBS` for `server`
-		+ ~~Replace farreach/config.ini with farreach/configs/config.ini.inmemory~~
-		+ ~~In scripts-inmemory/remote/sync.sh, uncomment `syncfiles_toall tommyds-2.2 \*`~~
-		+ ~~In farreach/tofino/netbufferv4.p4, uncomment `USE_BFSDE920`~~
 	+ Run `bash scripts-inmemory/remote/sync.sh` to sync required files including tommyds-2.2/ to all machines
 	+ In each server, enter tommyds-2.2/ and run `make staticlib` to compile TommyDS before `bash scripts/remote/makeserver.sh`
-	+ ~~In each switch, enter farreach/tofino and run `su; bash compile.sh` to compile switch code~~
 - NOTE: use `git checkout -- <filename>` to cancel the changes of the above files
