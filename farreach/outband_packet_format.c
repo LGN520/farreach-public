@@ -1,20 +1,20 @@
 #include "outband_packet_format.h"
 
 SnapshotSignal::SnapshotSignal(int control_type, int snapshotid) {
-	this._control_type = control_type;
-	this._snapshotid = snapshotid;
+	this->_control_type = control_type;
+	this->_snapshotid = snapshotid;
 }
 
 SnapshotSignal::SnapshotSignal(const char *buf, int recv_size) {
-	deserialzie(buf, recv_size);
+	deserialize(buf, recv_size);
 }
 
 int SnapshotSignal::control_type() const {
-	return this._control_type;
+	return this->_control_type;
 }
 
 int SnapshotSignal::snapshotid() const {
-	return this._snapshotid;
+	return this->_snapshotid;
 }
 
 int SnapshotSignal::serialize(char *buf, int max_size) {
@@ -22,10 +22,10 @@ int SnapshotSignal::serialize(char *buf, int max_size) {
 
 	int offset = 0;
 
-	memcpy(buf + offset, &this._control_type, sizeof(int));
+	memcpy(buf + offset, &this->_control_type, sizeof(int));
 	offset += sizeof(int);
 
-	memcpy(buf + offset, &this._snapshotid, sizeof(int));
+	memcpy(buf + offset, &this->_snapshotid, sizeof(int));
 	offset += sizeof(int);
 
 	return offset;
@@ -36,16 +36,16 @@ void SnapshotSignal::deserialize(const char* buf, int recv_size) {
 
 	int offset = 0;
 
-	memcpy(&this._control_type, buf + offset, sizeof(int));
+	memcpy(&this->_control_type, buf + offset, sizeof(int));
 	offset += sizeof(int);
 
-	memcpy(&this._snapshotid, buf + offset, sizeof(int));
+	memcpy(&this->_snapshotid, buf + offset, sizeof(int));
 	offset += sizeof(int);
 }
 
 // Utils
 
-static int dynamic_serialize_snapshot_getdata_ack(dynamic_array_t &dynamic_buf, int control_type, int max_pipelinenum, int max_logicalservernum, uint32_t* perpipeline_recordcnt, uint16_t** perpipeline_serveridxarray, netreach_key_t** perpipeline_keyarray, val_t** perpipeline_valarray, uint32_t** perpipeline_seqarray, bool** perpipeline_statarray, uint64_t* perlogicalserver_specialcase_bwcost) {
+int dynamic_serialize_snapshot_getdata_ack(dynamic_array_t &dynamic_buf, int control_type, int max_pipelinenum, int max_logicalservernum, uint32_t* perpipeline_recordcnt, uint16_t** perpipeline_serveridxarray, netreach_key_t** perpipeline_keyarray, val_t** perpipeline_valarray, uint32_t** perpipeline_seqarray, bool** perpipeline_statarray, uint64_t* perlogicalserver_specialcase_bwcost) {
 
 	// per-server data
 	dynamic_array_t tmp_sendbuf_list[max_logicalservernum]; // per-record data for each server
@@ -95,7 +95,7 @@ static int dynamic_serialize_snapshot_getdata_ack(dynamic_array_t &dynamic_buf, 
 
 	// prepare header of snapshot data and per-server data
 	int total_bytes = sizeof(int) + sizeof(int32_t); // leave 8B for SNAPSHOT_GETDATA_ACK and total_bytes
-	for (uint16_t tmp_serveridx = 0; tmp_serveridx < max_servernum; tmp_serveridx++) {
+	for (uint16_t tmp_serveridx = 0; tmp_serveridx < max_logicalservernum; tmp_serveridx++) {
 		if (tmp_record_cnts[tmp_serveridx] > 0) {
 			int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int) + sizeof(uint64_t);
 
@@ -126,11 +126,11 @@ static int dynamic_serialize_snapshot_getdata_ack(dynamic_array_t &dynamic_buf, 
 	return total_bytes;
 }
 
-static void deserialize_snapshot_getdata_ack(dynamic_array_t &dynamic_buf, const int control_type, int &total_bytes, std::vector<int> &perserver_bytes, std::vector<uint16_t> &perserver_serveridx, std::vector<int> &perserver_recordcnt, std::vector<uint64_t> &perserver_specialcase_bwcost, std::vector<std::vector<netreach_key_t>> &perserver_keyarray, std::vector<std::vector<val_t>> &perserver_valarray, std::vector<std::vector<uint32_t>> &perserver_seqarray, std::vector<std::vector<bool>> &perserver_statarray) {
+void deserialize_snapshot_getdata_ack(dynamic_array_t &dynamic_buf, const int control_type, int &total_bytes, std::vector<int> &perserver_bytes, std::vector<uint16_t> &perserver_serveridx, std::vector<int> &perserver_recordcnt, std::vector<uint64_t> &perserver_specialcase_bwcost, std::vector<std::vector<netreach_key_t>> &perserver_keyarray, std::vector<std::vector<val_t>> &perserver_valarray, std::vector<std::vector<uint32_t>> &perserver_seqarray, std::vector<std::vector<bool>> &perserver_statarray) {
 	deserialize_snapshot_getdata_ack(dynamic_buf.array(), dynamic_buf.size(), control_type, total_bytes, perserver_bytes, perserver_serveridx, perserver_recordcnt, perserver_specialcase_bwcost, perserver_keyarray, perserver_valarray, perserver_seqarray, perserver_statarray);
 }
 
-static void deserialize_snapshot_getdata_ack(char *buf, int maxsize, const int control_type, int &total_bytes, std::vector<int> &perserver_bytes, std::vector<uint16_t> &perserver_serveridx, std::vector<int> &perserver_recordcnt, std::vector<uint64_t> &perserver_specialcase_bwcost, std::vector<std::vector<netreach_key_t>> &perserver_keyarray, std::vector<std::vector<val_t>> &perserver_valarray, std::vector<std::vector<uint32_t>> &perserver_seqarray, std::vector<std::vector<bool>> &perserver_statarray) {
+void deserialize_snapshot_getdata_ack(char *buf, int maxsize, const int control_type, int &total_bytes, std::vector<int> &perserver_bytes, std::vector<uint16_t> &perserver_serveridx, std::vector<int> &perserver_recordcnt, std::vector<uint64_t> &perserver_specialcase_bwcost, std::vector<std::vector<netreach_key_t>> &perserver_keyarray, std::vector<std::vector<val_t>> &perserver_valarray, std::vector<std::vector<uint32_t>> &perserver_seqarray, std::vector<std::vector<bool>> &perserver_statarray) {
 	// FORMAT
 	// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes (including SNAPSHOT_GETDATA_ACK), per-server data>
 	// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, uint64_t cur_specialcase_bwcost, per-record data>
@@ -200,7 +200,7 @@ static void deserialize_snapshot_getdata_ack(char *buf, int maxsize, const int c
 	}
 }
 
-static int dynamic_serialize_snapshot_senddata(dynamic_array_t &dynamic_buf, int control_type, int snapshotid, uint16_t tmpserver_serveridx, int tmpserver_recordcnt, std::vector<netreach_key_t> &tmpserver_keyarray, std::vector<val_t> &tmpserver_valarray, std::vector<uint32_t> &tmpserver_seqarray, std::vector<bool> &tmpserver_statarray) {
+int dynamic_serialize_snapshot_senddata(dynamic_array_t &dynamic_buf, int control_type, int snapshotid, uint16_t tmpserver_serveridx, int tmpserver_recordcnt, std::vector<netreach_key_t> &tmpserver_keyarray, std::vector<val_t> &tmpserver_valarray, std::vector<uint32_t> &tmpserver_seqarray, std::vector<bool> &tmpserver_statarray) {
 	// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
 	// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 
@@ -239,7 +239,8 @@ static int dynamic_serialize_snapshot_senddata(dynamic_array_t &dynamic_buf, int
 		offset += sizeof(uint32_t);
 
 		// stat
-		dynamic_buf.dynamic_memcpy(offset, (char *)&tmpserver_statarray[i], sizeof(bool));
+		bool tmpstat = tmpserver_seqarray[i];
+		dynamic_buf.dynamic_memcpy(offset, (char *)&tmpstat, sizeof(bool));
 		offset += sizeof(bool);
 	}
 
@@ -249,7 +250,7 @@ static int dynamic_serialize_snapshot_senddata(dynamic_array_t &dynamic_buf, int
 	return offset;
 }
 
-static void deserialize_snapshot_senddata(dynamic_array_t &dynamic_buf, const int control_type, int &snapshotid, int &tmpserver_bytes, uint16_t &tmpserver_serveridx, int &tmpserver_recordcnt, std::vector<netreach_key_t> &tmpserver_keyarray, std::vector<val_t> &tmpserver_valarray, std::vector<uint32_t> &tmpserver_seqarray, std::vector<bool> &tmpserver_statarray) {
+void deserialize_snapshot_senddata(dynamic_array_t &dynamic_buf, const int control_type, int &snapshotid, int &tmpserver_bytes, uint16_t &tmpserver_serveridx, int &tmpserver_recordcnt, std::vector<netreach_key_t> &tmpserver_keyarray, std::vector<val_t> &tmpserver_valarray, std::vector<uint32_t> &tmpserver_seqarray, std::vector<bool> &tmpserver_statarray) {
 	// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
 	// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 
@@ -305,7 +306,7 @@ static void deserialize_snapshot_senddata(dynamic_array_t &dynamic_buf, const in
 }
 
 // FORMAT: <int num>, <Key k0, int seq0>, <Key k1, int seq1>, ...
-static int dynamic_serialize_upstream_backup_notification(dynamic_array_t &dynamic_buf, std::vector<std::vector<netreach_key_t>> &perserver_keyarray, std::vector<std::vector<uint32_t>> &perserver_seqarray) {
+int dynamic_serialize_upstream_backup_notification(dynamic_array_t &dynamic_buf, std::vector<std::vector<netreach_key_t>> &perserver_keyarray, std::vector<std::vector<uint32_t>> &perserver_seqarray) {
 	int offset = 0;
 
 	// skip num

@@ -664,7 +664,7 @@ void *run_controller_snapshotclient(void *param) {
 				std::vector<int> perserver_bytes;
 				std::vector<uint16_t> perserver_serveridx;
 				std::vector<int> perserver_recordcnt;
-				std::vector<uint64_t> perserver_specicalcase_bwcost;
+				std::vector<uint64_t> perserver_specialcase_bwcost;
 				std::vector<std::vector<netreach_key_t>> perserver_keyarray;
 				std::vector<std::vector<val_t>> perserver_valarray;
 				std::vector<std::vector<uint32_t>> perserver_seqarray;
@@ -747,9 +747,9 @@ void *run_controller_snapshotclient(void *param) {
 		fprintf(tmpfd, "totalbwcost(MiB/s): %f\n", bwcost_rate);
 		fprintf(tmpfd, "localbwcost(MiB/s):");
 		for (int i = 0; i < max_server_total_logical_num; i++) {
-			printf(tmpfd, " %f", localcp_bwcost_rates[i]);
+			fprintf(tmpfd, " %f", localcp_bwcost_rates[i]);
 		}
-		printf(tmpfd, "\n");
+		fprintf(tmpfd, "\n");
 		fflush(tmpfd);
 		fclose(tmpfd);
 
@@ -780,7 +780,7 @@ void *run_controller_snapshotclient_cleanup_subthread(void *param) {
 
 	char sendbuf[MAX_BUFSIZE];
 	snapshot_signal_t snapshot_cleanup_signal(SNAPSHOT_CLEANUP, controller_snapshotid);
-	int signalsize = _snapshot_cleanup_signal.serialize(sendbuf, MAX_BUFSIZE);
+	int signalsize = snapshot_cleanup_signal.serialize(sendbuf, MAX_BUFSIZE);
 	//memcpy(sendbuf, &SNAPSHOT_CLEANUP, sizeof(int));
 	//memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
 

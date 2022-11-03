@@ -418,8 +418,8 @@ table another_eg_port_forward_tbl {
 //#ifdef ENABLE_LARGEVALUEBLOCK
 	size: 512;
 //#else
-	size: 256;
-#endif
+//	size: 256;
+//#endif
 }
 
 // Stage 9

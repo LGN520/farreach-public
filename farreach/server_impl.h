@@ -1714,7 +1714,7 @@ void *run_server_snapshotdataserver(void *param) {
 			std::vector<uint32_t> tmp_seqarray;
 			std::vector<bool> tmp_statarray;
 
-			deserialize_snapshot_senddata(recvbuf, SNAPSHOT_SENDDATA, tmp_snapshotid, tmp_serverbytes, tmp_serveridx. tmp_recordcnt, tmp_keyarray, tmp_valarray, tmp_seqarray, tmp_statarray);
+			deserialize_snapshot_senddata(recvbuf, SNAPSHOT_SENDDATA, tmp_snapshotid, tmp_serverbytes, tmp_serveridx, tmp_recordcnt, tmp_keyarray, tmp_valarray, tmp_seqarray, tmp_statarray);
 
 			INVARIANT(recvbuf.size() == tmp_serverbytes);
 			INVARIANT(tmp_serveridx == global_server_logical_idx);

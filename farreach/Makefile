@@ -111,6 +111,10 @@ UTILS_OBJECTS :=
 #CLEAN += seq_cache.o
 #UTILS_OBJECTS += seq_cache.o
 
+DEPS += outband_packet_format.d
+CLEAN += outband_packet_format.d
+UTILS_OBJECTS += outband_packet_format.o
+
 ##############################################################################
 
 CPPFLAGS += $(INCDIR)

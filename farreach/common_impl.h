@@ -12,6 +12,7 @@
 #include "message_queue_impl.h"
 #include "../common/iniparser/iniparser_wrapper.h"
 #include "../common/workloadparser/parser.h"
+#include "outband_packet_format.h"
 
 /*
  * Class and alias
