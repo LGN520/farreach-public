@@ -36,13 +36,13 @@
 		* Implement controller part of upstream backup
 	+ HuanCheng
 		* Evaluation
-			* TODO: Re-run two numbers of exp1 latency to make a double-check
-			* TODO: Add LOAD in exp2 on different worklads
-				- TODO: Add doInsert for PregeneratedWorklad
-				- TODO: Still retrieve loading phase files, yet use `./bin/ycsb load` instead of `./bin/ycsb run`
+			* Re-run two numbers of exp1 latency to make a double-check
+			* Add LOAD in exp2 on different worklads
+				- Add doInsert for PregeneratedWorklad
+				- Still retrieve loading phase files, yet use `./bin/ycsb load` instead of `./bin/ycsb run`
 			* TODO: Add Twitter Traces for exp2 on different workloads
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
-			* TODO: Finish exp4 on dynamic pattern
+			* Finish exp4 on dynamic pattern
 			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
 				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
 				- TODO: Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost (discuss w/ Siyuan first)
