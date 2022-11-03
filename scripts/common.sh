@@ -1,6 +1,6 @@
 function readini() {
 	tmpfile=$1
-	result=$(awk -F '=' -v tmpsection=[$2] -v tmpkey=$3 '$0==tmpsection {flag = 1; next} /\[/ {flag = 0; next} flag && $1==tmpkey {print $2}' ${tmpfile})
+	result=$(awk -F '=' -v tmpsection=[$2] -v tmpkey=$3 '$0==tmpsection {flag = 1; next} /^\[/ {flag = 0; next} flag && $1==tmpkey {print $2}' ${tmpfile})
 	echo ${result}
 }
 

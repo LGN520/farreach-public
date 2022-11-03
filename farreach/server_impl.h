@@ -1605,11 +1605,14 @@ void *run_server_snapshotserver(void *param) {
 		// Fix duplicate packet
 		if (control_type != SNAPSHOT_CLEANUP && control_type == cur_signal.control_type() && snapshotid == cur_signal.snapshotid()) {
 			printf("[server.snapshotserver] receive duplicate control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+			fflush(stdout);
 			continue;
 		}
 		else {
 			control_type = cur_signal.control_type();
 			snapshotid = cur_signal.snapshotid();
+			printf("[server.snapshotserver] receive control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+			fflush(stdout);
 		}
 
 		if (control_type == SNAPSHOT_CLEANUP) {
@@ -1688,11 +1691,14 @@ void *run_server_snapshotdataserver(void *param) {
 		// Fix duplicate packet
 		if (control_type == *((int *)recvbuf.array()) && snapshotid == *((int *)(recvbuf.array() + sizeof(int)))) {
 			printf("[server.snapshotdataserver] receive duplicate control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+			fflush(stdout);
 			continue;
 		}
 		else {
 			control_type = *((int *)recvbuf.array());
 			snapshotid = *((int *)(recvbuf.array() + sizeof(int)));
+			printf("[server.snapshotdataserver] receive control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+			fflush(stdout);
 		}
 
 		if (control_type == SNAPSHOT_SENDDATA) {

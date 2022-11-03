@@ -148,15 +148,18 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
     def disable_singlepath(self):
-        print "Reset need_recirculate=0 for iports in different ingress pipelines"
-        for i in range(len(self.unmatched_devports)):
-            iport = self.unmatched_devports[i]
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
-                matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = iport)
-                self.client.need_recirculate_tbl_table_delete_by_match_spec(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+        # get entry count
+        entrynum = self.client.need_recirculate_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
+        if entrynum > 0:
+            print "Reset need_recirculate=0 for iports in different ingress pipelines"
+            for i in range(len(self.unmatched_devports)):
+                iport = self.unmatched_devports[i]
+                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
+                    matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            ig_intr_md_ingress_port = iport)
+                    self.client.need_recirculate_tbl_table_delete_by_match_spec(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
 
     def load_snapshot_data(self, cached_empty_index_backup, pipeidx):
         print "[ERROR] now we directly load snapshot data from data plane instead of via ptf channel"
@@ -211,13 +214,15 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 #        return sendbuf
 
     def reset_snapshot_flag_and_reg(self):
-        print "Reset snapshot_flag=0 for all ingress pipelines"
-        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
-            matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
-                    op_hdr_optype = tmpoptype,
-                    meta_need_recirculate = 0)
-            self.client.snapshot_flag_tbl_table_delete_by_match_spec(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+        entrynum = self.client.snapshot_flag_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
+        if entrynum > 0:
+            print "Reset snapshot_flag=0 for all ingress pipelines"
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
+                matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
+                self.client.snapshot_flag_tbl_table_delete_by_match_spec(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
 
         print "Reset case1_reg"
         self.client.register_reset_all_case1_reg(self.sess_hdl, self.dev_tgt)
