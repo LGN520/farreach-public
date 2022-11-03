@@ -24,7 +24,8 @@
 
 - 11.3
 	+ Siyuan
-		* TODO: Fix compilations errors of upstream backup
+		* Fix compilations errors of upstream backup
+		* Simply test correcness of upstream backup
 		* TODO: Merge into main branch of NetBuffer/ and benchmark/
 		* TODO: Survey write-back cache (not related with switch) and update related work
 			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
@@ -648,11 +649,14 @@
 			* TODO: Script calculates average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
 	- Dump client-side backup in TerminatorThread
 	- Debug and test
-		+ TODO: Fix compilation errors of client and server
-		+ TODO: Pass p4 compilation under range partition
-		+ TODO: Pass p4 compilation under hash partition
-		+ TODO: Send PUT + READ to check if client-side seq is correct
-* TODO: Update related work
+		+ Fix compilation errors of client, switch, and server&controller
+		+ Pass p4 compilation under range partition
+		+ Pass p4 compilation under hash partition
+		+ Send PUT + READ + DEL + READ w/o and w/ warmup to check if client-side seq is correct
+			* Fix issue of not read seq from deleted set
+			* Fix issue of sending value with null value data
+			* Fix issue of invalid type of SNAPSHOT_SENDDATA
+			* Fix issue of upstream backup notification
 * TODO: Implement replay-based recovery
 	- TODO: Replay cache admissions for in-switch cache based on in-switch snapshot
 	- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations
