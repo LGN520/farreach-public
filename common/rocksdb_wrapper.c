@@ -305,6 +305,12 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 		val = val_t(tmpbuf, tmpvallen);
 		tmpseq = tmpobj->seq;
 		stat = true;
+	} else {
+		uint32_t deleted_seq = 0;
+		bool is_deleted = deleted_set.check_and_remove(key, tmpseq, &deleted_seq);
+		if (deleted_seq > tmpseq) {
+			tmpseq = deleted_seq;
+		}
 	}
 
 	if (method_needseq()) {
@@ -335,6 +341,12 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t *seqptr) {
 			// TMPDEBUG
 			//printf("[GET] seq %d vallen %d valstr len %d\n", tmpseq, val.val_length, valstr.size());
 			//fflush(stdout);
+		} else {
+			uint32_t deleted_seq = 0;
+			bool is_deleted = deleted_set.check_and_remove(key, tmpseq, &deleted_seq);
+			if (deleted_seq > tmpseq) {
+				tmpseq = deleted_seq;
+			}
 		}
 		if (seqptr != NULL) {
 			*seqptr = tmpseq;

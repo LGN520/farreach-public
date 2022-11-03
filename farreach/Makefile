@@ -146,11 +146,11 @@ DEPS += warmup_client.d
 CLEAN += warmup_client.o
 CLIENT_TARGETS += warmup_client
 
-remote_client: remote_client.o $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += remote_client.d
-CLEAN += remote_client.o
-CLIENT_TARGETS += remote_client
+#remote_client: remote_client.o $(UTILS_OBJECTS)
+#	$(LINK) $^ $(LDLIBS) -o $@
+#DEPS += remote_client.d
+#CLEAN += remote_client.o
+#CLIENT_TARGETS += remote_client
 
 preparefinish_client: preparefinish_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@

@@ -96,29 +96,30 @@ int dynamic_serialize_snapshot_getdata_ack(dynamic_array_t &dynamic_buf, int con
 	// prepare header of snapshot data and per-server data
 	int total_bytes = sizeof(int) + sizeof(int32_t); // leave 8B for SNAPSHOT_GETDATA_ACK and total_bytes
 	for (uint16_t tmp_serveridx = 0; tmp_serveridx < max_logicalservernum; tmp_serveridx++) {
-		if (tmp_record_cnts[tmp_serveridx] > 0) {
-			int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int) + sizeof(uint64_t);
+		// NOTE: even if recordcnt = 0, we still need to send the metadata for the server, such that controller can notify the end of the current snapshot for the server
+		//if (tmp_record_cnts[tmp_serveridx] > 0) {
+		int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int) + sizeof(uint64_t);
 
-			// per-server bytes
-			dynamic_buf.dynamic_memcpy(total_bytes, (char *)&tmp_perserver_bytes, sizeof(int32_t));
-			total_bytes += sizeof(int32_t);
+		// per-server bytes
+		dynamic_buf.dynamic_memcpy(total_bytes, (char *)&tmp_perserver_bytes, sizeof(int32_t));
+		total_bytes += sizeof(int32_t);
 
-			// serveridx
-			dynamic_buf.dynamic_memcpy(total_bytes, (char *)&tmp_serveridx, sizeof(uint16_t));
-			total_bytes += sizeof(uint16_t);
+		// serveridx
+		dynamic_buf.dynamic_memcpy(total_bytes, (char *)&tmp_serveridx, sizeof(uint16_t));
+		total_bytes += sizeof(uint16_t);
 
-			// recordcnt
-			dynamic_buf.dynamic_memcpy(total_bytes, (char *)&tmp_record_cnts[tmp_serveridx], sizeof(int));
-			total_bytes += sizeof(int);
+		// recordcnt
+		dynamic_buf.dynamic_memcpy(total_bytes, (char *)&tmp_record_cnts[tmp_serveridx], sizeof(int));
+		total_bytes += sizeof(int);
 
-			// specialcase bwcost
-			dynamic_buf.dynamic_memcpy(total_bytes, (char *)&perlogicalserver_specialcase_bwcost[tmp_serveridx], sizeof(uint64_t));
-			total_bytes += sizeof(uint64_t);
+		// specialcase bwcost
+		dynamic_buf.dynamic_memcpy(total_bytes, (char *)&perlogicalserver_specialcase_bwcost[tmp_serveridx], sizeof(uint64_t));
+		total_bytes += sizeof(uint64_t);
 
-			// per-record data of each server
-			dynamic_buf.dynamic_memcpy(total_bytes, tmp_sendbuf_list[tmp_serveridx].array(), tmp_send_bytes[tmp_serveridx]);
-			total_bytes += tmp_send_bytes[tmp_serveridx];
-		}
+		// per-record data of each server
+		dynamic_buf.dynamic_memcpy(total_bytes, tmp_sendbuf_list[tmp_serveridx].array(), tmp_send_bytes[tmp_serveridx]);
+		total_bytes += tmp_send_bytes[tmp_serveridx];
+		//}
 	}
 	dynamic_buf.dynamic_memcpy(0, (char *)&control_type, sizeof(int)); // set 1st 4B as SNAPSHOT_GETDATA_ACK
 	dynamic_buf.dynamic_memcpy(0 + sizeof(int), (char *)&total_bytes, sizeof(int32_t)); // set 2nd 4B as total_bytes
@@ -323,7 +324,8 @@ int dynamic_serialize_upstream_backup_notification(dynamic_array_t &dynamic_buf,
 			offset += tmpkeysize;
 
 			// seq
-			dynamic_buf.dynamic_memcpy(offset, (char *)&tmpseq, sizeof(uint32_t));
+			uint32_t bigendian_seq = htonl(tmpseq);
+			dynamic_buf.dynamic_memcpy(offset, (char *)&bigendian_seq, sizeof(uint32_t));
 			offset += sizeof(uint32_t);
 
 			tmpnum++;
@@ -331,7 +333,8 @@ int dynamic_serialize_upstream_backup_notification(dynamic_array_t &dynamic_buf,
 	}
 
 	// go back to update num
-	dynamic_buf.dynamic_memcpy(0, (char *)&tmpnum, sizeof(int));
+	uint32_t bigendian_tmpnum = htonl(uint32_t(tmpnum));
+	dynamic_buf.dynamic_memcpy(0, (char *)&bigendian_tmpnum, sizeof(int));
 
 	return offset;
 }

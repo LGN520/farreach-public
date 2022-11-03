@@ -5,6 +5,7 @@
 #include "../common/key.h"
 #include "../common/val.h"
 #include <vector>
+#include <arpa/inet.h> // htonl
 
 class SnapshotSignal {
 	public:
