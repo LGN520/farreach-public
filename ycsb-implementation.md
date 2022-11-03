@@ -27,7 +27,7 @@
 		* Fix compilations errors of upstream backup
 		* Simply test correcness of upstream backup
 		* Merge into main branch of NetBuffer/ and benchmark/
-		* TODO: Survey write-back cache (not related with switch) and update related work
+		* Survey write-back cache (not related with switch) and update related work
 			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
 		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
 
@@ -36,20 +36,16 @@
 		* Implement controller part of upstream backup
 	+ HuanCheng
 		* Evaluation
-			* TODO: Finish exp4 on dynamic pattern
-			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
-				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
-			* TODO: Add Twitter Traces for exp2 on different workloads
-				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments (maybe we can have a discussion)
-			* TODO: Update benchmark.md for each exp including code change and configuration change
-				* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
-				* For exp1, give details of static server rotation as a module and latency evaluation as another module
-					- For exp2, exp3, exp5, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
-				* For exp4, give details of dynamic pattern
-			* TODO: Finish latency statistics for exp1 on overall analysis
+			* TODO: Re-run two numbers of exp1 latency to make a double-check
 			* TODO: Add LOAD in exp2 on different worklads
 				- TODO: Add doInsert for PregeneratedWorklad
 				- TODO: Still retrieve loading phase files, yet use `./bin/ycsb load` instead of `./bin/ycsb run`
+			* TODO: Add Twitter Traces for exp2 on different workloads
+				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
+			* TODO: Finish exp4 on dynamic pattern
+			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
+				- TODO: Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost (discuss w/ Siyuan first)
 			* TODO: Run multiple times of each experiment (as many times as we can)
 				- [IMPORTANT] keep all raw data of each time for each experiment
 				- NOTE: if you use an individual script to run a given experiment multiple times, you can give an iteration number of the current running time, and backup the statistics files to the directory related with the iteration number in the script before next time of running
@@ -78,6 +74,13 @@
 	+ Siyuan
 		* Fix issue exp9 on bandwidth cost; update scripts to support changes of snapshot period
 		* Implement client part of upstream backup
+	+ Huancheng
+		* Finish latency statistics for exp1 on overall analysis
+		* Update benchmark.md for each exp including code change and configuration change
+			* Basic order: prepare phase (keydump + loading) -> exp1 -> exp2 -> exp3 ...
+			* For exp1, give details of static server rotation as a module and latency evaluation as another module
+				- For exp2, exp3, exp5, ..., refer to exp1 for the same static server rotation, but give details of code/configuration changes
+			* For exp4, give details of dynamic pattern
 
 - 10.31 (using new exp order in slides; add exp1 overall analysis for latency statistics)
 	+ Siyuan
@@ -646,7 +649,6 @@
 		+ For speical case bwcost
 			* Switchos maintains and embeds per-server speical case bandwidth cost into snapshot data
 			* Controller dumps localbwcost as well as serveridx
-			* TODO: Script calculates average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
 	- Dump client-side backup in TerminatorThread
 	- Debug and test
 		+ Fix compilation errors of client, switch, and server&controller
