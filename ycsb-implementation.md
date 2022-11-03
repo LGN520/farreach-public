@@ -26,7 +26,7 @@
 	+ Siyuan
 		* Fix compilations errors of upstream backup
 		* Simply test correcness of upstream backup
-		* TODO: Merge into main branch of NetBuffer/ and benchmark/
+		* Merge into main branch of NetBuffer/ and benchmark/
 		* TODO: Survey write-back cache (not related with switch) and update related work
 			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
 		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation

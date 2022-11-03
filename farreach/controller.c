@@ -740,12 +740,23 @@ void *run_controller_snapshotclient(void *param) {
 		for (int i = 0; i < max_server_total_logical_num; i++) {
 			localcp_bwcost_rates[i] = perserver_localcp_bandwidthcost[i] / (controller_snapshot_period / 1000.0) / 1024.0 / 1024.0; // MiB/s
 		}
+		char strid[256];
+		if (workload_mode == 0) {
+			if (client_physical_num == 1) {
+				sprintf(strid, "static%d-%d", server_total_logical_num_for_rotation, server_logical_idxes_list[0][0]);
+			} else {
+				sprintf(strid, "static%d-%d-%d", server_total_logical_num_for_rotation, server_logical_idxes_list[0][0], server_logical_idxes_list[1][0]);
+			}
+		} else {
+			sprintf(strid, "dynamic");
+		}
 		//printf("bandwidth cost: %f MiB/s\n", bwcost_rate);
 		//fflush(stdout);
+		
 		FILE *tmpfd = fopen("tmp_controller_bwcost.out", "a+");
 		// NOTE: totalbwcost means bwcost of both local and global control plane, while localbwcost means bwcost of local control plane
-		fprintf(tmpfd, "totalbwcost(MiB/s): %f\n", bwcost_rate);
-		fprintf(tmpfd, "localbwcost(MiB/s):");
+		fprintf(tmpfd, "%s totalbwcost(MiB/s): %f\n", strid, bwcost_rate);
+		fprintf(tmpfd, "%s localbwcost(MiB/s):", strid);
 		for (int i = 0; i < max_server_total_logical_num; i++) {
 			fprintf(tmpfd, " %f", localcp_bwcost_rates[i]);
 		}
