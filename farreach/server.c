@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
   free_common();
   // close_load_server();
   close_reflector();
-  //close_server();
+  close_server();
 
   COUT_THIS("[ycsb_server.main] Exit successfully")
   exit(0);
@@ -302,7 +302,7 @@ void transaction_main() {
 
 	/* Close RocksDBs asap */
 
-	printf("Close servers asap...\n");
+	/*printf("Close servers asap...\n");
 	fflush(stdout);
 
 	void *status;
@@ -315,7 +315,7 @@ void transaction_main() {
 	}
 	printf("server.workers finish\n");
 	
-	close_server();
+	close_server();*/
 
 	/* Processing Statistics */
 
@@ -508,6 +508,16 @@ void transaction_main() {
 		}
 	}
 	printf("server.popclients finish\n");*/
+
+	void *status;
+	printf("wait for server.workers\n");
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		int rc = pthread_join(worker_threads[i], &status);
+		if (rc) {
+		  COUT_N_EXIT("Error: unable to join server.worker " << rc);
+		}
+	}
+	printf("server.workers finish\n");
 
 	printf("wait for server.evictserver\n");
 	for (size_t i = 0; i < current_server_logical_num; i++) {
