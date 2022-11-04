@@ -16,43 +16,36 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
+- 11.5
+	+ Siyuan
+		* TODO: Implement server part for server-side replay-based recovery
+		* TODO: Use student-T distribution to calculate the error bars of each experiment
+		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
+		* TODO: Update implementation
+		* TODO: Find the reason why test_server_rotation_p1.sh can sleep 15s after retrieving loading phase files, while test_server_rotation_p2.sh needs 120s and test_dynamic.sh needs 90s
+
 - 11.4
 	+ Siyuan
 		* Review code for large write_delay_time
 			- (1) WriteOptions.low_pri is false by default -> not due to priority
 			- (2) WriteController.NeedsDelay() is true which limits the rate of all writes -> maybe due to flushing/compaction?
 			- Reason: stop writes due to too many level-0 files
-		* TODO: Implement server-side replay-based recovery
-		* TODO: Use student-T distribution to calculate the error bars of each experiment
-		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
-		* TODO: Update implementation
-		* TODO: Find the reason why test_server_rotation_p1.sh can sleep 15s after retrieving loading phase files, while test_server_rotation_p2.sh needs 120s and test_dynamic.sh needs 90s
-
-- 11.3
-	+ Siyuan
-		* Fix compilations errors of upstream backup
-		* Simply test correcness of upstream backup
-		* Merge into main branch of NetBuffer/ and benchmark/
-		* Survey write-back cache (not related with switch) and update related work
-			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
-
-- 11.2
-	+ Siyuan
-		* Implement controller part of upstream backup
+		* Implement switchos part for server-side replay-based recovery
+		* Fix issues in related work
 	+ HuanCheng
 		* Evaluation
-			* Re-run two numbers of exp1 latency to make a double-check
 			* TODO: Add LOAD in exp2 on different worklads
 				- Add doInsert for PregeneratedWorklad
 				- Still retrieve loading phase files, yet use `./bin/ycsb load` instead of `./bin/ycsb run`
 			* [IMPORTANT] Fix write stalls
-				+ TODO: Sleep between stop and kill to wait for flushing and compaction
-					* TODO: Uncomment sleep in farreach/server_impl.h::close_server() if RocksDB does not wait for completing flush/compaction before close
+				+ Sleep between stop and kill in scripts to wait for flushing and compaction in loading/transaction phase -> WORK
+					* FUTURE: uncomment close_server in farreach/server.c::transaction_main() to close rocksdb instances asap
+					* FUTURE: uncomment sleep in farreach/server_impl.h::close_server() if RocksDB does not wait for completing flush/compaction before close
 					* TODO: Re-run exp4 farreach + hotin to see if we can avoid write stalls
 						- NOTE: as it has limited effect on average thpt, we do not need to re-run experiments without timeouts
+					* TODO: Re-run two numbers of exp1 latency to make a double-check
 			* TODO: Add Twitter Traces for exp2 on different workloads
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
-			* Finish exp4 on dynamic pattern
 			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
 				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
 				- TODO: Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost (discuss w/ Siyuan first)
@@ -82,6 +75,22 @@
 				- (2) Whether TPC-C benchmark can provide/generate skewed workloads
 				- (3) Whether TPC-C benchmark is open-source such that we can integrate our inswitchcache-lib into TPC-C
 				- (4) One alternative way is to dump TPC-C skewed workload and use YCSB to replay it, yet may be tricky
+
+- 11.3
+	+ Siyuan
+		* Fix compilations errors of upstream backup
+		* Simply test correcness of upstream backup
+		* Merge into main branch of NetBuffer/ and benchmark/
+		* Survey write-back cache (not related with switch) and update related work
+			- Search some papers first, (e.g., FAST'13, ATC'14, OSDI, and Concordia) for a double-check, and then update them into related work
+	+ HuanCheng
+		* Find an issue of timeout caused by write stopping due to too many level-0 SST files
+
+- 11.2
+	+ Siyuan
+		* Implement controller part of upstream backup
+	+ HuanCheng
+		* Finish exp4 on dynamic pattern
 
 - 11.1
 	+ Siyuan
@@ -679,10 +688,14 @@
 			* NOTE: we do NOT need recover_switch.sh to admit snapshot records
 			* NOTE: reflector/ptf needs to update switchos addr each time
 			* [IMPORTANT] NOTE: switchos simply poses a warning for the cache admission of a cached key instead of exiting, as now we do not retrieve server-side cached keyset during recovery
-	- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations (files: farreach/localscripts/fetchbackup_client2server.sh)
+	- Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations (files: farreach/localscripts/fetchbackup_client2server.sh)
 		+ Copy corresponding client-side backups to server
-			* TODO: Update upstream backup client-side filepath
-		+ TODO: For dynamic pattern, directly use the upstream backups
-		+ TODO: For static pattern, aggreagate per-rotation upstream backups and then use the aggregated upstream backups for recovery
+			* Update upstream backup client-side filepath
+			* Dump stat for upstream backups
+		+ TODO: Aggregate per-client backups into a single map
+			* TODO: For dynamic pattern, directly aggregate two upstream backups
+			+ TODO: For static pattern, aggreagate per-rotation upstream backups of two clients
+		+ TODO: Each server uses the aggregated backup map for recovery
 	_ TODO: Debug and test
 	- TODO: Exp 10: in-switch and server-side recovery time vs. cache size
+		+ TODO: Echo information in scripts to hint users to get statistics from tmp.out
