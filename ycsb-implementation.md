@@ -6,8 +6,8 @@
 	* TODO: Add YCSB-E in exp2 on different workloads after running all experiments
 		- TODO: Test ScanResponseSplit of range query
 	* Client-side upstream backup (before exp9 recovery time)
-		* TODO: Debug and test client-side upstream backup colleborating with periodic snapshot
-			- TODO: Check whether the seq of GET/PUT/DELRES_SEQ and GETRES_LARGEVALUE_SEQ > 0
+		* Debug and test client-side upstream backup colleborating with periodic snapshot
+			- Check whether the seq of GET/PUT/DELRES_SEQ and GETRES_LARGEVALUE_SEQ > 0
 		* TODO: Re-run exp8 on w/ or w/o snapshot for FarReach -> replace 1.02 imbalance ratio
 			- NOTE: Use synthetic-nosnapshot as the workloadname for exp8 w/o snapshot
 		* TODO: Re-run exp9 on control plane bandwidth cost vs. snapshot interrupt for FarReach
@@ -18,10 +18,14 @@
 
 - 11.4
 	+ Siyuan
+		* Review code for large write_delay_time
+			- (1) WriteOptions.low_pri is false by default -> not due to priority
+			- (2) WriteController.NeedsDelay() is true which limits the rate of all writes -> maybe due to flushing/compaction?
 		* TODO: Implement server-side replay-based recovery
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
 		* TODO: Update implementation
+		* TODO: Find the reason why test_server_rotation_p1.sh can sleep 15s after retrieving loading phase files, while test_server_rotation_p2.sh needs 120s and test_dynamic.sh needs 90s
 
 - 11.3
 	+ Siyuan
@@ -659,9 +663,13 @@
 			* Fix issue of sending value with null value data
 			* Fix issue of invalid type of SNAPSHOT_SENDDATA
 			* Fix issue of upstream backup notification
-* TODO: Implement replay-based recovery
-	- TODO: Replay cache admissions for in-switch cache based on in-switch snapshot
+* Implement replay-based recovery
+	- TODO: Replay cache admissions for in-switch cache based on in-switch snapshot (files: scripts/remote/test_recovery_time.sh, farreach/localscripts/recoverswitchostestbed.sh, farreach/switchos.c, scripts/common.sh)
+		+ Login bf1 as root -> launch switch data plane -> copy in-switch snapshot data -> configure switch data plane and launch switchos w/ recovery mode
+		+ TODO: switchos sends CACHE_POP_INSWITCH to admit snapshot keys w/ values w/o waiting for ACKs
+			* TODO: NOTE: we do NOT need recover_switch.sh to admit snapshot records
 	- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations
 		+ TODO: For dynamic pattern, directly use the upstream backups
 		+ TODO: For static pattern, aggreagate per-rotation upstream backups and then use the aggregated upstream backups for recovery
+	_ TODO: Debug and test
 	- TODO: Exp 10: in-switch and server-side recovery time vs. cache size

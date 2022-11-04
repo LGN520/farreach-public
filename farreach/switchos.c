@@ -301,6 +301,9 @@ void prepare_switchos() {
 }
 
 void recover() {
+	struct timespec recover_t1, recover_t2, recover_t3;
+	CUR_TIME(recover_t1);
+
 	char snapshotid_path[256];
 	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path, 256);
 	if (!isexist(snapshotid_path)) {
@@ -323,7 +326,8 @@ void recover() {
 	INVARIANT(content != NULL);
 
 	// set inswitch stateful memory with inswitch snapshot data
-	system("sudo bash tofino/recover_switch.sh");
+	// NOTE: switchos is launched by root, so we can directly run recover_switch.sh now
+	system("cd tofino; bash recover_switch.sh >../tmp_recoverswitch.sh 2>&1; cd ..");
 
 	// extract snapshot data
 	int total_bytes = 0;
@@ -366,6 +370,11 @@ void recover() {
 	}
 
 	munmap(content, filesize);
+
+	CUR_TIME(recover_t2);
+	DELTA_TIME(recover_t2, recover_t1, recover_t3);
+	printf("Time of recovering switch&switchos: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucketnum);
+	fflush(stdout);
 }
 
 void *run_switchos_popserver(void *param) {

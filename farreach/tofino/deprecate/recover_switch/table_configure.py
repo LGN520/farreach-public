@@ -88,8 +88,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             buf = f.read(total_bytes - 8)
             remainbytes = total_bytes - 8
             while True:
-                perserver_bytes, serveridx, recordcnt, buf = struct.unpack("=iHi{}s".format(remainbytes-10), buf)
-                remainbytes -= 10
+                perserver_bytes, serveridx, recordcnt, specialcase_bwcost, buf = struct.unpack("=iHiQ{}s".format(remainbytes-18), buf)
+                remainbytes -= 18
                 for _ in range(recordcnt):
                     keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, buf = struct.unpack("!3I2H{}s".format(remainbytes-16), buf)
                     key_list_list.append([keylolo, keylohi, keyhilo, keyhihilo, keyhihihi])
