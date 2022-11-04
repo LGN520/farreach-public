@@ -4,8 +4,8 @@ function readini() {
 	echo ${result}
 }
 
-DIRNAME="farreach"
-USER="ssy"
+DIRNAME="netcache"
+USER="theodorepuyang"
 
 #MAIN_CLIENT="dl11" # NOT used
 SECONDARY_CLIENT="dl15"
