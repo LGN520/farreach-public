@@ -304,10 +304,15 @@ void recover() {
 	struct timespec recover_t1, recover_t2, recover_t3;
 	CUR_TIME(recover_t1);
 
+	// (1) copy in-switch snapshot data from controller to switch
+	system("bash localscripts/fetchsnapshot_controller2switch.sh");
+
 	char snapshotid_path[256];
 	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path, 256);
 	if (!isexist(snapshotid_path)) {
-		printf("You need to copy latest snapshotid from controller to switchos before running with recover mode\n");
+		//printf("You need to copy latest snapshotid from controller to switchos before running with recover mode\n");
+		printf("No such file: %s", snapshotid_path);
+		fflush(stdout);
 		exit(-1);
 	}
 
@@ -316,7 +321,9 @@ void recover() {
 	char snapshotdata_path[256];
 	get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, 256, controller_snapshotid);
 	if (!isexist(snapshotdata_path)) {
-		printf("You need to copy inswitch snapshot data from controller to switchos before running with recover mode\n");
+		//printf("You need to copy inswitch snapshot data from controller to switchos before running with recover mode\n");
+		printf("No such file: %s", snapshotdata_path);
+		fflush(stdout);
 		exit(-1);
 	}
 
@@ -325,11 +332,11 @@ void recover() {
 	char *content = readonly_mmap(snapshotdata_path, 0, filesize);
 	INVARIANT(content != NULL);
 
-	// set inswitch stateful memory with inswitch snapshot data
-	// NOTE: switchos is launched by root, so we can directly run recover_switch.sh now
-	system("cd tofino; bash recover_switch.sh >../tmp_recoverswitch.sh 2>&1; cd ..");
+	// NOTE: switchos is launched by root, so we can directly run recover_switch.sh to set inswitch SRAM with inswitch snapshot data
+	// DEPRECATED: we can directly perform cache admissions by switchos
+	//system("cd tofino; bash recover_switch.sh >../tmp_recoverswitch.sh 2>&1; cd ..");
 
-	// extract snapshot data
+	// (2) extract snapshot data
 	int total_bytes = 0;
 	std::vector<int> perserver_bytes;
 	std::vector<uint16_t> perserver_serveridx;
@@ -342,6 +349,33 @@ void recover() {
 
 	deserialize_snapshot_getdata_ack(content, filesize, SNAPSHOT_GETDATA_ACK, total_bytes, perserver_bytes, perserver_serveridx, perserver_recordcnt, perserver_specialcase_bwcost, perserver_keyarray, perserver_valarray, perserver_seqarray, perserver_statarray);
 
+	// (3) Prepare for cache admissions
+	
+	// used by udp socket for cache population
+	sockaddr_in reflector_cp2dpserver_addr;
+	set_sockaddr(reflector_cp2dpserver_addr, inet_addr(reflector_ip_for_switchos), reflector_cp2dpserver_port);
+	int reflector_cp2dpserver_addr_len = sizeof(struct sockaddr);
+	int tmpudpsock_for_reflector = -1;
+	create_udpsock(tmpudpsock_for_reflector, true, "switchos.recover.udpsock_for_reflector", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS); // to reduce snapshot latency
+
+	// used by udpsocket to communicate with ptf.popserver
+	sockaddr_in ptf_popserver_addr;
+	set_sockaddr(ptf_popserver_addr, inet_addr("127.0.0.1"), switchos_ptf_popserver_port);
+	int ptf_popserver_addr_len = sizeof(struct sockaddr);
+	int tmpudpsock_for_ptf = -1;
+	create_udpsock(tmpudpsock_for_ptf, false, "switchos.recover.udpsock_for_ptf");
+
+	// communicate with reflector.cp2dpserer
+	char pktbuf[MAX_BUFSIZE];
+	uint32_t pktsize = 0;
+	char ackbuf[MAX_BUFSIZE];
+	int ack_recvsize = 0;
+	// communicate with ptf.popserver
+	char ptfbuf[MAX_BUFSIZE];
+	uint32_t ptf_sendsize = 0;
+	int ptf_recvsize = 0;
+	
+	// (4) Perform cache admissions
 	for (int i = 0; i < perserver_serveridx.size(); i++) {
 		uint16_t tmp_serveridx = perserver_serveridx[i];
 
@@ -359,17 +393,62 @@ void recover() {
 		uint32_t tmp_pipeidx = server_pipeidxes[tmp_server_physical_idx];
 
 		for (int j = 0; j < perserver_keyarray[i].size(); j++) {
+			uint16_t tmp_freeidx = switchos_perpipeline_cached_empty_index[tmp_pipeidx];
+
 			netreach_key_t tmp_key = perserver_keyarray[i][j];
+			val_t tmp_val = perserver_valarray[i][j];
+			uint32_t tmp_seq = perserver_seqarray[i][j];
+			bool tmp_stat = perserver_statarray[i][j];
+
+			if (tmp_freeidx >= switch_kv_bucketnum) {
+				printf("[WARN] total number of snapshot records > %d; perserver_keyarray[%d].size() is %d\n", switch_kv_bucketnum, i, perserver_keyarray[i].size());
+				fflush(stdout);
+				break;
+			}
+
+			// Set valid = 0 (not necessary under recovery mode due to no background traffic)
+			//setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, tmp_key, tmp_freeidx, 0);
+			//pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
+			//udpsendto(tmp_udpsock_for_reflector, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.recover.udpsock_for_reflector");
+			////is_timeout = udprecvfrom(tmp_udpsock_for_reflector, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.recover.udpsock_for_reflector");
+			////setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
+			////INVARIANT(tmp_setvalid_rsp.key() == tmp_key);
+
+			// send CACHE_POP_INSWITCH to reflector (DEPRECATED: try internal pcie port)
+			cache_pop_inswitch_t tmp_cache_pop_inswitch(CURMETHOD_ID, tmp_key, tmp_val, tmp_seq, tmp_freeidx, tmp_stat);
+			pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
+			udpsendto(tmpudpsock_for_reflector, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.recover.udpsock_for_reflector");
+			////is_timeout = udprecvfrom(tmpudpsock_for_reflector, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.recover.udpsock_for_reflector");
+			////cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
+			////INVARIANT(tmp_cache_pop_inswitch_ack.key() == tmp_key);
+
+			// add new <key, value> pair into cache_lookup_tbl
+			ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_key, tmp_freeidx);
+			udpsendto(tmpudpsock_for_ptf, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.recover.udpsock_for_ptf");
+			////udprecvfrom(tmpudpsock_for_ptf, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.recover.udpsock_for_ptf");
+			////INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
+				
+			// set valid=1 to enable the entry through reflector
+			// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
+			setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, tmp_key, tmp_freeidx, 1);
+			pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
+			udpsendto(tmpudpsock_for_reflector, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.recover.udpsock_for_reflector");
+			////is_timeout = udprecvfrom(tmpudpsock_for_reflector, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.recover.udpsock_for_reflector");
+			////setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
+			////INVARIANT(tmp_setvalid_rsp.key() == tmp_key);
 
 			// Update switchos inswitch cache metadata
+			switchos_cached_keyidx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_key, tmp_freeidx));
+			switchos_perpipeline_cached_keyarray[tmp_pipeidx][tmp_freeidx] = tmp_key;
+			switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][tmp_freeidx] = tmp_serveridx;
 			// NOTE: we follow the order of in-switch snapshot data to restore in-switch cache in data plane, so we can directly use and increase empty index as kvidx in control plane
-			switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_perpipeline_cached_empty_index[tmp_pipeidx]] = tmp_key;
-			switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_perpipeline_cached_empty_index[tmp_pipeidx]] = tmp_serveridx;
 			switchos_perpipeline_cached_empty_index[tmp_pipeidx] += 1;
 		}
 	}
 
 	munmap(content, filesize);
+	close(tmp_udpsock_for_reflector);
+	close(tmp_udpsock_for_ptf);
 
 	CUR_TIME(recover_t2);
 	DELTA_TIME(recover_t2, recover_t1, recover_t3);
@@ -494,8 +573,10 @@ void *run_switchos_popworker(void *param) {
 				INVARIANT(is_valid == true);
 				
 				if (switchos_cached_keyidx_map.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyidx_map.end()) {
-					printf("Error: populating a key %x cached at kvidx %u from server %d\n", tmp_cache_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_cache_pop_ptr->key()], int(tmp_cache_pop_ptr->serveridx()));
-					exit(-1);
+					//printf("Error: populating a key %x cached at kvidx %u from server %d\n", tmp_cache_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_cache_pop_ptr->key()], int(tmp_cache_pop_ptr->serveridx()));
+					//exit(-1);
+					printf("[WARNING] populating a key %x cached at kvidx %u from server %d\n", tmp_cache_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_cache_pop_ptr->key()], int(tmp_cache_pop_ptr->serveridx()));
+					fflush(stdout);
 				}
 
 				// find corresponding pipeline idx
