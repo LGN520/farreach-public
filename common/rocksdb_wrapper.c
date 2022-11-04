@@ -175,6 +175,16 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 #ifdef USE_TOMMYDS_KVS
 #else
 	if (method_needsnapshot()) {
+		// release stale snapshot ptr if necessary
+		/*SnapshotList tmp_splist = db_ptr->snapshots();
+		while (true) {
+			if (tmp_splist.empty()) {
+				break;
+			} else {
+				db_ptr->ReleaseSnapshot(tmp_splist.newest());
+			}
+		}*/
+
 		// load deleted set
 		std::string deletedset_path;
 		get_server_deletedset_path(methodid, deletedset_path, tmpworkerid);
