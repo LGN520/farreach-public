@@ -87,6 +87,17 @@ RocksdbWrapper::RocksdbWrapper(method_t curmethodid) {
 RocksdbWrapper::~RocksdbWrapper() {
 	// close runtime database
 	if (db_ptr != NULL) {
+		if (method_needsnapshot()) {
+			if (sp_ptr != NULL) {
+				db_ptr->ReleaseSnapshot(sp_ptr);
+				sp_ptr = NULL;
+			}
+			if (latest_sp_ptr != NULL) {
+				db_ptr->ReleaseSnapshot(latest_sp_ptr);
+				latest_sp_ptr = NULL;
+			}
+		}
+
 #ifdef USE_TOMMYDS_KVS
 		tommy_hashdyn_done(db_ptr);
 #else
@@ -726,6 +737,10 @@ void RocksdbWrapper::init_snapshot() {
 		}
 
 		// make snapshot of database
+		if (sp_ptr != NULL) {
+			db_ptr->ReleaseSnapshot(sp_ptr);
+			sp_ptr = NULL;
+		}
 		sp_ptr = db_ptr->GetSnapshot();
 		uint64_t snapshotdbseq = sp_ptr->GetSequenceNumber();
 		INVARIANT(sp_ptr != NULL);
@@ -840,6 +855,10 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 			if (rwlock.try_lock_shared()) break;
 		}
 		// make snapshot of database
+		if (latest_sp_ptr != NULL) {
+			db_ptr->ReleaseSnapshot(latest_sp_ptr);
+			latest_sp_ptr = NULL;
+		}
 		latest_sp_ptr = db_ptr->GetSnapshot();
 		uint64_t latest_snapshotdbseq = latest_sp_ptr->GetSequenceNumber();
 		INVARIANT(latest_sp_ptr != NULL);
