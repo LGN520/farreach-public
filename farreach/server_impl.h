@@ -175,11 +175,24 @@ void prepare_server() {
 
 void close_server() {
 
+	printf("[server] start to close all RocksDB instances\n");
+	fflush(stdout);
+
+	//printf("[server] sleep 10s to wait for flush/compaction\n");
+	//fflush(stdout);
+	//sleep(10000); // sleep 10s to wait for flush/compaction
+	//printf("[server] finish sleep\n");
+	//fflush(stdout);
+
 	if (db_wrappers != NULL) {
-		printf("Close rocksdb databases\n");
+		printf("Close rocksdb databases...\n");
+		fflush(stdout);
 		delete [] db_wrappers;
 		db_wrappers = NULL;
 	}
+
+	printf("[server] close all RocksDB instances\n");
+	fflush(stdout);
 
 	if (server_worker_udpsock_list != NULL) {
 		delete [] server_worker_udpsock_list;

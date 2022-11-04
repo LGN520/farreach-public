@@ -21,6 +21,7 @@
 		* Review code for large write_delay_time
 			- (1) WriteOptions.low_pri is false by default -> not due to priority
 			- (2) WriteController.NeedsDelay() is true which limits the rate of all writes -> maybe due to flushing/compaction?
+			- Reason: stop writes due to too many level-0 files
 		* TODO: Implement server-side replay-based recovery
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
@@ -41,9 +42,14 @@
 	+ HuanCheng
 		* Evaluation
 			* Re-run two numbers of exp1 latency to make a double-check
-			* Add LOAD in exp2 on different worklads
+			* TODO: Add LOAD in exp2 on different worklads
 				- Add doInsert for PregeneratedWorklad
 				- Still retrieve loading phase files, yet use `./bin/ycsb load` instead of `./bin/ycsb run`
+			* [IMPORTANT] Fix write stalls
+				+ TODO: Sleep between stop and kill to wait for flushing and compaction
+					* TODO: Uncomment sleep in farreach/server_impl.h::close_server() if RocksDB does not wait for completing flush/compaction before close
+					* TODO: Re-run exp4 farreach + hotin to see if we can avoid write stalls
+						- NOTE: as it has limited effect on average thpt, we do not need to re-run experiments without timeouts
 			* TODO: Add Twitter Traces for exp2 on different workloads
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
 			* Finish exp4 on dynamic pattern
@@ -55,6 +61,10 @@
 				- NOTE: if you use an individual script to run a given experiment multiple times, you can give an iteration number of the current running time, and backup the statistics files to the directory related with the iteration number in the script before next time of running
 				- NOTE: to login Tofino as root in the script such that you can launch and configure switch automatically, you can use `ssh -i <private-key-for-switch> root@bf1 "<command>"`
 		* Coding
+			* Code changes
+				* TODO: Fix keydump issue of memory overflow for key-frequency map
+				* TODO: Fix GlobalConfig issue of not judging methodid for client_upstreambackupreleaser_port
+				* TODO: Print ratio of write requests with >128B values in keydump
 			* TODO: Finish TraceReplay workload
 				- TODO: Get correpsonding trace file based on workloadName
 				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
@@ -67,7 +77,6 @@
 						* Add fromBytes() to parse 16B keybytes for Twitter traces
 						* Re-run keydump to generate hot keys, dynamic rules, and pre-generated workloads
 						* NOTE: check affected modules -> ycsb::PregeneratedWorkload, ycsb::DynamicRulemap, common/workloadparser
-			* TODO: Print ratio of write requests with >128B values in keydump
 			* TODO: Take a look at TPC-C benchmark especially for the following concerns
 				- (1) Whether TPC-C benchmark has a version based on Java
 				- (2) Whether TPC-C benchmark can provide/generate skewed workloads
@@ -664,11 +673,15 @@
 			* Fix issue of invalid type of SNAPSHOT_SENDDATA
 			* Fix issue of upstream backup notification
 * Implement replay-based recovery
-	- TODO: Replay cache admissions for in-switch cache based on in-switch snapshot (files: scripts/remote/test_recovery_time.sh, farreach/localscripts/recoverswitchostestbed.sh, farreach/switchos.c, scripts/common.sh)
+	- Replay cache admissions for in-switch cache based on in-switch snapshot (files: scripts/common.sh scripts/remote/test_recovery_time.sh, farreach/localscripts/launchswitchtestbed.sh, farreach/switchos.c, farreach/localscripts/fetchsnapshot_controller2switch.sh)
 		+ Login bf1 as root -> launch switch data plane -> copy in-switch snapshot data -> configure switch data plane and launch switchos w/ recovery mode
-		+ TODO: switchos sends CACHE_POP_INSWITCH to admit snapshot keys w/ values w/o waiting for ACKs
-			* TODO: NOTE: we do NOT need recover_switch.sh to admit snapshot records
-	- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations
+		+ switchos sends CACHE_POP_INSWITCH to admit snapshot keys w/ values w/o waiting for ACKs
+			* NOTE: we do NOT need recover_switch.sh to admit snapshot records
+			* NOTE: reflector/ptf needs to update switchos addr each time
+			* [IMPORTANT] NOTE: switchos simply poses a warning for the cache admission of a cached key instead of exiting, as now we do not retrieve server-side cached keyset during recovery
+	- TODO: Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations (files: farreach/localscripts/fetchbackup_client2server.sh)
+		+ Copy corresponding client-side backups to server
+			* TODO: Update upstream backup client-side filepath
 		+ TODO: For dynamic pattern, directly use the upstream backups
 		+ TODO: For static pattern, aggreagate per-rotation upstream backups and then use the aggregated upstream backups for recovery
 	_ TODO: Debug and test
