@@ -4,6 +4,16 @@ DIRNAME="farreach"
 
 # NOTE: you need to launch spine/leaf switch data plane before running this script under su account
 
+if [ $# -eq 1 ]
+then
+	recovermode=$1
+	if [ "x${recovermode}" != "xrecover" ]
+	then
+		echo "[ERROR] incorrect arg: ${recovermode}"
+		exit
+	fi
+fi
+
 echo "clear tmp files"
 rm tmp_switchos.out
 rm tmp_popserver.out
@@ -14,7 +24,7 @@ echo "configure data plane"
 cd tofino; bash configure.sh; cd ..
 
 echo "launch switchos"
-nohup ./switchos >tmp_switchos.out 2>&1 &
+nohup ./switchos ${recovermode} >tmp_switchos.out 2>&1 &
 
 echo "launch ptfserver"
 cd tofino; nohup bash ptf_popserver.sh >../tmp_popserver.out 2>&1 &

@@ -7,6 +7,8 @@ function readini() {
 DIRNAME="netcache"
 USER="theodorepuyang"
 
+SWITCH_PRIVATEKEY=".ssh/id_rsa_forbf1"
+
 #MAIN_CLIENT="dl11" # NOT used
 SECONDARY_CLIENT="dl15"
 
