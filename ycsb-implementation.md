@@ -45,7 +45,7 @@
 		* Update implementation
 	+ HuanCheng
 		* Evaluation
-			* TODO: Add LOAD in exp2 on different worklads
+			* Add LOAD in exp2 on different worklads
 				- Add doInsert for PregeneratedWorklad
 				- Still retrieve loading phase files, yet use `./bin/ycsb load` instead of `./bin/ycsb run`
 			* [IMPORTANT] Fix write stalls
@@ -56,7 +56,9 @@
 						- NOTE: as it has limited effect on average thpt, we do not need to re-run experiments without timeouts
 					* TODO: Re-run two numbers of exp1 latency to make a double-check
 					* TODO: Find the reason why test_server_rotation_p1.sh can sleep 15s after retrieving loading phase files, while test_server_rotation_p2.sh needs 120s and test_dynamic.sh needs 90s
-			* TODO: Add Twitter Traces for exp2 on different workloads
+			* Add Twitter Traces for exp2 on different workloads
+				- Dump twitter traces through keydump.
+				- TODO: run.
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
 			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
 				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
@@ -68,14 +70,14 @@
 					+ TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh
 		* Coding
 			* Code changes
-				* TODO: Fix keydump issue of memory overflow for key-frequency map
-				* TODO: Fix GlobalConfig issue of not judging methodid for client_upstreambackupreleaser_port
-				* TODO: Print ratio of write requests with >128B values in keydump
+				* Fix keydump issue of memory overflow for key-frequency map
+				* Fix GlobalConfig issue of not judging methodid for client_upstreambackupreleaser_port
+				* Print ratio of write requests with >128B values in keydump
 			* TODO: Finish TraceReplay workload
-				- TODO: Get correpsonding trace file based on workloadName
-				- TODO: Limit the maximum number of parsed requests, and the maximum value size based on its paper
-				- TODO: Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
-				- TODO: Twitter key -> 16B keybytes by md5 -> inswitchcache.core.Key by fromBytes
+				- Get correpsonding trace file based on workloadName
+				- Limit the maximum number of parsed requests, and the maximum value size based on its paper
+				- Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
+				- Twitter key -> 16B keybytes by md5 -> inswitchcache.core.Key by fromBytes
 					+ How to implement it more reasonable? -> possible solution:
 						* Change toString() to dump key as two 8B longs, which is "<8B long> <8B long>"
 						* Change fromString() to extract key from "<8B long> <8B long>"
