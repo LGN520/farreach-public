@@ -18,7 +18,8 @@
 
 - 11.6
 	+ Siyuan
-		* TODO: Update implementation
+		* TODO: Debug and test replay-based recovery for exp10 on recovery time
+		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 	+ HuanCheng
 		* TODO: Finish exp10 on recovery time
@@ -36,8 +37,12 @@
 	+ Siyuan
 		* Implement server part for server-side replay-based recovery
 		* Fix maxseq issue under recovery mode
-		* TODO: Debug and test replay-based recovery for exp10 on recovery time
-		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
+		* Take a look at TPC-C benchmark especially for the following concerns
+			- Official website only provides specification yet no implementation
+			- Most open-sourced TPC-C benchmarks are only for OLTP relational databases, e.g., MySQL
+			- Some TPC-C benchmarks can test RocksDB, as RocksDB has implemented an OLTP interface called MyRocks similar as MySQL on top the server-side storage server
+				+ However, as in-switch cache cannot provide an OLTP interface, we cannot directly use MyRocksd; while it is too heavy to re-implement MyRocksdb in the client-side
+		* Update implementation
 	+ HuanCheng
 		* Evaluation
 			* TODO: Add LOAD in exp2 on different worklads
@@ -78,11 +83,6 @@
 						* Add fromBytes() to parse 16B keybytes for Twitter traces
 						* Re-run keydump to generate hot keys, dynamic rules, and pre-generated workloads
 						* NOTE: check affected modules -> ycsb::PregeneratedWorkload, ycsb::DynamicRulemap, common/workloadparser
-			* TODO: Take a look at TPC-C benchmark especially for the following concerns
-				- (1) Whether TPC-C benchmark has a version based on Java
-				- (2) Whether TPC-C benchmark can provide/generate skewed workloads
-				- (3) Whether TPC-C benchmark is open-source such that we can integrate our inswitchcache-lib into TPC-C
-				- (4) One alternative way is to dump TPC-C skewed workload and use YCSB to replay it, yet may be tricky
 
 - 11.4
 	+ Siyuan
