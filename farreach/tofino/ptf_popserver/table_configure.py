@@ -182,6 +182,9 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.cache_lookup_tbl_table_delete_by_match_spec(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
 
+    def writeallseq(self, maxseq):
+        self.client.register_write_all_seq_reg(self.sess_hdl, self.dev_tgt, maxseq)
+
     def runTest(self):
         #with_switchos_addr = False
         print "[ptf.popserver] ready"
@@ -260,6 +263,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 switchos_ptf_popserver_udpsock.close()
                 print("[ptf.popserver] END")
                 break;
+            elif control_type == SWITCHOS_WRITEALLSEQ:
+                maxseq = struct.unpack("=I", recvbuf)[0]
+                print "Write all seq_reg as {}".format(maxseq)
+                self.writeallseq(maxseq)
+                # NOTE: not need ack
             else:
                 print("Invalid control type {}".format(control_type))
                 exit(-1)

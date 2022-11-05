@@ -44,6 +44,18 @@ void get_server_snapshotdeletedset_path(method_t methodid, std::string &snapshot
 	return;
 }
 
+void get_server_snapshotmaxseq_path(method_t methodid, std::string &snapshotmaxseq_path, uint16_t workerid, uint32_t snapshotid) {
+	const char *methodname = get_methodname_byid(methodid);
+	GET_STRING(snapshotmaxseq_path, "/tmp/" << std::string(methodname) << "/worker" << workerid << ".snapshotmaxseq" << snapshotid);
+	return;
+}
+
+void get_server_latestmaxseq_path(method_t methodid, std::string &latestmaxseq_path, uint16_t workerid) {
+	const char *methodname = get_methodname_byid(methodid);
+	GET_STRING(latestmaxseq_path, "/tmp/" << std::string(methodname) << "/worker" << workerid << ".latestmaxseq");
+	return;
+}
+
 // controller
 
 void get_controller_snapshotid_path(method_t methodid, std::string &snapshotid_path) {
@@ -157,6 +169,20 @@ void store_snapshotdbseq(uint64_t snapshotdbseq, std::string snapshotdbseq_path)
 	FILE *snapshotdbseq_fd = fopen(snapshotdbseq_path.c_str(), "wb+");
 	fwrite(&snapshotdbseq, sizeof(uint64_t), 1, snapshotdbseq_fd);
 	fclose(snapshotdbseq_fd);
+	return;
+}
+
+void load_maxseq(uint32_t &maxseq, std::string maxseq_path) {
+	FILE *maxseq_fd = fopen(maxseq_path.c_str(), "rb");
+	fread(&maxseq, sizeof(uint32_t), 1, maxseq_fd);
+	fclose(maxseq_fd);
+	return;
+}
+
+void store_maxseq(uint32_t maxseq, std::string maxseq_path) {
+	FILE *maxseq_fd = fopen(maxseq_path.c_str(), "wb+");
+	fwrite(&maxseq, sizeof(uint32_t), 1, maxseq_fd);
+	fclose(maxseq_fd);
 	return;
 }
 

@@ -122,6 +122,7 @@ class RocksdbWrapper {
 		bool method_needsnapshot() const;
 
 		uint16_t workerid;
+		uint32_t maxseq; // for switch recovery
 
 		// NOTE: we provide thread safety between per-server worker and evictserver; and there is no contention across workers of different servers
 		// NOTE: lock overhead is ignorable compared with that of rocksdb

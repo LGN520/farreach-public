@@ -1187,6 +1187,15 @@ int IniparserWrapper::get_switchos_ptf_snapshotserver_end() {
 	return tmp;
 }
 
+int IniparserWrapper::get_switchos_writeallseq() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_writeallseq", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_writeallseq]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
 // snapshot
 
 int IniparserWrapper::get_snapshot_cleanup() {

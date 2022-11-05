@@ -338,3 +338,106 @@ int dynamic_serialize_upstream_backup_notification(dynamic_array_t &dynamic_buf,
 
 	return offset;
 }
+
+// FORMAT: <int num>, <Key k0, Val v0, bool stat0, int seq0>, <Key k1, Val v1, bool stat1, int seq1>, ...
+void deserialize_upstream_backup_content(char *buf, int maxsize, std::vector<netreach_key_t> &keyarray, std::vector<val_t> &valarray, std::vector<uint32_t> &seqarray, std::vector<bool> &statarray) {
+	int offset = 0;
+
+	// num
+	int tmpnum = 0;
+	memcpy(&tmpnum, buf + offset, sizeof(int));
+	tmpnum = int(ntohl(uint32_t(tmpnum)));
+	offset += sizeof(int);
+
+	for (int i = 0; i < tmpnum; i++) {
+		// key
+		netreach_key_t tmpkey;
+		int tmpkeysize = tmpkey.deserialize(buf + offset, maxsize - offset);
+		offset += tmpkeysize;
+
+		// val
+		val_t tmpval;
+		int tmpvalsize = tmpval.deserialize(buf + offset, maxsize - offset);
+		offset += tmpvalsize;
+
+		// seq
+		uint32_t tmpseq = 0;
+		memcpy(&tmpseq, buf + offset, sizeof(uint32_t));
+		tmpseq = ntohl(tmpseq);
+		offset += sizeof(uint32_t);
+
+		// stat
+		uint8_t tmpstat = 0;
+		memcpy(&tmpstat, buf + offset, sizeof(uint8_t));
+		offset += sizeof(uint8_t)
+
+		keyarray.push_back(tmpkey);
+		valarray.push_back(tmpval);
+		seqarray.push_back(tmpseq);
+		statarray.push_back(tmpstat == 1 ? true : false);
+	}
+}
+
+void deserialize_perclient_upstream_backup_files(char *dirname, std::vector<std::vector<netreach_key_t>> &perclient_keyarray, std::vector<std::vector<val_t>> &perclient_valarray, std::vector<std::vector<uint32_t>> &perclient_seqarray, std::vector<std::vector<bool>> &perclient_statarray) {
+	DIR *dir = opendir(dirname);
+	if (dir != NULL) {
+		struct dirent *tmpent = NULL;
+		char tmpfilepath[256];
+		while ((tmpent = readdir(dir)) != NULL) {
+			memset(tmpfilepath, '\0', 256);
+			sprintf(tmpfilepath, "%s/%s", dirname, tmpent->d_name);
+			printf("[INFO] Load backup file %s\n", tmpfilepath);
+			fflush(stdout);
+
+			uint32_t tmpfilesize = get_filesize(tmpfilepath);
+			INVARIANT(tmpfilesize > 0);
+			char *tmpcontent = readonly_mmap(tmpfilepath, 0, tmpfilesize);
+			INVARIANT(tmpcontent != NULL);
+
+			std::vector<netreach_key_t> tmp_keyarray;
+			std::vector<val_t> tmp_valarray;
+			std::vector<uint32_t> tmp_seqarray;
+			std::vector<bool> tmp_statarray;
+			deserialize_upstream_backup_content(tmpcontent, tmpfilesize, tmp_keyarray, tmp_valarray, tmp_seqarray, tmp_statarray);
+
+			perclient_keyarray.push_back(tmp_keyarray);
+			perclient_valarray.push_back(tmp_valarray);
+			perclient_seqarray.push_back(tmp_seqarray);
+			perclient_statarray.push_back(tmp_stat);
+
+			munmap(tmpcontent, tmpfilesize);
+		}
+		closedir(dir);
+	} else {
+		printf("[ERROR] No such directory %s\n", dirname);
+		fflush(stdout);
+		exit(-1);
+	}
+}
+
+void deserialize_perserver_maxseq_files(char *dirname, std::vector<uint32_t> maxseqarray) {
+	DIR *dir = opendir(dirname);
+	if (dir != NULL) {
+		struct dirent *tmpent = NULL;
+		char tmpfilepath[256];
+		while ((tmpent = readdir(dir)) != NULL) {
+			if (strstr(tmpent->d_name, "maxseq") == NULL) { // filter for snapshot/latest maxseq files
+				continue;
+			}
+
+			memset(tmpfilepath, '\0', 256);
+			sprintf(tmpfilepath, "%s/%s", dirname, tmpent->d_name);
+			printf("[INFO] Load maxseq file %s\n", tmpfilepath);
+			fflush(stdout);
+
+			uint32_t tmp_maxseq = 0;
+			load_maxseq(tmp_maxseq, std::string(tmpfilepath));
+			maxseqarray.push_back(tmp_maxseq);
+		}
+		closedir(dir);
+	} else {
+		printf("[ERROR] No such directory %s\n", dirname);
+		fflush(stdout);
+		exit(-1);
+	}
+}

@@ -85,6 +85,12 @@ RocksdbWrapper::RocksdbWrapper(method_t curmethodid) {
 }
 
 RocksdbWrapper::~RocksdbWrapper() {
+
+	// store latest maxseq into disk
+	std::string latestmaxseq_path;
+	get_server_latestmaxseq_path(methodid, latestmaxseq_path, workerid);
+	store_maxseq(maxseq, latestmaxseq_path);
+
 	// close runtime database
 	if (db_ptr != NULL) {
 		if (method_needsnapshot()) {
@@ -219,7 +225,7 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 		// load snapshot data from disk if any
 		if (is_snapshot_existing) {
 			// set snapshotdb_ptr, snapshot_deleted_set, and inswitch_snapshot; reset sp_ptr
-			load_snapshot_files(snapshotid);
+			load_snapshot_files(snapshotid); // NOTE: load snapshotmaxseq into maxseq
 
 			latest_sp_ptr = NULL;
 		}
@@ -234,6 +240,17 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 		}
 	}
 #endif
+
+	// Update maxseq as latestmaxseq if necessary
+	std::string latestmaxseq_path;
+	get_server_latestmaxseq_path(methodid, latestmaxseq_path, workerid);
+	if (isexist(latestmaxseq_path)) {
+		uint32_t tmpmaxseq = 0;
+		load_maxseq(tmpmaxseq, latestmaxseq_path);
+		if (tmpmaxseq > maxseq) {
+			maxseq = tmpmaxseq;
+		}
+	}
 
 	return is_runtime_existing;
 }
@@ -393,6 +410,10 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 		if (rwlock.try_lock()) break;
 	}
 
+	if (seq > maxseq) {
+		maxseq = seq;
+	}
+
 	// check and update seq of deleted keys
 	if (method_needsnapshot()) {
 		uint32_t deleted_seq = 0;
@@ -501,6 +522,10 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 	//mutexlock.lock();
 	while (true) {
 		if (rwlock.try_lock()) break;
+	}
+
+	if (seq > maxseq) {
+		maxseq = seq;
 	}
 
 	// check and update seq of deleted keys
@@ -780,6 +805,12 @@ void RocksdbWrapper::init_snapshot() {
 		std::string snapshotdeletedset_path;
 		get_server_snapshotdeletedset_path(methodid, snapshotdeletedset_path, workerid, snapshotid);
 		snapshot_deleted_set.store(snapshotdeletedset_path);
+
+		// store snapshot maxseq into disk
+		uint32_t snapshotmaxseq = maxseq;
+		std::string snapshotmaxseq_path;
+		get_server_snapshotmaxseq_path(methodid, snapshotmaxseq_path, workerid, snapshotid);
+		store_maxseq(snapshotmaxseq, snapshotmaxseq_path);
 		
 		// store inswitch snapshot (NOTE: empty now)
 		store_inswitch_snapshot(snapshotid);
@@ -874,6 +905,7 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 		INVARIANT(latest_sp_ptr != NULL);
 		// make snapshot of deleted set
 		latest_snapshot_deleted_set = deleted_set;
+		uint32_t snapshotmaxseq = maxseq;
 
 		// NOTE: we can unlock rwlock after accessing db_ptr and deleted_set -> limited effect on put/delete
 		rwlock.unlock_shared();
@@ -893,6 +925,11 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 		std::string latest_snapshotdeletedset_path;
 		get_server_snapshotdeletedset_path(methodid, latest_snapshotdeletedset_path, workerid, snapshotid+1);
 		snapshot_deleted_set.store(latest_snapshotdeletedset_path);
+
+		// store snapshot maxseq into disk
+		std::string snapshotmaxseq_path;
+		get_server_snapshotmaxseq_path(methodid, snapshotmaxseq_path, workerid, snapshotid+1);
+		store_maxseq(snapshotmaxseq, snapshotmaxseq_path);
 
 		//CUR_TIME(store_t2);
 		//DELTA_TIME(create_t2, create_t1, create_t3);
@@ -1036,6 +1073,10 @@ void RocksdbWrapper::load_serverside_snapshot_files(int tmpsnapshotid) {
 	get_server_snapshotdeletedset_path(methodid, snapshotdeletedset_path, workerid, tmpsnapshotid);
 	INVARIANT(isexist(snapshotdeletedset_path));
 	snapshot_deleted_set.load(snapshotdeletedset_path);
+
+	std::string snapshotmaxseq_path;
+	get_server_snapshotmaxseq_path(methodid, snapshotmaxseq_path, workerid, tmpsnapshotid);
+	load_maxseq(maxseq, snapshotmaxseq_path);
 #endif
 	return;
 }
@@ -1140,6 +1181,10 @@ void RocksdbWrapper::remove_snapshot_files(int tmpsnapshotid) {
 	std::string snapshotdeletedset_path;
 	get_server_snapshotdeletedset_path(methodid, snapshotdeletedset_path, workerid, tmpsnapshotid);
 	rmfiles(snapshotdeletedset_path.c_str());
+
+	std::string snapshotmaxseq_path;
+	get_server_snapshotmaxseq_path(methodid, snapshotmaxseq_path, workerid, tmpsnapshotid);
+	rmfiles(snapshotmaxseq_path.c_str());
 
 	std::string inswitchsnapshot_path;
 	get_server_inswitchsnapshot_path(methodid, inswitchsnapshot_path, workerid, tmpsnapshotid);

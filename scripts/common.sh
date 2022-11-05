@@ -9,7 +9,7 @@ USER="theodorepuyang"
 
 SWITCH_PRIVATEKEY=".ssh/id_rsa_forbf1"
 
-#MAIN_CLIENT="dl11" # NOT used
+MAIN_CLIENT="dl11" # used in recovery mode
 SECONDARY_CLIENT="dl15"
 
 # NOTE: must be consistent with each config.ini

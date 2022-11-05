@@ -2,7 +2,8 @@
 #define REFLECTOR_IMPL_H
 
 // shared by reflector.cp2dpserver and reflector.dp2cpserver, but no contention
-bool volatile reflector_with_switchos_popworker_popclient_for_reflector_addr = false;
+//bool volatile reflector_with_switchos_popworker_popclient_for_reflector_addr = false;
+std::mutex mutex_for_popclient_addr; // cope with recovery mode
 struct sockaddr_in reflector_switchos_popworker_popclient_for_reflector_addr;
 unsigned int reflector_switchos_popworker_popclient_for_reflector_addr_len = sizeof(struct sockaddr);
 bool volatile reflector_with_switchos_snapshotserver_snapshotclient_for_reflector_addr = false;
@@ -92,11 +93,17 @@ void *run_reflector_cp2dpserver(void *param) {
 			case packet_type_t::CACHE_EVICT_LOADDATA_INSWITCH:
 			case packet_type_t::SETVALID_INSWITCH:
 				{
-					if (!reflector_with_switchos_popworker_popclient_for_reflector_addr) {
+					/*if (!reflector_with_switchos_popworker_popclient_for_reflector_addr) {
 						memcpy(&reflector_switchos_popworker_popclient_for_reflector_addr, &tmp_addr, sizeof(struct sockaddr_in));
 						reflector_switchos_popworker_popclient_for_reflector_addr_len = tmp_addrlen;
 						reflector_with_switchos_popworker_popclient_for_reflector_addr = true;
-					}
+					}*/
+
+					// Update each time to cope with recovery mode
+					mutex_for_popclient_addr.lock();
+					memcpy(&reflector_switchos_popworker_popclient_for_reflector_addr, &tmp_addr, sizeof(struct sockaddr_in));
+					reflector_switchos_popworker_popclient_for_reflector_addr_len = tmp_addrlen;
+					mutex_for_popclient_addr.unlock();
 					break;
 				}
 			case packet_type_t::LOADSNAPSHOTDATA_INSWITCH:
@@ -151,9 +158,11 @@ void *run_reflector_dp2cpserver(void *param) {
 			case packet_type_t::CACHE_EVICT_LOADDATA_INSWITCH_ACK:
 			case packet_type_t::SETVALID_INSWITCH_ACK:
 				{
-					INVARIANT(reflector_with_switchos_popworker_popclient_for_reflector_addr == true);
+					//INVARIANT(reflector_with_switchos_popworker_popclient_for_reflector_addr == true);
+					mutex_for_popclient_addr.lock();
 					// NOTE: not use popserver.popclient due to duplicate packets for packet loss issued by switch
 					udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &reflector_switchos_popworker_popclient_for_reflector_addr, reflector_switchos_popworker_popclient_for_reflector_addr_len, "reflector.dp2cpserver.popclient");
+					mutex_for_popclient_addr.unlock();
 					break;
 				}
 			case packet_type_t::LOADSNAPSHOTDATA_INSWITCH_ACK:

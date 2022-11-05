@@ -11,17 +11,23 @@ then
 	exit
 fi
 
+# Create and sync config.ini for full scale of server rotation
+echo "Create and sync config.ini for full scale of server rotation"
+source scripts/remote/prepare_server_rotation.sh
+
+# Copy client-side upstream backups from clients to servers 
+echo "Launch server and reflector w/ recovery mode"
+source scripts/remote/launchservertestbed.sh
+
 # Launch switch
 echo "Launch switch data plane"
 ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; nohup bash start_switch.sh >tmp_switch.out 2>&1 &"
-sleep 15s
+sleep 10s
 
-# Copy in-switch snapshot id/data from controller to switch
-echo "Copy in-switch snapshot from controller to switch"
-ssh ${USER}@bf1 "mkdir -p /tmp/${DIRNAME}"
-scp ${USER}@${SERVER0}:/tmp/${DIRNAME}/controller.snapshot* ${USER}@bf1:/tmp/${DIRNAME}
-
-# Configure switch
+# Configure switch and launch switchos
 echo "Configure switch data plane and launch switch control plane w/ recovery mode"
 ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; nohup bash localscripts/launchswitchtestbed.sh recover >tmp_launchswitchtestbed.out 2>&1 &"
-sleep 15s
+#sleep 10s
+
+echo "Resume ${DIRNAME}/config.ini with ${DIRNAME}/config.ini.bak if any"
+mv ${DIRNAME}/config.ini.bak ${DIRNAME}/config.ini

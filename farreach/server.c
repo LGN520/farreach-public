@@ -43,11 +43,17 @@ int server_physical_idx = -1;
 
 cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other threads
 
+// replay-based recovery
+bool recover_mode = false;
+std::map<netreach_key_t, snapshot_record_t> *server_aggregated_backupmap_list = NULL;
+std::mutex mutex_for_recoverystatistics;
+
 /* functions */
 
 // transaction phase
 #include "reflector_impl.h"
 #include "server_impl.h"
+void recover(); // recovery mode
 void transaction_main(); // transaction phase
 void *run_transaction_loadfinishserver(void *param);
 void kill(int signum);
@@ -56,13 +62,17 @@ int main(int argc, char **argv) {
   parse_ini("config.ini");
   parse_control_ini("control_type.ini");
 
-  if (argc != 2) {
-	printf("Usage: ./server server_physical_idx\n");
+  if (argc != 2 && argc != 3) {
+	printf("Usage: ./server server_physical_idx [recover]\n");
 	exit(-1);
   }
   server_physical_idx = atoi(argv[1]);
   INVARIANT(server_physical_idx >= 0);
   INVARIANT(server_physical_idx < server_physical_num);
+
+  if ((argc == 3) && (strcmp(argv[2], "recover") == 0)) {
+	recover_mode = true;
+  }
 
   CPU_ZERO(&nonserverworker_cpuset);
   for (int i = server_worker_corenums[server_physical_idx]; i < server_total_corenums[server_physical_idx]; i++) {
@@ -85,6 +95,10 @@ int main(int argc, char **argv) {
   printf("[main] transaction phase start\n");
   fflush(stdout);
 
+  if (recover_mode == true) {
+    recover();
+  }
+
   prepare_reflector();
   prepare_server();
   transaction_main();
@@ -96,6 +110,11 @@ int main(int argc, char **argv) {
   close_reflector();
   close_server();
 
+  if (server_aggregated_backupmap_list != NULL) {
+	  delete [] server_aggregated_backpmap_list;
+	  server_aggregated_backupmap_list = NULL;
+  }
+
   COUT_THIS("[ycsb_server.main] Exit successfully")
   exit(0);
 }
@@ -103,6 +122,61 @@ int main(int argc, char **argv) {
 /*
  * Transaction phase
  */
+
+void recover() {
+	struct timespec recover_t1, recover_t2, recover_t3;
+	CUR_TIME(recover_t1);
+
+	// (1) copy upstream backups from clients to current server
+	system("bash localscripts/fetchbackup_client2server.sh");
+
+	// (2) deserialize each backup file
+	
+	std::vector<std::vector<netreach_key_t>> perclient_keyarray;
+	std::vector<std::vector<val_t>> perclient_valarray;
+	std::vector<std::vector<uint32_t>> perclient_seqarray;
+	std::vector<std::vector<bool>> perclient_statarray;
+
+	char dirname[256];
+	memset(dirname, '\0', 256);
+	sprintf(dirname, "../benchmark/output/upstreambackups/");
+	deserialize_peclient_upstream_backup_files(dirname, perclient_keyarray, perclient_valarray, perclient_seqarray, perclient_statarray);
+
+	// (3) aggregate per-client backups
+	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
+	server_aggregated_backupmap_list = new std::map<netreach_key_t, snapshot_record_t>[current_server_logical_num];
+	for (int i = 0; i < perclient_keyarray.size(); i++) {
+		for (int j = 0; j < perclient_keyarray[i].size(); j++) {
+			netreach_key_t tmpkey = perclient_keyarray[i][j];
+#ifdef USE_HASH
+			uint32_t tmpserveridx = tmpkey.get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
+#elif defined(USE_RANGE)
+			uint32_t tmpserveridx = tmpkey.get_rangepartition_idx(max_server_total_logical_num);
+#endif
+			
+			int tmplistidx = -1;
+			for (int k = 0; k < server_logical_idxes_list[server_physical_idx].size(); k++) {
+				if (tmpserveridx == server_logical_idxes_list[server_physical_idx][k]) {
+					tmplistidx = k;
+					break;
+				}
+			}
+
+			if (tmplistidx >= 0) {
+				val_t tmpval = perclient_valarray[i][j];
+				uint32_t tmpseq = perclient_seqarray[i][j];
+				bool tmpstat = perclient_statarray[i][j];
+				server_aggregated_backupmap_list[tmplistidx].insert(std::pair<netreach_key_t, snapshot_record_t>(\
+							tmpkey, snapshot_record_t(tmpval, tmpseq, tmpstat)));
+			}
+		}
+	}
+
+	CUR_TIME(recover_t2);
+	DELTA_TIME(recover_t2, recover_t1, recover_t3);
+	printf("[Statistics] Preprocessing time of client-side preservations: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucketnum);
+	fflush(stdout);
+}
 
 void transaction_main() {
 	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();

@@ -146,6 +146,7 @@ void close_switchos();
 //inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx, uint32_t pipeidx);
 //inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx, uint32_t pipeidx);
 inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t freeidx);
+inline uint32_t serialize_writeallseq(char *buf, uint32_t maxseq);
 //inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx, uint32_t pipeidx);
 // NOTE: now we load evicted data directly from data plane instead of via ptf channel
 //inline uint32_t serialize_get_evictdata_setvalid3(char *buf, uint32_t pipeidx);
@@ -304,8 +305,12 @@ void recover() {
 	struct timespec recover_t1, recover_t2, recover_t3;
 	CUR_TIME(recover_t1);
 
-	// (1) copy in-switch snapshot data from controller to switch
-	system("bash localscripts/fetchsnapshot_controller2switch.sh");
+	// (1) copy in-switch snapshot data, client-side maxseq, and server-side maxseq from controller/client/server to switch
+	system("bash localscripts/fetchall_all2switch.sh");
+
+	uint32_t maxseq = 0;
+
+	// (2) extract in-switch snapshot data
 
 	char snapshotid_path[256];
 	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path, 256);
@@ -335,8 +340,7 @@ void recover() {
 	// NOTE: switchos is launched by root, so we can directly run recover_switch.sh to set inswitch SRAM with inswitch snapshot data
 	// DEPRECATED: we can directly perform cache admissions by switchos
 	//system("cd tofino; bash recover_switch.sh >../tmp_recoverswitch.sh 2>&1; cd ..");
-
-	// (2) extract snapshot data
+	
 	int total_bytes = 0;
 	std::vector<int> perserver_bytes;
 	std::vector<uint16_t> perserver_serveridx;
@@ -348,6 +352,8 @@ void recover() {
 	std::vector<std::vector<bool>> perserver_statarray;
 
 	deserialize_snapshot_getdata_ack(content, filesize, SNAPSHOT_GETDATA_ACK, total_bytes, perserver_bytes, perserver_serveridx, perserver_recordcnt, perserver_specialcase_bwcost, perserver_keyarray, perserver_valarray, perserver_seqarray, perserver_statarray);
+
+	munmap(content, filesize);
 
 	// (3) Prepare for cache admissions
 	
@@ -400,6 +406,11 @@ void recover() {
 			uint32_t tmp_seq = perserver_seqarray[i][j];
 			bool tmp_stat = perserver_statarray[i][j];
 
+			// Update maxseq for in-switch snapshot
+			if (tmp_seq > maxseq) {
+				maxseq = tmp_seq;
+			}
+
 			if (tmp_freeidx >= switch_kv_bucketnum) {
 				printf("[WARN] total number of snapshot records > %d; perserver_keyarray[%d].size() is %d\n", switch_kv_bucketnum, i, perserver_keyarray[i].size());
 				fflush(stdout);
@@ -446,13 +457,44 @@ void recover() {
 		}
 	}
 
-	munmap(content, filesize);
+	// (5) get final maxseq
+	
+	// update maxseq for client-side backup files
+	std::vector<std::vector<netreach_key_t>> perclient_keyarray;
+	std::vector<std::vector<val_t>> perclient_valarray;
+	std::vector<std::vector<uint32_t>> perclient_seqarray;
+	std::vector<std::vector<bool>> perclient_statarray;
+	char dirname[256];
+	memset(dirname, '\0', 256);
+	sprintf(dirname, "../benchmark/output/upstreambackups/");
+	deserialize_peclient_upstream_backup_files(dirname, perclient_keyarray, perclient_valarray, perclient_seqarray, perclient_statarray);
+	for (int i = 0; i < perclient_seqarray.size(); i++) {
+		for (int j = 0; j < perclient_seqarray[i].size(); j++) {
+			if (perclient_seqarray[i][j] > maxseq) {
+				maxseq = perclient_seqarray[i][j];
+			}
+		}
+	}
+
+	// update maxseq for server-side maxseq files
+	std::vector<uint32_t> perserver_maxseq;
+	deserialize_perserver_maxseq_files("/tmp/farreach/", perserver_maxseq);
+	for (int i = 0; i < perserver_maxseq.size(); i++) {
+		if (perserver_maxseq[i] > maxseq) {
+			maxseq = perserver_maxseq[i];
+		}
+	}
+
+	// (6) write all seq_reg as maxseq (no ack)
+	ptf_sendsize = serialize_writeallseq(ptfbuf, maxseq);
+	udpsendto(tmpudpsock_for_ptf, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.recover.udpsock_for_ptf");
+
 	close(tmp_udpsock_for_reflector);
 	close(tmp_udpsock_for_ptf);
 
 	CUR_TIME(recover_t2);
 	DELTA_TIME(recover_t2, recover_t1, recover_t3);
-	printf("Time of recovering switch&switchos: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucketnum);
+	printf("[Statistics] Recovery time of switch&switchos: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucketnum);
 	fflush(stdout);
 }
 
@@ -1689,6 +1731,12 @@ inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16
 	return sizeof(int) + tmp_keysize + sizeof(uint16_t);
 	//memcpy(buf + sizeof(int) + tmp_keysize + sizeof(uint16_t), &pipeidx, sizeof(uint32_t));
 	//return sizeof(int) + tmp_keysize + sizeof(uint16_t) + sizeof(uint32_t);
+}
+
+inline uint32_t serialize_writeallseq(char *buf, uint32_t maxseq) {
+	memcpy(buf, &SWITCHOS_WRITEALLSEQ, sizeof(int));
+	memcpy(buf + sizeof(int), &maxseq, sizeof(uint32_t));
+	return sizeof(int) + sizeof(uint32_t);
 }
 
 /*inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx, uint32_t pipeidx) {

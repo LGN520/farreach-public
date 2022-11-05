@@ -16,22 +16,28 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
+- 11.6
+	+ Siyuan
+		* TODO: Update implementation
+		* TODO: Use student-T distribution to calculate the error bars of each experiment
+	+ HuanCheng
+		* TODO: Finish exp10 on recovery time
+		* TODO: Finish exp2 on workload E
+			- For each method
+				- Uncomment RANGE_SUPPORT in tofino/\[netbufferv4/netcache/nocache\].p4 and re-compile switch
+				- TODO: Test ScanResponseSplit of range query
+				- TODO: Test exp2 on workload E to get the first round result
+					+ Expected: all methods have similar range query performance
+					+ TODO: If results mathc expectation, re-run exp2 on workload E to get 2nd and 3rd round results
+			- [NOTE] After exp2, before other exps, for each method
+				- TODO: comment RANGE_SUPPORT in tofino/\[netbufferv4/netcache/nocache\].p4 and re-compile switch
+
 - 11.5
 	+ Siyuan
-		* TODO: Implement server part for server-side replay-based recovery
-		* TODO: Use student-T distribution to calculate the error bars of each experiment
+		* Implement server part for server-side replay-based recovery
+		* Fix maxseq issue under recovery mode
+		* TODO: Debug and test replay-based recovery for exp10 on recovery time
 		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
-		* TODO: Update implementation
-		* TODO: Find the reason why test_server_rotation_p1.sh can sleep 15s after retrieving loading phase files, while test_server_rotation_p2.sh needs 120s and test_dynamic.sh needs 90s
-
-- 11.4
-	+ Siyuan
-		* Review code for large write_delay_time
-			- (1) WriteOptions.low_pri is false by default -> not due to priority
-			- (2) WriteController.NeedsDelay() is true which limits the rate of all writes -> maybe due to flushing/compaction?
-			- Reason: stop writes due to too many level-0 files
-		* Implement switchos part for server-side replay-based recovery
-		* Fix issues in related work
 	+ HuanCheng
 		* Evaluation
 			* TODO: Add LOAD in exp2 on different worklads
@@ -44,6 +50,7 @@
 					* TODO: Re-run exp4 farreach + hotin to see if we can avoid write stalls
 						- NOTE: as it has limited effect on average thpt, we do not need to re-run experiments without timeouts
 					* TODO: Re-run two numbers of exp1 latency to make a double-check
+					* TODO: Find the reason why test_server_rotation_p1.sh can sleep 15s after retrieving loading phase files, while test_server_rotation_p2.sh needs 120s and test_dynamic.sh needs 90s
 			* TODO: Add Twitter Traces for exp2 on different workloads
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
 			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
@@ -53,6 +60,7 @@
 				- [IMPORTANT] keep all raw data of each time for each experiment
 				- NOTE: if you use an individual script to run a given experiment multiple times, you can give an iteration number of the current running time, and backup the statistics files to the directory related with the iteration number in the script before next time of running
 				- NOTE: to login Tofino as root in the script such that you can launch and configure switch automatically, you can use `ssh -i <private-key-for-switch> root@bf1 "<command>"`
+					+ TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh
 		* Coding
 			* Code changes
 				* TODO: Fix keydump issue of memory overflow for key-frequency map
@@ -75,6 +83,15 @@
 				- (2) Whether TPC-C benchmark can provide/generate skewed workloads
 				- (3) Whether TPC-C benchmark is open-source such that we can integrate our inswitchcache-lib into TPC-C
 				- (4) One alternative way is to dump TPC-C skewed workload and use YCSB to replay it, yet may be tricky
+
+- 11.4
+	+ Siyuan
+		* Review code for large write_delay_time
+			- (1) WriteOptions.low_pri is false by default -> not due to priority
+			- (2) WriteController.NeedsDelay() is true which limits the rate of all writes -> maybe due to flushing/compaction?
+			- Reason: stop writes due to too many level-0 files
+		* Implement switchos part for server-side replay-based recovery
+		* Fix issues in related work
 
 - 11.3
 	+ Siyuan
@@ -681,6 +698,7 @@
 			* Fix issue of sending value with null value data
 			* Fix issue of invalid type of SNAPSHOT_SENDDATA
 			* Fix issue of upstream backup notification
+
 * Implement replay-based recovery
 	- Replay cache admissions for in-switch cache based on in-switch snapshot (files: scripts/common.sh scripts/remote/test_recovery_time.sh, farreach/localscripts/launchswitchtestbed.sh, farreach/switchos.c, farreach/localscripts/fetchsnapshot_controller2switch.sh)
 		+ Login bf1 as root -> launch switch data plane -> copy in-switch snapshot data -> configure switch data plane and launch switchos w/ recovery mode
@@ -688,14 +706,22 @@
 			* NOTE: we do NOT need recover_switch.sh to admit snapshot records
 			* NOTE: reflector/ptf needs to update switchos addr each time
 			* [IMPORTANT] NOTE: switchos simply poses a warning for the cache admission of a cached key instead of exiting, as now we do not retrieve server-side cached keyset during recovery
-	- Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations (files: farreach/localscripts/fetchbackup_client2server.sh)
+	- Replay record updates for server-side KVS based on in-switch snapshot and client-side record preservations (files: farreach/localscripts/fetchbackup_client2server.sh, farreach/server.c, farreach/server_impl.h)
 		+ Copy corresponding client-side backups to server
 			* Update upstream backup client-side filepath
 			* Dump stat for upstream backups
-		+ TODO: Aggregate per-client backups into a single map
-			* TODO: For dynamic pattern, directly aggregate two upstream backups
-			+ TODO: For static pattern, aggreagate per-rotation upstream backups of two clients
-		+ TODO: Each server uses the aggregated backup map for recovery
+		+ Aggregate per-client backups into a single map
+			* For dynamic pattern, directly aggregate two upstream backups
+			+ For static pattern, aggreagate per-rotation upstream backups of two clients
+		+ Each server worker uses the corresponding aggregated backup map for recovery
+	- Fix maxseq issue (NOTE: no P4 modification) (files: common/rocksdb_wrapper.c, common/io_helper.c, farreach/localscripts/fetchsnapshot_controller2switch.sh -> fetchall_all2switch.sh, farreach/switchos.c, farreach/tofino/ptf_popserver/table_configure.py, farreach/common_impl.h, common/iniparser/iniparser_wrapper.c, farreach/tofino/common.py)
+		+ Server updates maxseq for each cache miss of put/del write request
+			* Server saves maxseq of cache misses for each snapshot, and also saves latest maxseq after finishing transaction phase
+			* Server loads latest/snapshotted maxseq if any when opening, and choose the larger one as final maxseq
+		+ Switchos copies maxseq files from server0/1 to switch
+			* Switchos gets maxseq of cache hits based on in-switch snapshot and client-side upstream backups
+			* Switchos gets maxseq of cache misses based on per-server latest/snapshotted maxseq
+			* Switchos gets final maxseq based on maxseq of cache hits/misses, and write all seq_reg conservatively by ptf.popserver
 	_ TODO: Debug and test
 	- TODO: Exp 10: in-switch and server-side recovery time vs. cache size
 		+ TODO: Echo information in scripts to hint users to get statistics from tmp.out

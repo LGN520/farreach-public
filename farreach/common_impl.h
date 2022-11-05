@@ -217,6 +217,7 @@ int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = -1;
 int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = -1;
 int SWITCHOS_PTF_POPSERVER_END = -1;
 int SWITCHOS_PTF_SNAPSHOTSERVER_END = -1;
+int SWITCHOS_WRITEALLSEQ = -1;
 
 // Packet types used by switchos/controller/server for snapshot
 int SNAPSHOT_CLEANUP = -1;
@@ -524,6 +525,7 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = ini.get_switchos_reset_snapshot_flag_and_reg_ack();
 	SWITCHOS_PTF_POPSERVER_END = ini.get_switchos_ptf_popserver_end();
 	SWITCHOS_PTF_SNAPSHOTSERVER_END = ini.get_switchos_ptf_snapshotserver_end();
+	SWITCHOS_WRITEALLSEQ = ini.get_switchos_writeallseq();
 
 	SNAPSHOT_CLEANUP = ini.get_snapshot_cleanup();
 	SNAPSHOT_CLEANUP_ACK = ini.get_snapshot_cleanup_ack();

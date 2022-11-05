@@ -22,6 +22,8 @@ void get_server_snapshotdb_path(method_t methodid, std::string &snapshotdb_path,
 void get_server_snapshotdbseq_path(method_t methodid, std::string &snapshotdbseq_path, uint16_t workerid, uint32_t snapshotid);
 void get_server_snapshotdeletedset_path(method_t methodid, std::string &snapshotdeletedset_path, uint16_t workerid, uint32_t snapshotid);
 void get_server_inswitchsnapshot_path(method_t methodid, std::string &inswitchsnapshot_path, uint16_t workerid, uint32_t snapshotid);
+void get_server_snapshotmaxseq_path(method_t methodid, std::string &snapshotmaxseq_path, uint16_t workerid, uint32_t snapshotid);
+void get_server_latestmaxseq_path(method_t methodid, std::string &latestmaxseq_path, uint16_t workerid);
 
 void get_controller_snapshotid_path(method_t methodid, std::string &snapshotid_path);
 void get_controller_snapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid);
@@ -37,6 +39,8 @@ void load_snapshotid(int &snapshotid, std::string snapshotid_path);
 void store_snapshotid(int snapshotid, std::string snapshotid_path);
 void load_snapshotdbseq(uint64_t &snapshotdbseq, std::string snapshotdbseq_path);
 void store_snapshotdbseq(uint64_t snapshotdbseq, std::string snapshotdbseq_path);
+void load_maxseq(uint32_t &maxseq, std::string maxseq_path);
+void store_maxseq(uint32_t maxseq, std::string maxseq_path);
 void store_buf(const char * buf, uint32_t bufsize, std::string path);
 
 // for switchos

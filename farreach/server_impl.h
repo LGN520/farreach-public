@@ -67,6 +67,7 @@ std::atomic<bool> *server_issnapshot_list = NULL; // TODO: be atomic
 void prepare_server();
 // server.workers for processing pkts
 void *run_server_worker(void *param);
+void run_server_recover(uint16_t local_server_logical_idx, uint16_t global_server_logical_idx);
 //void *run_server_popclient(void *param);
 void send_cachepop(const int &sockfd, const char *buf, const int &buflen, const struct sockaddr_in &dstaddr, const socklen_t &dstaddrlen, char *recvbuf, const int& maxrecvbuflen, int &recvsize);
 void *run_server_evictserver(void *param);
@@ -379,6 +380,33 @@ void clear_blocklist(const int &sockfd, blockinfo_t &tmp_blockinfo, const val_t 
  * Worker for server-side processing 
  */
 
+void run_server_recover(uint16_t local_server_logical_idx, uint16_t global_server_logical_idx) {
+	std::map<netreach_key_t, snapshot_record_t> &tmp_aggregated_backupmap = server_aggregated_backupmap_list[local_server_logical_idx];
+
+	struct timespec recover_t1, recover_t2, recover_t3;
+	CUR_TIME(recover_t1);
+
+	// update server-side KVS if necessary
+	// NOTE: we need to check seq to avoid from overwriting normal data
+	for (std::map<netreach_key_t, snapshot_record_t>::iterator iter = tmp_aggregated_backupmap.begin(); iter != tmp_aggregated_backupmap.end(); iter++) {
+		netreach_key_t tmpkey = iter->first;
+		snapshot_record_t tmprecord = iter->second;
+		if (tmprecord.stat) { // put
+			db_wrappers[local_server_logical_idx].put(tmpkey, tmprecord.val, tmprecord.seq, true);
+		}
+		else { // del
+			db_wrappers[local_server_logical_idx].remove(tmpkey, tmprecord.seq, true);
+		}
+	}
+
+	CUR_TIME(recover_t2);
+	DELTA_TIME(recover_t2, recover_t1, recover_t3);
+	mutex_for_recovery_statistics.lock();
+	printf("[Statistics] Recovery time of server %d: %f s w/ cache size %d\n", global_server_logical_idx, GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucketnum);
+	fflush(stdout);
+	mutex_for_recovery_statistics.unlock();
+}
+
 void *run_server_worker(void * param) {
   // Parse param
   server_worker_param_t &thread_param = *(server_worker_param_t *)param;
@@ -395,6 +423,11 @@ void *run_server_worker(void * param) {
   if (!is_existing) {
 	  printf("[server.worker %d-%d] you need to run loader before server\n", local_server_logical_idx, global_server_logical_idx);
 	  //exit(-1);
+  }
+
+  // recover if necessary
+  if (recover_mode == true) {
+	  run_server_recover(local_server_logical_idx, global_server_logical_idx);
   }
 
   // packet headers (only needed by dpdk / raw socket)

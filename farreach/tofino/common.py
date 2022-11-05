@@ -117,6 +117,7 @@ SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = int(control_config.get("switchos", "SWITC
 SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = int(control_config.get("switchos", "SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK"))
 SWITCHOS_PTF_POPSERVER_END = int(control_config.get("switchos", "SWITCHOS_PTF_POPSERVER_END"))
 SWITCHOS_PTF_SNAPSHOTSERVER_END = int(control_config.get("switchos", "SWITCHOS_PTF_SNAPSHOTSERVER_END"))
+SWITCHOS_WRITEALLSEQ = int(control_config.get("switchos", "SWITCHOS_WRITEALLSEQ"))
 SNAPSHOT_GETDATA_ACK = int(control_config.get("snapshot", "SNAPSHOT_GETDATA_ACK"))
 
 # Set it as True if support range, or False otherwise

@@ -23,9 +23,6 @@ rm tmp_cleaner.out
 echo "configure data plane"
 cd tofino; bash configure.sh; cd ..
 
-echo "launch switchos"
-nohup ./switchos ${recovermode} >tmp_switchos.out 2>&1 &
-
 echo "launch ptfserver"
 cd tofino; nohup bash ptf_popserver.sh >../tmp_popserver.out 2>&1 &
 cd ..
@@ -33,3 +30,13 @@ cd tofino; nohup bash ptf_snapshotserver.sh >../tmp_snapshotserver.out 2>&1 &
 cd ..
 cd tofino; nohup bash ptf_cleaner.sh >../tmp_cleaner.out 2>&1 &
 cd ..
+
+if [ "x${recovermode}" == "xrecover" ]
+then
+	sleep 10s # wait for data plane interfaces UP; wait for ptf_popserver
+	echo "launch switchos w/ recovery mode"
+	nohup ./switchos ${recovermode} >tmp_switchos.out 2>&1 &
+else
+	echo "launch switchos"
+	nohup ./switchos >tmp_switchos.out 2>&1 &
+fi

@@ -6,6 +6,8 @@
 #include "../common/val.h"
 #include <vector>
 #include <arpa/inet.h> // htonl
+#include <dirent.h>
+#include <stdio.h>
 
 class SnapshotSignal {
 	public:
@@ -40,5 +42,12 @@ void deserialize_snapshot_senddata(dynamic_array_t &dynamic_buf, int control_typ
 
 // UPSTREAM_BACKUP_NOTIFICATION
 int dynamic_serialize_upstream_backup_notification(dynamic_array_t &dynamic_buf, std::vector<std::vector<netreach_key_t>> &perserver_keyarray, std::vector<std::vector<uint32_t>> &perserver_seqarray);
+
+// file content of upstream backups
+void deserialize_upstream_backup_content(char *buf, int maxsize, std::vector<netreach_key_t> &keyarray, std::vector<val_t> &valarray, std::vector<uint32_t> &seqarray, std::vector<bool> &statarray);
+void deserialize_perclient_upstream_backup_files(char *dirname, std::vector<std::vector<netreach_key_t>> &perclient_keyarray, std::vector<std::vector<val_t>> &perclient_valarray, std::vector<std::vector<uint32_t>> &perclient_seqarray, std::vector<std::vector<bool>> &perclient_statarray);
+
+// per-server maxseq
+void deserialize_perserver_maxseq_files(char *dirname, std::vector<uint32_t> maxseqarray);
 
 #endif
