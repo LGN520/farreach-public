@@ -17,6 +17,9 @@
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
 - 11.7
+	+ Siyuan
+		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
+		* TODO: Use student-T distribution to calculate the error bars of each experiment
 	+ HuanCheng
 		* TODO: Start to re-run experiments for multiple rounds
 			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
@@ -43,8 +46,6 @@
 					- Add `source /root/.zshrc` into all method/tofino/*.sh to retrieve switch env for non-interative terminal
 					- Use `su user -c` to switch normal user and copy recovery information to switch
 					- Filter filename in outband_packet_format.c to avoid deserializing "." and ".."
-		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
-		* TODO: Use student-T distribution to calculate the error bars of each experiment
 	+ HuanCheng
 		* Evaluation
 			* [IMPORTANT] Fix write stalls
