@@ -11,22 +11,51 @@ then
 	exit
 fi
 
+function getTiming(){
+    start=$1
+    end=$2
+ 
+    start_s=`echo $start | cut -d '.' -f 1`
+    start_ns=`echo $start | cut -d '.' -f 2`
+    end_s=`echo $end | cut -d '.' -f 1`
+    end_ns=`echo $end | cut -d '.' -f 2`
+ 
+    time_micro=$(( (10#$end_s-10#$start_s)*1000000 + (10#$end_ns/1000 - 10#$start_ns/1000) ))
+    #time_ms=`expr $time_micro/1000  | bc `
+ 
+    #echo "$time_micro microseconds"
+    #echo "$time_ms ms"
+	echo $(echo "scale=4; ${time_micro} / 1000.0 / 1000.0" | bc)
+}
+
+# Collect recovery information
+echo "Collect recovery information among clients/servers/switchos"
+begin_time=`date +%s.%N`
+# Fetch all to switch
+ssh ${USER}@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/fetchall_all2switch.sh >/dev/null 2>&1"
+# Fetch client-side backups to server
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
+ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
+end_time=`date +%s.%N`
+collect_time=$(getTiming ${begin_time} ${end_time})
+echo "[Statistics] collect time: ${collect_time} s"
+
 # Create and sync config.ini for full scale of server rotation
 echo "Create and sync config.ini for full scale of server rotation"
 source scripts/remote/prepare_server_rotation.sh
 
 # Copy client-side upstream backups from clients to servers 
 echo "Launch server and reflector w/ recovery mode"
-source scripts/remote/launchservertestbed.sh
+source scripts/remote/launchservertestbed.sh recover
 
 # Launch switch
 echo "Launch switch data plane"
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; nohup bash start_switch.sh >tmp_switch.out 2>&1 &"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; rm tmp_switch.out; nohup bash start_switch.sh >tmp_switch.out 2>&1 &"
 sleep 10s
 
 # Configure switch and launch switchos
 echo "Configure switch data plane and launch switch control plane w/ recovery mode"
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; nohup bash localscripts/launchswitchtestbed.sh recover >tmp_launchswitchtestbed.out 2>&1 &"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; rm tmp_launchswitchostestbed.sh; bash localscripts/launchswitchostestbed.sh recover >tmp_launchswitchostestbed.out 2>&1"
 sleep 5s
 
 # Close server

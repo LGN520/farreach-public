@@ -16,6 +16,7 @@
 #include <sys/time.h> // struct timeval
 #include <string.h>
 #include <map>
+#include <mutex>
 
 // CPU affinity
 #define _GNU_SOURCE
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
   close_server();
 
   if (server_aggregated_backupmap_list != NULL) {
-	  delete [] server_aggregated_backpmap_list;
+	  delete [] server_aggregated_backupmap_list;
 	  server_aggregated_backupmap_list = NULL;
   }
 
@@ -127,8 +128,8 @@ void recover() {
 	struct timespec recover_t1, recover_t2, recover_t3;
 	CUR_TIME(recover_t1);
 
-	// (1) copy upstream backups from clients to current server
-	system("bash localscripts/fetchbackup_client2server.sh");
+	// (1) copy upstream backups from clients to current server (put into test_recovery_time.sh)
+	//system("bash localscripts/fetchbackup_client2server.sh");
 
 	// (2) deserialize each backup file
 	
@@ -140,7 +141,7 @@ void recover() {
 	char dirname[256];
 	memset(dirname, '\0', 256);
 	sprintf(dirname, "../benchmark/output/upstreambackups/");
-	deserialize_peclient_upstream_backup_files(dirname, perclient_keyarray, perclient_valarray, perclient_seqarray, perclient_statarray);
+	deserialize_perclient_upstream_backup_files(dirname, perclient_keyarray, perclient_valarray, perclient_seqarray, perclient_statarray);
 
 	// (3) aggregate per-client backups
 	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
@@ -174,7 +175,7 @@ void recover() {
 
 	CUR_TIME(recover_t2);
 	DELTA_TIME(recover_t2, recover_t1, recover_t3);
-	printf("[Statistics] Preprocessing time of client-side preservations: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucketnum);
+	printf("[Statistics] Preprocessing time of client-side preservations: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
 	fflush(stdout);
 }
 

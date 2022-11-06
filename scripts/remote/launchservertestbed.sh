@@ -5,6 +5,18 @@ fi
 
 #set -x
 
+if [ $# -eq 1 ]
+then
+	recovermode=$1
+	if [ "x${recovermode}" != "xrecover" ]
+	then
+		echo "[ERROR] incorrect arg: ${recovermode}"
+		exit
+	fi
+else
+	recovermode=""
+fi
+
 cd ${DIRNAME}
 
 # NOTE: you need to launch per-switch data plane and control plane before running this script
@@ -28,8 +40,8 @@ then
 fi
 
 echo "launch servers"
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./server 0 >tmp_server.out 2>&1 &"
-ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./server 1 >tmp_server.out 2>&1 &"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./server 0 >tmp_server.out ${recovermode} 2>&1 &"
+ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; nohup ./server 1 >tmp_server.out ${recovermode} 2>&1 &"
 
 if [ ${with_reflector} -eq 1 ]
 then

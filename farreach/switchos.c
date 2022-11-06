@@ -305,8 +305,8 @@ void recover() {
 	struct timespec recover_t1, recover_t2, recover_t3;
 	CUR_TIME(recover_t1);
 
-	// (1) copy in-switch snapshot data, client-side maxseq, and server-side maxseq from controller/client/server to switch
-	system("bash localscripts/fetchall_all2switch.sh");
+	// (1) copy in-switch snapshot data, client-side maxseq, and server-side maxseq from controller/client/server to switch (put into test_recovery_time.sh)
+	//system("bash localscripts/fetchall_all2switch.sh");
 
 	uint32_t maxseq = 0;
 
@@ -411,8 +411,8 @@ void recover() {
 				maxseq = tmp_seq;
 			}
 
-			if (tmp_freeidx >= switch_kv_bucketnum) {
-				printf("[WARN] total number of snapshot records > %d; perserver_keyarray[%d].size() is %d\n", switch_kv_bucketnum, i, perserver_keyarray[i].size());
+			if (tmp_freeidx >= switch_kv_bucket_num) {
+				printf("[WARN] total number of snapshot records > %d; perserver_keyarray[%d].size() is %d\n", switch_kv_bucket_num, i, perserver_keyarray[i].size());
 				fflush(stdout);
 				break;
 			}
@@ -420,8 +420,8 @@ void recover() {
 			// Set valid = 0 (not necessary under recovery mode due to no background traffic)
 			//setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, tmp_key, tmp_freeidx, 0);
 			//pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
-			//udpsendto(tmp_udpsock_for_reflector, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.recover.udpsock_for_reflector");
-			////is_timeout = udprecvfrom(tmp_udpsock_for_reflector, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.recover.udpsock_for_reflector");
+			//udpsendto(tmpudpsock_for_reflector, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.recover.udpsock_for_reflector");
+			////is_timeout = udprecvfrom(tmpudpsock_for_reflector, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.recover.udpsock_for_reflector");
 			////setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
 			////INVARIANT(tmp_setvalid_rsp.key() == tmp_key);
 
@@ -467,7 +467,7 @@ void recover() {
 	char dirname[256];
 	memset(dirname, '\0', 256);
 	sprintf(dirname, "../benchmark/output/upstreambackups/");
-	deserialize_peclient_upstream_backup_files(dirname, perclient_keyarray, perclient_valarray, perclient_seqarray, perclient_statarray);
+	deserialize_perclient_upstream_backup_files(dirname, perclient_keyarray, perclient_valarray, perclient_seqarray, perclient_statarray);
 	for (int i = 0; i < perclient_seqarray.size(); i++) {
 		for (int j = 0; j < perclient_seqarray[i].size(); j++) {
 			if (perclient_seqarray[i][j] > maxseq) {
@@ -486,15 +486,17 @@ void recover() {
 	}
 
 	// (6) write all seq_reg as maxseq (no ack)
+	printf("Write maxseq %d to all seq_reg\n", maxseq);
+	fflush(stdout);
 	ptf_sendsize = serialize_writeallseq(ptfbuf, maxseq);
 	udpsendto(tmpudpsock_for_ptf, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.recover.udpsock_for_ptf");
 
-	close(tmp_udpsock_for_reflector);
-	close(tmp_udpsock_for_ptf);
+	close(tmpudpsock_for_reflector);
+	close(tmpudpsock_for_ptf);
 
 	CUR_TIME(recover_t2);
 	DELTA_TIME(recover_t2, recover_t1, recover_t3);
-	printf("[Statistics] Recovery time of switch&switchos: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucketnum);
+	printf("[Statistics] Recovery time of switch&switchos: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
 	fflush(stdout);
 }
 

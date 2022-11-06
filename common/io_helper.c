@@ -210,7 +210,7 @@ void get_controller_snapshotdata_path(method_t methodid, char *snapshotdata_path
 	const char *methodname = get_methodname_byid(methodid);
 	char tmpstr[256];
 	memset(tmpstr, '\0', 256);
-	sprintf(tmpstr, "/tmp/%s/controller.snapshotdata", methodname);
+	sprintf(tmpstr, "/tmp/%s/controller.snapshotdata%d", methodname, snapshotid);
 	INVARIANT(snapshotdata_path != NULL && len >= strlen(tmpstr));
 	memset(snapshotdata_path, '\0', len);
 	memcpy(snapshotdata_path, tmpstr, strlen(tmpstr));
@@ -221,7 +221,7 @@ void get_controller_spinesnapshotdata_path(method_t methodid, char *snapshotdata
 	const char *methodname = get_methodname_byid(methodid);
 	char tmpstr[256];
 	memset(tmpstr, '\0', 256);
-	sprintf(tmpstr, "/tmp/%s/controller.spinesnapshotdata", methodname);
+	sprintf(tmpstr, "/tmp/%s/controller.spinesnapshotdata%d", methodname, snapshotid);
 	INVARIANT(snapshotdata_path != NULL && len >= strlen(tmpstr));
 	memset(snapshotdata_path, '\0', len);
 	memcpy(snapshotdata_path, tmpstr, strlen(tmpstr));
@@ -232,7 +232,7 @@ void get_controller_leafsnapshotdata_path(method_t methodid, char *snapshotdata_
 	const char *methodname = get_methodname_byid(methodid);
 	char tmpstr[256];
 	memset(tmpstr, '\0', 256);
-	sprintf(tmpstr, "/tmp/%s/controller.leafsnapshotdata", methodname);
+	sprintf(tmpstr, "/tmp/%s/controller.leafsnapshotdata%d", methodname, snapshotid);
 	INVARIANT(snapshotdata_path != NULL && len >= strlen(tmpstr));
 	memset(snapshotdata_path, '\0', len);
 	memcpy(snapshotdata_path, tmpstr, strlen(tmpstr));

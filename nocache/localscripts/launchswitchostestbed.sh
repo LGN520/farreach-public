@@ -4,3 +4,4 @@ DIRNAME="nocache"
 
 echo "configure data plane"
 cd tofino; bash configure.sh; cd ..
+sleep 1s

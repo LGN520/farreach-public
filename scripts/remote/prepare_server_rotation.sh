@@ -34,6 +34,7 @@ sed -i '1,$s/server_logical_idxes=TODO1/server_logical_idxes='${rotated_servers}
 if [ "x${DIRNAME}" == "xfarreach" ]
 then
 	sed -i '1,$s/controller_snapshot_period=TODO/controller_snapshot_period='${snapshot_period}/'' ${DIRNAME}/config.ini
+	sed -i '1,$s/switch_kv_bucket_num=TODO/switch_kv_bucket_num='${cache_size}/'' ${DIRNAME}/config.ini
 fi
 
 echo "Sync new ${DIRNAME}/config.ini to all machines"

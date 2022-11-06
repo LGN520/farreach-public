@@ -733,6 +733,7 @@ void *run_controller_snapshotclient(void *param) {
 		CUR_TIME(snapshot_t2);
 		DELTA_TIME(snapshot_t2, snapshot_t1, snapshot_t3);
 		printf("Time of making consistent system snapshot: %f s\n", GET_MICROSECOND(snapshot_t3) / 1000.0 / 1000.0);
+		fflush(stdout);
 
 		// NOTE: append bandwidthcost into tmp_controller_bwcost.out
 		double bwcost_rate = bandwidthcost / (controller_snapshot_period / 1000.0) / 1024.0 / 1024.0; // MiB/s
@@ -741,8 +742,9 @@ void *run_controller_snapshotclient(void *param) {
 			localcp_bwcost_rates[i] = perserver_localcp_bandwidthcost[i] / (controller_snapshot_period / 1000.0) / 1024.0 / 1024.0; // MiB/s
 		}
 		char strid[256];
+		memset(strid, '\0', 256);
 		if (workload_mode == 0) {
-			if (client_physical_num == 1) {
+			if (server_physical_num == 1) {
 				sprintf(strid, "static%d-%d", server_total_logical_num_for_rotation, server_logical_idxes_list[0][0]);
 			} else {
 				sprintf(strid, "static%d-%d-%d", server_total_logical_num_for_rotation, server_logical_idxes_list[0][0], server_logical_idxes_list[1][0]);

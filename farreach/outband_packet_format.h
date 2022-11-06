@@ -4,6 +4,7 @@
 #include "../common/helper.h"
 #include "../common/key.h"
 #include "../common/val.h"
+#include "../common/io_helper.h"
 #include <vector>
 #include <arpa/inet.h> // htonl
 #include <dirent.h>
