@@ -16,22 +16,73 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
+- 11.7
+	+ HuanCheng
+		* TODO: Start to re-run experiments for multiple rounds
+			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
+
 - 11.6
 	+ Siyuan
-		* TODO: Debug and test replay-based recovery for exp10 on recovery time
+		* Debug and test replay-based recovery for exp10 on recovery time
+			+ Pass compilation client, server, and switchos
+			+ Try exp 10: in-switch and server-side recovery time vs. cache size
+				* Script change
+					- Dynamically set cache size in config.ini for FarReach
+					- Create scripts/exps/exp10.sh, which can be invoked by external scripts for multiple rounds if necessary
+						+ Backup required files in exp10.sh before test_recovery_time.sh
+						+ Echo information in exp10.sh to hint users to get statistics from tmp.out
+				* Run server rotation for static pattern of FarReach under a given cache size
+					- NOTE: each time of running server rotation will replace the following files, we backup them into benchmark/output/exp10/cachesize-<cachesize> in exp10.sh
+						+ Client-side upstream backups in dl11 and dl15: under benchmark/output/upstreambackups/, static*client<0/1>.out and dynamic-client<0/1>.out
+						+ Controller-side in-switch snapshot in dl16: /tmp/farreach/controller.snapshot*
+						+ Server-side maxseq files in dl16 and dl13: /tmp/farreach/*maxseq*
+				* Run test_recovery_time.sh under the same cache size
+					- NOTE: you can directly run test_recovery_time.sh w/ 5 times to get variance on <=5 rounds, respectively
+				* Fix issues
+					- Fix typo of controller.c for strid of bwcost.out
+					- Add `source /root/.zshrc` into all method/tofino/*.sh to retrieve switch env for non-interative terminal
+					- Use `su user -c` to switch normal user and copy recovery information to switch
+					- Filter filename in outband_packet_format.c to avoid deserializing "." and ".."
 		* TODO: Update exp1 latency, exp2 LOAD/twitter, exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 	+ HuanCheng
-		* TODO: Finish exp10 on recovery time
-		* TODO: Finish exp2 on workload E
-			- For each method
-				- Uncomment RANGE_SUPPORT in tofino/\[netbufferv4/netcache/nocache\].p4 and re-compile switch
-				- TODO: Test ScanResponseSplit of range query
-				- TODO: Test exp2 on workload E to get the first round result
-					+ Expected: all methods have similar range query performance
-					+ TODO: If results mathc expectation, re-run exp2 on workload E to get 2nd and 3rd round results
-			- [NOTE] After exp2, before other exps, for each method
-				- TODO: comment RANGE_SUPPORT in tofino/\[netbufferv4/netcache/nocache\].p4 and re-compile switch
+		* Evaluation
+			* [IMPORTANT] Fix write stalls
+				+ Sleep between stop and kill in scripts to wait for flushing and compaction in loading/transaction phase -> WORK
+					* FUTURE: uncomment close_server in farreach/server.c::transaction_main() to close rocksdb instances asap
+					* FUTURE: uncomment sleep in farreach/server_impl.h::close_server() if RocksDB does not wait for completing flush/compaction before close
+					* Re-run exp4 farreach + hotin to see if we can avoid write stalls -> still with performance fluctuation
+						- [IMPORTANT] NOTE: it has effect on average thpt -> we have to re-run all experiments!
+					* Re-run two numbers of exp1 latency to make a double-check -> still with large latency (due to RocksDB disk operations?)
+					* TODO: Find the reason why test_server_rotation_p1.sh can sleep 15s after retrieving loading phase files, while test_server_rotation_p2.sh needs 120s and test_dynamic.sh needs 90s
+			* Add Twitter Traces for exp2 on different workloads
+				- Dump twitter traces through keydump.
+				- TODO: run.
+				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
+			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
+				- TODO: Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost (discuss w/ Siyuan first)
+			* TODO: Run multiple times of each experiment (as many times as we can)
+				- [IMPORTANT] keep all raw data of each time for each experiment
+				- NOTE: if you use an individual script to run a given experiment multiple times, you can give an iteration number of the current running time, and backup the statistics files to the directory related with the iteration number in the script before next time of running
+				- NOTE: to login Tofino as root in the script such that you can launch and configure switch automatically, you can use `ssh -i <private-key-for-switch> root@bf1 "<command>"`
+					+ TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh
+		* Other evaluation (after finishing the above exps)
+			* TODO: Finish exp10 on recovery time
+				- [IMPORTANT] TODO: add the following two notes to benchmark.md for exp10
+					+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
+						* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
+					+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
+						* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh
+			* TODO: Finish exp2 on workload E
+				- For each method
+					- Uncomment RANGE_SUPPORT in tofino/\[netbufferv4/netcache/nocache\].p4 and re-compile switch
+					- TODO: Test ScanResponseSplit of range query
+					- TODO: Test exp2 on workload E to get the first round result
+						+ Expected: all methods have similar range query performance
+						+ TODO: If results mathc expectation, re-run exp2 on workload E to get 2nd and 3rd round results
+				- [NOTE] After exp2, before other exps, for each method
+					- TODO: comment RANGE_SUPPORT in tofino/\[netbufferv4/netcache/nocache\].p4 and re-compile switch
 
 - 11.5
 	+ Siyuan
@@ -48,32 +99,12 @@
 			* Add LOAD in exp2 on different worklads
 				- Add doInsert for PregeneratedWorklad
 				- Still retrieve loading phase files, yet use `./bin/ycsb load` instead of `./bin/ycsb run`
-			* [IMPORTANT] Fix write stalls
-				+ Sleep between stop and kill in scripts to wait for flushing and compaction in loading/transaction phase -> WORK
-					* FUTURE: uncomment close_server in farreach/server.c::transaction_main() to close rocksdb instances asap
-					* FUTURE: uncomment sleep in farreach/server_impl.h::close_server() if RocksDB does not wait for completing flush/compaction before close
-					* TODO: Re-run exp4 farreach + hotin to see if we can avoid write stalls
-						- NOTE: as it has limited effect on average thpt, we do not need to re-run experiments without timeouts
-					* TODO: Re-run two numbers of exp1 latency to make a double-check
-					* TODO: Find the reason why test_server_rotation_p1.sh can sleep 15s after retrieving loading phase files, while test_server_rotation_p2.sh needs 120s and test_dynamic.sh needs 90s
-			* Add Twitter Traces for exp2 on different workloads
-				- Dump twitter traces through keydump.
-				- TODO: run.
-				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
-			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
-				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
-				- TODO: Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost (discuss w/ Siyuan first)
-			* TODO: Run multiple times of each experiment (as many times as we can)
-				- [IMPORTANT] keep all raw data of each time for each experiment
-				- NOTE: if you use an individual script to run a given experiment multiple times, you can give an iteration number of the current running time, and backup the statistics files to the directory related with the iteration number in the script before next time of running
-				- NOTE: to login Tofino as root in the script such that you can launch and configure switch automatically, you can use `ssh -i <private-key-for-switch> root@bf1 "<command>"`
-					+ TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh
 		* Coding
 			* Code changes
 				* Fix keydump issue of memory overflow for key-frequency map
 				* Fix GlobalConfig issue of not judging methodid for client_upstreambackupreleaser_port
 				* Print ratio of write requests with >128B values in keydump
-			* TODO: Finish TraceReplay workload
+			* Finish TraceReplay workload
 				- Get correpsonding trace file based on workloadName
 				- Limit the maximum number of parsed requests, and the maximum value size based on its paper
 				- Comment request filtering under static pattern in TraceReplayWorkload -> resort to KeydumpClient and PregeneratedWorkload
@@ -724,6 +755,3 @@
 			* Switchos gets maxseq of cache hits based on in-switch snapshot and client-side upstream backups
 			* Switchos gets maxseq of cache misses based on per-server latest/snapshotted maxseq
 			* Switchos gets final maxseq based on maxseq of cache hits/misses, and write all seq_reg conservatively by ptf.popserver
-	_ TODO: Debug and test
-	- TODO: Exp 10: in-switch and server-side recovery time vs. cache size
-		+ TODO: Echo information in scripts to hint users to get statistics from tmp.out
