@@ -45,6 +45,7 @@ sed -i '1,$s/server_logical_idxes=TODO0/server_logical_idxes='${bottleneck_serve
 if [ "x${DIRNAME}" == "xfarreach" ]
 then
 	sed -i '1,$s/controller_snapshot_period=TODO/controller_snapshot_period='${snapshot_period}/'' ${DIRNAME}/config.ini
+	sed -i '1,$s/switch_kv_bucket_num=TODO/switch_kv_bucket_num='${cache_size}/'' ${DIRNAME}/config.ini
 fi
 source scripts/remote/sync_file.sh ${DIRNAME} config.ini
 

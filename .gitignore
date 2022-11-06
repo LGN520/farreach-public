@@ -5,3 +5,6 @@ ycsb.iml
 *.o
 *.a
 *.s
+
+*.ini.exp*
+*.sh.exp*

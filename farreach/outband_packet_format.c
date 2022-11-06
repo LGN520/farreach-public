@@ -369,7 +369,7 @@ void deserialize_upstream_backup_content(char *buf, int maxsize, std::vector<net
 		// stat
 		uint8_t tmpstat = 0;
 		memcpy(&tmpstat, buf + offset, sizeof(uint8_t));
-		offset += sizeof(uint8_t)
+		offset += sizeof(uint8_t);
 
 		keyarray.push_back(tmpkey);
 		valarray.push_back(tmpval);
@@ -384,6 +384,10 @@ void deserialize_perclient_upstream_backup_files(char *dirname, std::vector<std:
 		struct dirent *tmpent = NULL;
 		char tmpfilepath[256];
 		while ((tmpent = readdir(dir)) != NULL) {
+			if (strstr(tmpent->d_name, "static") == NULL && strstr(tmpent->d_name, "dynamic") == NULL) { // filter for static or dynamic backup files
+				continue;
+			}
+
 			memset(tmpfilepath, '\0', 256);
 			sprintf(tmpfilepath, "%s/%s", dirname, tmpent->d_name);
 			printf("[INFO] Load backup file %s\n", tmpfilepath);
@@ -403,7 +407,10 @@ void deserialize_perclient_upstream_backup_files(char *dirname, std::vector<std:
 			perclient_keyarray.push_back(tmp_keyarray);
 			perclient_valarray.push_back(tmp_valarray);
 			perclient_seqarray.push_back(tmp_seqarray);
-			perclient_statarray.push_back(tmp_stat);
+			perclient_statarray.push_back(tmp_statarray);
+
+			printf("[INFO] number of backups: %d\n", tmp_keyarray.size());
+			fflush(stdout);
 
 			munmap(tmpcontent, tmpfilesize);
 		}

@@ -14,10 +14,8 @@ fi
 
 tmpdir="benchmark/output/upstreambackups"
 
-echo "Switch from root to ${USER}"
-su ${USER}
-mkdir -p ${tmpdir}
-rm -r ${tmpdir}/*
+mkdir -p ${SWITCH_ROOTPATH}/${tmpdir}
+rm -r ${SWITCH_ROOTPATH}/${tmpdir}/*
 mkdir -p /tmp/${DIRNAME}
 rm -r /tmp/${DIRNAME}/*
 
@@ -26,12 +24,12 @@ echo "Copy client-side backups to switch"
 cd ..
 if [ "x${workloadmode}" == "x0" ]
 then
-	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static*client0.out ${tmpdir}
-	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static*client1.out ${tmpdir}
+	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static*client0.out ${SWITCH_ROOTPATH}/${tmpdir}
+	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static*client1.out ${SWITCH_ROOTPATH}/${tmpdir}
 elif [ "x${workloadmode}" == "x1" ]
 then
-	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client0.out ${tmpdir}
-	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client1.out ${tmpdir}
+	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client0.out ${SWITCH_ROOTPATH}/${tmpdir}
+	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client1.out ${SWITCH_ROOTPATH}/${tmpdir}
 else
 	echo "[ERROR] invalid workload mode: ${workloadmode}"
 	exit

@@ -9,7 +9,7 @@ function readini() {
 	echo ${result}
 }
 
-DIRNAME="netcache"
+DIRNAME=TODO
 
 ##### method-related variables #####
 
