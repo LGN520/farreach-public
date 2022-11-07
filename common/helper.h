@@ -39,6 +39,7 @@ static const char *get_methodname_byid(method_t methodid) {
 #define USE_YCSB
 //#define USE_SYNTHETIC
 //#define USE_TPCC
+#define USE_TWITTER_TRACE
 
 #define WARMUP_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "../benchmark/output/%s-hotest.out", workload)

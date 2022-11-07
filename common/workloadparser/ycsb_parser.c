@@ -283,12 +283,16 @@ bool YcsbParserIterator::parsekey(const char* line, int linelen) {
 	const char* key_begin = nullptr;
 	const char* key_end = nullptr;
 
+#ifdef USE_TWITTER_TRACE
+	key_begin = strchr(line, ' ') + 1;
+#else
 	key_begin = strstr(line, "user");
 	//if (unlikely(key_begin == nullptr)) return false;
 	//key_begin += 4; // Skip the first usertable
 	//key_begin = strstr(key_begin, "user");
 	if (unlikely(key_begin == nullptr)) return false;
 	key_begin += 4; // At the first character of key
+#endif
 	key_end = strchr(key_begin, ' '); // At the end of key
 	if (unlikely(key_end == nullptr)) return false;
 
