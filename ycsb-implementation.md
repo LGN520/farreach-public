@@ -22,6 +22,21 @@
 		* TODO: Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+	+ Huancheng
+		* TODO: Finish twitter trace evaluation
+		* TODO: Exp4: Change generate_dynamic_rules.py to generate <workloadname>-staticrules, such that all rule files are the same as that for the first 10 seconds (no key popularity changes)
+		* TODO: Use workloadname=synthetic, dynamic_ruleprefix=static to get the results of static pattern w/ only 2 servers during 70 seconds
+		* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
+		* Other evaluation (after finishing the above exps)
+			* TODO: Finish exp10 on recovery time
+				- [IMPORTANT] TODO: add the following two notes to benchmark.md for exp10
+					+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
+						* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
+					+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
+						* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
+		* TODO: Start to re-run experiments for multiple rounds
+			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
 
 - 11.7
 	+ Siyuan
@@ -40,37 +55,15 @@
 			* Add Twitter Traces for exp2 on different workloads
 				- Dump twitter traces through keydump.
 				- Fix a typo of libcommon to deserialize PUTREQ_LARGEVALUE_SEQ correctly
-				- TODO: Fix memory overflow issue for cluster 40
+				- Fix memory overflow issue for cluster 40
 				- TODO: run.
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
-			* TODO: Add the results of static pattern (w/o server rotations; w/ only two storage servers) for exp4 on dynamic workloads
-				- TODO: Change generate_dynamic_rules.py to generate <workloadname>-staticrules, such that all rule files are the same as that for the first 10 seconds (no key popularity changes)
-				- TODO: Use workloadname=synthetic, dynamic_ruleprefix=static to get the results of static pattern w/ only 2 servers during 70 seconds
-			* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
-				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
+			* Add the results of static pattern (w/o server rotations; w/ only two storage servers) for exp4 on dynamic workloads
 			* TODO: Run multiple times of each experiment (as many times as we can)
 				- [IMPORTANT] keep all raw data of each time for each experiment
 				- NOTE: if you use an individual script to run a given experiment multiple times, you can give an iteration number of the current running time, and backup the statistics files to the directory related with the iteration number in the script before next time of running
 				- NOTE: to login Tofino as root in the script such that you can launch and configure switch automatically, you can use `ssh -i <private-key-for-switch> root@bf1 "<command>"`
 					+ TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh
-		* Other evaluation (after finishing the above exps)
-			* TODO: Finish exp10 on recovery time
-				- [IMPORTANT] TODO: add the following two notes to benchmark.md for exp10
-					+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
-						* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
-					+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
-						* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh
-			* TODO: Finish exp2 on workload E
-				- For each method
-					- Uncomment RANGE_SUPPORT in tofino/\[netbufferv4/netcache/nocache\].p4 and re-compile switch
-					- TODO: Test ScanResponseSplit of range query
-					- TODO: Test exp2 on workload E to get the first round result
-						+ Expected: all methods have similar range query performance
-						+ TODO: If results mathc expectation, re-run exp2 on workload E to get 2nd and 3rd round results
-				- [NOTE] After exp2, before other exps, for each method
-					- TODO: comment RANGE_SUPPORT in tofino/\[netbufferv4/netcache/nocache\].p4 and re-compile switch
-		* TODO: Start to re-run experiments for multiple rounds
-			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
 
 - 11.6
 	+ Siyuan
