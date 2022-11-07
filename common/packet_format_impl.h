@@ -4233,7 +4233,7 @@ static uint32_t deserialize_switchidx(switchidx_t &switchidx, const char * data,
 
 static netreach_key_t get_packet_key(method_t methodid, const char * data, uint32_t recvsize) {
 	netreach_key_t tmpkey;
-	int tmp_keyoff = Packet<key_t>::get_ophdrsize(methodid) - sizeof(netreach_key_t);
+	int tmp_keyoff = Packet<netreach_key_t>::get_ophdrsize(methodid) - sizeof(netreach_key_t);
 	const char *begin = data + tmp_keyoff;
 	tmpkey.deserialize(begin, recvsize - tmp_keyoff);
 	return tmpkey;
@@ -4302,7 +4302,7 @@ static size_t get_frag_totalsize(method_t methodid, packet_type_t type, size_t f
 
 static uint16_t get_packet_clientlogicalidx(method_t methodid, const char * data, uint32_t recvsize) {
 	packet_type_t tmp_optype = get_packet_type(data, recvsize);
-	size_t tmp_ophdrsize = Packet<key_t>::get_ophdrsize(methodid);
+	size_t tmp_ophdrsize = Packet<netreach_key_t>::get_ophdrsize(methodid);
 	uint32_t prevbytes = 0;
 	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE) {
 		prevbytes = tmp_ophdrsize; // op_hdr
@@ -4327,7 +4327,7 @@ static uint16_t get_packet_clientlogicalidx(method_t methodid, const char * data
 
 static uint32_t get_packet_fragseq(method_t methodid, const char * data, uint32_t recvsize) {
 	packet_type_t tmp_optype = get_packet_type(data, recvsize);
-	size_t tmp_ophdrsize = Packet<key_t>::get_ophdrsize(methodid);
+	size_t tmp_ophdrsize = Packet<netreach_key_t>::get_ophdrsize(methodid);
 	uint32_t prevbytes = 0;
 	if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE) {
 		prevbytes = tmp_ophdrsize + sizeof(uint16_t); // op_hdr + client_logical_idx
