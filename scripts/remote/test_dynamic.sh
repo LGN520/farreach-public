@@ -30,7 +30,7 @@ then
 	sleep 10s
 fi
 
-echo "launch clients pf ${DIRNAME}"
+echo "launch clients of ${DIRNAME}"
 ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; nohup ./bin/ycsb run ${DIRNAME} -pi 1 >tmp_client.out 2>&1 &"
 sleep 5s
 cd benchmark/ycsb/

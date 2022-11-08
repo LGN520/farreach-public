@@ -62,7 +62,7 @@ if [ ${with_reflector} -eq 1 ]; then
 	sudo nohup ./reflector spine >tmp_serverrotation_part1_reflector.out 2>&1 &
 	cd ..
 fi
-sleep 15s # wait longer time for the first rotation, as rocksdb needs to load the files overwritten by the backups
+sleep 120s # wait longer time for the first rotation, as rocksdb needs to load the files overwritten by the backups
 
 # NOTE: we trigger snapshot in the physical client 0 during transaction phase for farreach/distfarreach
 echo "start clients"

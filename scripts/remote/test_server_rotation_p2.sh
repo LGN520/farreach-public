@@ -78,7 +78,7 @@ else
 	justloaded=$(expr ${tmprotateidx})
 fi
 
-if [ $((${justloaded} % 16)) -eq 0 ]; then
+if [ $((${justloaded} % 8)) -eq 0 ]; then
 	echo "sleep 120s after retrieving database files"
 	sleep 120s
 else
