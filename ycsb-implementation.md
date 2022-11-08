@@ -18,6 +18,8 @@
 
 - 11.9
 	+ Siyuan
+		* TODO: Read NSDI'13 Memcache, ATC'17 Memshare, FAST'20 Twitter traces, OSDI'20 Cachelib
+		* TODO: Add discussion about distributed extension in paper
 		* TODO: Update exp9 bandwidth cost of evaluation in paper
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
@@ -28,8 +30,7 @@
 		* Update exp4 dynamic, exp6 skewness of evaluation in paper
 		* Dump more bwcost information in controller
 		* Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
-		* TODO: Add design details of upstream backup in paper
-		* TODO: Add discussion about distributed extension in paper
+		* Add design details of upstream backup in paper
 	+ Huancheng
 		* TODO: Finish twitter trace evaluation
 			- TODO: Fix issue of zero cache hit rate
