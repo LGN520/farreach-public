@@ -7,19 +7,22 @@ ParserIterator::~ParserIterator() {}
 #ifdef USE_TWITTER_TRACE
 netreach_key_t extract_key(const char *buf, int buflen) {
 	INVARIANT(buflen == 32);
-	int stringlen = buflen / 2;
-	std::string keystrhi(buf, stringlen);
-	std::string keystrlo(buf+stringlen, stringlen);
-	uint64_t tmpkeyhi = strtoul(keystrhi.c_str(), 0, 16);
-	uint64_t tmpkeylo = strtoul(keystrlo.c_str(), 0, 16);
-	uint32_t keyhilo = 0;
-	uint32_t keyhihi = 0;
-	uint32_t keylolo = 0;
-	uint32_t keylohi = 0;
-	memcpy((void *)&keyhilo, (void *)&tmpkeyhi, sizeof(uint32_t)); // lowest 4B -> keyhilo
-	memcpy((void *)&keyhihi, ((char *)&tmpkeyhi)+4, sizeof(uint32_t)); // highest 4B -> keyhihi
-	memcpy((void *)&keylolo, (void *)&tmpkeylo, sizeof(uint32_t)); // highest 4B -> keylolo
-	memcpy((void *)&keylohi, ((char *)&tmpkeylo)+4, sizeof(uint32_t)); // highest 4B -> keylohi
+	int valuelen = buflen / 4;
+	std::string keystrhilo(buf, valuelen);
+	std::string keystrhihi(buf + valuelen, valuelen);
+	std::string keystrlolo(buf + 2 * valuelen, valuelen);
+	std::string keystrlohi(buf + 3 * valuelen, valuelen);
+
+	uint32_t keyhilo = strtoull(keystrhilo.c_str(), 0, 16); // 1st 4B -> keyhilo
+	uint32_t keyhihi = strtoull(keystrhihi.c_str(), 0, 16); // 2nd 4B -> keyhihi
+	uint32_t keylolo = strtoull(keystrlolo.c_str(), 0, 16); // 3rd 4B -> keylolo
+	uint32_t keylohi = strtoull(keystrlohi.c_str(), 0, 16); // 4th 4B -> keylohi
+
+	keyhilo = ntohl(keyhilo);
+	keyhihi = ntohl(keyhihi);
+	keylolo = ntohl(keylolo);
+	keylohi = ntohl(keylohi);
+
 	return netreach_key_t(keylolo, keylohi, keyhilo, keyhihi);
 }
 #elif defined USE_YCSB
