@@ -27,7 +27,7 @@
 		* Update exp10.sh to support roundidx, and backup generated files for the given round
 		* Update exp4 dynamic, exp6 skewness of evaluation in paper
 		* Dump more bwcost information in controller
-		* TODO: Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
+		* Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
 		* TODO: Add design details of upstream backup in paper
 		* TODO: Add discussion about distributed extension in paper
 	+ Huancheng
@@ -50,6 +50,7 @@
 						* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
 					+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
 						* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
+				- TODO: Write down how to calculate average recovery time into benchmark.md
 		* TODO: Start to re-run experiments for multiple rounds
 			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
 

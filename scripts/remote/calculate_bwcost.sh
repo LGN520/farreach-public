@@ -27,5 +27,6 @@ echo "copy statistics file ${filename} from main server"
 scp ${USER}@${SERVER0}:${filepath} ${CLIENT_ROOTPATH}
 
 cd scripts/local/
-python calculate_bwcost_helper.py ${CLIENT_ROOTPATH}/${filename} ${snapshot_period}
+#python calculate_bwcost_helper.py ${CLIENT_ROOTPATH}/${filename} ${snapshot_period}
+python calculate_bwcost_helper.py ${CLIENT_ROOTPATH}/${filename}
 cd ../../
