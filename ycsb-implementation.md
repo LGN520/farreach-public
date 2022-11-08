@@ -16,18 +16,33 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.8
+- 11.9
 	+ Siyuan
-		* TODO: Update exp4 dynamic, exp6 skewness, and exp9 bandwidth of evaluation
-		* TODO: Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
+		* TODO: Update exp9 bandwidth cost of evaluation in paper
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+
+- 11.8
+	+ Siyuan
+		* Update exp10.sh to support roundidx, and backup generated files for the given round
+		* Update exp4 dynamic, exp6 skewness of evaluation in paper
+		* Dump more bwcost information in controller
+		* TODO: Update calculate_bwcost_helper.py to calculate average globalbwcost and per-server average localbwcost for exp9 on bandwidth cost, and then sums up avg localbwcost of all logical servers and avg globalbwcost
+		* TODO: Add design details of upstream backup in paper
+		* TODO: Add discussion about distributed extension in paper
 	+ Huancheng
 		* TODO: Finish twitter trace evaluation
+			- TODO: Fix issue of zero cache hit rate
+			- TODO: Fix issue of missing iterations + largevalue timeout
+			- TODO: Update benchmark.md to guide users to download and store Twitter traces into the specific path with required filename
 		* TODO: Exp4: Change generate_dynamic_rules.py to generate <workloadname>-staticrules, such that all rule files are the same as that for the first 10 seconds (no key popularity changes)
 		* TODO: Use workloadname=synthetic, dynamic_ruleprefix=static to get the results of static pattern w/ only 2 servers during 70 seconds
 		* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
 				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
+				- TODO: Check tmp_controller_bwcost.out: totalcost should be larger as server rotation iteration proceeds, as more in-switch records are marked as latest (vallen from 0 to 128B)
+					+ TODO: Check tmp_serverrotation_part<1/2>_controller.out, which dumps # of in-switch entries with non-zero vallen
+				- TODO: Check tmp_controller_bwcost.out: for each rotation, two localcosts of bottleneck partition and rotate partition should be non-zero
+					+ TODO: Check tmp_switchos.out, which dumps # of speical cases during snapshot
 		* Other evaluation (after finishing the above exps)
 			* TODO: Finish exp10 on recovery time
 				- [IMPORTANT] TODO: add the following two notes to benchmark.md for exp10

@@ -672,6 +672,24 @@ void *run_controller_snapshotclient(void *param) {
 
 				deserialize_snapshot_getdata_ack(databuf, SNAPSHOT_GETDATA_ACK, total_bytes, perserver_bytes, perserver_serveridx, perserver_recordcnt, perserver_specialcase_bwcost, perserver_keyarray, perserver_valarray, perserver_seqarray, perserver_statarray);
 
+				// TMPDEBUG
+				int tmp_truestatcnt = 0;
+				int tmp_nonzerovalcnt = 0;
+				int tmp_totalcnt = 0;
+				for (int i = 0; i < perserver_statarray.size(); i++) {
+					for (int j = 0; j < perserver_statarray[i].size(); j++) {
+						if (perserver_statarray[i][j]) {
+							tmp_truestatcnt += 1;
+						}
+						if (perserver_valarray[i][j].val_length > 0) {
+							tmp_nonzerovalcnt += 1;
+						}
+						tmp_totalcnt += 1;
+					}
+				}
+				printf("[DEBUG] stat=true cnt: %d, non-zero vallength cnt: %d, total entry cnt: %d\n", tmp_truestatcnt, tmp_nonzerovalcnt, tmp_totalcnt);
+				fflush(stdout);
+
 				// update bandwidth usage
 				bandwidthcost += total_bytes;
 				for (int tmp_bwcostidx = 0; tmp_bwcostidx < perserver_specialcase_bwcost.size(); tmp_bwcostidx++) {
