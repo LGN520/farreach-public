@@ -21,6 +21,12 @@
 		* Read NSDI'13 Memcache and ATC'17 Memshare, which are general key-value caching for storage of web applications instead of key-value store
 		* Update evaluation plan to merge exp8 and exp9
 		* Update exp8 thpt of evaluation in paper
+		* [IMPORTANT] Background of paper: do NOT mention write allocate and write around policy
+			- Write allocate: trigger cache admission/eviction to allocate space for cache misses instead of accessing storage servers
+			- Write around: NOT trigger cache admission/eviction for cache misses and only access storage servers
+			- FarReach: trigger cache admission/eviction to allocate space for cache misses by controller, and access storage servers to process the cache misses
+			- NOTE: FarReach is between write around and write allocate
+		* TODO: Proofread related work, including arxiv PKache and VLDB read-after-write consistency
 		* TODO: FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Add discussion about distributed extension in paper
 		* TODO: Update exp8 bandwidth cost of evaluation in paper
