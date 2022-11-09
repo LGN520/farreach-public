@@ -18,9 +18,12 @@
 
 - 11.9
 	+ Siyuan
-		* TODO: Read NSDI'13 Memcache, ATC'17 Memshare, FAST'20 Twitter traces, OSDI'20 Cachelib
+		* Read NSDI'13 Memcache and ATC'17 Memshare, which are general key-value caching for storage of web applications instead of key-value store
+		* Update evaluation plan to merge exp8 and exp9
+		* Update exp8 thpt of evaluation in paper
+		* TODO: FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Add discussion about distributed extension in paper
-		* TODO: Update exp9 bandwidth cost of evaluation in paper
+		* TODO: Update exp8 bandwidth cost of evaluation in paper
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 
@@ -35,25 +38,33 @@
 		* TODO: Finish twitter trace evaluation
 			- TODO: Fix issue of zero cache hit rate
 			- TODO: Fix issue of missing iterations + largevalue timeout
+			- TODO: Fix issue of incorrect results under automatic script
 			- TODO: Update benchmark.md to guide users to download and store Twitter traces into the specific path with required filename
 		* TODO: Exp4: Change generate_dynamic_rules.py to generate <workloadname>-staticrules, such that all rule files are the same as that for the first 10 seconds (no key popularity changes)
 		* TODO: Use workloadname=synthetic, dynamic_ruleprefix=static to get the results of static pattern w/ only 2 servers during 70 seconds
-		* TODO: Finish exp9 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
-				- TODO: Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out -> if encounter any issue in controller/switchos, let Siyuan fix first
-				- TODO: Check tmp_controller_bwcost.out: totalcost should be larger as server rotation iteration proceeds, as more in-switch records are marked as latest (vallen from 0 to 128B)
-					+ TODO: Check tmp_serverrotation_part<1/2>_controller.out, which dumps # of in-switch entries with non-zero vallen
-				- TODO: Check tmp_controller_bwcost.out: for each rotation, two localcosts of bottleneck partition and rotate partition should be non-zero
-					+ TODO: Check tmp_switchos.out, which dumps # of speical cases during snapshot
+		* TODO: Finish exp8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
+			- Check generated files
+				- Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out
+				- Check tmp_controller_bwcost.out: totalcost should be larger as server rotation iteration proceeds, as more in-switch records are marked as latest (vallen from 0 to 128B)
+					+ Check tmp_serverrotation_part<1/2>_controller.out, which dumps # of in-switch entries with non-zero vallen
+				- Check tmp_controller_bwcost.out: for each rotation, two localcosts of bottleneck partition and rotate partition should be non-zero
+					+ Check tmp_switchos.out, which dumps # of speical cases during snapshot
+			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
+			- TODO: Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
 		* Other evaluation (after finishing the above exps)
-			* TODO: Finish exp10 on recovery time
+			* TODO: Finish exp9 on recovery time
+				- TODO: Fix issue of dynamic rulemap server in server 1
 				- [IMPORTANT] TODO: add the following two notes to benchmark.md for exp10
 					+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
 						* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
 					+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
 						* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
 				- TODO: Write down how to calculate average recovery time into benchmark.md
+				- TODO: To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
+				- TODO: In warmup_client.c, we need to admit the top K hottest keys for the given cache size K
 		* TODO: Start to re-run experiments for multiple rounds
 			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
+			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
 
 - 11.7
 	+ Siyuan
@@ -73,14 +84,12 @@
 				- Dump twitter traces through keydump.
 				- Fix a typo of libcommon to deserialize PUTREQ_LARGEVALUE_SEQ correctly
 				- Fix memory overflow issue for cluster 40
-				- TODO: run.
 				- NOTE: double-check the Twitter Traces of the choosen clusters before experiments
 			* Add the results of static pattern (w/o server rotations; w/ only two storage servers) for exp4 on dynamic workloads
-			* TODO: Run multiple times of each experiment (as many times as we can)
+			* Run multiple times of each experiment (as many times as we can)
 				- [IMPORTANT] keep all raw data of each time for each experiment
 				- NOTE: if you use an individual script to run a given experiment multiple times, you can give an iteration number of the current running time, and backup the statistics files to the directory related with the iteration number in the script before next time of running
 				- NOTE: to login Tofino as root in the script such that you can launch and configure switch automatically, you can use `ssh -i <private-key-for-switch> root@bf1 "<command>"`
-					+ TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh
 
 - 11.6
 	+ Siyuan
