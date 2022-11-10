@@ -16,31 +16,22 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.10
+- 11.11
 	+ Siyuan
-		* Proofread related work in paper
-		* TODO: Update background in paper
 		* TODO: Update design in paper
-		* TODO: Fix figure issue in paper
+		* TODO: Fix figure issues in paper
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Add discussion about distributed extension in paper
 		* TODO: Update exp8 bandwidth cost of evaluation in paper
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 
-- 11.9
+- 11.10
 	+ Siyuan
-		* Read NSDI'13 Memcache and ATC'17 Memshare, which are general key-value caching for storage of web applications instead of key-value store
-		* Update evaluation plan to merge exp8 and exp9
-		* Update exp8 thpt of evaluation in paper
-		* [IMPORTANT] Background of paper: do NOT mention write allocate and write around policy
-			- Write allocate: trigger cache admission/eviction to allocate space for cache misses instead of accessing storage servers
-			- Write around: NOT trigger cache admission/eviction for cache misses and only access storage servers
-			- FarReach: trigger cache admission/eviction to allocate space for cache misses by controller, and access storage servers to process the cache misses
-			- NOTE: FarReach is between write around and write allocate
-		* Proofread related work
-		* Read arxiv PKache and VLDB read-after-write consistency
-	+ Huancheng
+		* Proofread related work in paper
+		* Update background in paper
+		* Update design assumptions in paper
+	+ HuanCheng
 		* TODO: Finish twitter trace evaluation
 			- TODO: Fix issue of zero cache hit rate
 			- TODO: Fix issue of missing iterations + largevalue timeout
@@ -77,6 +68,21 @@
 		* TODO: Start to re-run experiments for multiple rounds
 			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
 			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
+
+- 11.9
+	+ Siyuan
+		* Read NSDI'13 Memcache and ATC'17 Memshare, which are general key-value caching for storage of web applications instead of key-value store
+		* Update evaluation plan to merge exp8 and exp9
+		* Update exp8 thpt of evaluation in paper
+		* [IMPORTANT] Background of paper: do NOT mention write allocate and write around policy
+			- Write allocate: trigger cache admission/eviction to allocate space for cache misses instead of accessing storage servers
+			- Write around: NOT trigger cache admission/eviction for cache misses and only access storage servers
+			- FarReach: trigger cache admission/eviction to allocate space for cache misses by controller, and access storage servers to process the cache misses
+			- NOTE: FarReach is between write around and write allocate
+		* Proofread related work
+		* Read arxiv PKache and VLDB read-after-write consistency
+	+ Huancheng
+		* Find timeout issues of twitter trace due to farreach's read blocking for large value and netcache's incorrect cache eviction
 
 - 11.8
 	+ Siyuan
