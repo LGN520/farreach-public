@@ -209,20 +209,14 @@ void *run_switchos_popserver(void *param) {
 		}
 		mutex_for_cached_keyset.unlock();
 
-		if (!is_cached) {
+		if (!is_cached && workload_mode == 1) { // not cached and dynamic workload pattern
 			// notify switchos.popworker for cache population/eviction
-			if (workload_mode == 1) { // dynamic workload pattern
-				bool res = switchos_netcache_getreq_pop_ptr_queue.write(tmp_netcache_getreq_pop_ptr);
-				if (!res) {
-					printf("[switch os] message queue overflow of switchos.switchos_netcache_getreq_pop_ptr_queue!\n");
-				}
-			}
-			else { // static workload pattern
-				delete tmp_netcache_getreq_pop_ptr;
-				tmp_netcache_getreq_pop_ptr = NULL;
+			bool res = switchos_netcache_getreq_pop_ptr_queue.write(tmp_netcache_getreq_pop_ptr);
+			if (!res) {
+				printf("[switch os] message queue overflow of switchos.switchos_netcache_getreq_pop_ptr_queue!\n");
 			}
 		}
-		else {
+		else { // cached or static workload pattern
 			delete tmp_netcache_getreq_pop_ptr;
 			tmp_netcache_getreq_pop_ptr = NULL;
 		}

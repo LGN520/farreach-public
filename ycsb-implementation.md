@@ -18,6 +18,10 @@
 
 - 11.10
 	+ Siyuan
+		* Proofread related work in paper
+		* TODO: Update background in paper
+		* TODO: Update design in paper
+		* TODO: Fix figure issue in paper
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Add discussion about distributed extension in paper
 		* TODO: Update exp8 bandwidth cost of evaluation in paper
@@ -41,6 +45,11 @@
 			- TODO: Fix issue of zero cache hit rate
 			- TODO: Fix issue of missing iterations + largevalue timeout
 			- TODO: Fix issue of incorrect results under automatic script
+			- TODO: Fix issue of dynamic array set for upstream backups
+			- TODO: Fix issue of missing PUTREQ_LARGEVALUE in server1 of farreach
+			- TODO: Fix issue of controller.evictserver of netcache
+				+ TODO: Fix issue of failed 8th iteration of netcache
+			- TODO: Place switch launching and configuration into internal scripts
 			- TODO: Update benchmark.md to guide users to download and store Twitter traces into the specific path with required filename
 		* TODO: Exp4: Change generate_dynamic_rules.py to generate <workloadname>-staticrules, such that all rule files are the same as that for the first 10 seconds (no key popularity changes)
 		* TODO: Use workloadname=synthetic, dynamic_ruleprefix=static to get the results of static pattern w/ only 2 servers during 70 seconds
@@ -53,6 +62,7 @@
 					+ Check tmp_switchos.out, which dumps # of speical cases during snapshot
 			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
 			- TODO: Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
+			- TODO: Do we need to add results of snapshot period = 2.5/7.5?
 		* Other evaluation (after finishing the above exps)
 			* TODO: Finish exp9 on recovery time
 				- TODO: Fix issue of dynamic rulemap server in server 1

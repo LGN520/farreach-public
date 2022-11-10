@@ -294,7 +294,7 @@ void *run_switchos_dppopserver(void *param) {
 		}
 		mutex_for_cached_keyset.unlock();
 
-		if (!is_cached) {
+		if (!is_cached && workload_mode == 1) { // not cached and dynamic workload pattern
 			// calculate global server logical index
 #ifdef USE_HASH
 			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
