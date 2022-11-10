@@ -209,7 +209,7 @@ void *run_switchos_popserver(void *param) {
 		}
 		mutex_for_cached_keyset.unlock();
 
-		if (!is_cached && workload_mode == 1) { // not cached and dynamic workload pattern
+		if (!is_cached) { // not cached
 			// notify switchos.popworker for cache population/eviction
 			bool res = switchos_netcache_getreq_pop_ptr_queue.write(tmp_netcache_getreq_pop_ptr);
 			if (!res) {
@@ -329,6 +329,12 @@ void *run_switchos_popworker(void *param) {
 				switchos_perpipeline_cached_empty_index[tmp_pipeidx] += 1;
 			}
 			else { // Without free idx
+				if (workload_mode == 1) { // dynamic pattern does not need cache eviction
+					delete tmp_netcache_getreq_pop_ptr;
+					tmp_netcache_getreq_pop_ptr = NULL;
+					continue;
+				}
+
 				//CUR_TIME(evict_total_t1);
 
 				//CUR_TIME(evict_load_t1);
