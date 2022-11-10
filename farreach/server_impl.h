@@ -586,6 +586,7 @@ void *run_server_worker(void * param) {
 				//printf("GETREQ_LARGEVALUEBLOCK_SEQ: key %x; seq %d\n", req.key().keyhihi, req.seq()); // TMPDEBUG
 				//fflush(stdout);
 				if (tmpiter == tmp_blockinfomap.end()) {
+#ifndef SERVER_ROTATION
 					printf("[WARN][LARGEVALUEBLOCK] blockinfomap does not contain key %x -> block the GETREQ_LARGEVALUEBLOCK_SEQ\n", req.key().keyhihi);
 					fflush(stdout);
 
@@ -601,6 +602,24 @@ void *run_server_worker(void * param) {
 					tmp_blockinfo._blockedaddrlen_list.push_back(client_addrlen);
 
 					tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(req.key(), tmp_blockinfo));
+#else
+					// NOTE: if w/ server rotation, as the storage server will be re-launched each rotation which loses the previous blockinfomap, we ignore the case of unexisting key in blockinfomap -> reasonable as in practice, blockinfomap will not be lost
+					val_t tmp_val;
+					uint32_t tmp_seq = 0;
+					bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, &tmp_seq);
+					if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
+						// NOTE: GETREQ_LARGEVALUEBLOCK_SEQ.seq() is the seq of the latest PUTREQ_LARGEVALUE, which cannot be used for GETRES_SEQ
+						get_response_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+					}
+					else {
+						get_response_largevalue_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
+						dynamicbuf.clear();
+						rsp_size = rsp.dynamic_serialize(dynamicbuf);
+						udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
+					}
+#endif
 				} else { // with existing blockinfo for rare case of PUTREQ_LARGEVALUE
 					blockinfo_t &tmp_blockinfo = tmpiter->second;
 					if (tmp_blockinfo._largevalueseq == req.seq() & tmp_blockinfo._isblocked == true) {
