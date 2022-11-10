@@ -270,6 +270,10 @@ void *run_switchos_dppopserver(void *param) {
 			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(CURMETHOD_ID, tmp_netcache_warmupreq_inswitch_pop.key());
 		}
 		else if (tmp_optype == packet_type_t::NETCACHE_GETREQ_POP) {
+			if (workload_mode == 0) { // static pattern does not need change cache for NETCACHE_GETREQ_POP
+				continue;
+			}
+
 			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(CURMETHOD_ID, buf, recvsize);
 		}
 		else {

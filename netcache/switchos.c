@@ -191,6 +191,10 @@ void *run_switchos_popserver(void *param) {
 			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(CURMETHOD_ID, tmp_netcache_warmupreq_inswitch_pop.key());
 		}
 		else if (tmp_optype == packet_type_t::NETCACHE_GETREQ_POP) {
+			if (workload_mode == 0) { // static pattern does not need change cache for NETCACHE_GETREQ_POP
+				continue;
+			}
+
 			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(CURMETHOD_ID, buf, recvsize); // freed by switchos.popworker if the key is not cached
 		}
 		else {
@@ -329,12 +333,6 @@ void *run_switchos_popworker(void *param) {
 				switchos_perpipeline_cached_empty_index[tmp_pipeidx] += 1;
 			}
 			else { // Without free idx
-				if (workload_mode == 1) { // dynamic pattern does not need cache eviction
-					delete tmp_netcache_getreq_pop_ptr;
-					tmp_netcache_getreq_pop_ptr = NULL;
-					continue;
-				}
-
 				//CUR_TIME(evict_total_t1);
 
 				//CUR_TIME(evict_load_t1);
