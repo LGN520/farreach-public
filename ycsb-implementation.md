@@ -19,12 +19,11 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.11
+- 11.12
 	+ Siyuan
-		* Update cache admission design in paper
-		* Update cache eviction design in paper
 		* TODO: Update snapshot design in paper
-		* TODO: Fix figure issues in paper
+		* TODO: Update impl in paper
+		* TODO: Fix figure issues of eval in paper
 		* TODO: Check TPC-C details for KVS tricks
 		* TODO: Dump db_bench skewed workload
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
@@ -32,6 +31,12 @@
 		* TODO: Update exp8 bandwidth cost of evaluation in paper
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+
+- 11.11
+	+ Siyuan
+		* Update cache admission design in paper
+		* Update cache eviction design in paper
+		* Update part of snapshot design in paper
 
 - 11.10
 	+ Siyuan
