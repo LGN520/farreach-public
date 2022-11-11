@@ -1,5 +1,8 @@
 # Implementation log of YCSB
 
+- [IMPORTANT]
+	+ We must change the bottleneck idx for each trace/workload based on keydump results
+
 ## TODO list
 
 - TODO
@@ -18,8 +21,12 @@
 
 - 11.11
 	+ Siyuan
-		* TODO: Update design in paper
+		* Update cache admission design in paper
+		* Update cache eviction design in paper
+		* TODO: Update snapshot design in paper
 		* TODO: Fix figure issues in paper
+		* TODO: Check TPC-C details for KVS tricks
+		* TODO: Dump db_bench skewed workload
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Add discussion about distributed extension in paper
 		* TODO: Update exp8 bandwidth cost of evaluation in paper
@@ -40,10 +47,23 @@
 			- TODO: Fix issue of missing PUTREQ_LARGEVALUE in server1 of farreach
 			- TODO: Fix issue of controller.evictserver of netcache
 				+ TODO: Fix issue of failed 8th iteration of netcache
+			- Double-check
+				+ Check whether cluster 9 hot ratio is larger than workloada in keydump -> both are around 40%
+					* TODO: Fix issue of incorrect bottleneck idx and get farreach/nocache results of cluster 40
+					* TODO: Also dump >1400B write ratio and <=128B write ratio in keydump
+				+ TODO: Analyze cluster 27 and 14 by keydump
+					* Concerns on cluseter 27 (data of part 1): avg value size is 8, 1.06 Zipfian alpha and 15% write ratio
+					* Concerns on cluseter 14 (data of smallest part): avg value size is 414, yet 35% write ratio and 1.3 alpha
+					* NOT use cluster 8, 29, and 49: avg value size is too large -> large writes/reads may be dominant
+				+ TODO: If Twitter traces do not work, as TPC-C is not suitable, we may try db_bench
+					* TODO: Before coding for db_bench, we should dump and replay db_bench skewed workload by YCSB to get preliminary results
+				+ TODO: Mark the results of the 1st round after chaning sleep in scripts to distinguish them with other 1st round results
+				+ FUTURE: Try more clients, e.g. 128*2, until saturating the bottleneck server (backup 64-client keydump files, redo keydump for 128-client)
 			- TODO: Place switch launching and configuration into internal scripts
 			- TODO: Update benchmark.md to guide users to download and store Twitter traces into the specific path with required filename
-		* TODO: Exp4: Change generate_dynamic_rules.py to generate <workloadname>-staticrules, such that all rule files are the same as that for the first 10 seconds (no key popularity changes)
-		* TODO: Use workloadname=synthetic, dynamic_ruleprefix=static to get the results of static pattern w/ only 2 servers during 70 seconds
+		* Exp 4 on dynamic patterns
+			* TODO: Exp4: Change generate_dynamic_rules.py to generate <workloadname>-staticrules, such that all rule files are the same as that for the first 10 seconds (no key popularity changes)
+			* TODO: Use workloadname=synthetic, dynamic_ruleprefix=static to get the results of static pattern w/ only 2 servers during 70 seconds
 		* TODO: Finish exp8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
 			- Check generated files
 				- Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out
