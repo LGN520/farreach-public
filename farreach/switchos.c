@@ -1261,7 +1261,8 @@ void *run_switchos_snapshotserver(void *param) {
 			// ptf sets snapshot flag as true atomically
 			//system("bash tofino/set_snapshot_flag.sh");
 			memcpy(ptfbuf, &SWITCHOS_SET_SNAPSHOT_FLAG, sizeof(int));
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			memcpy(ptfbuf + sizeof(int), &snapshotid, sizeof(int)); // for seq_hdr.snapshot_token
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, 2*sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_SET_SNAPSHOT_FLAG_ACK);
 

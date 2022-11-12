@@ -884,7 +884,7 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 	INVARIANT(tmpsnapshotid >= 0);
 	
 	// NOTE: if tmpsnapshotid == snapshotid, it has been solevd by SNAPSHOT_CLEANUP
-	INVARIANT(tmpsnapshotid == 0 || tmpsnapshotid == snapshotid + 1)
+	//INVARIANT(tmpsnapshotid == 0 || tmpsnapshotid == snapshotid + 1)
 
 	if (!is_snapshot.test_and_set(std::memory_order_acquire)) {
 

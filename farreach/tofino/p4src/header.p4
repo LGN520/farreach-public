@@ -92,6 +92,7 @@ header_type shadowtype_t {
 header_type seq_t {
 	fields {
 		seq: 32;
+		snapshot_token: 32;
 	}
 }
 

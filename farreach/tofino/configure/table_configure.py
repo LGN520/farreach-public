@@ -1305,16 +1305,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
                 #val_stat_udplen = aligned_vallen + 34
                 #val_stat_iplen = aligned_vallen + 54
-                val_stat_seq_udplen = aligned_vallen + 38
-                val_stat_seq_iplen = aligned_vallen + 58
-                val_seq_inswitch_stat_clone_udplen = aligned_vallen + 58
-                val_seq_inswitch_stat_clone_iplen = aligned_vallen + 78
-                val_seq_udplen = aligned_vallen + 34
-                val_seq_iplen = aligned_vallen + 54
-                val_seq_stat_udplen = aligned_vallen + 38
-                val_seq_stat_iplen = aligned_vallen + 58
-                val_seq_inswitch_stat_udplen = aligned_vallen + 54
-                val_seq_inswitch_stat_iplen = aligned_vallen + 74
+                val_stat_seq_udplen = aligned_vallen + 42
+                val_stat_seq_iplen = aligned_vallen + 62
+                val_seq_inswitch_stat_clone_udplen = aligned_vallen + 62
+                val_seq_inswitch_stat_clone_iplen = aligned_vallen + 82
+                val_seq_udplen = aligned_vallen + 38
+                val_seq_iplen = aligned_vallen + 58
+                val_seq_stat_udplen = aligned_vallen + 42
+                val_seq_stat_iplen = aligned_vallen + 62
+                val_seq_inswitch_stat_udplen = aligned_vallen + 58
+                val_seq_inswitch_stat_iplen = aligned_vallen + 78
                 matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=GETRES_SEQ,
                         vallen_hdr_vallen_start=vallen_start,
@@ -1365,10 +1365,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             onlyop_iplen = 46
             #stat_udplen = 32
             #stat_iplen = 52
-            seq_stat_udplen = 36
-            seq_stat_iplen = 56
-            seq_udplen = 32
-            seq_iplen = 52
+            seq_stat_udplen = 40
+            seq_stat_iplen = 60
+            seq_udplen = 36
+            seq_iplen = 56
             scanreqsplit_udplen = 49
             scanreqsplit_iplen = 69
             frequency_udplen = 30
@@ -1418,8 +1418,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             # For large value
-            shadowtype_seq_udp_delta = 6
-            shadowtype_seq_ip_delta = 6
+            shadowtype_seq_udp_delta = 10
+            shadowtype_seq_ip_delta = 10
             for tmpoptype in [PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CASE3, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED]:
                 matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,

@@ -213,7 +213,7 @@ class GetResponseServer : public GetResponse<key_t, val_t> { // ophdr + val + sh
 
 
 template<class key_t, class val_t>
-class GetResponseSeq : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr
+class GetResponseSeq : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + seq_hdr + stat_hdr
 	public: 
 		GetResponseSeq();
 		GetResponseSeq(method_t methodid, key_t key, val_t val, uint32_t seq, bool stat, uint16_t nodeidx_foreval);
@@ -434,7 +434,7 @@ class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCa
 };
 
 template<class key_t, class val_t>
-class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
+class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq_hdr
 	public: 
 		PutRequestSeq();
 		PutRequestSeq(method_t methodid, key_t key, val_t val, uint32_t seq);
@@ -442,6 +442,7 @@ class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 
 		val_t val() const;
 		uint32_t seq() const;
+		uint32_t snapshot_token() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -450,6 +451,7 @@ class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
 		uint32_t _seq;
+		uint32_t _snapshot_token; // ONLY used by XXX_CASE3 in farreach
 };
 
 template<class key_t, class val_t>
@@ -492,11 +494,13 @@ class DelRequestSeq : public Packet<key_t> { // ophdr + shadowtype + seq
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
 		uint32_t seq() const;
+		uint32_t snapshot_token() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint32_t _seq;
+		uint32_t _snapshot_token;
 };
 
 template<class key_t>
@@ -741,7 +745,7 @@ class CacheEvictLoaddataInswitch : public CacheEvictLoadfreqInswitch<key_t> { //
 };
 
 template<class key_t, class val_t>
-class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + val + shadowtype + seq + stat_hdr
+class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + val + shadowtype + seq_hdr + stat_hdr
 	public: 
 		CacheEvictLoaddataInswitchAck(method_t methodid, const char * data, uint32_t recv_size);
 
@@ -1061,12 +1065,14 @@ class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // o
 		static size_t get_frag_hdrsize(method_t methodid);
 
 		uint32_t seq() const;
+		uint32_t snapshot_token() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint32_t _seq;
+		uint32_t _snapshot_token;
 };
 
 template<class key_t, class val_t>

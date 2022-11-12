@@ -63,6 +63,7 @@ int *server_evictserver_udpsock_list = NULL;
 int *server_snapshotserver_udpsock_list = NULL;
 int *server_snapshotdataserver_udpsock_list = NULL;
 std::atomic<bool> *server_issnapshot_list = NULL; // TODO: be atomic
+std::atomic<int> *server_snapshottoken_list = NULL; // perform as snapshot timestamp
 
 void prepare_server();
 // server.workers for processing pkts
@@ -168,6 +169,7 @@ void prepare_server() {
 	}
 
 	server_issnapshot_list = new std::atomic<bool>[current_server_logical_num];
+	server_snapshottoken_list = new std::atomic<int>[current_server_logical_num];
 
 	memory_fence();
 
@@ -248,6 +250,10 @@ void close_server() {
 	if (server_issnapshot_list != NULL) {
 		delete [] server_issnapshot_list;
 		server_issnapshot_list = NULL;
+	}
+	if (server_snapshottoken_list != NULL) {
+		delete [] server_snapshottoken_list;
+		server_snapshottoken_list = NULL;
 	}
 	/*if (server_evictserver_tcpsock_list != NULL) {
 		delete [] server_evictserver_tcpsock_list;
@@ -974,9 +980,14 @@ void *run_server_worker(void * param) {
 #endif
 				//COUT_THIS("PUTREQ_SEQ_CASE3")
 				put_request_seq_case3_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
+				uint32_t tmp_snapshottoken = req.snapshot_token();
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
-					db_wrappers[local_server_logical_idx].make_snapshot();
+					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
+						server_snapshottoken_list[local_server_logicalidx] = tmp_snapshottoken;
+						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+					}
+					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
 
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
@@ -1001,9 +1012,14 @@ void *run_server_worker(void * param) {
 #endif
 
 				put_request_largevalue_seq_case3_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
+				uint32_t tmp_snapshottoken = req.snapshot_token();
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
-					db_wrappers[local_server_logical_idx].make_snapshot();
+					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
+						server_snapshottoken_list[local_server_logicalidx] = tmp_snapshottoken;
+						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+					}
+					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
 
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
@@ -1062,9 +1078,14 @@ void *run_server_worker(void * param) {
 #endif
 				//COUT_THIS("PUTREQ_POP_SEQ_CASE3")
 				put_request_pop_seq_case3_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
+				uint32_t tmp_snapshottoken = req.snapshot_token();
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
-					db_wrappers[local_server_logical_idx].make_snapshot();
+					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
+						server_snapshottoken_list[local_server_logicalidx] = tmp_snapshottoken;
+						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+					}
+					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
 
 				//COUT_THIS("[server] key = " << req.key().to_string())
@@ -1104,9 +1125,14 @@ void *run_server_worker(void * param) {
 #endif
 				//COUT_THIS("DELREQ_SEQ_CASE3")
 				del_request_seq_case3_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
+				uint32_t tmp_snapshottoken = req.snapshot_token();
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
-					db_wrappers[local_server_logical_idx].make_snapshot();
+					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
+						server_snapshottoken_list[local_server_logicalidx] = tmp_snapshottoken;
+						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+					}
+					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
 
 				bool tmp_stat = db_wrappers[local_server_logical_idx].remove(req.key(), req.seq());
@@ -1287,6 +1313,7 @@ void *run_server_worker(void * param) {
 				netreach_key_t tmp_key;
 				val_t tmp_val;
 				uint32_t tmp_seq;
+				uint32_t tmp_snapshottoken;
 				bool tmp_iscase3 = false;
 				bool tmp_isdelete = false;
 				if (pkt_type == packet_type_t::PUTREQ_SEQ_BEINGEVICTED) {
@@ -1302,6 +1329,7 @@ void *run_server_worker(void * param) {
 					tmp_key = req.key();
 					tmp_val = req.val();
 					tmp_seq = req.seq();
+					tmp_snapshottoken = req.snapshot_token();
 					tmp_iscase3 = true;
 					tmp_isdelete = false;
 				}
@@ -1316,6 +1344,7 @@ void *run_server_worker(void * param) {
 					del_request_seq_case3_beingevicted_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 					tmp_key = req.key();
 					tmp_seq = req.seq();
+					tmp_snapshottoken = req.snapshot_token();
 					tmp_iscase3 = true;
 					tmp_isdelete = true;
 				}
@@ -1332,13 +1361,18 @@ void *run_server_worker(void * param) {
 					tmp_key = req.key();
 					tmp_val = req.val();
 					tmp_seq = req.seq();
+					tmp_snapshottoken = req.snapshot_token();
 					tmp_iscase3 = true;
 					tmp_isdelete = false;
 				}
 
 				// process as usual
 				if (tmp_iscase3 && !server_issnapshot_list[local_server_logical_idx]) {
-					db_wrappers[local_server_logical_idx].make_snapshot();
+					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
+						server_snapshottoken_list[local_server_logicalidx] = tmp_snapshottoken;
+						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+					}
+					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
 				if (!tmp_isdelete) {
 					db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq);
@@ -1695,7 +1729,11 @@ void *run_server_snapshotserver(void *param) {
 		}
 		else if (control_type == SNAPSHOT_START) {
 			INVARIANT(!server_issnapshot_list[local_server_logical_idx]);
-			db_wrappers[local_server_logical_idx].make_snapshot(snapshotid);
+			if (snapshotid > server_snapshottoken_list[local_server_logical_idx]) {
+				server_snapshottoken_list[local_server_logicalidx] = snapshotid;
+				db_wrappers[local_server_logical_idx].make_snapshot(snapshotid);
+			}
+			// Otherwise, server-side snapshot has already been made for the current snapshot period
 			
 			// sendback SNAPSHOT_START_ACK to controller
 			snapshot_signal_t snapshot_startack_signal(SNAPSHOT_START_ACK, snapshotid);
