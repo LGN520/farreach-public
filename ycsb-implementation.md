@@ -19,20 +19,28 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.12
+- 11.15
 	+ Siyuan
-		* Update snapshot design in paper
-		* Update impl in paper
-		* Fix figure issues of eval in paper
-		* TODO: [IMPORTANT] Add snapshottoken into seqhdr for server-side snapshot
-		* TODO: Check TPC-C details for KVS tricks
+		* TODO: Debug and test seq_hdr.snapshot_token
+
+- 11.13
+	+ Siyuan
 		* TODO: Double-check cache eviction triggering and range query (consistent but not available)
 		* TODO: Dump db_bench skewed workload
+		* TODO: Go through reviews of comnet
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Add discussion about distributed extension in paper
 		* TODO: Update exp8 bandwidth cost of evaluation in paper
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+
+- 11.12
+	+ Siyuan
+		* Update snapshot design in paper
+		* Update impl in paper
+		* Fix figure issues of eval in paper
+		* [IMPORTANT] Add snapshottoken into seqhdr for server-side snapshot
+		* TODO: Check TPC-C details for KVS tricks
 
 - 11.11
 	+ Siyuan
@@ -846,10 +854,10 @@
 		+ Switch: update_pktlen_tbl (files: farreach/p4src/egress_mat.p4, farreach/configure/table_configure.py)
 		+ Server: seq-related packets and largevalue-related functions to get clientlogicalidx/fragseq (files: common/packet_format.\*)
 			* NOTE: ONLY PUT/DELREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, PUT/DELREQ_SEQ_CASE3_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_CASE3/_BEINGEVICTED need to use snapshottoken -> place snapshottoken into PUT/DELREQ_SEQ and PUTREQ_LARGEVALUE_SEQ
-		+ Client: TODO add snapshot_token into GET/PUT/DELRES for farreach client
-	- TODO: Set snapshottoken in snapshot_tbl
-		+ Controller: TODO
-		+ Switchos: TODO
-		+ Ptf.snapshotserver: TODO
-		+ Switch: TODO
-	- TODO: Use snapshottoken in server
+		+ Client: TODO update size/serialize/deserialize/dynamic_serialize for snapshot_token into GET/PUT/DELRES for farreach client (files: DelResponse.java, GetResponseLargeValueSeq.java, )
+	- Set snapshottoken in snapshot_flag_tbl
+		+ Controller: already embed controller_snapshotid into SNAPSHOT_SETFLAG when implementing upstream backup
+		+ Switchos: send snapshotid to ptf.snapshotserver by SNAPSHOT_SETFLAG (files: farreach/switchos.c)
+		+ Ptf.snapshotserver: add entries of snapshot_flag_tbl with action parameter of snapshotid (files:farreach/ptf_snapshotserver/table_configure.py)
+		+ Switch: set seq_hdr.snapshot_token = the action parameter of snapshotid (files: farreach/tofino/p4src/ingress_mat.p4)
+	- Use snapshottoken for XXX_CASE3 in server (files: farreach/server_impl.h)
