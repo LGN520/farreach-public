@@ -21,10 +21,12 @@
 
 - 11.12
 	+ Siyuan
-		* TODO: Update snapshot design in paper
-		* TODO: Update impl in paper
-		* TODO: Fix figure issues of eval in paper
+		* Update snapshot design in paper
+		* Update impl in paper
+		* Fix figure issues of eval in paper
 		* TODO: Check TPC-C details for KVS tricks
+		* TODO: [IMPORTANT] Add snapshotid into seqhdr for server-side snapshot
+		* TODO: Double-check cache eviction triggering and range query (consistent but not available)
 		* TODO: Dump db_bench skewed workload
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Add discussion about distributed extension in paper
@@ -714,6 +716,7 @@
 	+ Switch: largevalueseq_reg and is_largevalueblock
 	+ Server: per-server blockinfomap and mutex for read blocking
 * FUTURE: SYNC client-side upstream backup and server-side replay-based recovery for durability to DistFarreach
+* FUTURE: SYNC seqhdr.snapshotid for server-side snapshot to DistFarreach
 
 ## DEPRECATED
 
@@ -836,3 +839,5 @@
 			* Switchos gets maxseq of cache hits based on in-switch snapshot and client-side upstream backups
 			* Switchos gets maxseq of cache misses based on per-server latest/snapshotted maxseq
 			* Switchos gets final maxseq based on maxseq of cache hits/misses, and write all seq_reg conservatively by ptf.popserver
+
+* TODO: Add snapshotid into seqhdr for server-side snapshot
