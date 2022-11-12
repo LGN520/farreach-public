@@ -24,8 +24,8 @@
 		* Update snapshot design in paper
 		* Update impl in paper
 		* Fix figure issues of eval in paper
+		* TODO: [IMPORTANT] Add snapshottoken into seqhdr for server-side snapshot
 		* TODO: Check TPC-C details for KVS tricks
-		* TODO: [IMPORTANT] Add snapshotid into seqhdr for server-side snapshot
 		* TODO: Double-check cache eviction triggering and range query (consistent but not available)
 		* TODO: Dump db_bench skewed workload
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
@@ -716,7 +716,7 @@
 	+ Switch: largevalueseq_reg and is_largevalueblock
 	+ Server: per-server blockinfomap and mutex for read blocking
 * FUTURE: SYNC client-side upstream backup and server-side replay-based recovery for durability to DistFarreach
-* FUTURE: SYNC seqhdr.snapshotid for server-side snapshot to DistFarreach
+* FUTURE: SYNC seq_hdr.snapshot_token for server-side snapshot to DistFarreach
 
 ## DEPRECATED
 
@@ -840,4 +840,16 @@
 			* Switchos gets maxseq of cache misses based on per-server latest/snapshotted maxseq
 			* Switchos gets final maxseq based on maxseq of cache hits/misses, and write all seq_reg conservatively by ptf.popserver
 
-* TODO: Add snapshotid into seqhdr for server-side snapshot
+* Add snapshottoken into seqhdr for server-side snapshot
+	- Add snapshottoken into seqhdr (files: farreach/p4src/header.p4)
+	- Fix affected packet formats: GET/PUT/DELRES_SEQ, GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1, PUT/DELREQ_SEQ_INSWITCH_CASE1, PUTREQ_SEQ/_CASE3, PUTREQ_POP_SEQ/_CASE3, PUTREQ_SEQ_/CASE3_BEINGEVICTED, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, DELREQ_SEQ/_CASE3, DELREQ_SEQ/_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ, PUTREQ_LARGEVALUE_SEQ/_CASE3, PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED
+		+ Switch: update_pktlen_tbl (files: farreach/p4src/egress_mat.p4, farreach/configure/table_configure.py)
+		+ Server: seq-related packets and largevalue-related functions to get clientlogicalidx/fragseq (files: common/packet_format.\*)
+			* NOTE: ONLY PUT/DELREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, PUT/DELREQ_SEQ_CASE3_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_CASE3/_BEINGEVICTED need to use snapshottoken -> place snapshottoken into PUT/DELREQ_SEQ and PUTREQ_LARGEVALUE_SEQ
+		+ Client: TODO add snapshot_token into GET/PUT/DELRES for farreach client
+	- TODO: Set snapshottoken in snapshot_tbl
+		+ Controller: TODO
+		+ Switchos: TODO
+		+ Ptf.snapshotserver: TODO
+		+ Switch: TODO
+	- TODO: Use snapshottoken in server
