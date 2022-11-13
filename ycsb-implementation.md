@@ -25,8 +25,10 @@
 
 - 11.13
 	+ Siyuan
-		* TODO: Check TPC-C details for KVS tricks
+		* Check TPC-C details for KVS tricks -> TPC-C is uniform instead of skewed
 		* TODO: Go through reviews of comnet
+		* TODO: Proofread paper again
+		* TODO: Update eval
 		* TODO: Dump db_bench skewed workload
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Add discussion about distributed extension in paper
