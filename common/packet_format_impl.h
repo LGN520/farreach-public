@@ -3666,7 +3666,7 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::size() { // not used
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeq<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
 	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
-	if (this->_methodid == FARREACH_ID) {
+	if (methodid == FARREACH_ID) {
 		size += sizeof(uint32_t); // seq_hdr.snapshot_token
 	}
 	return size;
@@ -3749,7 +3749,7 @@ PutRequestLargevalueSeqCached<key_t, val_t>::PutRequestLargevalueSeqCached(metho
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqCached<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
 	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
-	if (this->_methodid == FARREACH_ID) {
+	if (methodid == FARREACH_ID) {
 		size += sizeof(uint32_t); // seq_hdr.snapshot_token
 	}
 	return size;
@@ -3778,7 +3778,7 @@ PutRequestLargevalueSeqCase3<key_t, val_t>::PutRequestLargevalueSeqCase3(method_
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqCase3<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
 	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
-	if (this->_methodid == FARREACH_ID) {
+	if (methodid == FARREACH_ID) {
 		size += sizeof(uint32_t); // seq_hdr.snapshot_token
 	}
 	return size;
@@ -4221,7 +4221,7 @@ PutRequestLargevalueSeqBeingevicted<key_t, val_t>::PutRequestLargevalueSeqBeinge
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqBeingevicted<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
 	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
-	if (this->_methodid == FARREACH_ID) {
+	if (methodid == FARREACH_ID) {
 		size += sizeof(uint32_t); // seq_hdr.snapshot_token
 	}
 	return size;
@@ -4250,7 +4250,7 @@ PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::PutRequestLargevalueSeqC
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
 	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
-	if (this->_methodid == FARREACH_ID) {
+	if (methodid == FARREACH_ID) {
 		size += sizeof(uint32_t); // seq_hdr.snapshot_token
 	}
 	return size;
@@ -4426,7 +4426,7 @@ static uint16_t get_packet_clientlogicalidx(method_t methodid, const char * data
 	}
 	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
 		prevbytes = tmp_ophdrsize + sizeof(optype_t) + sizeof(uint32_t); // op_hdr + shadowtype + seq
-		if (this->_methodid == FARREACH_ID) {
+		if (methodid == FARREACH_ID) {
 			prevbytes += sizeof(uint32_t); // seq_hdr.snapshot_token
 		}
 	}
@@ -4454,7 +4454,7 @@ static uint32_t get_packet_fragseq(method_t methodid, const char * data, uint32_
 	}
 	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
 		prevbytes = tmp_ophdrsize + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t); // op_hdr + shadowtype + seq + client_logical_idx
-		if (this->_methodid == FARREACH_ID) {
+		if (methodid == FARREACH_ID) {
 			prevbytes += sizeof(uint32_t); // seq_hdr.snapshot_token
 		}
 	}
