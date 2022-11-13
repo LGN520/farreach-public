@@ -31,6 +31,13 @@
 		* TODO: Add discussion about distributed extension in paper
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+	+ Huancheng
+		* TODO: finish exp8 static workload
+		* TODO: finish exp5 static workload
+		* TODO: run exp9 and exp10
+		* TODO: Start to re-run experiments for multiple rounds
+			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
+			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
 
 - 11.13
 	+ Siyuan
@@ -59,14 +66,14 @@
 		* Update background in paper
 		* Update design assumptions in paper
 	+ HuanCheng
-		* TODO: Finish twitter trace evaluation
-			- TODO: Fix issue of zero cache hit rate
-			- TODO: Fix issue of missing iterations + largevalue timeout
-			- TODO: Fix issue of incorrect results under automatic script
-			- TODO: Fix issue of dynamic array set for upstream backups
-			- TODO: Fix issue of missing PUTREQ_LARGEVALUE in server1 of farreach
-			- TODO: Fix issue of controller.evictserver of netcache
-				+ TODO: Fix issue of failed 8th iteration of netcache
+		* Finish twitter trace evaluation
+			- Fix issue of zero cache hit rate
+			- Fix issue of missing iterations + largevalue timeout
+			- Fix issue of incorrect results under automatic script
+			- Fix issue of dynamic array set for upstream backups
+			- Fix issue of missing PUTREQ_LARGEVALUE in server1 of farreach
+			- Fix issue of controller.evictserver of netcache
+				+ Fix issue of failed 8th iteration of netcache
 			- Double-check
 				+ Check whether cluster 9 hot ratio is larger than workloada in keydump -> both are around 40%
 					* TODO: Fix issue of incorrect bottleneck idx and get farreach/nocache results of cluster 40
