@@ -23,18 +23,22 @@
 	+ Siyuan
 		* TODO: Debug and test seq_hdr.snapshot_token
 
-- 11.13
+- 11.14
 	+ Siyuan
-		* Check TPC-C details for KVS tricks -> TPC-C is uniform instead of skewed
-		* TODO: Go through reviews of comnet
-		* TODO: Proofread paper again
-		* TODO: Update eval
+		* TODO: Fix review comments of comnet22
 		* TODO: Dump db_bench skewed workload
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Add discussion about distributed extension in paper
-		* TODO: Update exp8 bandwidth cost of evaluation in paper
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+
+- 11.13
+	+ Siyuan
+		* Check TPC-C details for KVS tricks -> TPC-C is uniform instead of skewed
+		* Update exp8 in eval
+		* Proofread paper again
+		* Go through reviews of comnet and re-organize repo
+		* Fix switch/server compilation issues of farreach for seq_hdr.snapshot_token
 
 - 11.12
 	+ Siyuan
