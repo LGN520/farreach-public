@@ -25,17 +25,20 @@
 
 - 11.14
 	+ Siyuan
+		* Update design for cache admission/eviction details and range query limitations in paper
+		* Check YCSB formula of Zipfian generator
+			- Skewness value is theta parameter of Zeta distribution used to generate Zipfian distribution, which cannot be used for uniform distribution (reference: SIGMOD'94 Quickly Generating Billion-Record Synthetic Databases)
+		* Update part of eval in paper
+		* TODO: Update discussion about distributed extension in paper, and double-check farreach paper
 		* TODO: Fix review comments of comnet22
-		* TODO: Dump db_bench skewed workload
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
-		* TODO: Add discussion about distributed extension in paper
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 	+ Huancheng
-		* TODO: Try db_bench to get preliminary results
+		* TODO: Try to dump db_bench to get preliminary results
 			* TODO: Before coding for db_bench, we should dump and replay db_bench skewed workload by YCSB to get preliminary results
 		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
-		* TODO: For exp6 on skewness, add uniform result -> check YCSB formula of Zipfian generator to see what is the skewness value of a uniform distribution, or no skewness value for a uniform distribution
+		* TODO: For exp6 on skewness, add uniform result
 		* TODO: For exp7 on value size, run ONLY ONE ROUND for 100% 256B value size -> expected: no improvement of farreach, but the throughput should be similar as that of nocache/netcache under 128B value size
 		* TODO: finish exp8 static workload
 			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
@@ -43,7 +46,9 @@
 			- TODO: Use snapshot period of 0, 2.5, 5, 7.5, 10 -> keep the results of 1 in the 1st round in exp8.md
 		* TODO: finish exp5 static workload
 		* TODO: run exp9
+		* TODO: run exp10
 			- TODO: [IMPORTANT] In warmup_client.c, we need to admit the top K hottest keys for the given cache size K
+			- TODO: For exp10.sh, as it relies on switch launching and configuration in test_server_rotation.sh -> either place the automatic launching and configuration from other exp.sh into test_server_rotation/dynamic.sh, or modify exp10.sh as other exp.sh
 			- TODO: add the following two notes to benchmark.md for exp10
 				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
 					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
@@ -51,9 +56,6 @@
 					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
 			- TODO: Write down how to calculate average recovery time into benchmark.md
 			- TODO: To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
-		* TODO: run exp10
-			- TODO: For exp10.sh, as it relies on switch launching and configuration in test_server_rotation.sh -> either place the automatic launching and configuration from other exp.sh into test_server_rotation/dynamic.sh, or modify exp10.sh as other exp.sh
-			- TODO: Update benchmark.md to guide users to download and store Twitter traces into the specific path with required filename
 		* TODO: Start to re-run experiments for multiple rounds
 			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
 			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
@@ -104,6 +106,7 @@
 					* NOT use cluster 8, 29, and 49: avg value size is too large -> large writes/reads may be dominant
 				+ If Twitter traces do not work, as TPC-C is not suitable, we may try db_bench
 				+ FUTURE: Try more clients, e.g. 128*2, until saturating the bottleneck server (backup 64-client keydump files, redo keydump for 128-client)
+			- DEPRECATED: Update benchmark.md to guide users to download and store Twitter traces into the specific path with required filename
 		* Exp 4 on dynamic patterns
 			* NOW: disable key popularity cahnge in dynamic rulemap for stable in exp4
 				- Use workloadname=synthetic, dynamic_ruleprefix=static/stable to get the results of static pattern w/ only 2 servers (w/o server rotations) during 70 seconds
