@@ -32,9 +32,28 @@
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 	+ Huancheng
+		* TODO: Try db_bench to get preliminary results
+			* TODO: Before coding for db_bench, we should dump and replay db_bench skewed workload by YCSB to get preliminary results
+		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
+		* TODO: For exp6 on skewness, add uniform result -> check YCSB formula of Zipfian generator to see what is the skewness value of a uniform distribution, or no skewness value for a uniform distribution
+		* TODO: For exp7 on value size, run ONLY ONE ROUND for 100% 256B value size -> expected: no improvement of farreach, but the throughput should be similar as that of nocache/netcache under 128B value size
 		* TODO: finish exp8 static workload
+			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
+			- TODO: Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
+			- TODO: Use snapshot period of 0, 2.5, 5, 7.5, 10 -> keep the results of 1 in the 1st round in exp8.md
 		* TODO: finish exp5 static workload
-		* TODO: run exp9 and exp10
+		* TODO: run exp9
+			- TODO: [IMPORTANT] In warmup_client.c, we need to admit the top K hottest keys for the given cache size K
+			- TODO: add the following two notes to benchmark.md for exp10
+				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
+					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
+				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
+					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
+			- TODO: Write down how to calculate average recovery time into benchmark.md
+			- TODO: To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
+		* TODO: run exp10
+			- TODO: For exp10.sh, as it relies on switch launching and configuration in test_server_rotation.sh -> either place the automatic launching and configuration from other exp.sh into test_server_rotation/dynamic.sh, or modify exp10.sh as other exp.sh
+			- TODO: Update benchmark.md to guide users to download and store Twitter traces into the specific path with required filename
 		* TODO: Start to re-run experiments for multiple rounds
 			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
 			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
@@ -74,47 +93,27 @@
 			- Fix issue of missing PUTREQ_LARGEVALUE in server1 of farreach
 			- Fix issue of controller.evictserver of netcache
 				+ Fix issue of failed 8th iteration of netcache
+			- Fix issue of dynamic rulemap server in server 1
 			- Double-check
 				+ Check whether cluster 9 hot ratio is larger than workloada in keydump -> both are around 40%
-					* TODO: Fix issue of incorrect bottleneck idx and get farreach/nocache results of cluster 40
-					* TODO: Also dump >1400B write ratio and <=128B write ratio in keydump
-				+ TODO: Analyze cluster 27 and 14 by keydump
+					* Fix issue of incorrect bottleneck idx and get farreach/nocache results of cluster 40
+					* Also dump >1400B write ratio and <=128B write ratio in keydump
+				+ Analyze cluster 27 and 14 by keydump
 					* Concerns on cluseter 27 (data of part 1): avg value size is 8, 1.06 Zipfian alpha and 15% write ratio
 					* Concerns on cluseter 14 (data of smallest part): avg value size is 414, yet 35% write ratio and 1.3 alpha
 					* NOT use cluster 8, 29, and 49: avg value size is too large -> large writes/reads may be dominant
-				+ TODO: If Twitter traces do not work, as TPC-C is not suitable, we may try db_bench
-					* TODO: Before coding for db_bench, we should dump and replay db_bench skewed workload by YCSB to get preliminary results
-				+ TODO: Mark the results of the 1st round after chaning sleep in scripts to distinguish them with other 1st round results
+				+ If Twitter traces do not work, as TPC-C is not suitable, we may try db_bench
 				+ FUTURE: Try more clients, e.g. 128*2, until saturating the bottleneck server (backup 64-client keydump files, redo keydump for 128-client)
-			- TODO: Place switch launching and configuration into internal scripts
-			- TODO: Update benchmark.md to guide users to download and store Twitter traces into the specific path with required filename
 		* Exp 4 on dynamic patterns
-			* TODO: Exp4: Change generate_dynamic_rules.py to generate <workloadname>-staticrules, such that all rule files are the same as that for the first 10 seconds (no key popularity changes)
-			* TODO: Use workloadname=synthetic, dynamic_ruleprefix=static to get the results of static pattern w/ only 2 servers during 70 seconds
-		* TODO: Finish exp8 on control plane bandwidth cost vs. different snapshot interrupts for FarReach
-			- Check generated files
-				- Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out
-				- Check tmp_controller_bwcost.out: totalcost should be larger as server rotation iteration proceeds, as more in-switch records are marked as latest (vallen from 0 to 128B)
-					+ Check tmp_serverrotation_part<1/2>_controller.out, which dumps # of in-switch entries with non-zero vallen
-				- Check tmp_controller_bwcost.out: for each rotation, two localcosts of bottleneck partition and rotate partition should be non-zero
-					+ Check tmp_switchos.out, which dumps # of speical cases during snapshot
-			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
-			- TODO: Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
-			- TODO: Do we need to add results of snapshot period = 2.5/7.5?
-		* Other evaluation (after finishing the above exps)
-			* TODO: Finish exp9 on recovery time
-				- TODO: Fix issue of dynamic rulemap server in server 1
-				- [IMPORTANT] TODO: add the following two notes to benchmark.md for exp10
-					+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
-						* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
-					+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
-						* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
-				- TODO: Write down how to calculate average recovery time into benchmark.md
-				- TODO: To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
-				- TODO: In warmup_client.c, we need to admit the top K hottest keys for the given cache size K
-		* TODO: Start to re-run experiments for multiple rounds
-			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
-			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
+			* NOW: disable key popularity cahnge in dynamic rulemap for stable in exp4
+				- Use workloadname=synthetic, dynamic_ruleprefix=static/stable to get the results of static pattern w/ only 2 servers (w/o server rotations) during 70 seconds
+				- DEPRECATED: Change generate_dynamic_rules.py to generate <workloadname>-staticrules, such that all rule files are the same as that for the first 10 seconds (no key popularity changes)
+		- Check generated files of exp8
+			- Check tmp_switchos.out, tmp_controller.out, and tmp_controller_bwcost.out
+			- Check tmp_controller_bwcost.out: totalcost should be larger as server rotation iteration proceeds, as more in-switch records are marked as latest (vallen from 0 to 128B)
+				+ Check tmp_serverrotation_part<1/2>_controller.out, which dumps # of in-switch entries with non-zero vallen
+			- Check tmp_controller_bwcost.out: for each rotation, two localcosts of bottleneck partition and rotate partition should be non-zero
+				+ Check tmp_switchos.out, which dumps # of speical cases during snapshot
 
 - 11.9
 	+ Siyuan
