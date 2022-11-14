@@ -19,9 +19,16 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.15
+- 11.16
 	+ Siyuan
 		* TODO: Debug and test seq_hdr.snapshot_token
+
+- 11.15
+	+ Siyuan
+		* TODO: Fix review comments for comnet22
+		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
+		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
+		* TODO: Use student-T distribution to calculate the error bars of each experiment
 
 - 11.14
 	+ Siyuan
@@ -29,11 +36,8 @@
 		* Check YCSB formula of Zipfian generator
 			- Skewness value is theta parameter of Zeta distribution used to generate Zipfian distribution, which cannot be used for uniform distribution (reference: SIGMOD'94 Quickly Generating Billion-Record Synthetic Databases)
 		* Update part of eval in paper
-		* TODO: Update discussion about distributed extension in paper, and double-check farreach paper
-		* TODO: Fix review comments of comnet22
-		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
-		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
-		* TODO: Use student-T distribution to calculate the error bars of each experiment
+		* Update discussion about distributed extension in paper, and double-check farreach paper
+		* Fix one comment of reviewer 1 for comnet22
 	+ Huancheng
 		* TODO: Try to dump db_bench to get preliminary results
 			* TODO: Before coding for db_bench, we should dump and replay db_bench skewed workload by YCSB to get preliminary results
