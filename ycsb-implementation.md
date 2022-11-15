@@ -19,16 +19,30 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* TODO: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.16
+- 11.17
 	+ Siyuan
 		* TODO: Debug and test seq_hdr.snapshot_token
 
-- 11.15
+- 11.16
 	+ Siyuan
+		* TODO: Fix comments in farreach
 		* TODO: Fix review comments for comnet22
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+
+- 11.15
+	+ Siyuan
+		* Add cloc.sh for NetBuffer/ including benchmark/
+		* DeltaINT-E of COMNET22
+			- Calculate memory overhead of sketch
+				+ Fix typos in P4 code to update SRAM usage in hardware (files: Tofino/<C1/C2/C3/C4>/main.p4, Tofino/<C1/C2/C3/C4>/p4src/parser.p4) -> sync to DeltaINT-O
+				+ Update text of hardware results in eval
+			- TODO: Evaluate computation overhead of both mmh3 and EcmpHash
+				+ Add mmh3 into NS3 and fix an issue of small sketch size (files: HPCC-DINT/simulation/src/point-to-point/model/switch-node.*) -> sync to DeltaINT-O
+					* Pass compilation, and simply run for a while to see if there is any runtime error
+		* Fix comments in farreach
+			- [IMPORTANT] blocking in switch/server is just a detailed implementation trick, which is not the fundamental design issue
 
 - 11.14
 	+ Siyuan
