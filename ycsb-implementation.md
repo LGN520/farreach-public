@@ -19,9 +19,16 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* DEPRECATED: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.17
+- 11.18
 	+ Siyuan
 		* TODO: Debug and test seq_hdr.snapshot_token
+
+- 11.17
+	+ Siyuan
+		* TODO: Fix comments of reviewer2 for comnet22
+		* TODO: Fix the comment on scaling issue for comnet22
+		* TODO: Update exp10 recovery time of evaluation in paper
+		* TODO: Use student-T distribution to calculate the error bars of each experiment
 
 - 11.16
 	+ Siyuan
@@ -30,10 +37,6 @@
 			- IncBricks ASPLOS'17
 			- AppSwitch APNET'17
 			- Mind SOSP'21
-		* TODO: Fix review comments for comnet22
-		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
-		* TODO: Update exp10 recovery time of evaluation in paper
-		* TODO: Use student-T distribution to calculate the error bars of each experiment
 
 - 11.15
 	+ Siyuan
@@ -42,7 +45,7 @@
 			- Calculate memory overhead of sketch
 				+ Fix typos in P4 code to update SRAM usage in hardware (files: Tofino/<C1/C2/C3/C4>/main.p4, Tofino/<C1/C2/C3/C4>/p4src/parser.p4) -> sync to DeltaINT-O
 				+ Update text of hardware results in eval
-			- TODO: Evaluate computation overhead of both mmh3 and EcmpHash
+			- Evaluate computation overhead of both mmh3 and EcmpHash
 				+ Add mmh3 into NS3 and fix an issue of small sketch size (files: HPCC-DINT/simulation/src/point-to-point/model/switch-node.*) -> sync to DeltaINT-O
 					* Pass compilation, and simply run for a while to see if there is any runtime error
 		* Fix comments in farreach
