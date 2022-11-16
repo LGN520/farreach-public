@@ -6,8 +6,8 @@
 ## TODO list
 
 - TODO
-	* TODO: Add YCSB-E in exp2 on different workloads after running all experiments
-		- TODO: Test ScanResponseSplit of range query
+	* DEPRECATED: Add YCSB-E in exp2 on different workloads after running all experiments
+		- DEPRECATED: Test ScanResponseSplit of range query
 	* Client-side upstream backup (before exp9 recovery time)
 		* Debug and test client-side upstream backup colleborating with periodic snapshot
 			- Check whether the seq of GET/PUT/DELRES_SEQ and GETRES_LARGEVALUE_SEQ > 0
@@ -17,7 +17,7 @@
 		* TODO: Finish exp10 on recovery time vs. cache size for FarReach
 	* Others
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
-	* TODO: Try in-memory KVS after we have got all results of RocksDB
+	* DEPRECATED: Try in-memory KVS after we have got all results of RocksDB
 
 - 11.17
 	+ Siyuan
@@ -25,7 +25,8 @@
 
 - 11.16
 	+ Siyuan
-		* TODO: Fix comments in farreach
+		* Fix comments in farreach
+		* TODO: Add related work in farreach
 		* TODO: Fix review comments for comnet22
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
 		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
