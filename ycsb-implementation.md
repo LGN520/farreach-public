@@ -26,10 +26,13 @@
 - 11.16
 	+ Siyuan
 		* Fix comments in farreach
-		* TODO: Add related work in farreach
+		* Add related work in farreach
+			- IncBricks ASPLOS'17
+			- AppSwitch APNET'17
+			- Mind SOSP'21
 		* TODO: Fix review comments for comnet22
 		* TODO: Read FAST'20 Twitter traces, OSDI'20 Cachelib
-		* TODO: Update exp2 workoad E and Twitter traces, and exp10 recovery time of evaluation in paper
+		* TODO: Update exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 
 - 11.15

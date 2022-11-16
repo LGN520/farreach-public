@@ -39,17 +39,17 @@ Contents
 
 - Install boost
 	+ `sudo apt-get install libboost-all-dev`
-- Install bpftools for spine reflector
-	+ `git clone https://github.com/cloudflare/bpftools.git`
-	+ `cd bpftools`
-	+ `make`
-- Disable THP to reduce write_memtable_time in rocksdb
-	+ `sudo apt-get install hugepages`
-	+ `sudo hugeadm --thp-never`
-	+ `cat /sys/kernel/mm/transparent_hugepage/enabled` to check
 - Install Maven and Java
 	+ Please use openjdk-8/11 to avoid version-related issues
 - Tofino compiler version: 8.9.1
+- ONLY for multi-switch setting: Install bpftools for spine reflector
+	+ `git clone https://github.com/cloudflare/bpftools.git`
+	+ `cd bpftools`
+	+ `make`
+- DEPRECATED: Disable THP to reduce write_memtable_time in rocksdb
+	+ `sudo apt-get install hugepages`
+	+ `sudo hugeadm --thp-never`
+	+ `cat /sys/kernel/mm/transparent_hugepage/enabled` to check
 
 </br>
 
