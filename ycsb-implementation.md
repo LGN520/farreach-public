@@ -21,19 +21,48 @@
 
 - 11.18
 	+ Siyuan
+		* TODO: Merge NetBuffer::snapshot_token into NetBuffer::master; uncomment client-side packet code for snapshot token
 		* TODO: Debug and test seq_hdr.snapshot_token
-		* TODO: Debug and test val_hdr and seq_hdr in GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
+			- TODO: Check if client receives correct seq
+			- TODO: Check if server receives correct snapshot_token
+		* TODO: Debug and test record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
+			- TODO: Check if server receives correct pkttype/seq/val/stat after record embedding
 		* TODO: Fix the comment on scaling issue for comnet22
 		* TODO: Update exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+	+ Huancheng
+		* TODO: Try to dump db_bench to get preliminary results
+			* TODO: Before coding for db_bench, we should dump and replay db_bench skewed workload by YCSB to get preliminary results
+		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
+		* TODO: For exp6 on skewness, add uniform result
+		* TODO: For exp7 on value size, run ONLY ONE ROUND for 100% 256B value size -> expected: no improvement of farreach, but the throughput should be similar as that of nocache/netcache under 128B value size
+		* TODO: finish exp8 static workload
+			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
+			- TODO: Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
+			- TODO: Use snapshot period of 0, 2.5, 5, 7.5, 10 -> keep the results of 1 in the 1st round in exp8.md
+		* TODO: finish exp5 static workload
+		* TODO: run exp9
+		* TODO: run exp10
+			- TODO: [IMPORTANT] In warmup_client.c, we need to admit the top K hottest keys for the given cache size K
+			- TODO: For exp10.sh, as it relies on switch launching and configuration in test_server_rotation.sh -> either place the automatic launching and configuration from other exp.sh into test_server_rotation/dynamic.sh, or modify exp10.sh as other exp.sh
+			- TODO: add the following two notes to benchmark.md for exp10
+				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
+					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
+				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
+					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
+			- TODO: Write down how to calculate average recovery time into benchmark.md
+			- TODO: To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
+		* TODO: Start to re-run experiments for multiple rounds
+			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
+			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
 
 - 11.17
 	+ Siyuan
 		* Fix comments of reviewer2 for comnet22
 		* Fix the comments of farreach on design
-		* TODO: Fix ingress bug of seq_hdr.snapshot_token
-		* TODO: Implement record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
-			- TODO: Fix compilation errors of switch and server
+		* Fix ingress bug of seq_hdr.snapshot_token
+		* Implement record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
+			- Fix compilation errors of switch and server
 
 - 11.16
 	+ Siyuan
@@ -64,31 +93,6 @@
 		* Update part of eval in paper
 		* Update discussion about distributed extension in paper, and double-check farreach paper
 		* Fix one comment of reviewer 1 for comnet22
-	+ Huancheng
-		* TODO: Try to dump db_bench to get preliminary results
-			* TODO: Before coding for db_bench, we should dump and replay db_bench skewed workload by YCSB to get preliminary results
-		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
-		* TODO: For exp6 on skewness, add uniform result
-		* TODO: For exp7 on value size, run ONLY ONE ROUND for 100% 256B value size -> expected: no improvement of farreach, but the throughput should be similar as that of nocache/netcache under 128B value size
-		* TODO: finish exp8 static workload
-			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
-			- TODO: Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
-			- TODO: Use snapshot period of 0, 2.5, 5, 7.5, 10 -> keep the results of 1 in the 1st round in exp8.md
-		* TODO: finish exp5 static workload
-		* TODO: run exp9
-		* TODO: run exp10
-			- TODO: [IMPORTANT] In warmup_client.c, we need to admit the top K hottest keys for the given cache size K
-			- TODO: For exp10.sh, as it relies on switch launching and configuration in test_server_rotation.sh -> either place the automatic launching and configuration from other exp.sh into test_server_rotation/dynamic.sh, or modify exp10.sh as other exp.sh
-			- TODO: add the following two notes to benchmark.md for exp10
-				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
-					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
-				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
-					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
-			- TODO: Write down how to calculate average recovery time into benchmark.md
-			- TODO: To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
-		* TODO: Start to re-run experiments for multiple rounds
-			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
-			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
 
 - 11.13
 	+ Siyuan
@@ -904,15 +908,16 @@
 		+ Controller: already embed controller_snapshotid into SNAPSHOT_SETFLAG when implementing upstream backup
 		+ Switchos: send snapshotid to ptf.snapshotserver by SNAPSHOT_SETFLAG (files: farreach/switchos.c)
 		+ Ptf.snapshotserver: add entries of snapshot_flag_tbl with action parameter of snapshotid (files:farreach/ptf_snapshotserver/table_configure.py)
-		+ TODO: Switch: set inswitch_hdr.snapshot_token = the action parameter of snapshotid (files: farreach/tofino/p4src/ingress_mat.p4)
-			* TODO: Set seq_hdr.snapshot_token = inswitch_hdr.snapshot_token for XXX_CASE3
-			* TODO: Update pktlen related with inswitch_hdr in libcommon and client
+		+ Switch: set inswitch_hdr.snapshot_token = the action parameter of snapshotid (files: farreach/tofino/p4src/ingress_mat.p4)
+			* Add inswitch_hdr.snapshot_token (files: farreach/tofino/p4src/header.p4)
+			* Update pktlen related with inswitch_hdr in switch/libcommon (files: farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py, common/packet_format_impl.h)
+			* Set seq_hdr.snapshot_token = inswitch_hdr.snapshot_token for XXX_CASE3, including PUTREQ_LARGEVALUE_CASE3/\_BEINGEVICTED, PUTREQ_SEQ_CASE3/\_BEINGEVICTED, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3/\_BEINGEVICTED
 	- Use snapshottoken for XXX_CASE3 in server (files: farreach/server_impl.h)
 
 * Implement record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
 	- Add GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD with val_hdr (must <= 128B), seq_hdr (savedseq), and stat_hdr
 		+ [IMPORTANT] NOTE: seq_hdr.seq in GETREQ_LARGEVALUEBLOCK_SEQ is meta.largevalueseq (the assigned seq of the lastet PUTREQ_LARGEVALUE), while seq_hdr.seq in GETREQ_LARGEVALUEBLOCK_RECORD is savedseq (the assigned seq of the in-switch record)
-		+ Add packet format in software (files: packet_format.h, packet_format_impl.h)
+		+ Add packet format in software (files: packet_format.h, packet_format_impl.h, farreach/common_impl.h)
 		+ Add packet format in hardware (files: farreach/tofino/main.p4, farreach/tofino/common.py)
 	- Update GETREQ to GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD in switch
 		+ Access update_vallen_tbl (set access_val_mode as 1 for update_val_tbl) and access_deleted_tbl for GETREQ_INSWITCH if cached=1 (same as original)
@@ -921,9 +926,9 @@
 		+ Update update_pktlen_tbl, update_ipmac_srcport_tbl, and add_and_remove_value_header_tbl (files: farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py)
 	- Update server-side code
 		+ Backup the original server_impl.h as deprecated-src/server_impl.h.readblocking
-		+ Remove server-side read blocking
+		+ Remove server-side read blocking (files: server_impl.h)
 			* Remove server_blockinfo_for_readblocking_list, server_blockinfomap_for_largevalueblock_list, server_mutex_for_largevalueblock_list
 			* Remove read blocking processing of PUTREQ_LARGEVALUE_SEQ/\_CASE3, XXX_BEINGEVICTED, and evictserver
 			* Remove case processing of GETREQ_LARGEVALUEBLOCK_SEQ and GETREQ_BEINGEVICTED
-			* Rmove clear_blocklist()
-		+ TODO: Add processing of GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD (both have the same logic)
+			* Remove clear_blocklist()
+		+ Add processing of GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD (both have the same logic)
