@@ -220,10 +220,10 @@ void close_server() {
 	//	delete [] server_blockinfomap_for_largevalueblock_list;
 	//	server_blockinfomap_for_largevalueblock_list = NULL;
 	//}
-	if (server_mutex_for_largevalueblock_list != NULL) {
-		delete [] server_mutex_for_largevalueblock_list;
-		server_mutex_for_largevalueblock_list = NULL;
-	}
+	//if (server_mutex_for_largevalueblock_list != NULL) {
+	//	delete [] server_mutex_for_largevalueblock_list;
+	//	server_mutex_for_largevalueblock_list = NULL;
+	//}
 	if (server_popclient_udpsock_list != NULL) {
 		delete [] server_popclient_udpsock_list;
 		server_popclient_udpsock_list = NULL;
