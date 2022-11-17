@@ -9,9 +9,9 @@
 | Exp 3            | Static  | done | done |  |  |  |
 | Exp 4            | Static  | done | done | done |  |  |
 | Exp 5            | Dynamic | done |  |  |  |  |
-| Exp 6            | Static  | done | done | doing |  |  |
+| Exp 6            | Static  | done | done | done |  |  |
 | Exp 7            | Static  | done | done | doing |  |  |
-| Exp 8 - Static   | Static  |  |  |  |  |  |
+| Exp 8 - Static   | Static  | doing |  |  |  |  |
 | Exp 8 - Dynamic  | Dynamic | done |  |  |  |  |
 | Exp 9            | Static  |  |  |  |  |  |
 </br>

@@ -31,8 +31,6 @@
 		* TODO: Update exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 	+ Huancheng
-		* TODO: Try to dump db_bench to get preliminary results
-			* TODO: Before coding for db_bench, we should dump and replay db_bench skewed workload by YCSB to get preliminary results
 		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
 		* TODO: For exp6 on skewness, add uniform result
 		* TODO: For exp7 on value size, run ONLY ONE ROUND for 100% 256B value size -> expected: no improvement of farreach, but the throughput should be similar as that of nocache/netcache under 128B value size
@@ -63,6 +61,9 @@
 		* Fix ingress bug of seq_hdr.snapshot_token
 		* Implement record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
 			- Fix compilation errors of switch and server
+	+ Huancheng
+		* Try to dump db_bench to get preliminary results
+			* Before coding for db_bench, we should dump and replay db_bench skewed workload by YCSB to get preliminary results
 
 - 11.16
 	+ Siyuan
