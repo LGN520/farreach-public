@@ -22,13 +22,18 @@
 - 11.18
 	+ Siyuan
 		* TODO: Debug and test seq_hdr.snapshot_token
-
-- 11.17
-	+ Siyuan
-		* TODO: Fix comments of reviewer2 for comnet22
+		* TODO: Debug and test val_hdr and seq_hdr in GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
 		* TODO: Fix the comment on scaling issue for comnet22
 		* TODO: Update exp10 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+
+- 11.17
+	+ Siyuan
+		* Fix comments of reviewer2 for comnet22
+		* Fix the comments of farreach on design
+		* TODO: Fix ingress bug of seq_hdr.snapshot_token
+		* TODO: Implement record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
+			- TODO: Fix compilation errors of switch and server
 
 - 11.16
 	+ Siyuan
@@ -762,6 +767,7 @@
 * FUTURE: SYNC read blocking for PUTREQ_LARGEVALUE pktloss to DistFarreach
 	+ Switch: largevalueseq_reg and is_largevalueblock
 	+ Server: per-server blockinfomap and mutex for read blocking
+	+ FUTURE: SYNC record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ to DistFarReach (NOT need blocking for both eviction and large write now)
 * FUTURE: SYNC client-side upstream backup and server-side replay-based recovery for durability to DistFarreach
 * FUTURE: SYNC seq_hdr.snapshot_token for server-side snapshot to DistFarreach
 
@@ -889,7 +895,7 @@
 
 * Add snapshottoken into seqhdr for server-side snapshot
 	- Add snapshottoken into seqhdr (files: farreach/p4src/header.p4)
-	- Fix affected packet formats: GET/PUT/DELRES_SEQ, GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1, PUT/DELREQ_SEQ_INSWITCH_CASE1, PUTREQ_SEQ/_CASE3, PUTREQ_POP_SEQ/_CASE3, PUTREQ_SEQ_/CASE3_BEINGEVICTED, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, DELREQ_SEQ/_CASE3, DELREQ_SEQ/_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ, PUTREQ_LARGEVALUE_SEQ/_CASE3, PUTREQ_LARGEVALUE_SEQ/_CASE3_BEINGEVICTED
+	- Fix affected packet formats: GET/PUT/DELRES_SEQ, GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1, PUT/DELREQ_SEQ_INSWITCH_CASE1, PUTREQ_SEQ/\_CASE3, PUTREQ_POP_SEQ/\_CASE3, PUTREQ_SEQ_/CASE3_BEINGEVICTED, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, DELREQ_SEQ/\_CASE3, DELREQ_SEQ/\_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ, PUTREQ_LARGEVALUE_SEQ/\_CASE3, PUTREQ_LARGEVALUE_SEQ/\_CASE3_BEINGEVICTED
 		+ Switch: update_pktlen_tbl (files: farreach/p4src/egress_mat.p4, farreach/configure/table_configure.py)
 		+ Server: seq-related packets and largevalue-related functions to get clientlogicalidx/fragseq (files: common/packet_format.\*)
 			* NOTE: ONLY PUT/DELREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, PUT/DELREQ_SEQ_CASE3_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_CASE3/_BEINGEVICTED need to use snapshottoken -> place snapshottoken into PUT/DELREQ_SEQ and PUTREQ_LARGEVALUE_SEQ
@@ -898,5 +904,26 @@
 		+ Controller: already embed controller_snapshotid into SNAPSHOT_SETFLAG when implementing upstream backup
 		+ Switchos: send snapshotid to ptf.snapshotserver by SNAPSHOT_SETFLAG (files: farreach/switchos.c)
 		+ Ptf.snapshotserver: add entries of snapshot_flag_tbl with action parameter of snapshotid (files:farreach/ptf_snapshotserver/table_configure.py)
-		+ Switch: set seq_hdr.snapshot_token = the action parameter of snapshotid (files: farreach/tofino/p4src/ingress_mat.p4)
+		+ TODO: Switch: set inswitch_hdr.snapshot_token = the action parameter of snapshotid (files: farreach/tofino/p4src/ingress_mat.p4)
+			* TODO: Set seq_hdr.snapshot_token = inswitch_hdr.snapshot_token for XXX_CASE3
+			* TODO: Update pktlen related with inswitch_hdr in libcommon and client
 	- Use snapshottoken for XXX_CASE3 in server (files: farreach/server_impl.h)
+
+* Implement record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
+	- Add GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD with val_hdr (must <= 128B), seq_hdr (savedseq), and stat_hdr
+		+ [IMPORTANT] NOTE: seq_hdr.seq in GETREQ_LARGEVALUEBLOCK_SEQ is meta.largevalueseq (the assigned seq of the lastet PUTREQ_LARGEVALUE), while seq_hdr.seq in GETREQ_LARGEVALUEBLOCK_RECORD is savedseq (the assigned seq of the in-switch record)
+		+ Add packet format in software (files: packet_format.h, packet_format_impl.h)
+		+ Add packet format in hardware (files: farreach/tofino/main.p4, farreach/tofino/common.py)
+	- Update GETREQ to GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD in switch
+		+ Access update_vallen_tbl (set access_val_mode as 1 for update_val_tbl) and access_deleted_tbl for GETREQ_INSWITCH if cached=1 (same as original)
+		+ Update access_savedseq_tbl for GETREQ_INSWITCH if cached=1 for GETRES_SEQ, GETRES_BEINGEVICTED/LARGEVALUEBLOCK_RECORD (files: farreach/tofino/configure/table_configure.py)
+		+ Update another_eg_port_forward_tbl for update_getreq_inswitch_to_getreq_beingevicted/largevalueblock_record (files: farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py)
+		+ Update update_pktlen_tbl, update_ipmac_srcport_tbl, and add_and_remove_value_header_tbl (files: farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py)
+	- Update server-side code
+		+ Backup the original server_impl.h as deprecated-src/server_impl.h.readblocking
+		+ Remove server-side read blocking
+			* Remove server_blockinfo_for_readblocking_list, server_blockinfomap_for_largevalueblock_list, server_mutex_for_largevalueblock_list
+			* Remove read blocking processing of PUTREQ_LARGEVALUE_SEQ/\_CASE3, XXX_BEINGEVICTED, and evictserver
+			* Remove case processing of GETREQ_LARGEVALUEBLOCK_SEQ and GETREQ_BEINGEVICTED
+			* Rmove clear_blocklist()
+		+ TODO: Add processing of GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD (both have the same logic)
