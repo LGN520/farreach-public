@@ -1318,13 +1318,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 val_seq_stat_iplen = aligned_vallen + 62
                 val_seq_inswitch_stat_udplen = aligned_vallen + 62
                 val_seq_inswitch_stat_iplen = aligned_vallen + 82
-                matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
-                        op_hdr_optype=GETRES_SEQ, GETREQ_BEINGEVICTED_RECORD, GETREQ_LARGEVALUEBLOCK_RECORD,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
-                actnspec0 = netbufferv4_update_pktlen_action_spec_t(val_stat_seq_udplen, val_stat_seq_iplen)
-                self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                for tmpoptype in [GETRES_SEQ, GETREQ_BEINGEVICTED_RECORD, GETREQ_LARGEVALUEBLOCK_RECORD]:
+                    matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
+                            op_hdr_optype=tmpoptype,
+                            vallen_hdr_vallen_start=vallen_start,
+                            vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
+                    actnspec0 = netbufferv4_update_pktlen_action_spec_t(val_stat_seq_udplen, val_stat_seq_iplen)
+                    self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                 for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
                     matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
@@ -1610,29 +1611,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     if is_hot == 1:
                                                         # Update GETREQ_INSWITCH as GETREQ_POP to server
                                                         #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_pop_action_spec_t(self.devPorts[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_pop(\
+                                                        self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_pop(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                     else:
                                                         # Update GETREQ_INSWITCH as GETREQ to server
                                                         #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                        self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                 else:
                                                     if validvalue == 0:
                                                         # Update GETREQ_INSWITCH as GETREQ to server
                                                         #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                        self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                     elif validvalue == 1:
                                                         if is_latest == 0:
                                                             # Update GETREQ_INSWITCH as GETREQ_NLATEST to server
                                                             #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_nlatest_action_spec_t(self.devPorts[1])
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_nlatest(\
+                                                            self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_nlatest(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         else:
                                                             # Update GETREQ_INSWITCH as GETRES_SEQ to client by mirroring
                                                             actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_seq_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_seq_by_mirroring(\
+                                                            self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_seq_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     elif validvalue == 3:
                                                         if is_latest == 0:
@@ -1640,13 +1641,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             #self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted(\
                                                             #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                             # Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED_RECORD to server
-                                                            actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_beingevicted_record(tmpstat)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted_record(\
+                                                            actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_beingevicted_record_action_spec_t(tmpstat)
+                                                            self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted_record(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         else:
                                                             # Update GETREQ_INSWITCH as GETRES_SEQ to client by mirroring
                                                             actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_seq_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_seq_by_mirroring(\
+                                                            self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_seq_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ
                                             # NOTE: we use sid == self.sids[0] to avoid duplicate entry; we use inswitch_hdr_client_sid = 0 to match the default value of inswitch_hdr.client_sid
@@ -1898,7 +1899,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     #self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_largevalueblock_seq(\
                                                                     #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                                     # Update GETREQ_INSWITCH as GETREQ_LARGEVALUEBLOCK_RECORD to server
-                                                                    actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_largevalueblock_record(tmpstat)
+                                                                    actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_largevalueblock_record_action_spec_t(tmpstat)
                                                                     self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_largevalueblock_record(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                                 elif is_largevalueblock == 0:
@@ -1917,8 +1918,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 #self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted(\
                                                                 #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 # Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED_RECORD to server
-                                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_beingevicted_record(tmpstat)
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted_record(\
+                                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_beingevicted_record_action_spec_t(tmpstat)
+                                                                self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted_record(\
                                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                             else:
                                                                 # Update GETREQ_INSWITCH as GETRES_SEQ to client by mirroring
