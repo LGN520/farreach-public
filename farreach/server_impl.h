@@ -1471,6 +1471,71 @@ void *run_server_worker(void * param) {
 
 				break;
 			}
+		case packet_type_t::GETREQ_BEINGEVICTED_RECORD: 
+		case packet_type_t::GETREQ_LARGEVALUEBLOCK_RECORD:
+			{
+#ifdef DUMP_BUF
+				dump_buf(dynamicbuf.array(), recv_size);
+#endif
+				netreach_key_t tmp_key;
+				val_t tmp_val;
+				uint32_t tmp_seq = 0;
+				bool tmp_stat = false;
+
+				if (pkt_type == packet_type_t::GETREQ_BEINGEVICTED_RECORD) {
+					get_request_beingevicted_record_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
+					tmp_key = req.key();
+					tmp_val = req.val();
+					tmp_seq = req.seq();
+					tmp_stat = req.stat();
+				}
+				else if (pkt_type == packet_type_t::GETREQ_LARGEVALUEBLOCK_RECORD) {
+					get_request_largevalueblock_record_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
+					tmp_key = req.key();
+					tmp_val = req.val();
+					tmp_seq = req.seq();
+					tmp_stat = req.stat();
+				}
+
+				// access server-side key-value store
+				val_t tmp_serverval;
+				uint32_t tmp_serverseq = 0;
+				bool tmp_serverstat = db_wrappers[local_server_logical_idx].get(tmp_key, tmp_serverval, &tmp_serverseq);
+
+				val_t tmp_finalval;
+				uint32_t tmp_finalseq = 0;
+				bool tmp_finalstat = false;
+				if (tmp_seq > tmp_serverseq) { // server-side record is stale
+					tmp_finalval = tmp_val;
+					tmp_finalseq = tmp_seq;
+					tmp_finalstat = tmp_stat;
+				} else { // server-side record is latest
+					tmp_finalval = tmp_serverval;
+					tmp_finalseq = tmp_serverseq;
+					tmp_finalstat = tmp_serverstat;
+				}
+
+				// send back read response
+				if (tmp_finalval.val_length <= val_t::SWITCH_MAX_VALLEN) {
+					get_response_seq_t rsp(CURMETHOD_ID, tmp_key, tmp_finalval, tmp_finalseq, tmp_finalstat, global_server_logical_idx);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+					dump_buf(buf, rsp_size);
+#endif
+				}
+				else {
+					get_response_largevalue_seq_t rsp(CURMETHOD_ID, tmp_key, tmp_finalval, tmp_finalseq, tmp_finalstat, global_server_logical_idx);
+					dynamicbuf.clear();
+					rsp_size = rsp.dynamic_serialize(dynamicbuf);
+					udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
+#ifdef DUMP_BUF
+					dump_buf(dynamicbuf.array(), rsp_size);
+#endif
+				}
+			
+				break;
+			}
 		default:
 			{
 				COUT_THIS("[server.worker] Invalid packet type: " << int(pkt_type))
