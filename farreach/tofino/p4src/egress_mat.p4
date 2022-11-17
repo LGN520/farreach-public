@@ -173,23 +173,48 @@ action update_getreq_inswitch_to_getreq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_getreq_inswitch_to_getreq_beingevicted() {
-	modify_field(op_hdr.optype, GETREQ_BEINGEVICTED);
+//action update_getreq_inswitch_to_getreq_beingevicted() {
+//	modify_field(op_hdr.optype, GETREQ_BEINGEVICTED);
+//
+//	remove_header(shadowtype_hdr);
+//	remove_header(inswitch_hdr);
+//}
 
-	remove_header(shadowtype_hdr);
-	remove_header(inswitch_hdr);
-}
+////#ifdef ENABLE_LARGEVALUEBLOCK
+//action update_getreq_inswitch_to_getreq_largevalueblock_seq() {
+//	modify_field(op_hdr.optype, GETREQ_LARGEVALUEBLOCK_SEQ);
+//	modify_field(shadowtype_hdr.shadowtype, GETREQ_LARGEVALUEBLOCK_SEQ);
+//
+//	modify_field(seq_hdr.seq, meta.largevalueseq);
+//
+//	//remove_header(shadowtype_hdr);
+//	add_header(seq_hdr);
+//
+//	remove_header(inswitch_hdr);
+//}
+////#endif
 
-//#ifdef ENABLE_LARGEVALUEBLOCK
-action update_getreq_inswitch_to_getreq_largevalueblock_seq() {
-	modify_field(op_hdr.optype, GETREQ_LARGEVALUEBLOCK_SEQ);
-
-	modify_field(seq_hdr.seq, meta.largevalueseq);
+action update_getreq_inswitch_to_getreq_beingevicted_record(stat) {
+	modify_field(op_hdr.optype, GETREQ_BEINGEVICTED_RECORD);
+	modify_field(shadowtype_hdr.shadowtype, GETREQ_BEINGEVICTED_RECORD);
+	modify_field(stat_hdr.stat, stat);
 
 	//remove_header(shadowtype_hdr);
 	add_header(seq_hdr);
-
 	remove_header(inswitch_hdr);
+	add_header(stat_hdr);
+}
+
+//#ifdef ENABLE_LARGEVALUEBLOCK
+action update_getreq_inswitch_to_getreq_largevalueblock_record(stat) {
+	modify_field(op_hdr.optype, GETREQ_LARGEVALUEBLOCK_RECORD);
+	modify_field(shadowtype_hdr.shadowtype, GETREQ_LARGEVALUEBLOCK_RECORD);
+	modify_field(stat_hdr.stat, stat);
+
+	//remove_header(shadowtype_hdr);
+	add_header(seq_hdr);
+	remove_header(inswitch_hdr);
+	add_header(stat_hdr);
 }
 //#endif
 
@@ -391,9 +416,13 @@ table another_eg_port_forward_tbl {
 	}
 	actions {
 		update_getreq_inswitch_to_getreq;
-		update_getreq_inswitch_to_getreq_beingevicted;
+//		update_getreq_inswitch_to_getreq_beingevicted;
+////#ifdef ENABLE_LARGEVALUEBLOCK
+//		update_getreq_inswitch_to_getreq_largevalueblock_seq;
+////#endif
+		update_getreq_inswitch_to_getreq_beingevicted_record;
 //#ifdef ENABLE_LARGEVALUEBLOCK
-		update_getreq_inswitch_to_getreq_largevalueblock_seq;
+		update_getreq_inswitch_to_getreq_largevalueblock_record;
 //#endif
 		update_getreq_inswitch_to_getreq_pop;
 		update_getreq_inswitch_to_getreq_nlatest;
@@ -1007,7 +1036,7 @@ action update_val_stat_pktlen(aligned_vallen) {
 	add(ipv4_hdr.totalLen, aligned_vallen, 54);
 }
 
-// GETRES_SEQ
+// GETRES_SEQ, GETREQ_BEINGEVICTED_RECORD, GETREQ_LARGEVALUEBLOCK_RECORD
 action update_val_stat_seq_pktlen(aligned_vallen) {
 	// 20[iphdr] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 4(stat)
 	add(udp_hdr.hdrlen, aligned_vallen, 42);

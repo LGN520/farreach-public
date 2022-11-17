@@ -787,6 +787,42 @@ void GetResponseSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_
 	}*/
 }
 
+// GetRequestBeingevictedRecord (value must <= 128B)
+
+template<class key_t, class val_t>
+GetRequestBeingevictedRecord<key_t, val_t>::GetRequestBeingevictedRecord(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETREQ_BEINGEVICTED_RECORD);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t GetRequestBeingevictedRecord<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	printf("[ERROR] not support serialize for GETREQ_BEINGEVICTED_RECORD\n");
+	exit(-1);
+	return 0;
+}
+
+// GetRequestLargevalueblockRecord (value must <= 128B)
+
+template<class key_t, class val_t>
+GetRequestLargevalueblockRecord<key_t, val_t>::GetRequestLargevalueblockRecord(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETREQ_LARGEVALUEBLOCK_RECORD);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t GetRequestLargevalueblockRecord<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	printf("[ERROR] not support serialize for GETREQ_LARGEVALUEBLOCK_RECORD\n");
+	exit(-1);
+	return 0;
+}
+
 // PutResponse
 
 template<class key_t>

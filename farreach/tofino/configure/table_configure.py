@@ -1036,7 +1036,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.client.update_vallen_tbl_table_add_with_get_vallen(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_savedseq_tbl (default: nop; size: 56)
+            # Table: access_savedseq_tbl (default: nop; size: 56-2+8=62)
             print "Configuring access_savedseq_tbl"
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
@@ -1046,7 +1046,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 inswitch_hdr_is_cached = is_cached,
                                 validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
-                        if is_cached == 1 and (validvalue == 1 or validvalue == 3) and is_latest == 1:
+                        # For GETRES_SEQ
+                        #if is_cached == 1 and (validvalue == 1 or validvalue == 3) and is_latest == 1:
+                        # For GETRES_SEQ, GETREQ_BEINGEVICTED_RECORD, and GETREQ_LARGEVALUEBLOCK_RECORD
+                        if is_cached == 1:
                             self.client.access_savedseq_tbl_table_add_with_get_savedseq(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
                         for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
@@ -1283,7 +1286,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             else:
                 self.configure_eg_port_forward_tbl_with_range()
 
-            # Table: update_pktlen_tbl (default: nop; 13*17+15=236)
+            # Table: update_pktlen_tbl (default: nop; 15*17+14=269)
             print "Configuring update_pktlen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1316,7 +1319,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 val_seq_inswitch_stat_udplen = aligned_vallen + 58
                 val_seq_inswitch_stat_iplen = aligned_vallen + 78
                 matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
-                        op_hdr_optype=GETRES_SEQ,
+                        op_hdr_optype=GETRES_SEQ, GETREQ_BEINGEVICTED_RECORD, GETREQ_LARGEVALUEBLOCK_RECORD,
                         vallen_hdr_vallen_start=vallen_start,
                         vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
                 actnspec0 = netbufferv4_update_pktlen_action_spec_t(val_stat_seq_udplen, val_stat_seq_iplen)
@@ -1388,7 +1391,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = netbufferv4_update_pktlen_action_spec_t(seq_stat_udplen, seq_stat_iplen)
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-            for tmpoptype in [DELREQ_SEQ, DELREQ_SEQ_CASE3, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ]:
+            #, GETREQ_LARGEVALUEBLOCK_SEQ
+            for tmpoptype in [DELREQ_SEQ, DELREQ_SEQ_CASE3, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED]:
                 matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
                         vallen_hdr_vallen_start=0,
@@ -1462,7 +1466,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = netbufferv4_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CASE3, GETREQ_BEINGEVICTED, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ]:
+                #, GETREQ_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ
+                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_CASE3, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED, GETREQ_BEINGEVICTED_RECORD, GETREQ_LARGEVALUEBLOCK_RECORD]:
                     matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
@@ -1490,12 +1495,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec2)
 
-            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*14=238)
+            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*16=272)
             print "Configuring add_and_remove_value_header_tbl"
             # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
             #LOADREQ, GETRES
-            for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES_SEQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED]:
+            for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES_SEQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED, GETREQ_BEINGEVICTED_RECORD, GETREQ_LARGEVALUEBLOCK_RECORD]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                     if i == 0:
                         vallen_start = 0
@@ -1631,9 +1636,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     elif validvalue == 3:
                                                         if is_latest == 0:
-                                                            # Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED to server
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            ## Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED to server
+                                                            #self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted(\
+                                                            #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            # Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED_RECORD to server
+                                                            actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_beingevicted_record(tmpstat)
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted_record(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         else:
                                                             # Update GETREQ_INSWITCH as GETRES_SEQ to client by mirroring
                                                             actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_seq_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
@@ -1885,9 +1894,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         elif validvalue == 1:
                                                             if is_latest == 0:
                                                                 if is_largevalueblock == 1:
-                                                                    # Update GETREQ_INSWITCH as GETREQ_LARGEVALUEBLOCK_SEQ to server
-                                                                    self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_largevalueblock_seq(\
-                                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                                    ## Update GETREQ_INSWITCH as GETREQ_LARGEVALUEBLOCK_SEQ to server
+                                                                    #self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_largevalueblock_seq(\
+                                                                    #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                                    # Update GETREQ_INSWITCH as GETREQ_LARGEVALUEBLOCK_RECORD to server
+                                                                    actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_largevalueblock_record(tmpstat)
+                                                                    self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_largevalueblock_record(\
+                                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                                 elif is_largevalueblock == 0:
                                                                     # Update GETREQ_INSWITCH as GETREQ_NLATEST to server
                                                                     #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_nlatest_action_spec_t(self.devPorts[1])
@@ -1900,9 +1913,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         elif validvalue == 3:
                                                             if is_latest == 0:
-                                                                # Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED to server
-                                                                self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                                ## Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED to server
+                                                                #self.client.another_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted(\
+                                                                #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                                # Update GETREQ_INSWITCH as GETREQ_BEINGEVICTED_RECORD to server
+                                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_beingevicted_record(tmpstat)
+                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_beingevicted_record(\
+                                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                             else:
                                                                 # Update GETREQ_INSWITCH as GETRES_SEQ to client by mirroring
                                                                 actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_seq_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
