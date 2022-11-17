@@ -366,6 +366,7 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3() {
 	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CASE3 w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
 	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -384,6 +385,7 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3_beingevi
 	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
 	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -652,6 +654,7 @@ action update_putreq_seq_inswitch_case1_to_putres_seq_by_mirroring(client_sid, s
 action update_putreq_inswitch_to_putreq_seq_case3() {
 	modify_field(op_hdr.optype, PUTREQ_SEQ_CASE3);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_CASE3);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -662,6 +665,7 @@ action update_putreq_inswitch_to_putreq_seq_case3() {
 action update_putreq_inswitch_to_putreq_seq_case3_beingevicted() {
 	modify_field(op_hdr.optype, PUTREQ_SEQ_CASE3_BEINGEVICTED);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_CASE3_BEINGEVICTED);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -670,6 +674,7 @@ action update_putreq_inswitch_to_putreq_seq_case3_beingevicted() {
 action update_putreq_inswitch_to_putreq_pop_seq_case3() {
 	modify_field(op_hdr.optype, PUTREQ_POP_SEQ_CASE3);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_POP_SEQ_CASE3);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -798,6 +803,7 @@ action update_delreq_seq_inswitch_case1_to_delres_seq_by_mirroring(client_sid, s
 action update_delreq_inswitch_to_delreq_seq_case3() {
 	modify_field(op_hdr.optype, DELREQ_SEQ_CASE3);
 	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_CASE3);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -808,6 +814,7 @@ action update_delreq_inswitch_to_delreq_seq_case3() {
 action update_delreq_inswitch_to_delreq_seq_case3_beingevicted() {
 	modify_field(op_hdr.optype, DELREQ_SEQ_CASE3_BEINGEVICTED);
 	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_CASE3_BEINGEVICTED);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -1045,11 +1052,11 @@ action update_val_stat_seq_pktlen(aligned_vallen) {
 
 // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 action update_val_seq_inswitch_stat_clone_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 16(inswitch) + 4(stat) + 4(clone_hdr) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 63);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 83);
-	add(udp_hdr.hdrlen, aligned_vallen, 62);
-	add(ipv4_hdr.totalLen, aligned_vallen, 82);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 20(inswitch) + 4(stat) + 4(clone_hdr) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 67);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 87);
+	add(udp_hdr.hdrlen, aligned_vallen, 66);
+	add(ipv4_hdr.totalLen, aligned_vallen, 86);
 }
 
 // PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED
@@ -1109,11 +1116,11 @@ action update_val_seq_stat_pktlen(aligned_vallen) {
 
 // LOADSNAPSHOTDATA_INSWITCH_ACK
 action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 16(inswitch) + 4(stat) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 59);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 79);
-	add(udp_hdr.hdrlen, aligned_vallen, 58);
-	add(ipv4_hdr.totalLen, aligned_vallen, 78);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 20(inswitch) + 4(stat) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 63);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 83);
+	add(udp_hdr.hdrlen, aligned_vallen, 62);
+	add(ipv4_hdr.totalLen, aligned_vallen, 82);
 }
 
 // PUTREQ_LARGEVALUE_SEQ

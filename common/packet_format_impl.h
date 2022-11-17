@@ -51,7 +51,7 @@ int Packet<key_t>::get_inswitch_prev_bytes(method_t methodid) {
 	int result = 0;
 	switch (methodid) {
 		case FARREACH_ID:
-			result = 14;
+			result = 18;
 			break;
 		case NOCACHE_ID:
 			result = 14;

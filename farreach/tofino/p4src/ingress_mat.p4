@@ -387,12 +387,14 @@ table hash_for_cm34_tbl {
 
 action set_snapshot_flag(snapshotid) {
 	modify_field(inswitch_hdr.snapshot_flag, 1);
-	modify_field(seq_hdr.snapshot_token, snapshotid);
+	//modify_field(seq_hdr.snapshot_token, snapshotid);
+	modify_field(inswitch_hdr.snapshot_token, snapshotid);
 }
 
 action reset_snapshot_flag() {
 	modify_field(inswitch_hdr.snapshot_flag, 0);
-	modify_field(seq_hdr.snapshot_token, 0);
+	//modify_field(seq_hdr.snapshot_token, 0);
+	modify_field(inswitch_hdr.snapshot_token, 0);
 }
 
 @pragma stage 4
