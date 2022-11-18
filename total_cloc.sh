@@ -5,7 +5,7 @@ COMMON_EXCLUSIONS="! -path *reserved_files* ! -path *results* ! -path *tofino-ba
 
 #set -x
 
-function getLOC() {
+function getTotalLOC() {
 	tmpdirname=$1
 
 	echo "(1) Software LOC:"
@@ -30,4 +30,5 @@ function getLOC() {
 	echo "(3) P4 LOC: ${p4loc}"
 }
 
-getLOC farreach
+echo "total LOC of farreach"
+getTotalLOC farreach

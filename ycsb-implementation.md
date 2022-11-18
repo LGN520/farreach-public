@@ -6,8 +6,6 @@
 ## TODO list
 
 - TODO
-	* DEPRECATED: Add YCSB-E in exp2 on different workloads after running all experiments
-		- DEPRECATED: Test ScanResponseSplit of range query
 	* Client-side upstream backup (before exp9 recovery time)
 		* Debug and test client-side upstream backup colleborating with periodic snapshot
 			- Check whether the seq of GET/PUT/DELRES_SEQ and GETRES_LARGEVALUE_SEQ > 0
@@ -17,19 +15,32 @@
 		* TODO: Finish exp10 on recovery time vs. cache size for FarReach
 	* Others
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
+	* After finishing evaluation
+		* TODO: Re-organize scripts, and add comments to scripts
+		* TODO: Update benchmark.md
 	* DEPRECATED: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.18
+- 11.19
 	+ Siyuan
-		* TODO: Merge NetBuffer::snapshot_token into NetBuffer::master; uncomment client-side packet code for snapshot token
+		* TODO: Fix the comment on scaling issue for comnet22
+			- Review code of INTDetect in deltaint
+			- Update topo_genereate_multilayer.py to generate larger topology for differlent path lengths
+			- TODO: Run with different leaf layer nums
 		* TODO: Debug and test seq_hdr.snapshot_token
 			- TODO: Check if client receives correct seq
 			- TODO: Check if server receives correct snapshot_token
 		* TODO: Debug and test record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
 			- TODO: Check if server receives correct pkttype/seq/val/stat after record embedding
-		* TODO: Fix the comment on scaling issue for comnet22
-		* TODO: Update exp10 recovery time of evaluation in paper
+		* TODO: Update exp9 recovery time of evaluation in paper
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
+			- Finish code in eval/scripts/common.py
+			- TODO Text: "We plot the average results over 10 runs with 95% confidence intervals based on the student’s t-distribution. Some intervals may be invisible due to small variations."
+
+- 11.18 (PKU's testbed is crashed)
+	+ Siyuan
+		* Merge NetBuffer::snapshot_token into NetBuffer::master; uncomment client-side packet code for snapshot token
+		* Proofread section 4 of impl
+			- Count core LOC for switchos and controller by controlplane_cloc.sh
 	+ Huancheng
 		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
 		* TODO: For exp6 on skewness, add uniform result
@@ -778,6 +789,8 @@
 
 ## DEPRECATED
 
+* DEPRECATED: Add YCSB-E in exp2 on different workloads after running all experiments
+	- DEPRECATED: Test ScanResponseSplit of range query
 * DEPRECATED: Reduce redundant switch-related scripts in method/localscripts/
 * DEPRECATED: Implement DistfarreachClient, DistnocacheClient, and DistcacheClient (send pkt for power-of-two-choices for sampled GETRES) in YCSB (just with different methodids)
 	- [IMPORTANT] current distributed extension is a single discussion instead of a critical design -> NOT need to evaluate
