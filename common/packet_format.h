@@ -26,7 +26,7 @@ enum class PacketType {
 	PUTREQ_SEQ=0x0003, PUTREQ_POP_SEQ=0x0013, PUTREQ_SEQ_CASE3=0x0023, PUTREQ_POP_SEQ_CASE3=0x0033, NETCACHE_PUTREQ_SEQ_CACHED=0x0043, PUTREQ_SEQ_BEINGEVICTED=0x0053, PUTREQ_SEQ_CASE3_BEINGEVICTED=0x0063, PUTREQ_SEQ_BEINGEVICTED_SPINE=0x0073, PUTREQ_SEQ_CASE3_BEINGEVICTED_SPINE=0x0083,
 	//CACHE_POP_INSWITCH=0x0007,
 	GETRES_LATEST_SEQ_INSWITCH=0x000f, GETRES_DELETED_SEQ_INSWITCH=0x001f, GETRES_LATEST_SEQ_INSWITCH_CASE1=0x002f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x003f, PUTREQ_SEQ_INSWITCH_CASE1=0x004f, DELREQ_SEQ_INSWITCH_CASE1=0x005f, LOADSNAPSHOTDATA_INSWITCH_ACK=0x006f, CACHE_POP_INSWITCH=0x007f, NETCACHE_VALUEUPDATE_INSWITCH=0x008f, GETRES_LATEST_SEQ_SERVER_INSWITCH=0x009f, GETRES_DELETED_SEQ_SERVER_INSWITCH=0x010f, DISTCACHE_SPINE_VALUEUPDATE_INSWITCH=0x011f, DISTCACHE_LEAF_VALUEUPDATE_INSWITCH=0x012f, DISTCACHE_VALUEUPDATE_INSWITCH=0x013f, DISTCACHE_VALUEUPDATE_INSWITCH_ORIGIN=0x014f, NETCACHE_CACHE_POP_INSWITCH_NLATEST=0x015f,
-	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b, NETCACHE_VALUEUPDATE=0x003b, GETRES_LATEST_SEQ_SERVER=0x004b, GETRES_DELETED_SEQ_SERVER=0x005b, GETRES_SEQ=0x006b,
+	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b, NETCACHE_VALUEUPDATE=0x003b, GETRES_LATEST_SEQ_SERVER=0x004b, GETRES_DELETED_SEQ_SERVER=0x005b, GETRES_SEQ=0x006b, GETREQ_BEINGEVICTED_RECORD=0x007b, GETREQ_LARGEVALUEBLOCK_RECORD=0x008b,
 	GETRES=0x0009, GETRES_SERVER=0x0019, DISTCACHE_GETRES_SPINE=0x0029,
 	PUTREQ_INSWITCH=0x0005,
 	DELREQ_SEQ_INSWITCH=0x0006, PUTREQ_LARGEVALUE_SEQ_INSWITCH=0x0016,
@@ -213,7 +213,7 @@ class GetResponseServer : public GetResponse<key_t, val_t> { // ophdr + val + sh
 
 
 template<class key_t, class val_t>
-class GetResponseSeq : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr
+class GetResponseSeq : public GetResponse<key_t, val_t> { // ophdr + val + shadowtype + seq_hdr + stat_hdr
 	public: 
 		GetResponseSeq();
 		GetResponseSeq(method_t methodid, key_t key, val_t val, uint32_t seq, bool stat, uint16_t nodeidx_foreval);
@@ -228,6 +228,24 @@ class GetResponseSeq : public GetResponse<key_t, val_t> { // ophdr + val + shado
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint32_t _seq;
+};
+
+template<class key_t, class val_t>
+class GetRequestBeingevictedRecord : public GetResponseSeq<key_t, val_t> { // ophdr + val + shadowtype + seq_hdr + stat_hdr
+	public: 
+		GetRequestBeingevictedRecord(method_t methodid, const char *data, uint32_t recv_size);
+		virtual ~GetRequestBeingevictedRecord(){}
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class GetRequestLargevalueblockRecord : public GetResponseSeq<key_t, val_t> { // ophdr + val + shadowtype + seq_hdr + stat_hdr
+	public: 
+		GetRequestLargevalueblockRecord(method_t methodid, const char *data, uint32_t recv_size);
+		virtual ~GetRequestLargevalueblockRecord(){}
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
 template<class key_t>
@@ -434,7 +452,7 @@ class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCa
 };
 
 template<class key_t, class val_t>
-class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
+class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq_hdr
 	public: 
 		PutRequestSeq();
 		PutRequestSeq(method_t methodid, key_t key, val_t val, uint32_t seq);
@@ -442,6 +460,7 @@ class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 
 		val_t val() const;
 		uint32_t seq() const;
+		uint32_t snapshot_token() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -450,6 +469,7 @@ class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
 		uint32_t _seq;
+		uint32_t _snapshot_token; // ONLY used by XXX_CASE3 in farreach
 };
 
 template<class key_t, class val_t>
@@ -492,11 +512,13 @@ class DelRequestSeq : public Packet<key_t> { // ophdr + shadowtype + seq
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
 		uint32_t seq() const;
+		uint32_t snapshot_token() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint32_t _seq;
+		uint32_t _snapshot_token;
 };
 
 template<class key_t>
@@ -741,7 +763,7 @@ class CacheEvictLoaddataInswitch : public CacheEvictLoadfreqInswitch<key_t> { //
 };
 
 template<class key_t, class val_t>
-class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + val + shadowtype + seq + stat_hdr
+class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + val + shadowtype + seq_hdr + stat_hdr
 	public: 
 		CacheEvictLoaddataInswitchAck(method_t methodid, const char * data, uint32_t recv_size);
 
@@ -1061,12 +1083,14 @@ class PutRequestLargevalueSeq : public PutRequestLargevalue<key_t, val_t> { // o
 		static size_t get_frag_hdrsize(method_t methodid);
 
 		uint32_t seq() const;
+		uint32_t snapshot_token() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint32_t _seq;
+		uint32_t _snapshot_token;
 };
 
 template<class key_t, class val_t>

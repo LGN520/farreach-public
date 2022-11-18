@@ -92,6 +92,7 @@ header_type shadowtype_t {
 header_type seq_t {
 	fields {
 		seq: 32;
+		snapshot_token: 32;
 	}
 }
 
@@ -110,6 +111,7 @@ header_type inswitch_t {
 		hashval_for_cm2: 16; // at most 64K
 		hashval_for_cm3: 16; // at most 64K
 		hashval_for_cm4: 16; // at most 64K
+		snapshot_token: 32; // NOTE: only place it before inswitch_hdr.idx, we can simply change INSWITCH_PREVBYTES in libcommon
 		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
 	}

@@ -136,7 +136,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.need_recirculate_tbl_table_add_with_set_need_recirculate(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-    def set_snapshot_flag(self):
+    def set_snapshot_flag(self, snapshotid):
         print "Set snapshot_flag=1 for all ingress pipelines"
         for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
             matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
@@ -144,8 +144,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_need_recirculate = 0)
             #self.client.snapshot_flag_tbl_table_delete_by_match_spec(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
+            actnspec0 = netbufferv4_set_snapshot_flag_action_spec_t(\
+                    convert_u32_to_i32(snapshotid))
             self.client.snapshot_flag_tbl_table_add_with_set_snapshot_flag(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
     def disable_singlepath(self):
         # get entry count
@@ -279,7 +281,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_SET_SNAPSHOT_FLAG:
                 # set snapshot_flag as true atomically
-                self.set_snapshot_flag()
+                snapshotid = struct.unpack("=I", recvbuf)[0]
+                self.set_snapshot_flag(snapshotid)
 
                 # send back SWITCHOS_SET_SNAPSHOT_FLAG_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_SET_SNAPSHOT_FLAG_ACK)

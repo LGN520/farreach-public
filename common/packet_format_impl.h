@@ -51,7 +51,7 @@ int Packet<key_t>::get_inswitch_prev_bytes(method_t methodid) {
 	int result = 0;
 	switch (methodid) {
 		case FARREACH_ID:
-			result = 14;
+			result = 18;
 			break;
 		case NOCACHE_ID:
 			result = 14;
@@ -713,6 +713,9 @@ uint32_t GetResponseSeq<key_t, val_t>::size() { // unused
 	/*if (this->_methodid == DISTCACHE_ID) {
 		size += (sizeof(uint32_t) + sizeof(uint32_t));
 	}*/
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	return size;
 }
 
@@ -730,6 +733,10 @@ uint32_t GetResponseSeq<key_t, val_t>::serialize(char * const data, uint32_t max
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		memset(begin, 0, sizeof(uint32_t));
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
@@ -761,6 +768,9 @@ void GetResponseSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq); // Big-endian to little-endian
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 	begin += sizeof(bool);
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
@@ -775,6 +785,42 @@ void GetResponseSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_
 		this->_leafload = ntohl(this->_leafload);
 		begin += sizeof(uint32_t);
 	}*/
+}
+
+// GetRequestBeingevictedRecord (value must <= 128B)
+
+template<class key_t, class val_t>
+GetRequestBeingevictedRecord<key_t, val_t>::GetRequestBeingevictedRecord(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETREQ_BEINGEVICTED_RECORD);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t GetRequestBeingevictedRecord<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	printf("[ERROR] not support serialize for GETREQ_BEINGEVICTED_RECORD\n");
+	exit(-1);
+	return 0;
+}
+
+// GetRequestLargevalueblockRecord (value must <= 128B)
+
+template<class key_t, class val_t>
+GetRequestLargevalueblockRecord<key_t, val_t>::GetRequestLargevalueblockRecord(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == FARREACH_ID || methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETREQ_LARGEVALUEBLOCK_RECORD);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t GetRequestLargevalueblockRecord<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	printf("[ERROR] not support serialize for GETREQ_LARGEVALUEBLOCK_RECORD\n");
+	exit(-1);
+	return 0;
 }
 
 // PutResponse
@@ -867,7 +913,11 @@ uint32_t PutResponseSeq<key_t>::seq() const {
 
 template<class key_t>
 uint32_t PutResponseSeq<key_t>::size() {
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t);
+	}
+	return size;
 }
 
 template<class key_t>
@@ -882,6 +932,10 @@ uint32_t PutResponseSeq<key_t>::serialize(char * const data, uint32_t max_size) 
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		memset(begin, 0, sizeof(uint32_t));
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
@@ -902,6 +956,9 @@ void PutResponseSeq<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq); // Big-endian to little-endian
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 	begin += sizeof(bool);
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
@@ -1448,12 +1505,20 @@ bool GetResponseLatestSeqInswitchCase1<key_t, val_t>::stat() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::size() { // unused
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid) + Packet<key_t>::get_clone_bytes(this->_methodid);
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid) + Packet<key_t>::get_clone_bytes(this->_methodid);
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::bwcost() {
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + this->_val.val_length + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid) + Packet<key_t>::get_clone_bytes(this->_methodid);
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + this->_val.val_length + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid) + Packet<key_t>::get_clone_bytes(this->_methodid);
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 template<class key_t, class val_t>
@@ -1470,6 +1535,10 @@ uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::serialize(char * const
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		memset(begin, 0, sizeof(uint32_t));
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	int tmp_inswitch_prev_bytes = Packet<key_t>::get_inswitch_prev_bytes(this->_methodid);
 	memset(begin, 0, tmp_inswitch_prev_bytes); // the first bytes of inswitch_hdr
 	begin += tmp_inswitch_prev_bytes;
@@ -1500,6 +1569,9 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq);
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	begin += Packet<key_t>::get_inswitch_prev_bytes(this->_methodid); // the first bytes of inswitch_hdr
 	memcpy((void *)&this->_idx, begin, sizeof(uint16_t));
 	this->_idx = ntohs(this->_idx); // big-endian to little-endian
@@ -1568,14 +1640,14 @@ GetResponseDeletedSeqInswitchCase1<key_t, val_t>::GetResponseDeletedSeqInswitchC
 
 template<class key_t, class val_t>
 PutRequestSeq<key_t, val_t>::PutRequestSeq()
-	: Packet<key_t>(), _val(), _seq(0)
+	: Packet<key_t>(), _val(), _seq(0), _snapshot_token(0)
 {
 	this->_type = optype_t(packet_type_t::PUTREQ_SEQ);
 }
 
 template<class key_t, class val_t>
 PutRequestSeq<key_t, val_t>::PutRequestSeq(method_t methodid, key_t key, val_t val, uint32_t seq)
-	: Packet<key_t>(methodid, packet_type_t::PUTREQ_SEQ, 0, 0, key), _val(val), _seq(seq)
+	: Packet<key_t>(methodid, packet_type_t::PUTREQ_SEQ, 0, 0, key), _val(val), _seq(seq), _snapshot_token(0)
 {
 }
 
@@ -1600,8 +1672,17 @@ uint32_t PutRequestSeq<key_t, val_t>::seq() const {
 }
 
 template<class key_t, class val_t>
+uint32_t PutRequestSeq<key_t, val_t>::snapshot_token() const {
+	return this->_snapshot_token;
+}
+
+template<class key_t, class val_t>
 uint32_t PutRequestSeq<key_t, val_t>::size() {
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t);
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 template<class key_t, class val_t>
@@ -1618,6 +1699,11 @@ void PutRequestSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_s
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq); // Big-endian to little-endian
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		memcpy((void *)&this->_snapshot_token, begin, sizeof(uint32_t));
+		this->_snapshot_token = ntohl(this->_snapshot_token);
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 }
 
 template<class key_t, class val_t>
@@ -1710,7 +1796,7 @@ uint32_t PutRequestPopSeqCase3<key_t, val_t>::serialize(char * const data, uint3
 
 template<class key_t>
 DelRequestSeq<key_t>::DelRequestSeq() 
-	: Packet<key_t>(), _seq(0)
+	: Packet<key_t>(), _seq(0), _snapshot_token(0)
 {
 }
 
@@ -1727,9 +1813,18 @@ uint32_t DelRequestSeq<key_t>::seq() const {
 }
 
 template<class key_t>
+uint32_t DelRequestSeq<key_t>::snapshot_token() const {
+	return this->_snapshot_token;
+}
+
+template<class key_t>
 uint32_t DelRequestSeq<key_t>::size() {
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(uint32_t) + DEBUG_BYTES;
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(uint32_t);
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 template<class key_t>
@@ -1748,6 +1843,11 @@ void DelRequestSeq<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq);
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		memcpy((void *)&this->_snapshot_token, begin, sizeof(uint32_t));
+		this->_snapshot_token = ntohl(this->_snapshot_token);
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 }
 
 // GetRequestLargevalueblockSeq
@@ -2588,7 +2688,11 @@ bool CacheEvictLoaddataInswitchAck<key_t, val_t>::stat() const {
 
 template<class key_t, class val_t>
 uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::size() { // unused
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 template<class key_t, class val_t>
@@ -2605,6 +2709,9 @@ void CacheEvictLoaddataInswitchAck<key_t, val_t>::deserialize(const char * data,
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq);
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 	begin += sizeof(bool); // stat_hdr.stat
 	//begin += sizeof(uint16_t); // stat_hdr.nodeidx_foreval
@@ -2660,7 +2767,11 @@ LoadsnapshotdataInswitchAck<key_t, val_t>::LoadsnapshotdataInswitchAck(method_t 
 
 template<class key_t, class val_t>
 uint32_t LoadsnapshotdataInswitchAck<key_t, val_t>::size() { // unused
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 template<class key_t, class val_t>
@@ -2676,6 +2787,9 @@ void LoadsnapshotdataInswitchAck<key_t, val_t>::deserialize(const char * data, u
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq);
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	begin += Packet<key_t>::get_inswitch_prev_bytes(this->_methodid); // the first bytes of inswitch_hdr
 	memcpy((void *)&this->_idx, begin, sizeof(uint16_t));
 	this->_idx = ntohs(this->_idx); // big-endian to little-endian
@@ -3546,13 +3660,13 @@ void PutRequestLargevalue<key_t, val_t>::deserialize(const char * data, uint32_t
 
 template<class key_t, class val_t>
 PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq() 
-	: PutRequestLargevalue<key_t, val_t>(), _seq(0)
+	: PutRequestLargevalue<key_t, val_t>(), _seq(0), _snapshot_token(0)
 {	
 }
 
 template<class key_t, class val_t>
 PutRequestLargevalueSeq<key_t, val_t>::PutRequestLargevalueSeq(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t client_logical_idx, uint32_t fragseq) 
-	: PutRequestLargevalue<key_t, val_t>(methodid, key, val, client_logical_idx, fragseq), _seq(seq)
+	: PutRequestLargevalue<key_t, val_t>(methodid, key, val, client_logical_idx, fragseq), _seq(seq), _snapshot_token(0)
 {	
 	this->_type = static_cast<optype_t>(packet_type_t::PUTREQ_LARGEVALUE_SEQ);
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
@@ -3572,13 +3686,26 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::seq() const {
 }
 
 template<class key_t, class val_t>
+uint32_t PutRequestLargevalueSeq<key_t, val_t>::snapshot_token() const {
+	return _snapshot_token;
+}
+
+template<class key_t, class val_t>
 uint32_t PutRequestLargevalueSeq<key_t, val_t>::size() { // not used
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN;
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t) + val_t::SWITCH_MAX_VALLEN;
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeq<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
-	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	if (methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 template<class key_t, class val_t>
@@ -3593,6 +3720,11 @@ uint32_t PutRequestLargevalueSeq<key_t, val_t>::serialize(char * const data, uin
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, &bigendian_seq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		uint32_t bigendian_snapshot_token = htonl(this->_snapshot_token);
+		memcpy(begin, &bigendian_snapshot_token, sizeof(uint32_t));
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	uint16_t bigendian_client_logical_idx = htons(this->_client_logical_idx);
 	memcpy(begin, &bigendian_client_logical_idx, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
@@ -3615,6 +3747,11 @@ void PutRequestLargevalueSeq<key_t, val_t>::deserialize(const char * data, uint3
 	memcpy(&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq);
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		memcpy((void *)&this->_snapshot_token, begin, sizeof(uint32_t));
+		this->_snapshot_token = ntohl(this->_snapshot_token);
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	memcpy(&this->_client_logical_idx, begin, sizeof(uint16_t));
 	this->_client_logical_idx = ntohs(this->_client_logical_idx);
 	begin += sizeof(uint16_t);
@@ -3647,7 +3784,11 @@ PutRequestLargevalueSeqCached<key_t, val_t>::PutRequestLargevalueSeqCached(metho
 
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqCached<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
-	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	if (methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 // PutRequestLargevalueSeqCase3 (value must > 128B)
@@ -3672,7 +3813,11 @@ PutRequestLargevalueSeqCase3<key_t, val_t>::PutRequestLargevalueSeqCase3(method_
 
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqCase3<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
-	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	if (methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 // GetResponseLargevalue (value must > 128B)
@@ -4111,7 +4256,11 @@ PutRequestLargevalueSeqBeingevicted<key_t, val_t>::PutRequestLargevalueSeqBeinge
 
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqBeingevicted<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
-	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	if (methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 // PutRequestLargevalueSeqCase3Beingevicted (value must > 128B)
@@ -4136,7 +4285,11 @@ PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::PutRequestLargevalueSeqC
 
 template<class key_t, class val_t>
 size_t PutRequestLargevalueSeqCase3Beingevicted<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
-	return Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	uint32_t size = Packet<key_t>::get_ophdrsize(methodid) + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t); // op_hdr + shadowtype_hdr + seq_hdr + client_logical_idx + fragseq
+	if (methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 // NetcacheCachePopAckNLatest (default value length must = 0B; only used in end-hosts)
@@ -4309,6 +4462,9 @@ static uint16_t get_packet_clientlogicalidx(method_t methodid, const char * data
 	}
 	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
 		prevbytes = tmp_ophdrsize + sizeof(optype_t) + sizeof(uint32_t); // op_hdr + shadowtype + seq
+		if (methodid == FARREACH_ID) {
+			prevbytes += sizeof(uint32_t); // seq_hdr.snapshot_token
+		}
 	}
 	else if (tmp_optype == packet_type_t::LOADREQ) {
 		prevbytes = tmp_ophdrsize; // op_hdr
@@ -4334,6 +4490,9 @@ static uint32_t get_packet_fragseq(method_t methodid, const char * data, uint32_
 	}
 	else if (tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CACHED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3 || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED || tmp_optype == packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED) {
 		prevbytes = tmp_ophdrsize + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t); // op_hdr + shadowtype + seq + client_logical_idx
+		if (methodid == FARREACH_ID) {
+			prevbytes += sizeof(uint32_t); // seq_hdr.snapshot_token
+		}
 	}
 	else if (tmp_optype == packet_type_t::LOADREQ) {
 		prevbytes = tmp_ophdrsize + sizeof(uint16_t); // op_hdr + client_logical_idx

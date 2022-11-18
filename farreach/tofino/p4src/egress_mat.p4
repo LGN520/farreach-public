@@ -173,23 +173,48 @@ action update_getreq_inswitch_to_getreq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_getreq_inswitch_to_getreq_beingevicted() {
-	modify_field(op_hdr.optype, GETREQ_BEINGEVICTED);
+//action update_getreq_inswitch_to_getreq_beingevicted() {
+//	modify_field(op_hdr.optype, GETREQ_BEINGEVICTED);
+//
+//	remove_header(shadowtype_hdr);
+//	remove_header(inswitch_hdr);
+//}
 
-	remove_header(shadowtype_hdr);
-	remove_header(inswitch_hdr);
-}
+////#ifdef ENABLE_LARGEVALUEBLOCK
+//action update_getreq_inswitch_to_getreq_largevalueblock_seq() {
+//	modify_field(op_hdr.optype, GETREQ_LARGEVALUEBLOCK_SEQ);
+//	modify_field(shadowtype_hdr.shadowtype, GETREQ_LARGEVALUEBLOCK_SEQ);
+//
+//	modify_field(seq_hdr.seq, meta.largevalueseq);
+//
+//	//remove_header(shadowtype_hdr);
+//	add_header(seq_hdr);
+//
+//	remove_header(inswitch_hdr);
+//}
+////#endif
 
-//#ifdef ENABLE_LARGEVALUEBLOCK
-action update_getreq_inswitch_to_getreq_largevalueblock_seq() {
-	modify_field(op_hdr.optype, GETREQ_LARGEVALUEBLOCK_SEQ);
-
-	modify_field(seq_hdr.seq, meta.largevalueseq);
+action update_getreq_inswitch_to_getreq_beingevicted_record(stat) {
+	modify_field(op_hdr.optype, GETREQ_BEINGEVICTED_RECORD);
+	modify_field(shadowtype_hdr.shadowtype, GETREQ_BEINGEVICTED_RECORD);
+	modify_field(stat_hdr.stat, stat);
 
 	//remove_header(shadowtype_hdr);
 	add_header(seq_hdr);
-
 	remove_header(inswitch_hdr);
+	add_header(stat_hdr);
+}
+
+//#ifdef ENABLE_LARGEVALUEBLOCK
+action update_getreq_inswitch_to_getreq_largevalueblock_record(stat) {
+	modify_field(op_hdr.optype, GETREQ_LARGEVALUEBLOCK_RECORD);
+	modify_field(shadowtype_hdr.shadowtype, GETREQ_LARGEVALUEBLOCK_RECORD);
+	modify_field(stat_hdr.stat, stat);
+
+	//remove_header(shadowtype_hdr);
+	add_header(seq_hdr);
+	remove_header(inswitch_hdr);
+	add_header(stat_hdr);
 }
 //#endif
 
@@ -341,6 +366,7 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3() {
 	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CASE3 w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
 	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -359,6 +385,7 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3_beingevi
 	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
 	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -391,9 +418,13 @@ table another_eg_port_forward_tbl {
 	}
 	actions {
 		update_getreq_inswitch_to_getreq;
-		update_getreq_inswitch_to_getreq_beingevicted;
+//		update_getreq_inswitch_to_getreq_beingevicted;
+////#ifdef ENABLE_LARGEVALUEBLOCK
+//		update_getreq_inswitch_to_getreq_largevalueblock_seq;
+////#endif
+		update_getreq_inswitch_to_getreq_beingevicted_record;
 //#ifdef ENABLE_LARGEVALUEBLOCK
-		update_getreq_inswitch_to_getreq_largevalueblock_seq;
+		update_getreq_inswitch_to_getreq_largevalueblock_record;
 //#endif
 		update_getreq_inswitch_to_getreq_pop;
 		update_getreq_inswitch_to_getreq_nlatest;
@@ -623,6 +654,7 @@ action update_putreq_seq_inswitch_case1_to_putres_seq_by_mirroring(client_sid, s
 action update_putreq_inswitch_to_putreq_seq_case3() {
 	modify_field(op_hdr.optype, PUTREQ_SEQ_CASE3);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_CASE3);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -633,6 +665,7 @@ action update_putreq_inswitch_to_putreq_seq_case3() {
 action update_putreq_inswitch_to_putreq_seq_case3_beingevicted() {
 	modify_field(op_hdr.optype, PUTREQ_SEQ_CASE3_BEINGEVICTED);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_CASE3_BEINGEVICTED);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -641,6 +674,7 @@ action update_putreq_inswitch_to_putreq_seq_case3_beingevicted() {
 action update_putreq_inswitch_to_putreq_pop_seq_case3() {
 	modify_field(op_hdr.optype, PUTREQ_POP_SEQ_CASE3);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_POP_SEQ_CASE3);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -769,6 +803,7 @@ action update_delreq_seq_inswitch_case1_to_delres_seq_by_mirroring(client_sid, s
 action update_delreq_inswitch_to_delreq_seq_case3() {
 	modify_field(op_hdr.optype, DELREQ_SEQ_CASE3);
 	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_CASE3);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -779,6 +814,7 @@ action update_delreq_inswitch_to_delreq_seq_case3() {
 action update_delreq_inswitch_to_delreq_seq_case3_beingevicted() {
 	modify_field(op_hdr.optype, DELREQ_SEQ_CASE3_BEINGEVICTED);
 	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_CASE3_BEINGEVICTED);
+	modify_field(seq_hdr.snapshot_token, inswitch_hdr.snapshot_token);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -1007,29 +1043,29 @@ action update_val_stat_pktlen(aligned_vallen) {
 	add(ipv4_hdr.totalLen, aligned_vallen, 54);
 }
 
-// GETRES_SEQ
+// GETRES_SEQ, GETREQ_BEINGEVICTED_RECORD, GETREQ_LARGEVALUEBLOCK_RECORD
 action update_val_stat_seq_pktlen(aligned_vallen) {
-	// 20[iphdr] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 4(stat)
-	add(udp_hdr.hdrlen, aligned_vallen, 38);
-	add(ipv4_hdr.totalLen, aligned_vallen, 58);
+	// 20[iphdr] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 4(stat)
+	add(udp_hdr.hdrlen, aligned_vallen, 42);
+	add(ipv4_hdr.totalLen, aligned_vallen, 62);
 }
 
 // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 action update_val_seq_inswitch_stat_clone_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 16(inswitch) + 4(stat) + 4(clone_hdr) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 59);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 79);
-	add(udp_hdr.hdrlen, aligned_vallen, 58);
-	add(ipv4_hdr.totalLen, aligned_vallen, 78);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 20(inswitch) + 4(stat) + 4(clone_hdr) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 67);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 87);
+	add(udp_hdr.hdrlen, aligned_vallen, 66);
+	add(ipv4_hdr.totalLen, aligned_vallen, 86);
 }
 
 // PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, PUTREQ_SEQ_BEINGEVICTED, PUTREQ_SEQ_CASE3_BEINGEVICTED
 action update_val_seq_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 35);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 55);
-	add(udp_hdr.hdrlen, aligned_vallen, 34);
-	add(ipv4_hdr.totalLen, aligned_vallen, 54);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 39);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 59);
+	add(udp_hdr.hdrlen, aligned_vallen, 38);
+	add(ipv4_hdr.totalLen, aligned_vallen, 58);
 }
 
 // PUTRES, DELRES
@@ -1043,18 +1079,18 @@ action update_stat_pktlen() {
 
 // PUTRES_SEQ, DELRES_SEQ
 action update_seq_stat_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 4(seq) + 4(stat)
-	modify_field(udp_hdr.hdrlen, 36);
-	modify_field(ipv4_hdr.totalLen, 56);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 8(seq_hdr) + 4(stat)
+	modify_field(udp_hdr.hdrlen, 40);
+	modify_field(ipv4_hdr.totalLen, 60);
 }
 
 // DELREQ_SEQ, DELREQ_SEQ_CASE3, DELREQ_SEQ_BEINGEVICTED, DELREQ_SEQ_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ
 action update_seq_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 4(seq) + 1(debug_hdr)
-	//modify_field(udp_hdr.hdrlen, 33);
-	/modify_field(ipv4_hdr.totalLen, 53);
-	modify_field(udp_hdr.hdrlen, 32);
-	modify_field(ipv4_hdr.totalLen, 52);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 8(seq_hdr) + 1(debug_hdr)
+	//modify_field(udp_hdr.hdrlen, 37);
+	/modify_field(ipv4_hdr.totalLen, 57);
+	modify_field(udp_hdr.hdrlen, 36);
+	modify_field(ipv4_hdr.totalLen, 56);
 }
  
 // SCANREQ_SPLIT
@@ -1073,25 +1109,25 @@ action update_frequency_pktlen() {
 
 // CACHE_EVICT_LOADDATA_INSWITCH_ACK
 action update_val_seq_stat_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 4(stat)
-	add(udp_hdr.hdrlen, aligned_vallen, 38);
-	add(ipv4_hdr.totalLen, aligned_vallen, 58);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 4(stat)
+	add(udp_hdr.hdrlen, aligned_vallen, 42);
+	add(ipv4_hdr.totalLen, aligned_vallen, 62);
 }
 
 // LOADSNAPSHOTDATA_INSWITCH_ACK
 action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 16(inswitch) + 4(stat) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 55);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 75);
-	add(udp_hdr.hdrlen, aligned_vallen, 54);
-	add(ipv4_hdr.totalLen, aligned_vallen, 74);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 8(seq_hdr) + 20(inswitch) + 4(stat) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 63);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 83);
+	add(udp_hdr.hdrlen, aligned_vallen, 62);
+	add(ipv4_hdr.totalLen, aligned_vallen, 82);
 }
 
 // PUTREQ_LARGEVALUE_SEQ
 action add_shadowtypehdr_seqhdr_pktlen() {
-	// 2(shadowtype) + 4(seq)
-	add_to_field(udp_hdr.hdrlen, 6);
-	add_to_field(ipv4_hdr.totalLen, 6);
+	// 2(shadowtype) + 8(seq_hdr)
+	add_to_field(udp_hdr.hdrlen, 10);
+	add_to_field(ipv4_hdr.totalLen, 10);
 }
 */
 
