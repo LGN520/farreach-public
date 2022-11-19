@@ -20,12 +20,8 @@
 		* TODO: Update benchmark.md
 	* DEPRECATED: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.19
+- 11.20
 	+ Siyuan
-		* TODO: Fix the comment on scaling issue for comnet22
-			- Review code of INTDetect in deltaint
-			- Update topo_genereate_multilayer.py to generate larger topology for differlent path lengths
-			- TODO: Run with different leaf layer nums
 		* TODO: Debug and test seq_hdr.snapshot_token
 			- TODO: Check if client receives correct seq
 			- TODO: Check if server receives correct snapshot_token
@@ -35,6 +31,14 @@
 		* TODO: Use student-T distribution to calculate the error bars of each experiment
 			- Finish code in eval/scripts/common.py
 			- TODO Text: "We plot the average results over 10 runs with 95% confidence intervals based on the student’s t-distribution. Some intervals may be invisible due to small variations."
+
+- 11.19
+	+ Siyuan
+		* Fix the comment on scaling issue for comnet22
+			- Review code of INTDetect in deltaint
+			- Update topo_genereate_multilayer.py to generate larger topology for differlent path lengths
+			- Configure deltaint environment in CSE server
+			- Run with different leaf layer nums
 
 - 11.18 (PKU's testbed is crashed)
 	+ Siyuan
