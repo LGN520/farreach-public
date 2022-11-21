@@ -171,6 +171,10 @@ void prepare_server() {
 
 	server_issnapshot_list = new std::atomic<bool>[current_server_logical_num];
 	server_snapshottoken_list = new std::atomic<int>[current_server_logical_num];
+	for (int i = 0; i < current_server_logical_num; i++) {
+		server_issnapshot_list[i] = false;
+		server_snapshottoken_list[i] = 0;
+	}
 
 	memory_fence();
 

@@ -77,6 +77,7 @@ Contents
 			- Under each server, run `bash scripts/local/makeserver.sh`
 		* Automatic way (NOT used now due to slow sequential compialtion)
 			- Under the main client, `bash scripts/remote/makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server
+		* NOTE: if with "make: warning:  Clock skew detected.  Your build may be incomplete" during make, run `find . -type f | xargs touch` and then re-make files
 	+ Compile hardware code (NOT need to run now as we have compiled hardware code)
 		* Under each Tofino OS, enter directory of method/tofino/ (or method/tofino-spine/ and method/tofino-leaf/)
 			- `bash compile.sh` (NOTE: if we have already compiled for all methods, we do NOT need to run this command unless we change in-switch implementation)
