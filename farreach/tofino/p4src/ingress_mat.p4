@@ -221,36 +221,6 @@ table hash_partition_tbl {
 }
 #endif
 
-#ifndef USE_BFSDE920
-action cached_action(idx) {
-	modify_field(inswitch_hdr.idx, idx);
-	modify_field(inswitch_hdr.is_cached, 1);
-}
-
-action uncached_action() {
-	modify_field(inswitch_hdr.is_cached, 0);
-}
-
-@pragma stage 2
-table cache_lookup_tbl {
-	reads {
-		op_hdr.keylolo: exact;
-		op_hdr.keylohi: exact;
-		op_hdr.keyhilo: exact;
-		//op_hdr.keyhihi: exact;
-		op_hdr.keyhihilo: exact;
-		op_hdr.keyhihihi: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		cached_action;
-		uncached_action;
-	}
-	default_action: uncached_action();
-	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
-}
-#endif
-
 action hash_for_cm12() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm1, 0, hash_calc, CM_BUCKET_COUNT);
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);
@@ -270,6 +240,37 @@ table hash_for_cm12_tbl {
 	size: 2;
 }
 
+#ifndef USE_BFSDE920
+action cached_action(idx) {
+	modify_field(inswitch_hdr.idx, idx);
+	modify_field(inswitch_hdr.is_cached, 1);
+}
+
+action uncached_action() {
+	modify_field(inswitch_hdr.is_cached, 0);
+}
+
+@pragma stage 2 16384
+@pragma stage 3
+table cache_lookup_tbl {
+	reads {
+		op_hdr.keylolo: exact;
+		op_hdr.keylohi: exact;
+		op_hdr.keyhilo: exact;
+		//op_hdr.keyhihi: exact;
+		op_hdr.keyhihilo: exact;
+		op_hdr.keyhihihi: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		cached_action;
+		uncached_action;
+	}
+	default_action: uncached_action();
+	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
+}
+#endif
+
 // Stage 3
 
 #ifdef USE_BFSDE920
@@ -282,7 +283,7 @@ action uncached_action() {
 	modify_field(inswitch_hdr.is_cached, 0);
 }
 
-@pragma stage 2
+@pragma stage 3
 table cache_lookup_tbl {
 	reads {
 		op_hdr.keylolo: exact;
