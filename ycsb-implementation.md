@@ -18,21 +18,32 @@
 	* After finishing evaluation
 		* TODO: Re-organize scripts, and add comments to scripts
 		* TODO: Update benchmark.md
+		* TODO: Remove unnecessary files in method/tofino/visualization/
 	* DEPRECATED: Try in-memory KVS after we have got all results of RocksDB
 
-- 11.20
+- 11.22
 	+ Siyuan
-		* TODO: Debug and test seq_hdr.snapshot_token
-			- TODO: Check if client receives correct seq
-			- TODO: Check if server receives correct snapshot_token
-		* TODO: Debug and test record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
-			- TODO: Check if server receives correct pkttype/seq/val/stat after record embedding
+		* Update evaluation results (3 rounds) to make it complete
+			- DONE: exp1
+			- TODO: exp2, ...
 		* TODO: Update exp9 recovery time of evaluation in paper
-		* TODO: Use student-T distribution to calculate the error bars of each experiment
-			- Finish code in eval/scripts/common.py
-			- TODO Text: "We plot the average results over 10 runs with 95% confidence intervals based on the student’s t-distribution. Some intervals may be invisible due to small variations."
 
-- 11.19
+- 11.21
+	+ Siyuan
+		* Debug and test seq_hdr.snapshot_token w/ 32K cache entries
+			- Check if client receives correct seq and nodeidx_for_eval
+			- Check if server receives correct snapshot_token
+		* Debug and test record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now) w/ 32K cache entries
+			- Check if server receives correct pkttype/seq/val/stat after record embedding
+		* Fix comments on impl
+			- Check if 32K cache entries can work in farreach -> if it works, update exp10 results
+			- Check if 32K cache entries can work in netcache -> if it works, update exp10 results
+		* Use student-T distribution to calculate the error bars of each experiment
+			- Finish code in eval/scripts/common.py
+			- Reference text: "We plot the average results over 10 runs with 95% confidence intervals based on the student’s t-distribution. Some intervals may be invisible due to small variations."
+		* Update evaluation to make it complete (partial)
+
+- 11.19 - 11.20 (PKU's testbed is still crashed)
 	+ Siyuan
 		* Fix the comment on scaling issue for comnet22
 			- Review code of INTDetect in deltaint
