@@ -989,8 +989,10 @@ void *run_server_worker(void * param) {
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
 					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
-						server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
-						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						bool tmpres = db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						if (tmpres) {
+							server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
+						}
 					}
 					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
@@ -1021,8 +1023,10 @@ void *run_server_worker(void * param) {
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
 					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
-						server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
-						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						bool tmpres = db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						if (tmpres) {
+							server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
+						}
 					}
 					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
@@ -1087,8 +1091,10 @@ void *run_server_worker(void * param) {
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
 					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
-						server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
-						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						bool tmpres = db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						if (tmpres) {
+							server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
+						}
 					}
 					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
@@ -1134,8 +1140,10 @@ void *run_server_worker(void * param) {
 
 				if (!server_issnapshot_list[local_server_logical_idx]) {
 					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
-						server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
-						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						bool tmpres = db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						if (tmpres) {
+							server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
+						}
 					}
 					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
@@ -1374,8 +1382,10 @@ void *run_server_worker(void * param) {
 				// process as usual
 				if (tmp_iscase3 && !server_issnapshot_list[local_server_logical_idx]) {
 					if (tmp_snapshottoken > server_snapshottoken_list[local_server_logical_idx]) {
-						server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
-						db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						bool tmpres = db_wrappers[local_server_logical_idx].make_snapshot(tmp_snapshottoken);
+						if (tmpres) {
+							server_snapshottoken_list[local_server_logical_idx] = tmp_snapshottoken;
+						}
 					}
 					// Otherwise, server-side snapshot has already been made for the current snapshot period
 				}
@@ -1800,8 +1810,10 @@ void *run_server_snapshotserver(void *param) {
 		else if (control_type == SNAPSHOT_START) {
 			INVARIANT(!server_issnapshot_list[local_server_logical_idx]);
 			if (snapshotid > server_snapshottoken_list[local_server_logical_idx]) {
-				server_snapshottoken_list[local_server_logical_idx] = snapshotid;
-				db_wrappers[local_server_logical_idx].make_snapshot(snapshotid);
+				bool tmpres = db_wrappers[local_server_logical_idx].make_snapshot(snapshotid);
+				if (tmpres) {
+					server_snapshottoken_list[local_server_logical_idx] = snapshotid;
+				}
 			}
 			// Otherwise, server-side snapshot has already been made for the current snapshot period
 			

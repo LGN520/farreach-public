@@ -146,7 +146,7 @@ class RocksdbWrapper {
 
 		// transaction phase (per-server worker, evictserver, and consnapshotserver touch both rocksdb and deleted set; need mutex for atomicity)
 		void clean_snapshot(int tmpsnapshotid);
-		void make_snapshot(int tmpsnapshotid = 0);
+		bool make_snapshot(int tmpsnapshotid = 0);
 		void update_snapshot(std::map<netreach_key_t, snapshot_record_t> &tmp_inswitch_snapshot, int tmpsnapshotid);
 		void stop_snapshot();
 

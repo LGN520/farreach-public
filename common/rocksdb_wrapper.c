@@ -876,7 +876,7 @@ void RocksdbWrapper::clean_snapshot(int tmpsnapshotid) {
 
 // create a new server-side snapshot yet not used by range query (as in-switch snapshot is stale)
 // invoked by worker due to case3 (tmpsnapshotid == 0); invoked by SNAPSHOT_START (tmpsnapshotid == snapshotid/snapshotid+1)
-void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
+bool RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 #ifdef USE_TOMMYDS_KVS
 	printf("[WARN] TommyDS does not support consistent snapshot and ignore the signal!\n");
 #else
@@ -885,6 +885,12 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 	
 	// NOTE: if tmpsnapshotid == snapshotid, it has been solevd by SNAPSHOT_CLEANUP
 	//INVARIANT(tmpsnapshotid == 0 || tmpsnapshotid == snapshotid + 1)
+	
+	// To solve corner cases under server rotation in evaluation
+	if (snapshotid == -1) {
+		printf("[WARN] make_snapshot before init_snapshot, which is caused by obselete packets of previous rotation or Tofino bugs -> ignore!\n");
+		return false;
+	}
 
 	if (!is_snapshot.test_and_set(std::memory_order_acquire)) {
 
@@ -936,10 +942,15 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 		//DELTA_TIME(store_t2, store_t1, store_t3);
 		//COUT_VAR(GET_MICROSECOND(create_t3));
 		//COUT_VAR(GET_MICROSECOND(store_t3));
+
+		return true;
+	}
+	else {
+		return false; // fail to get lock -> not make server-side snapshot -> not update server-side snapshot token
 	}
 #endif
 
-	return;
+	return true; // never arrive here
 }
 
 // use latest server-side and in-switch snapshot of snapshotid+1 for range query after receiving latest in-switch snapshot

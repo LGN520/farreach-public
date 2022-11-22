@@ -23,9 +23,11 @@
 
 - 11.22
 	+ Siyuan
+		* Proofread paper of deltaint and update reply (carefully explain how we address the comments)
+		* Fix the issue of remaining snapshot token in switch from previous rotation
 		* Update evaluation results (3 rounds) to make it complete
-			- DONE: exp1
-			- TODO: exp2, ...
+			- DONE: exp1, exp2, exp4
+			- TODO: exp3, exp5, exp6, ...
 		* TODO: Update exp9 recovery time of evaluation in paper
 
 - 11.21
