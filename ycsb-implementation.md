@@ -7,30 +7,54 @@
 
 - TODO
 	* Client-side upstream backup (before exp9 recovery time)
-		* Debug and test client-side upstream backup colleborating with periodic snapshot
-			- Check whether the seq of GET/PUT/DELRES_SEQ and GETRES_LARGEVALUE_SEQ > 0
-		* TODO: Re-run exp8 on w/ or w/o snapshot for FarReach -> replace 1.02 imbalance ratio
-			- NOTE: Use synthetic-nosnapshot as the workloadname for exp8 w/o snapshot
-		* TODO: Re-run exp9 on control plane bandwidth cost vs. snapshot interrupt for FarReach
-		* TODO: Finish exp10 on recovery time vs. cache size for FarReach
+		* TODO: For exp5 on dynamic pattern, close key popularity changes for 'stable'
+		* TODO: For exp8 on bandwidth cost, disable snapshot if period = 0
+		* TODO: Finish exp9 on recovery time vs. cache size for FarReach
 	* Others
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* After finishing evaluation
-		* TODO: Re-organize scripts, and add comments to scripts
+		* TODO: Re-organize scripts, and add comments to scripts (e.g., for sleep, for cleanup_obselete_snapshottoken.sh)
 		* TODO: Update benchmark.md
 		* TODO: Remove unnecessary files in method/tofino/visualization/
 	* DEPRECATED: Try in-memory KVS after we have got all results of RocksDB
+
+- 11.23
+	+ Siyuan
+		- TODO: For deltaint, update exp5 name?
+		* TODO: Update evaluation in paper
+			- TODO: exp3, exp5, exp7, exp8, exp9
 
 - 11.22
 	+ Siyuan
 		* Proofread paper of deltaint and update reply (carefully explain how we address the comments)
 		* Fix the issue of remaining snapshot token in switch from previous rotation
 		* Update evaluation results (3 rounds) to make it complete
-			- DONE: exp1, exp2, exp4
-			- TODO: exp3, exp5, exp6, ...
-		* TODO: Update exp9 recovery time of evaluation in paper
+			- DONE: exp1, exp2, exp4, exp6, exp10
+	+ Huancheng
+		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
+		* TODO: For exp6 on skewness, add uniform result
+		* TODO: For exp7 on value size, run ONLY ONE ROUND for 100% 256B value size -> expected: no improvement of farreach, but the throughput should be similar as that of nocache/netcache under 128B value size
+		* TODO: finish exp8 static workload
+			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
+			- TODO: Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
+			- TODO: Use snapshot period of 0, 2.5, 5, 7.5, 10 -> keep the results of 1 in the 1st round in exp8.md
+		* TODO: finish exp5 static workload
+		* TODO: run exp9
+		* TODO: run exp10
+			- TODO: [IMPORTANT] In warmup_client.c, we need to admit the top K hottest keys for the given cache size K
+			- TODO: For exp10.sh, as it relies on switch launching and configuration in test_server_rotation.sh -> either place the automatic launching and configuration from other exp.sh into test_server_rotation/dynamic.sh, or modify exp10.sh as other exp.sh
+			- TODO: add the following two notes to benchmark.md for exp10
+				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
+					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
+				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
+					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
+			- TODO: Write down how to calculate average recovery time into benchmark.md
+			- TODO: To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
+		* TODO: Start to re-run experiments for multiple rounds
+			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
+			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
 
-- 11.21
+- 11.21 (PKU's testbed is recovered)
 	+ Siyuan
 		* Debug and test seq_hdr.snapshot_token w/ 32K cache entries
 			- Check if client receives correct seq and nodeidx_for_eval
@@ -58,29 +82,6 @@
 		* Merge NetBuffer::snapshot_token into NetBuffer::master; uncomment client-side packet code for snapshot token
 		* Proofread section 4 of impl
 			- Count core LOC for switchos and controller by controlplane_cloc.sh
-	+ Huancheng
-		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
-		* TODO: For exp6 on skewness, add uniform result
-		* TODO: For exp7 on value size, run ONLY ONE ROUND for 100% 256B value size -> expected: no improvement of farreach, but the throughput should be similar as that of nocache/netcache under 128B value size
-		* TODO: finish exp8 static workload
-			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
-			- TODO: Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
-			- TODO: Use snapshot period of 0, 2.5, 5, 7.5, 10 -> keep the results of 1 in the 1st round in exp8.md
-		* TODO: finish exp5 static workload
-		* TODO: run exp9
-		* TODO: run exp10
-			- TODO: [IMPORTANT] In warmup_client.c, we need to admit the top K hottest keys for the given cache size K
-			- TODO: For exp10.sh, as it relies on switch launching and configuration in test_server_rotation.sh -> either place the automatic launching and configuration from other exp.sh into test_server_rotation/dynamic.sh, or modify exp10.sh as other exp.sh
-			- TODO: add the following two notes to benchmark.md for exp10
-				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
-					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
-				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
-					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
-			- TODO: Write down how to calculate average recovery time into benchmark.md
-			- TODO: To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
-		* TODO: Start to re-run experiments for multiple rounds
-			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
-			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
 
 - 11.17
 	+ Siyuan
