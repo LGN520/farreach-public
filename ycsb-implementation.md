@@ -18,18 +18,37 @@
 		* TODO: Remove unnecessary files in method/tofino/visualization/
 	* DEPRECATED: Try in-memory KVS after we have got all results of RocksDB
 
+- Evaluation writing
+	+ Missing numbers
+		- Exp2 of ycsb workloads
+			+ TODO: NoCache + workload D + 3rd round
+			+ TODO: FarReach + workload C + 3rd round
+		- Exp5 of dynamic pattern
+			+ TODO: NoCache/NetCache/FarReach without key popularity changes (stable)
+		- Exp6 of key distribution
+			+ TODO: NoCache/NetCache/FarReach under uniform distribution
+			+ TODO: FarReach + 0.95 skewness + 2nd round
+		- Exp7 of value size
+			+ TODO: FarReach of 256B
+		- Exp8 of snapshot impact
+			+ TODO: FarReach + disable snapshot + static/dynamic
+	+ 1-round results: exp3, exp5, exp7, exp8, exp9
+		- TODO: Update with 3 rounds first
+	+ 3-round reuslts: exp1, exp2, exp4, exp6, exp10
+		- TODO: Update with 5 rounds
+
 - 11.23
 	+ Siyuan
-		- TODO: For deltaint, update exp5 name?
+		- Proofread deltaint paper and reply
 		* TODO: Update evaluation in paper
-			- TODO: exp3, exp5, exp7, exp8, exp9
+			- Fix 1 MB / 1-MB issue
+			- Update evaluation summary
 
 - 11.22
 	+ Siyuan
 		* Proofread paper of deltaint and update reply (carefully explain how we address the comments)
 		* Fix the issue of remaining snapshot token in switch from previous rotation
 		* Update evaluation results (3 rounds) to make it complete
-			- DONE: exp1, exp2, exp4, exp6, exp10
 	+ Huancheng
 		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
 		* TODO: For exp6 on skewness, add uniform result
