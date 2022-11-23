@@ -36,15 +36,11 @@ from ptf.testutils import *
 from ptf.thriftutils import *
 from res_pd_rpc.ttypes import *
 
-import socket
 import struct
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 from common import *
-
-switchos_ptf_snapshotserver_udpsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-switchos_ptf_snapshotserver_udpsock.bind(("127.0.0.1", switchos_ptf_snapshotserver_port))
 
 flags = netbufferv4_register_flags_t(read_hw_sync=True)
 
