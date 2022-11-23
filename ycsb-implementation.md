@@ -20,19 +20,22 @@
 
 - Evaluation writing
 	+ Missing numbers
+		- Exp1 of overall performance
+			+ TODO: 95p latency of NoCache + 0.6MOPS + 3rd round
 		- Exp2 of ycsb workloads
 			+ TODO: NoCache + workload D + 3rd round
-			+ TODO: FarReach + workload C + 3rd round
+			+ TODO: FarReach + workload B + 3rd round
 		- Exp5 of dynamic pattern
-			+ TODO: NoCache/NetCache/FarReach without key popularity changes (stable)
+			+ TODO: NoCache/NetCache/FarReach under hotin/hotout/random
 		- Exp6 of key distribution
 			+ TODO: NoCache/NetCache/FarReach under uniform distribution
 			+ TODO: FarReach + 0.95 skewness + 2nd round
 		- Exp7 of value size
-			+ TODO: FarReach of 256B
+			+ FarReach of 256B
 		- Exp8 of snapshot impact
 			+ TODO: FarReach + disable snapshot + static/dynamic
-	+ 1-round results: exp3, exp5, exp7, exp8, exp9
+	+ TODO: 5 rounds of exp9
+	+ 1-round results: exp3, exp5, exp7, exp8
 		- TODO: Update with 3 rounds first
 	+ 3-round reuslts: exp1, exp2, exp4, exp6, exp10
 		- TODO: Update with 5 rounds
@@ -40,9 +43,11 @@
 - 11.23
 	+ Siyuan
 		- Proofread deltaint paper and reply
+		- TODO: Update Figure 13 in deltaint
 		* TODO: Update evaluation in paper
 			- Fix 1 MB / 1-MB issue
 			- Update evaluation summary
+			- TODO: Update exp6, exp7, and exp8
 
 - 11.22
 	+ Siyuan
