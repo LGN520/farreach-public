@@ -40,14 +40,19 @@
 	+ 3-round reuslts: exp1, exp2, exp4, exp6, exp10
 		- TODO: Update with 5 rounds
 
+- 11.24
+	+ Siyuan
+		- TODO: Update eval for missing numbers of exp5, exp6, exp8, and exp9
+
 - 11.23
 	+ Siyuan
 		- Proofread deltaint paper and reply
-		- TODO: Update Figure 13 in deltaint
-		* TODO: Update evaluation in paper
+		- Update Figure 13 in deltaint
+		- Update evaluation in paper
 			- Fix 1 MB / 1-MB issue
 			- Update evaluation summary
-			- TODO: Update exp6, exp7, and exp8
+			- Update exp7 for 256B
+		- Update controller.c to dump bandwidth cost for snapshot period of 0
 
 - 11.22
 	+ Siyuan
