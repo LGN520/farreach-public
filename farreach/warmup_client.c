@@ -69,6 +69,10 @@ void run_warmuper() {
 	set_sockaddr(server_addr, inet_addr(server_ips[0]), server_worker_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
 
+	printf("[warmup_client] cache size: %d\n", switch_kv_bucket_num);
+	fflush(stdout);
+
+	int tmp_warmupcnt = 0;
 	while (true) {
 		if (!iter->next()) {
 			break;
@@ -104,6 +108,13 @@ void run_warmuper() {
 		else {
 			printf("Invalid request type: %u\n", uint32_t(iter->type()));
 			exit(-1);
+		}
+
+		tmp_warmupcnt += 1;
+		if (tmp_warmupcnt >= switch_kv_bucket_num) {
+			printf("[warmup_client] already admit %d keys -> break\n", tmp_warmupcnt);
+			fflush(stdout);
+			break;
 		}
 	}
 
