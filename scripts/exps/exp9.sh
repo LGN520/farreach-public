@@ -18,6 +18,9 @@ fi
 
 # Global variables and utils
 
+exp_workloadmode=0
+exp_rotationscale=16
+
 exp_dirname="benchmark/output/round${roundidx}/exp10/"
 mkdir -p ${exp_dirname}
 echo "Backup path of generated files: ${exp_dirname}"
@@ -57,8 +60,20 @@ function runexp() {
 	mkdir -p ${tmpexpdirname}
 
 	echo "Backup recovery files to ${tmpexpdirname}"
-	cp benchmark/output/upstreambackups/* ${tmpexpdirname}
-	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/* ${tmpexpdirname}
+	#cp benchmark/output/upstreambackups/* ${tmpexpdirname}
+	#scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/* ${tmpexpdirname}
+	if [ ${exp_workloadmode} -eq 0 ]
+	then
+		cp benchmark/output/upstreambackups/static${exp_rotationscale}*client0.out ${tmpexpdirname}
+		scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/static${exp_rotationscale}*client1.out ${tmpexpdirname}
+	elif [ ${exp_workloadmode} -eq 1 ]
+	then
+		cp benchmark/output/upstreambackups/dynamic-client0.out ${tmpexpdirname}
+		scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/dynamic-client1.out ${tmpexpdirname}
+	else
+		echo "[ERROR] invalid workload mode: ${exp_workloadmode}"
+		exit
+	fi
 	scp ${USER}@${SERVER0}:/tmp/farreach/controller.snapshot* ${tmpexpdirname}
 	scp ${USER}@${SERVER0}:/tmp/farreach/*maxseq* ${tmpexpdirname}
 	scp ${USER}@${SERVER1}:/tmp/farreach/*maxseq* ${tmpexpdirname}

@@ -12,6 +12,12 @@ fi
 
 #set -x
 
+if [ "x${DIRNAME}" != "xfarreach" ]
+then
+	echo "[ERROR] DIRNAME should be farreach in scripts/common.sh for fetchall_all2switch.sh"
+	exit
+fi
+
 tmpdir="benchmark/output/upstreambackups"
 
 mkdir -p ${SWITCH_ROOTPATH}/${tmpdir}
@@ -24,8 +30,8 @@ echo "Copy client-side backups to switch"
 cd ..
 if [ "x${workloadmode}" == "x0" ]
 then
-	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static*client0.out ${SWITCH_ROOTPATH}/${tmpdir}
-	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static*client1.out ${SWITCH_ROOTPATH}/${tmpdir}
+	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}*client0.out ${SWITCH_ROOTPATH}/${tmpdir}
+	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}*client1.out ${SWITCH_ROOTPATH}/${tmpdir}
 elif [ "x${workloadmode}" == "x1" ]
 then
 	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client0.out ${SWITCH_ROOTPATH}/${tmpdir}

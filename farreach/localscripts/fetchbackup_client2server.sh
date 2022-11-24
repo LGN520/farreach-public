@@ -21,8 +21,8 @@ if [ "x${workloadmode}" == "x0" ]
 then
 	mkdir -p ${SERVER_ROOTPATH}/${tmpdir}
 	rm -r ${SERVER_ROOTPATH}/${tmpdir}/*
-	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static*client0.out ${SERVER_ROOTPATH}/${tmpdir}
-	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static*client1.out ${SERVER_ROOTPATH}/${tmpdir}
+	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}*client0.out ${SERVER_ROOTPATH}/${tmpdir}
+	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}client1.out ${SERVER_ROOTPATH}/${tmpdir}
 elif [ "x${workloadmode}" == "x1" ]
 then
 	mkdir -p ${SERVER_ROOTPATH}/${tmpdir}

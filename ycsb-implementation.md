@@ -43,22 +43,6 @@
 - 11.24
 	+ Siyuan
 		- TODO: Update eval for missing numbers of exp5, exp6, exp8, and exp9
-
-- 11.23
-	+ Siyuan
-		- Proofread deltaint paper and reply
-		- Update Figure 13 in deltaint
-		- Update evaluation in paper
-			- Fix 1 MB / 1-MB issue
-			- Update evaluation summary
-			- Update exp7 for 256B
-		- Update controller.c to dump bandwidth cost for snapshot period of 0
-
-- 11.22
-	+ Siyuan
-		* Proofread paper of deltaint and update reply (carefully explain how we address the comments)
-		* Fix the issue of remaining snapshot token in switch from previous rotation
-		* Update evaluation results (3 rounds) to make it complete
 	+ Huancheng
 		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
 		* TODO: For exp6 on skewness, add uniform result
@@ -82,6 +66,22 @@
 		* TODO: Start to re-run experiments for multiple rounds
 			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
 			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
+
+- 11.23
+	+ Siyuan
+		- Proofread deltaint paper and reply
+		- Update Figure 13 in deltaint
+		- Update evaluation in paper
+			- Fix 1 MB / 1-MB issue
+			- Update evaluation summary
+			- Update exp7 for 256B
+		- Update controller.c to dump bandwidth cost for snapshot period of 0
+
+- 11.22
+	+ Siyuan
+		* Proofread paper of deltaint and update reply (carefully explain how we address the comments)
+		* Fix the issue of remaining snapshot token in switch from previous rotation
+		* Update evaluation results (3 rounds) to make it complete
 
 - 11.21 (PKU's testbed is recovered)
 	+ Siyuan
