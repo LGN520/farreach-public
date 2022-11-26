@@ -14,6 +14,7 @@
 		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* After finishing evaluation
 		* TODO: Re-organize scripts, and add comments to scripts (e.g., for sleep, for cleanup_obselete_snapshottoken.sh)
+			- TODO: Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH from global.sh in each exp.sh
 		* TODO: Update benchmark.md
 		* TODO: Remove unnecessary files in method/tofino/visualization/
 	* DEPRECATED: Try in-memory KVS after we have got all results of RocksDB
@@ -26,23 +27,33 @@
 			+ TODO: NoCache + workload D + 3rd round
 			+ TODO: FarReach + workload B + 3rd round
 		- Exp5 of dynamic pattern
-			+ TODO: NoCache/NetCache/FarReach under hotin/hotout/random
+			+ NoCache/NetCache/FarReach under hotin/hotout/random
 		- Exp6 of key distribution
-			+ TODO: NoCache/NetCache/FarReach under uniform distribution
+			+ NoCache/NetCache/FarReach under uniform distribution
 			+ TODO: FarReach + 0.95 skewness + 2nd round
 		- Exp7 of value size
 			+ FarReach of 256B
 		- Exp8 of snapshot impact
-			+ TODO: FarReach + disable snapshot + static/dynamic
+			+ TODO: FarReach + disable snapshot + static(0) / dynamic
 	+ TODO: 5 rounds of exp9
-	+ 1-round results: exp3, exp5, exp7, exp8
+	+ 1-round results: exp3, exp5, exp6 of uniform, exp7, exp8 (only dynamic)
 		- TODO: Update with 3 rounds first
-	+ 3-round reuslts: exp1, exp2, exp4, exp6, exp10
+	+ 3-round reuslts: exp1, exp2, exp4, exp6, exp9
 		- TODO: Update with 5 rounds
+
+- 11.27
+	+ Siyuan
+		- TODO: Update eval for missing numbers of exp8 and exp9
+
+- 11.26
+	+ Siyuan
+		- Update eval to remove redundant information
+		- Update eval for missing numbers of exp5, exp6, and exp7 (just 1 round)
 
 - 11.24
 	+ Siyuan
-		- TODO: Update eval for missing numbers of exp5, exp6, exp8, and exp9
+		- Try assgn2 demo
+		- Check YCSB raw latency information
 	+ Huancheng
 		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
 		* TODO: For exp6 on skewness, add uniform result
