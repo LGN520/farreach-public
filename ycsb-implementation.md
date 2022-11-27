@@ -6,23 +6,23 @@
 ## TODO list
 
 - TODO
-	* Client-side upstream backup (before exp9 recovery time)
-		* TODO: For exp5 on dynamic pattern, close key popularity changes for 'stable'
-		* TODO: For exp8 on bandwidth cost, disable snapshot if period = 0
-		* TODO: Finish exp9 on recovery time vs. cache size for FarReach
-	* Others
-		* TODO: Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 	* After finishing evaluation
-		* TODO: Re-organize scripts, and add comments to scripts (e.g., for sleep, for cleanup_obselete_snapshottoken.sh)
-			- TODO: Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH from global.sh in each exp.sh
-		* TODO: Update benchmark.md
+		* TODO: Update scripts
+			- TODO: Keep the same exp order as in paper, including script name, script path, and result name
+		* TODO: Update benchmark.md for each exp detail
+			- TODO: How to create SSH key for switch and change private key path in common.sh if necessary
+			- TODO: add the following two notes to benchmark.md for exp10
+				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
+					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
+				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
+					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
+			- TODO: Write down how to calculate average recovery time into benchmark.md
 		* TODO: Remove unnecessary files in method/tofino/visualization/
-	* DEPRECATED: Try in-memory KVS after we have got all results of RocksDB
 
 - Evaluation writing
 	+ Missing numbers
 		- Exp1 of overall performance
-			+ TODO: 95p latency of NoCache + 0.6MOPS + 3rd round
+			+ 95p latency of NoCache + 0.6MOPS + 3rd round
 		- Exp2 of ycsb workloads
 			+ TODO: NoCache + workload D + 3rd round
 			+ TODO: FarReach + workload B + 3rd round
@@ -30,7 +30,7 @@
 			+ NoCache/NetCache/FarReach under hotin/hotout/random
 		- Exp6 of key distribution
 			+ NoCache/NetCache/FarReach under uniform distribution
-			+ TODO: FarReach + 0.95 skewness + 2nd round
+			+ FarReach + 0.95 skewness + 2nd round
 		- Exp7 of value size
 			+ FarReach of 256B
 		- Exp8 of snapshot impact
@@ -41,9 +41,20 @@
 	+ 3-round reuslts: exp1, exp2, exp4, exp6, exp9
 		- TODO: Update with 5 rounds
 
+- 11.28
+	+ Siyuan
+		- TODO: Update eval with results of 3 rounds
+	+ HuanCheng
+		- TODO: Continue evaluation on 4th/5th rounds
+		* TODO: Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
+			- TODO: Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh)
+			- TODO: Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
+		- TODO: Update benchmark.md to make every step of each experiment clear
+			+ NOTE: add how to use scripts for automatic evaluation, but still keep the original content about how to perform evaluation manually under each experiment, such that readers know the details of our experiments
+
 - 11.27
 	+ Siyuan
-		- TODO: Update eval for missing numbers of exp8 and exp9
+		- Proofread farreach paper
 
 - 11.26
 	+ Siyuan
@@ -55,28 +66,22 @@
 		- Try assgn2 demo
 		- Check YCSB raw latency information
 	+ Huancheng
-		* TODO: Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
-		* TODO: For exp6 on skewness, add uniform result
-		* TODO: For exp7 on value size, run ONLY ONE ROUND for 100% 256B value size -> expected: no improvement of farreach, but the throughput should be similar as that of nocache/netcache under 128B value size
-		* TODO: finish exp8 static workload
-			- TODO: Update YCSB client to disable snapshot if snapshot period = 0
-			- TODO: Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
-			- TODO: Use snapshot period of 0, 2.5, 5, 7.5, 10 -> keep the results of 1 in the 1st round in exp8.md
-		* TODO: finish exp5 static workload
-		* TODO: run exp9
-		* TODO: run exp10
-			- TODO: [IMPORTANT] In warmup_client.c, we need to admit the top K hottest keys for the given cache size K
-			- TODO: For exp10.sh, as it relies on switch launching and configuration in test_server_rotation.sh -> either place the automatic launching and configuration from other exp.sh into test_server_rotation/dynamic.sh, or modify exp10.sh as other exp.sh
-			- TODO: add the following two notes to benchmark.md for exp10
-				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
-					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
-				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
-					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
-			- TODO: Write down how to calculate average recovery time into benchmark.md
-			- TODO: To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
-		* TODO: Start to re-run experiments for multiple rounds
+		* Mark the results in the 1st round after changing sleep in scripts to distinguish them with other 1st round results; mark the exp2 results of twitter traces with wrong bottleneckidx in the 1st round
+		* For exp6 on skewness, add uniform result
+		* For exp7 on value size, run ONLY ONE ROUND for 100% 256B value size -> expected: no improvement of farreach, but the throughput should be similar as that of nocache/netcache under 128B value size
+		* Finish exp8 static workload -> NOT need further
+			- Update YCSB client to disable snapshot if snapshot period = 0
+			- Get bwcost and thpt for snapshot period = 0 under static and dynamic patterns
+			- Use snapshot period of 0, 2.5, 5, 7.5, 10 -> keep the results of 1 in the 1st round in exp8.md
+		* Finish exp5 stable workload
+		* Run exp9 on recovery time
+			- [IMPORTANT] In warmup_client.c, we need to admit the top K hottest keys for the given cache size K (files: farreach/warmup_client.c)
+			- For exp10.sh, as it relies on switch launching and configuration in test_server_rotation.sh -> either place the automatic launching and configuration from other exp.sh into test_server_rotation/dynamic.sh, or modify exp10.sh as other exp.sh
+			- To speed up evaluation, for each cache size, we only need to run server rotation only once -> under the given cache size, we can run test_recovery_time.sh duplicately to get multi-round recovery time
+		* Start to re-run experiments for multiple rounds
 			- NOTE: if thpt is affected after fixing write stalls, the previous results cannot be used as the results of the 1st round
-			- TODO: Update benchmark.md to hint user to create SSH key for switch and change private key path in common.sh if necessary
+		* Others
+			* Fix issue of not overwriting existing statistics in single rotation mode (maybe due to using wrong value of -sr)
 
 - 11.23
 	+ Siyuan
