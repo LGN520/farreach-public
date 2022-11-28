@@ -1,0 +1,9 @@
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch distcache/tofino-leaf/visulization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch distcache/tofino-spine/visulization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch distfarreach/tofino-leaf/visulization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch distfarreach/tofino-spine/visulization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch distnocache/tofino-leaf/visualization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch distnocache/tofino-spine/visualization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch farreach/tofino/visulization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch netcache/tofino/visulization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch nocache/tofino/visualization/*' -f HEAD

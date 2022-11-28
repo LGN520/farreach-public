@@ -19,7 +19,7 @@
 				+ NOTE: you have to specify the private key in Tofino such that it can scp files from clients/servers into switch
 					* Otherwise, you may have an error message of `Permission denied (public key) for scp` in farreach/localscripts/fetch*.sh 
 			- TODO: Write down how to calculate average recovery time into benchmark.md
-		* TODO: Remove unnecessary files in method/tofino/visualization/
+		* TODO: Execute tmp.sh to remove visualization files
 
 - Evaluation writing
 	+ Missing numbers
