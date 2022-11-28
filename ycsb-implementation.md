@@ -12,10 +12,12 @@
 		* TODO: Update benchmark.md for each exp detail
 			- TODO: How to create SSH key for switch and change private key path in common.sh if necessary
 			- TODO: add the following two notes to benchmark.md for exp10
-				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers
+				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers (note that you should have the file of ~/.ssh/know_hosts in advance)
 					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
 				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
 					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
+				+ NOTE: you have to specify the private key in Tofino such that it can scp files from clients/servers into switch
+					* Otherwise, you may have an error message of `Permission denied (public key) for scp` in farreach/localscripts/fetch*.sh 
 			- TODO: Write down how to calculate average recovery time into benchmark.md
 		* TODO: Remove unnecessary files in method/tofino/visualization/
 
@@ -43,12 +45,14 @@
 
 - 11.28
 	+ Siyuan
+		- Prepare for open source code (remove unnecessary and confidential files)
 		- TODO: Update eval with results of 3 rounds
 	+ HuanCheng
 		- TODO: Continue evaluation on 4th/5th rounds
 		* TODO: Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
 			- TODO: Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh)
 			- TODO: Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
+			- TODO: For each method (nocache/netcache/farreach), copy exp1/method_config.ini into method/configs/config.ini.normal as the template of each exp.sh -> for each other exp, say exp5, diff exp5/method_config.ini with method/configs/config.ini.normal to see if we have to change more lines by sed in exp.sh (e.g., change workloadmode from 0 to 1 for exp5)
 		- TODO: Update benchmark.md to make every step of each experiment clear
 			+ NOTE: add how to use scripts for automatic evaluation, but still keep the original content about how to perform evaluation manually under each experiment, such that readers know the details of our experiments
 
