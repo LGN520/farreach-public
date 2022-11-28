@@ -2,24 +2,23 @@
 
 - [IMPORTANT]
 	+ We must change the bottleneck idx for each trace/workload based on keydump results
+- Remote repos
+	+ [READ-ONLY] farreach/: the public repo
+		* NO confidential files + NO submodule of benchmark/ + NO multi-switch files
+	+ [FUTURE-EXTENSION] NetBuffer/: the private repo
+		* NO confidential files + submodule of benchmark/ + multi-switch files
+	+ [READ-ONLY; OBSELETE-AFTER-EXTENSION] NetBuffer-backup/: the backup of latest version for the private repo (to avoid bugs of `git rm --cached`)
+		* Condidential files + submodule of benchmark/ + multi-switch files
 
 ## TODO list
 
-- TODO
-	* After finishing evaluation
-		* TODO: Update scripts
-			- TODO: Keep the same exp order as in paper, including script name, script path, and result name
-		* TODO: Update benchmark.md for each exp detail
-			- TODO: How to create SSH key for switch and change private key path in common.sh if necessary
-			- TODO: add the following two notes to benchmark.md for exp10
-				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers (note that you should have the file of ~/.ssh/know_hosts in advance)
-					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
-				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
-					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
-				+ NOTE: you have to specify the private key in Tofino such that it can scp files from clients/servers into switch
-					* Otherwise, you may have an error message of `Permission denied (public key) for scp` in farreach/localscripts/fetch*.sh 
-			- TODO: Write down how to calculate average recovery time into benchmark.md
-		* TODO: Execute tmp.sh to remove visualization files
+- END of FarReach
+	+ TODO: Fork benchmark/ and NetBuffer-backup/ (w/ comment: before removing confidential files) as an online backup with the list label of farreach in github
+	+ TODO: Keep dl11:NetBuffer-backup as the offline backup for the latest version of private repo (remove large generated files)
+	+ TODO: In local machine, use tmp.sh to remove confidential files and update remote NetBuffer/
+	+ TODO: Pull remote NetBuffer into dl11:NetBuffer, and run farreach + dynamic w/ hotin
+	+ TODO: Create public repo farreach, use update_public_repo.sh in local machine to re-organize and update public repo
+	+ TODO: Create an anonymous link for the public repo
 
 - Evaluation writing
 	+ Missing numbers
@@ -43,18 +42,31 @@
 	+ 3-round reuslts: exp1, exp2, exp4, exp6, exp9
 		- TODO: Update with 5 rounds
 
+- 11.29
+	+ Siyuan
+		- TODO: Update eval with results of 3 rounds
+
 - 11.28
 	+ Siyuan
 		- Prepare for open source code (remove unnecessary and confidential files)
-		- TODO: Update eval with results of 3 rounds
 	+ HuanCheng
 		- TODO: Continue evaluation on 4th/5th rounds
-		* TODO: Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
+		- TODO: Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
 			- TODO: Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh)
 			- TODO: Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
 			- TODO: For each method (nocache/netcache/farreach), copy exp1/method_config.ini into method/configs/config.ini.normal as the template of each exp.sh -> for each other exp, say exp5, diff exp5/method_config.ini with method/configs/config.ini.normal to see if we have to change more lines by sed in exp.sh (e.g., change workloadmode from 0 to 1 for exp5)
-		- TODO: Update benchmark.md to make every step of each experiment clear
-			+ NOTE: add how to use scripts for automatic evaluation, but still keep the original content about how to perform evaluation manually under each experiment, such that readers know the details of our experiments
+			- TODO: [Difficult?] Keep the same exp order as in paper, including script name, the path in script, and backup directory name
+		- TODO: Update benchmark.md to make every step of each experiment clear (not only the following to-dos)
+			+ TODO: add how to use scripts for automatic evaluation, but still keep the original content about how to perform evaluation manually under each experiment, such that readers know the details of our experiments
+			+ TODO: How to create SSH key for switch and change private key path in common.sh if necessary
+			+ TODO: add the following two notes to benchmark.md for exp10
+				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers (note that you should have the file of ~/.ssh/know_hosts in advance)
+					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
+				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers
+					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
+				+ NOTE: you have to specify the private key in Tofino such that it can scp files from clients/servers into switch
+					* Otherwise, you may have an error message of `Permission denied (public key) for scp` in farreach/localscripts/fetch*.sh 
+			+ TODO: Write down how to calculate average recovery time into benchmark.md
 
 - 11.27
 	+ Siyuan
