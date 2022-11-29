@@ -3,6 +3,7 @@
 USER="theodorepuyang"
 
 SWITCH_PRIVATEKEY=".ssh/id_rsa_forbf1"
+CONNECTION_PRIVATEKEY=".ssh/n2sys_new"
 
 MAIN_CLIENT="dl11" # used in recovery mode
 SECONDARY_CLIENT="dl15"
