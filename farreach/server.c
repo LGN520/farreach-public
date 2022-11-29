@@ -146,6 +146,8 @@ void recover() {
 	// (3) aggregate per-client backups
 	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
 	server_aggregated_backupmap_list = new std::map<netreach_key_t, snapshot_record_t>[current_server_logical_num];
+	int clientbackup_totalcnt = 0;
+	int clientbackup_validcnt = 0;
 	for (int i = 0; i < perclient_keyarray.size(); i++) {
 		for (int j = 0; j < perclient_keyarray[i].size(); j++) {
 			netreach_key_t tmpkey = perclient_keyarray[i][j];
@@ -169,12 +171,90 @@ void recover() {
 				bool tmpstat = perclient_statarray[i][j];
 				server_aggregated_backupmap_list[tmplistidx].insert(std::pair<netreach_key_t, snapshot_record_t>(\
 							tmpkey, snapshot_record_t(tmpval, tmpseq, tmpstat)));
+				clientbackup_validcnt += 1;
 			}
+			clientbackup_totalcnt += 1;
+		}
+	}
+
+	// (4) extract in-switch snapshot data
+
+	char snapshotid_path[256];
+	get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path, 256);
+	if (!isexist(snapshotid_path)) {
+		//printf("You need to copy latest snapshotid from controller (at main server) to server before running with recover mode\n");
+		printf("No such file: %s", snapshotid_path);
+		fflush(stdout);
+		exit(-1);
+	}
+
+	int controller_snapshotid = 0;
+	load_snapshotid(controller_snapshotid, snapshotid_path);
+	char snapshotdata_path[256];
+	get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, 256, controller_snapshotid);
+	if (!isexist(snapshotdata_path)) {
+		//printf("You need to copy latest snapshotid from controller (at main server) to server before running with recover mode\n");
+		printf("No such file: %s", snapshotdata_path);
+		fflush(stdout);
+		exit(-1);
+	}
+
+	uint32_t filesize = get_filesize(snapshotdata_path);
+	INVARIANT(filesize > 0);
+	char *content = readonly_mmap(snapshotdata_path, 0, filesize);
+	INVARIANT(content != NULL);
+	
+	int total_bytes = 0;
+	std::vector<int> perserver_bytes;
+	std::vector<uint16_t> perserver_serveridx;
+	std::vector<int> perserver_recordcnt;
+	std::vector<uint64_t> perserver_specialcase_bwcost;
+	std::vector<std::vector<netreach_key_t>> perserver_keyarray;
+	std::vector<std::vector<val_t>> perserver_valarray;
+	std::vector<std::vector<uint32_t>> perserver_seqarray;
+	std::vector<std::vector<bool>> perserver_statarray;
+
+	deserialize_snapshot_getdata_ack(content, filesize, SNAPSHOT_GETDATA_ACK, total_bytes, perserver_bytes, perserver_serveridx, perserver_recordcnt, perserver_specialcase_bwcost, perserver_keyarray, perserver_valarray, perserver_seqarray, perserver_statarray);
+
+	munmap(content, filesize);
+
+	// (5) aggregate in-switch snapshot
+	
+	int inswitchsnapshot_totalcnt = 0;
+	int inswitchsnapshot_validcnt = 0;
+	for (int i = 0; i < perserver_keyarray.size(); i++) {
+		for (int j = 0; j < perserver_keyarray[i].size(); j++) {
+			netreach_key_t tmpkey = perserver_keyarray[i][j];
+#ifdef USE_HASH
+			uint32_t tmpserveridx = tmpkey.get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
+#elif defined(USE_RANGE)
+			uint32_t tmpserveridx = tmpkey.get_rangepartition_idx(max_server_total_logical_num);
+#endif
+			
+			int tmplistidx = -1;
+			for (int k = 0; k < server_logical_idxes_list[server_physical_idx].size(); k++) {
+				if (tmpserveridx == server_logical_idxes_list[server_physical_idx][k]) {
+					tmplistidx = k;
+					break;
+				}
+			}
+
+			if (tmplistidx >= 0) {
+				val_t tmpval = perserver_valarray[i][j];
+				uint32_t tmpseq = perserver_seqarray[i][j];
+				bool tmpstat = perserver_statarray[i][j];
+				server_aggregated_backupmap_list[tmplistidx].insert(std::pair<netreach_key_t, snapshot_record_t>(\
+							tmpkey, snapshot_record_t(tmpval, tmpseq, tmpstat)));
+				inswitchsnapshot_validcnt += 1;
+			}
+			inswitchsnapshot_totalcnt += 1;
 		}
 	}
 
 	CUR_TIME(recover_t2);
 	DELTA_TIME(recover_t2, recover_t1, recover_t3);
+	printf("[DEBUG] client-side backup validcnt: %d, totalcnt: %d\n", clientbackup_validcnt, clientbackup_totalcnt);
+	printf("[DEBUG] in-switch snapshot validcnt: %d, totalcnt: %d\n", inswitchsnapshot_validcnt, inswitchsnapshot_totalcnt);
 	printf("[Statistics] Preprocessing time of client-side preservations: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
 	fflush(stdout);
 }

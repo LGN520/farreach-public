@@ -34,3 +34,14 @@ else
 	exit
 fi
 cd ${DIRNAME}
+
+# Copy in-switch snapshot id/data from controller in dl16 to secondary server(s) in dl13
+tmp_curserver=$(hostname)
+if [ "x${tmp_curserver}" == "x${SERVER1}" ]
+then
+	echo "Copy in-switch snapshot from controller to ${tmp_curserver}"
+	mkdir -p /tmp/${DIRNAME}
+	rm /tmp/${DIRNAME}/controller.snapshot*
+	# TODO: add -i <keypath_atdl13_fromdl16> if necessary
+	scp ${USER}@${SERVER0}:/tmp/${DIRNAME}/controller.snapshot* /tmp/${DIRNAME}
+fi
