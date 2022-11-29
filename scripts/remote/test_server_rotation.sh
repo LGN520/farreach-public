@@ -41,6 +41,10 @@ ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; rm tmp_s
 ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out; rm tmp_controller_bwcost.out"
 ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part2*.out"
 
+if [ "x${DIRNAME}" == "xfarreach" ]; then
+	ssh -i "~/.ssh/farreach_id_rsa" root@bf1 "cd /home/${USER}/NetBuffer/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >tmp_cleanup.out 2>&1"
+fi
+
 source scripts/remote/test_server_rotation_p1.sh 0
 
 ##### Part 2 #####
@@ -60,6 +64,10 @@ for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); 
 		ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${rotateidx}.db" # retrieve rocksdb and reset rotatedservers.snapshotid = 0
 	else
 		ssh ${USER}@${SERVER1} "mv /tmp/${DIRNAME}/worker*.db /tmp/${DIRNAME}/worker${rotateidx}.db"
+	fi
+
+	if [ "x${DIRNAME}" == "xfarreach" ]; then
+		ssh -i "~/.ssh/farreach_id_rsa" root@bf1 "cd /home/${USER}/NetBuffer/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >>tmp_cleanup.out 2>&1"
 	fi
 
 	source scripts/remote/test_server_rotation_p2.sh 0 ${rotateidx}
