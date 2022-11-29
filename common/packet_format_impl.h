@@ -1421,6 +1421,10 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	begin += sizeof(uint32_t);
+	if (this->_methodid == FARREACH_ID) {
+		memset(begin, 0, sizeof(uint32_t));
+		begin += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
@@ -1442,7 +1446,11 @@ uint16_t GetResponseLatestSeq<key_t, val_t>::nodeidx_foreval() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeq<key_t, val_t>::size() { // unused
-	return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	uint32_t size = Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+	if (this->_methodid == FARREACH_ID) {
+		size += sizeof(uint32_t); // seq_hdr.snapshot_token
+	}
+	return size;
 }
 
 template<class key_t, class val_t>

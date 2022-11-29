@@ -413,7 +413,7 @@ void run_server_recover(uint16_t local_server_logical_idx, uint16_t global_serve
 	CUR_TIME(recover_t2);
 	DELTA_TIME(recover_t2, recover_t1, recover_t3);
 	mutex_for_recoverystatistics.lock();
-	printf("[Statistics] Recovery time of server %d: %f s w/ cache size %d\n", global_server_logical_idx, GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
+	printf("[Statistics] Replay time of server %d: %f s w/ cache size %d\n", global_server_logical_idx, GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
 	fflush(stdout);
 	mutex_for_recoverystatistics.unlock();
 }

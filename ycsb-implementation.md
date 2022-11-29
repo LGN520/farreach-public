@@ -35,16 +35,18 @@
 		- Exp7 of value size
 			+ FarReach of 256B
 		- Exp8 of snapshot impact
-			+ TODO: FarReach + disable snapshot + static(0) / dynamic
+			+ FarReach + disable snapshot + static(0) / dynamic
 	+ TODO: 5 rounds of exp9
-	+ 1-round results: exp3, exp5, exp6 of uniform, exp7, exp8 (only dynamic)
+	+ 1-round results: exp3
 		- TODO: Update with 3 rounds first
-	+ 3-round reuslts: exp1, exp2, exp4, exp6, exp9
+	+ 3-round reuslts: exp1, exp2, exp4, exp5, exp6, exp7, exp8 (only dynamic), exp9
 		- TODO: Update with 5 rounds
 
 - 11.29
 	+ Siyuan
-		- TODO: Update eval with results of 3 rounds
+		- Update eval with results of 3 rounds (TODO: exp2, exp3, and exp9)
+		- Fix the issue of not aggregating in-switch snapshot during server-side recovery (files: farreach/server.c, farreach/localscripts/fetchbackup_client2server.sh)
+		- Fix the issue of missing seq_hdr.snapshottoken for GETRES_LATEST/DELETED_SEQ in farreach
 
 - 11.28
 	+ Siyuan
@@ -992,7 +994,7 @@
 
 * Add snapshottoken into seqhdr for server-side snapshot
 	- Add snapshottoken into seqhdr (files: farreach/p4src/header.p4)
-	- Fix affected packet formats: GET/PUT/DELRES_SEQ, GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1, PUT/DELREQ_SEQ_INSWITCH_CASE1, PUTREQ_SEQ/\_CASE3, PUTREQ_POP_SEQ/\_CASE3, PUTREQ_SEQ_/CASE3_BEINGEVICTED, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, DELREQ_SEQ/\_CASE3, DELREQ_SEQ/\_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ, PUTREQ_LARGEVALUE_SEQ/\_CASE3, PUTREQ_LARGEVALUE_SEQ/\_CASE3_BEINGEVICTED
+	- Fix affected packet formats: GET/PUT/DELRES_SEQ, GETRES_LATEST/DELETED_SEQ, GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1, PUT/DELREQ_SEQ_INSWITCH_CASE1, PUTREQ_SEQ/\_CASE3, PUTREQ_POP_SEQ/\_CASE3, PUTREQ_SEQ_/CASE3_BEINGEVICTED, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, DELREQ_SEQ/\_CASE3, DELREQ_SEQ/\_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ, PUTREQ_LARGEVALUE_SEQ/\_CASE3, PUTREQ_LARGEVALUE_SEQ/\_CASE3_BEINGEVICTED
 		+ Switch: update_pktlen_tbl (files: farreach/p4src/egress_mat.p4, farreach/configure/table_configure.py)
 		+ Server: seq-related packets and largevalue-related functions to get clientlogicalidx/fragseq (files: common/packet_format.\*)
 			* NOTE: ONLY PUT/DELREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, PUT/DELREQ_SEQ_CASE3_BEINGEVICTED, PUTREQ_LARGEVALUE_SEQ_CASE3/_BEINGEVICTED need to use snapshottoken -> place snapshottoken into PUT/DELREQ_SEQ and PUTREQ_LARGEVALUE_SEQ
