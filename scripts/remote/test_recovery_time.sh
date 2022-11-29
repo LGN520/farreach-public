@@ -30,15 +30,19 @@ function getTiming(){
 
 # Collect recovery information
 echo "Collect recovery information among clients/servers/switchos"
-begin_time=`date +%s.%N`
+begin_time_1=`date +%s.%N`
 # Fetch all to switch
 ssh ${USER}@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/fetchall_all2switch.sh >/dev/null 2>&1"
 # Fetch client-side backups to server
+end_time_1=`date +%s.%N`
+begin_time_2=`date +%s.%N`
 ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
 ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
-end_time=`date +%s.%N`
-collect_time=$(getTiming ${begin_time} ${end_time})
-echo "[Statistics] collect time: ${collect_time} s"
+end_time_2=`date +%s.%N`
+collect_time_1=$(getTiming ${begin_time_1} ${end_time_1})
+collect_time_2=$(getTiming ${begin_time_2} ${end_time_2})
+echo "[Statistics] collect time switchos: ${collect_time_1} s"
+echo "[Statistics] collect time server: ${collect_time_2} s"
 
 # Create and sync config.ini for full scale of server rotation
 echo "Create and sync config.ini for full scale of server rotation"
@@ -55,7 +59,7 @@ sleep 10s
 
 # Configure switch and launch switchos
 echo "Configure switch data plane and launch switch control plane w/ recovery mode"
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; rm tmp_launchswitchostestbed.sh; bash localscripts/launchswitchostestbed.sh recover >tmp_launchswitchostestbed.out 2>&1"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; rm tmp_launchswitchostestbed.out; bash localscripts/launchswitchostestbed.sh recover >tmp_launchswitchostestbed.out 2>&1"
 sleep 5s
 
 # Close server
