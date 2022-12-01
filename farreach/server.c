@@ -146,8 +146,8 @@ void recover() {
 	// (3) aggregate per-client backups
 	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
 	server_aggregated_backupmap_list = new std::map<netreach_key_t, snapshot_record_t>[current_server_logical_num];
-	int clientbackup_totalcnt = 0;
-	int clientbackup_validcnt = 0;
+	//int clientbackup_totalcnt = 0;
+	//int clientbackup_validcnt = 0;
 	for (int i = 0; i < perclient_keyarray.size(); i++) {
 		for (int j = 0; j < perclient_keyarray[i].size(); j++) {
 			netreach_key_t tmpkey = perclient_keyarray[i][j];
@@ -171,9 +171,9 @@ void recover() {
 				bool tmpstat = perclient_statarray[i][j];
 				server_aggregated_backupmap_list[tmplistidx].insert(std::pair<netreach_key_t, snapshot_record_t>(\
 							tmpkey, snapshot_record_t(tmpval, tmpseq, tmpstat)));
-				clientbackup_validcnt += 1;
+				//clientbackup_validcnt += 1;
 			}
-			clientbackup_totalcnt += 1;
+			//clientbackup_totalcnt += 1;
 		}
 	}
 
@@ -220,8 +220,8 @@ void recover() {
 
 	// (5) aggregate in-switch snapshot
 	
-	int inswitchsnapshot_totalcnt = 0;
-	int inswitchsnapshot_validcnt = 0;
+	//int inswitchsnapshot_totalcnt = 0;
+	//int inswitchsnapshot_validcnt = 0;
 	for (int i = 0; i < perserver_keyarray.size(); i++) {
 		for (int j = 0; j < perserver_keyarray[i].size(); j++) {
 			netreach_key_t tmpkey = perserver_keyarray[i][j];
@@ -245,16 +245,16 @@ void recover() {
 				bool tmpstat = perserver_statarray[i][j];
 				server_aggregated_backupmap_list[tmplistidx].insert(std::pair<netreach_key_t, snapshot_record_t>(\
 							tmpkey, snapshot_record_t(tmpval, tmpseq, tmpstat)));
-				inswitchsnapshot_validcnt += 1;
+				//inswitchsnapshot_validcnt += 1;
 			}
-			inswitchsnapshot_totalcnt += 1;
+			//inswitchsnapshot_totalcnt += 1;
 		}
 	}
 
 	CUR_TIME(recover_t2);
 	DELTA_TIME(recover_t2, recover_t1, recover_t3);
-	printf("[DEBUG] client-side backup validcnt: %d, totalcnt: %d\n", clientbackup_validcnt, clientbackup_totalcnt);
-	printf("[DEBUG] in-switch snapshot validcnt: %d, totalcnt: %d\n", inswitchsnapshot_validcnt, inswitchsnapshot_totalcnt);
+	//printf("[DEBUG] client-side backup validcnt: %d, totalcnt: %d\n", clientbackup_validcnt, clientbackup_totalcnt);
+	//printf("[DEBUG] in-switch snapshot validcnt: %d, totalcnt: %d\n", inswitchsnapshot_validcnt, inswitchsnapshot_totalcnt);
 	printf("[Statistics] Preprocessing time of client-side preservations: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
 	fflush(stdout);
 }

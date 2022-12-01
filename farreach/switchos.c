@@ -496,7 +496,7 @@ void recover() {
 
 	CUR_TIME(recover_t2);
 	DELTA_TIME(recover_t2, recover_t1, recover_t3);
-	printf("[Statistics] Recovery time of switch&switchos: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
+	printf("[Statistics] Replay time of switch&switchos: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
 	fflush(stdout);
 }
 

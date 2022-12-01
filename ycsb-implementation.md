@@ -25,8 +25,8 @@
 		- Exp1 of overall performance
 			+ 95p latency of NoCache + 0.6MOPS + 3rd round
 		- Exp2 of ycsb workloads
-			+ TODO: NoCache + workload D + 3rd round
-			+ TODO: FarReach + workload B + 3rd round
+			+ NoCache + workload D + 3rd round
+			+ FarReach + workload B + 3rd round
 		- Exp5 of dynamic pattern
 			+ NoCache/NetCache/FarReach under hotin/hotout/random
 		- Exp6 of key distribution
@@ -36,15 +36,16 @@
 			+ FarReach of 256B
 		- Exp8 of snapshot impact
 			+ FarReach + disable snapshot + static(0) / dynamic
-	+ TODO: 5 rounds of exp9
-	+ 1-round results: exp3
-		- TODO: Update with 3 rounds first
-	+ 3-round reuslts: exp1, exp2, exp4, exp5, exp6, exp7, exp8 (only dynamic), exp9
+	+ 5 rounds of exp9
+	+ 3-round reuslts: exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8 (only dynamic), exp9
 		- TODO: Update with 5 rounds
+
+- 11.30
+	+ Siyuan
+		- Update eval with results of 3 rounds (TODO: exp2, exp3, and exp9)
 
 - 11.29
 	+ Siyuan
-		- Update eval with results of 3 rounds (TODO: exp2, exp3, and exp9)
 		- Fix the issue of not aggregating in-switch snapshot during server-side recovery (files: farreach/server.c, farreach/localscripts/fetchbackup_client2server.sh)
 		- Fix the issue of missing seq_hdr.snapshottoken for GETRES_LATEST/DELETED_SEQ in farreach
 
