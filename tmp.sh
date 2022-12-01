@@ -7,3 +7,5 @@
 #git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch farreach/tofino/visulization/*' -f HEAD
 #git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch netcache/tofino/visulization/*' -f HEAD
 #git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch nocache/tofino/visualization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch deprecated//netreach-v4-xindex/tofino/visualization/*' -f HEAD
+#git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch deprecated//netreach-voting-v3/tofino/visualization/*' -f HEAD
