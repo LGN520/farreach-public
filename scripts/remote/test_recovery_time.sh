@@ -42,7 +42,14 @@ echo "[Statistics] collect time server: ${avg_collect_time_2} s"
 
 # Create and sync config.ini for full scale of server rotation
 echo "Create and sync config.ini for full scale of server rotation"
-source scripts/remote/prepare_server_rotation.sh
+if [ "x${workloadmode}" == "x0" ]
+then
+	source scripts/remote/prepare_server_rotation.sh
+else
+	# TODO: create and sync correct config.ini for the dynamic pattern
+	echo "[ERROR] not support dynamic pattern now"
+	exit
+fi
 
 # Launch servers w/ recovery mode
 echo "Launch servers w/ recovery mode and reflector"
