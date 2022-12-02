@@ -21,14 +21,14 @@ if [ "x${workloadmode}" == "x0" ]
 then
 	mkdir -p ${SERVER_ROOTPATH}/${tmpdir}
 	rm -r ${SERVER_ROOTPATH}/${tmpdir}/*
-	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}*client0.out ${SERVER_ROOTPATH}/${tmpdir}
-	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}client1.out ${SERVER_ROOTPATH}/${tmpdir}
+	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}*client0.out ${SERVER_ROOTPATH}/${tmpdir}
+	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}client1.out ${SERVER_ROOTPATH}/${tmpdir}
 elif [ "x${workloadmode}" == "x1" ]
 then
 	mkdir -p ${SERVER_ROOTPATH}/${tmpdir}
 	rm -r ${SERVER_ROOTPATH}/${tmpdir}/*
-	scp ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client0.out ${SERVER_ROOTPATH}/${tmpdir}
-	scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client1.out ${SERVER_ROOTPATH}/${tmpdir}
+	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client0.out ${SERVER_ROOTPATH}/${tmpdir}
+	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client1.out ${SERVER_ROOTPATH}/${tmpdir}
 else
 	echo "[ERROR] invalid workload mode: ${workloadmode}"
 	exit
@@ -43,5 +43,5 @@ then
 	mkdir -p /tmp/${DIRNAME}
 	rm /tmp/${DIRNAME}/controller.snapshot*
 	# TODO: add -i <keypath_atdl13_fromdl16> if necessary
-	scp ${USER}@${SERVER0}:/tmp/${DIRNAME}/controller.snapshot* /tmp/${DIRNAME}
+	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SERVER0}:/tmp/${DIRNAME}/controller.snapshot* /tmp/${DIRNAME}
 fi

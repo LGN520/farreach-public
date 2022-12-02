@@ -117,7 +117,7 @@ class RocksdbWrapper {
 		bool remove(netreach_key_t key, uint32_t seq=0, bool checkseq=false);
 		size_t range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results);
 
-		void flush_latestmaxseq(); // force to flush latest maxseq to disk
+		void flush_latestmaxseq() const; // force to flush latest maxseq to disk
 	private:
 		method_t methodid = INVALID_ID;
 		bool method_needseq() const;

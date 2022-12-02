@@ -222,11 +222,11 @@ DEPS += skewness_check.d
 CLEAN += skewness_check.o
 CLIENT_TARGETS += skewness_check
 
-recover/controller_get_snapshotid: recover/controller_get_snapshotid.o $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += recover/controller_get_snapshotid.d
-CLEAN += recover/controller_get_snapshotid.o
-SERVER_TARGETS += recover/controller_get_snapshotid
+# recover/controller_get_snapshotid: recover/controller_get_snapshotid.o $(UTILS_OBJECTS)
+# 	$(LINK) $^ $(LDLIBS) -o $@
+# DEPS += recover/controller_get_snapshotid.d
+# CLEAN += recover/controller_get_snapshotid.o
+# SERVER_TARGETS += recover/controller_get_snapshotid
 
 #recover/server_recover: recover/server_recover.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
