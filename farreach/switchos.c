@@ -459,8 +459,8 @@ void recover() {
 
 	// (5) get final maxseq
 	
-	// update maxseq for client-side backup files
-	std::vector<std::vector<netreach_key_t>> perclient_keyarray;
+	// update maxseq for client-side backup files (not necessary, as we recover servers before in-switch cache)
+	/*std::vector<std::vector<netreach_key_t>> perclient_keyarray;
 	std::vector<std::vector<val_t>> perclient_valarray;
 	std::vector<std::vector<uint32_t>> perclient_seqarray;
 	std::vector<std::vector<bool>> perclient_statarray;
@@ -474,7 +474,7 @@ void recover() {
 				maxseq = perclient_seqarray[i][j];
 			}
 		}
-	}
+	}*/
 
 	// update maxseq for server-side maxseq files
 	std::vector<uint32_t> perserver_maxseq;

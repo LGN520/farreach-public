@@ -28,36 +28,42 @@ function getTiming(){
 	echo $(echo "scale=4; ${time_micro} / 1000.0 / 1000.0" | bc)
 }
 
-# Collect recovery information
-echo "Collect recovery information among clients/servers/switchos"
-begin_time_1=`date +%s.%N`
-# Fetch all to switch
-ssh ${USER}@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/fetchall_all2switch.sh >/dev/null 2>&1"
-# Fetch client-side backups to server
-end_time_1=`date +%s.%N`
+# Collect recovery information for servers
+echo "Collect recovery information for servers"
 begin_time_2=`date +%s.%N`
 ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
+end_time_2_1=`date +%s.%N`
 ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
-end_time_2=`date +%s.%N`
-collect_time_1=$(getTiming ${begin_time_1} ${end_time_1})
-collect_time_2=$(getTiming ${begin_time_2} ${end_time_2})
-echo "[Statistics] collect time switchos: ${collect_time_1} s"
-echo "[Statistics] collect time server: ${collect_time_2} s"
+end_time_2_2=`date +%s.%N`
+collect_time_2_1=$(getTiming ${begin_time_2} ${end_time_2_1})
+collect_time_2_2=$(getTiming ${begin_time_2} ${end_time_2_2})
+avg_collect_time_2=$(echo "(${collect_time_2_1} + ${collect_time_2_2}) / 2.0" | bc)
+echo "[Statistics] collect time server: ${avg_collect_time_2} s"
 
 # Create and sync config.ini for full scale of server rotation
 echo "Create and sync config.ini for full scale of server rotation"
 source scripts/remote/prepare_server_rotation.sh
 
-# Copy client-side upstream backups from clients to servers 
-echo "Launch server and reflector w/ recovery mode"
+# Launch servers w/ recovery mode
+echo "Launch servers w/ recovery mode and reflector"
 source scripts/remote/launchservertestbed.sh recover
+
+# Collect recovery information for in-switch cache
+echo "Collect recovery information for in-switch cache"
+begin_time_1=`date +%s.%N`
+# Fetch all to switch
+ssh ${USER}@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/fetchall_all2switch.sh >/dev/null 2>&1"
+# Fetch client-side backups to server
+end_time_1=`date +%s.%N`
+collect_time_1=$(getTiming ${begin_time_1} ${end_time_1})
+echo "[Statistics] collect time switchos: ${collect_time_1} s"
 
 # Launch switch
 echo "Launch switch data plane"
 ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; rm tmp_switch.out; nohup bash start_switch.sh >tmp_switch.out 2>&1 &"
 sleep 10s
 
-# Configure switch and launch switchos
+# Configure switch and launch switchos w/ recovery mode
 echo "Configure switch data plane and launch switch control plane w/ recovery mode"
 ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; rm tmp_launchswitchostestbed.out; bash localscripts/launchswitchostestbed.sh recover >tmp_launchswitchostestbed.out 2>&1"
 sleep 5s

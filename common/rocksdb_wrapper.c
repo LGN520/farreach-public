@@ -87,9 +87,10 @@ RocksdbWrapper::RocksdbWrapper(method_t curmethodid) {
 RocksdbWrapper::~RocksdbWrapper() {
 
 	// store latest maxseq into disk
-	std::string latestmaxseq_path;
-	get_server_latestmaxseq_path(methodid, latestmaxseq_path, workerid);
-	store_maxseq(maxseq, latestmaxseq_path);
+	//std::string latestmaxseq_path;
+	//get_server_latestmaxseq_path(methodid, latestmaxseq_path, workerid);
+	//store_maxseq(maxseq, latestmaxseq_path);
+	flush_latestmaxseq();
 
 	// close runtime database
 	if (db_ptr != NULL) {
@@ -733,6 +734,15 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 #endif
 
 	return results.size();
+}
+
+void RocksdbWrapper::flush_latestmaxseq() const {
+	// store latest maxseq into disk
+	std::string latestmaxseq_path;
+	get_server_latestmaxseq_path(methodid, latestmaxseq_path, workerid);
+	store_maxseq(maxseq, latestmaxseq_path);
+
+	return;
 }
 
 bool RocksdbWrapper::method_needseq() const {

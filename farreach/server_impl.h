@@ -409,6 +409,7 @@ void run_server_recover(uint16_t local_server_logical_idx, uint16_t global_serve
 			db_wrappers[local_server_logical_idx].remove(tmpkey, tmprecord.seq, true);
 		}
 	}
+	db_wrappers[local_server_logical_idx].flush_latestmaxseq(); // flush maxseq into disk for in-switch cache recovery
 
 	CUR_TIME(recover_t2);
 	DELTA_TIME(recover_t2, recover_t1, recover_t3);
