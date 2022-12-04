@@ -16,9 +16,9 @@
 	+ TODO: Fork benchmark/ and NetBuffer-backup/ (w/ comment: before removing confidential files) as an online backup with the list label of farreach in github
 	+ TODO: Keep dl11:NetBuffer-backup as the offline backup for the latest version of private repo (remove large generated files)
 	+ TODO: In local machine, use tmp.sh to remove confidential files and update remote NetBuffer/
-	+ TODO: Pull remote NetBuffer into dl11:NetBuffer, and run farreach + dynamic w/ hotin
-	+ TODO: Create public repo farreach, use update_public_repo.sh in local machine to re-organize and update public repo
-	+ TODO: Create an anonymous link for the public repo
+	+ TODO: Pull remote NetBuffer/ into dl11:NetBuffer, and run farreach + dynamic w/ hotin -> TODO: work (NetBuffer-backup/ can be removed in the future)
+	+ TODO: Create public repo farreach-public/, rename dl11:NetBuffer as dl11:farreach-public, and use update_public_repo.sh to re-organize and update farreach-public/
+	+ TODO: Create an anonymous link for the public repo farreach-public/
 
 - Evaluation writing
 	+ Missing numbers

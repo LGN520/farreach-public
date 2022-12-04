@@ -51,6 +51,11 @@ rm .gitmodules
 rm -r benchmark/.git
 git add benchmark
 
+# Update projects/NetBuffer/ as projects/farreach-public/
+tmpfiles=($(find nocache/ netcache/ farreach/ common/ scripts/ benchmark/ -type f -name "*.sh" -o -name "*.c" -o -name "*.h" | xargs grep -r -e "NetBuffer/" -e "/NetBuffer" -l | grep -v "update_publich_repo.sh"))
+echo "${tmpfiles}" | xargs sed -i 's!/NetBuffer!/farreach-public!g'
+echo "${tmpfiles}" | xargs sed -i 's!NetBuffer/!farreach-public/!g'
+
 # Commit
 git commit -am 're-organize for public repo'
 
