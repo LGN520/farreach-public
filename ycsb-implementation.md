@@ -42,18 +42,12 @@
 
 - 11.30
 	+ Siyuan
-		- Update eval with results of 3 rounds (TODO: exp2, exp3, and exp9)
-
-- 11.29
-	+ Siyuan
-		- Fix the issue of not aggregating in-switch snapshot during server-side recovery (files: farreach/server.c, farreach/localscripts/fetchbackup_client2server.sh)
-		- Fix the issue of missing seq_hdr.snapshottoken for GETRES_LATEST/DELETED_SEQ in farreach
-
-- 11.28
-	+ Siyuan
-		- Prepare for open source code (remove unnecessary and confidential files)
+		- Update eval with results of 3 rounds (TODO: exp3)
 	+ HuanCheng
 		- TODO: Continue evaluation on 4th/5th rounds
+		- TODO: Add a script for single rotation mode, and update benchmark.md
+		- TODO: Add a script for exp9 recovery time calculation
+			- TODO: Update benchmark.md to guide how to test recovery time based on existing recovery information without extra server rotations: use the script to resume recovery information (upstream backups and in-switch snapshot) to clients/servers -> perform exp9.sh with a parameter indicating only-recovery mode
 		- TODO: Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
 			- TODO: Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh)
 			- TODO: Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
@@ -70,6 +64,15 @@
 				+ NOTE: you have to specify the private key in Tofino such that it can scp files from clients/servers into switch
 					* Otherwise, you may have an error message of `Permission denied (public key) for scp` in farreach/localscripts/fetch*.sh 
 			+ TODO: Write down how to calculate average recovery time into benchmark.md
+
+- 11.29
+	+ Siyuan
+		- Fix the issue of not aggregating in-switch snapshot during server-side recovery (files: farreach/server.c, farreach/localscripts/fetchbackup_client2server.sh)
+		- Fix the issue of missing seq_hdr.snapshottoken for GETRES_LATEST/DELETED_SEQ in farreach
+
+- 11.28
+	+ Siyuan
+		- Prepare for open source code (remove unnecessary and confidential files)
 
 - 11.27
 	+ Siyuan
