@@ -1147,7 +1147,7 @@ void *run_server_worker(void * param) {
 			{
 				COUT_THIS("[server.worker] Invalid packet type: " << int(pkt_type))
 				std::cout << std::flush;
-				exit(-1);
+				//exit(-1);
 			}
 	}
 
