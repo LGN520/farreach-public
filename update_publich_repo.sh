@@ -43,6 +43,7 @@ rm -r ./nocache/deprecatedscripts
 rm -r ./ovs
 rm -r ./tommyds-2.2
 rm evaluation-progress.md
+rm rmhistory.sh
 rm update_public_repo.sh
 rm ycsb-implementation.md
 
