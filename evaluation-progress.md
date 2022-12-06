@@ -3,14 +3,14 @@
 
 |  Evaluation  | Type | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 |
 |:-------|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|
-| Exp 1            | Static  | done | done | done | doing | doing |
+| Exp 1            | Static  | done | done | done | done | done |
 | Exp 2            | Static  | done | done | done | done | done |
-| Exp 3            | Static  | done | done | doing | doing |  |
+| Exp 3            | Static  | done | done | done |  |  |
 | Exp 4            | Static  | done | done | done | done | done |
 | Exp 5            | Dynamic | done | done | done |  |  |
-| Exp 6            | Static  | done | done | done | doing | doing |
-| Exp 7            | Static  | done | done | done | doing | doing |
-| Exp 8            | Dynamic | done | done | done | doing | doing |
+| Exp 6            | Static  | done | done | done | done | done |
+| Exp 7            | Static  | done | done | done | done | done |
+| Exp 8            | Dynamic | done | done | done |  |  |
 | Exp 9            | Static  | done | done | done | done | done |
 </br>
 
