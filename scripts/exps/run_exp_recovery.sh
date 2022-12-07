@@ -90,9 +90,6 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
 
     echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Get recovery time"
     bash scripts/remote/test_recovery_time.sh > tmp_test_recovery_time.out 2>&1
-    echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Please record the collect time dumped by test_recovery_time.sh manually"
-    echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Please calculate the average switch recovery time based on tmp_switchos.out manually"
-    echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Please calculate the average switch preprocessing time and recovery time based on tmp_server.out manally"
 
     echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Backup statistics files to ${exp9_output_path}/${exp9_cachesize}"
     sleep 10s
@@ -101,5 +98,7 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
     scp -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1:${SWITCH_ROOTPATH}/farreach/tmp_switchos.out ${exp9_output_path}/${exp9_cachesize}
     scp ${USER}@${SERVER0}:${CLIENT_ROOTPATH}/farreach/tmp_server.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_0.out
     scp ${USER}@${SERVER1}:${CLIENT_ROOTPATH}/farreach/tmp_server.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_1.out
+
+    python scripts/local/calculate_recovery_time_helper.py ${exp9_output_path}/${exp9_cachesize} ${exp9_server_scale}
   done
 done
