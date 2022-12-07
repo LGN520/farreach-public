@@ -23,7 +23,7 @@ SERVER_ROOTPATH="/home/${USER}/projects/NetBuffer"
 BACKUPS_ROOTPATH="/tmp/rocksdbbackups"
 
 # experiment
-EVALUATION_SCRIPTS_PATH="/home/${USER}/projects/NetBuffer/benchmark/scripts"
+EVALUATION_SCRIPTS_PATH="/home/${USER}/projects/NetBuffer/scripts"
 EVALUATION_OUTPUT_PREFIX="/home/${USER}/results"
 
 is_global_included=1
