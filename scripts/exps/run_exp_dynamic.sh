@@ -1,5 +1,5 @@
 #!/bin/bash
-# run this scripts on dl11 (main client)
+# run this scripts on ${MAIN_CLIENT} (main client)
 # exp_dynamic
 
 source scripts/global.sh
@@ -11,9 +11,10 @@ roundnumber=$1
 
 exp7_method_list=("farreach" "netcache" "nocache")
 exp7_dynamic_rule_list=(hotin hotout random stable)
+exp7_output_path="${EVALUATION_OUTPUT_PREFIX}/exp7/${roundnumber}"
 
-### Create json backup directory
-mkdir -p ${EVALUATION_OUTPUT_PREFIX}/exp7/${roundnumber}/
+### Create output directory
+mkdir -p ${exp7_output_path}
 
 for exp7_method in ${exp7_method_list[@]}; do
   ### Preparation
@@ -58,9 +59,9 @@ for exp7_method in ${exp7_method_list[@]}; do
 
 
     ### Cleanup
-    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp7_method}-${exp7_rule}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp7/${roundnumber}/synthetic-${exp7_method}-${exp7_rule}-client0.out
-    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp7_method}-${exp7_rule}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp7/${roundnumber}/synthetic-${exp7_method}-${exp7_rule}-client1.out
-    echo "[exp7][${exp7_method}] stop switchos" 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp7_method}-${exp7_rule}-client0.out  ${exp7_output_path}/synthetic-${exp7_method}-${exp7_rule}-client0.out
+    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp7_method}-${exp7_rule}-client1.out  ${exp7_output_path}/synthetic-${exp7_method}-${exp7_rule}-client1.out
+    echo "[exp7][${exp7_method}] stop switchos"
     ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp7_method}; bash localscripts/stopswitchtestbed.sh"
   done
 done

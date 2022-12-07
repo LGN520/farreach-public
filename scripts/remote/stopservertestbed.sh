@@ -22,7 +22,7 @@ then
 	sudo source scripts/local/localstop.sh ./reflector >/dev/null 2>&1
 fi
 
-sleep 15s
+sleep 15s # wait for database to finish flush and compaction
 
 echo "kill servers"
 ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}; bash scripts/local/localkill.sh ./server >/dev/null 2>&1"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# run this scripts on dl11 (main client)
+# run this scripts on ${MAIN_CLIENT} (main client)
 # exp_recovery
 
 source scripts/global.sh
@@ -12,8 +12,9 @@ exp9_recoveryonly=$2
 
 exp9_server_scale="16"
 exp9_server_scale_bottleneck="14"
-exp9_round_list=("0" "1" "2" "3" "4")
+exp9_round_list=("0" "1" "2" "3" "4" "5") # do one extra round 0 to wait for database to finish flush and compaction
 exp9_cachesize_list=("100" "1000" "10000")
+exp9_output_path="${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}"
 
 ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
 
@@ -53,39 +54,38 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
   fi
 
   for exp9_roundnumber in ${exp9_round_list[@]}; do
-    mkdir -p ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
-
+    mkdir -p ${exp9_output_path}/${exp9_cachesize}
 
     if [ ${exp9_recoveryonly} -eq 0 ]; then
       if [ ${exp9_workloadmode} -eq 0 ]; then
-        cp benchmark/output/upstreambackups/static${exp9_server_scale}*client0.out ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
-        scp ${USER}@dl15:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/static${exp9_server_scale}*client1.out ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
+        cp benchmark/output/upstreambackups/static${exp9_server_scale}*client0.out ${exp9_output_path}/${exp9_cachesize}
+        scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/static${exp9_server_scale}*client1.out ${exp9_output_path}/${exp9_cachesize}
       elif [ ${exp9_workloadmode} -eq 1 ]; then
-        cp benchmark/output/upstreambackups/dynamic-client0.out ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
-        scp ${USER}@dl15:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/dynamic-client1.out ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
+        cp benchmark/output/upstreambackups/dynamic-client0.out ${exp9_output_path}/${exp9_cachesize}
+        scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/dynamic-client1.out ${exp9_output_path}/${exp9_cachesize}
       else
         echo "[ERROR] invalid workload mode: ${exp9_workloadmode}"
         exit
       fi
 
-      scp ${USER}@dl16:/tmp/farreach/controller.snapshot* ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
-      scp ${USER}@dl16:/tmp/farreach/*maxseq* ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
-      scp ${USER}@dl13:/tmp/farreach/*maxseq* ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
+      scp ${USER}@${SERVER0}:/tmp/farreach/controller.snapshot* ${exp9_output_path}/${exp9_cachesize}
+      scp ${USER}@${SERVER0}:/tmp/farreach/*maxseq* ${exp9_output_path}/${exp9_cachesize}
+      scp ${USER}@${SERVER1}:/tmp/farreach/*maxseq* ${exp9_output_path}/${exp9_cachesize}
     else
       if [ ${exp9_workloadmode} -eq 0 ]; then
-        cp ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}/static${exp9_server_scale}*client0.out benchmark/output/upstreambackups/
-        scp ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}/static${exp9_server_scale}*client1.out  ${USER}@dl15:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/
+        cp ${exp9_output_path}/${exp9_cachesize}/static${exp9_server_scale}*client0.out benchmark/output/upstreambackups/
+        scp ${exp9_output_path}/${exp9_cachesize}/static${exp9_server_scale}*client1.out  ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/
       elif [ ${exp9_workloadmode} -eq 1 ]; then
-        cp ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}/dynamic-client0.out benchmark/output/upstreambackups/
-        scp ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}/dynamic-client1.out ${USER}@dl15:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/
+        cp ${exp9_output_path}/${exp9_cachesize}/dynamic-client0.out benchmark/output/upstreambackups/
+        scp ${exp9_output_path}/${exp9_cachesize}/dynamic-client1.out ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/
       else
         echo "[ERROR] invalid workload mode: ${exp9_workloadmode}"
         exit
       fi
 
-      scp ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}/controller.snapshot* ${USER}@dl16:/tmp/farreach/
-      scp ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}/*maxseq* ${USER}@dl16:/tmp/farreach/
-      scp ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}/*maxseq* ${USER}@dl13:/tmp/farreach/
+      scp ${exp9_output_path}/${exp9_cachesize}/controller.snapshot* ${USER}@${SERVER0}:/tmp/farreach/
+      scp ${exp9_output_path}/${exp9_cachesize}/*maxseq* ${USER}@${SERVER0}:/tmp/farreach/
+      scp ${exp9_output_path}/${exp9_cachesize}/*maxseq* ${USER}@${SERVER1}:/tmp/farreach/
     fi
 
     echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Get recovery time"
@@ -94,12 +94,12 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
     echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Please calculate the average switch recovery time based on tmp_switchos.out manually"
     echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Please calculate the average switch preprocessing time and recovery time based on tmp_server.out manally"
 
-    echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Backup statistics files to ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}"
+    echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Backup statistics files to ${exp9_output_path}/${exp9_cachesize}"
     sleep 10s
-    cp tmp_test_recovery_time.out ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
-    scp -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1:${SWITCH_ROOTPATH}/farreach/tmp_launchswitchostestbed.out ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
-    scp -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1:${SWITCH_ROOTPATH}/farreach/tmp_switchos.out ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}
-    scp ${USER}@dl16:${CLIENT_ROOTPATH}/farreach/tmp_server.out ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}/tmp_server_0.out
-    scp ${USER}@dl13:${CLIENT_ROOTPATH}/farreach/tmp_server.out ${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}/${exp9_cachesize}/tmp_server_1.out
+    cp tmp_test_recovery_time.out ${exp9_output_path}/${exp9_cachesize}
+    scp -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1:${SWITCH_ROOTPATH}/farreach/tmp_launchswitchostestbed.out ${exp9_output_path}/${exp9_cachesize}
+    scp -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1:${SWITCH_ROOTPATH}/farreach/tmp_switchos.out ${exp9_output_path}/${exp9_cachesize}
+    scp ${USER}@${SERVER0}:${CLIENT_ROOTPATH}/farreach/tmp_server.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_0.out
+    scp ${USER}@${SERVER1}:${CLIENT_ROOTPATH}/farreach/tmp_server.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_1.out
   done
 done

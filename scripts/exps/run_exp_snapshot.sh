@@ -1,5 +1,5 @@
 #!/bin/bash
-# run this scripts on dl11 (main client)
+# run this scripts on ${MAIN_CLIENT} (main client)
 # exp_snapshot
 
 source scripts/global.sh
@@ -11,9 +11,10 @@ roundnumber=$1
 
 exp8_dynamic_rule_list=(hotin hotout random)
 exp8_snapshot_list=("0" "2500" "5000" "7500" "10000")
+exp8_output_path="${EVALUATION_OUTPUT_PREFIX}/exp8/${roundnumber}"
 
 ### Create json backup directory
-mkdir -p ${EVALUATION_OUTPUT_PREFIX}/exp8/${roundnumber}/
+mkdir -p ${exp8_output_path}
 
 for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
   for exp8_snapshot in ${exp8_snapshot_list[@]}; do
@@ -52,12 +53,12 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
 
 
     ### Cleanup
-    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/farreach-${exp8_rule}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp8/${roundnumber}/${exp8_snapshot}-farreach-${exp8_rule}-client0.out
-    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/farreach-${exp8_rule}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp8/${roundnumber}/${exp8_snapshot}-farreach-${exp8_rule}-client1.out
+    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/farreach-${exp8_rule}-client0.out  ${exp8_output_path}/${exp8_snapshot}-farreach-${exp8_rule}-client0.out
+    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/farreach-${exp8_rule}-client1.out  ${exp8_output_path}/${exp8_snapshot}-farreach-${exp8_rule}-client1.out
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] stop switchos" 
     ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
 
-    scp ${USER}@dl16:${SERVER_ROOTPATH}/farreach/tmp_controller_bwcost.out ${EVALUATION_OUTPUT_PREFIX}/exp8/${roundnumber}/${exp8_snapshot}_${exp8_rule}_tmp_controller_bwcost.out
+    scp ${USER}@${SERVER0}:${SERVER_ROOTPATH}/farreach/tmp_controller_bwcost.out ${exp8_output_path}/${exp8_snapshot}_${exp8_rule}_tmp_controller_bwcost.out
   done
 done
 

@@ -33,7 +33,6 @@ if [[ ${with_controller} -eq 1 ]]; then
 fi
 
 ##### Part 1 #####
-
 echo "[part 1] run single bottleneck server thread"
 
 echo "clear tmp files in remote clients/servers and controller"
@@ -42,13 +41,13 @@ ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_
 ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part2*.out"
 
 if [ "x${DIRNAME}" == "xfarreach" ]; then
+	# clear snapshot token every iteration to maintain snapshot id sequence
 	ssh -i "~/.ssh/farreach_id_rsa" root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >tmp_cleanup.out 2>&1"
 fi
 
 source scripts/remote/test_server_rotation_p1.sh 0
 
 ##### Part 2 #####
-
 echo "[part 2] run bottleneck server thread + rotated server thread"
 
 rotatecnt=1
@@ -57,7 +56,7 @@ for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); 
 		continue
 	fi
 
-	#if [ ${rotatecnt} -ne 0 ] && [ $((${rotatecnt}%16)) -eq 0 ]; then
+	# initiliaze and refresh database status every 8 iterations
 	if [ $((${rotatecnt}%8)) -eq 0 ]; then
 		echo "refresh bottleneck parition and rotated partition back to the state after loading phase"
 		ssh ${USER}@${SERVER0} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db" # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
@@ -67,17 +66,12 @@ for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); 
 	fi
 
 	if [ "x${DIRNAME}" == "xfarreach" ]; then
+		# clear snapshot token every iteration to maintain snapshot id sequence
 		ssh -i "~/.ssh/farreach_id_rsa" root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >>tmp_cleanup.out 2>&1"
 	fi
 
 	source scripts/remote/test_server_rotation_p2.sh 0 ${rotateidx}
 	rotatecnt=$((++rotatecnt))
-
-	#read -p "Continue[y/n]: " is_continue
-	#if [ ${is_continue}x == nx ]
-	#then
-	#	exit
-	#fi
 done
 
 echo "Resume ${DIRNAME}/config.ini with ${DIRNAME}/config.ini.bak if any"

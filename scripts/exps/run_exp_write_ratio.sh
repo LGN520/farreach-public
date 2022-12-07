@@ -1,5 +1,5 @@
 #!/bin/bash
-# run this scripts on dl11 (main client)
+# run this scripts on ${MAIN_CLIENT} (main client)
 # exp_write_ratio
 
 source scripts/global.sh
@@ -15,9 +15,10 @@ exp4_method_list=("farreach" "netcache" "nocache")
 exp4_workload_list=("synthetic-25" "synthetic-75" "synthetic")
 exp4_existed_workload_list=("workloadc" "workloada")
 exp4_backup_workload_list=("synthetic-0" "synthetic-50")
+exp4_output_path="${EVALUATION_OUTPUT_PREFIX}/exp4/${roundnumber}"
 
 ### Create json backup directory
-mkdir -p ${EVALUATION_OUTPUT_PREFIX}/exp4/${roundnumber}/
+mkdir -p ${exp4_output_path}/
 
 for exp4_method in ${exp4_method_list[@]}; do
   sed -i "/^DIRNAME=/s/=.*/=\"${exp4_method}\"/" ${CLIENT_ROOTPATH}/scripts/common.sh
@@ -62,8 +63,8 @@ for exp4_method in ${exp4_method_list[@]}; do
 
 
     ### Cleanup
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp4/${roundnumber}/${exp4_workload}-${exp4_method}-static${exp4_server_scale}-client0.out 
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp4/${roundnumber}/${exp4_workload}-${exp4_method}-static${exp4_server_scale}-client1.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client0.out  ${exp4_output_path}/${exp4_workload}-${exp4_method}-static${exp4_server_scale}-client0.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client1.out  ${exp4_output_path}/${exp4_workload}-${exp4_method}-static${exp4_server_scale}-client1.out 
     echo "[exp4][${exp4_method}][${exp4_workload}] stop switchos" 
     ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd /${SWITCH_ROOTPATH}/${exp4_method}; bash localscripts/stopswitchtestbed.sh"
   done
@@ -71,8 +72,8 @@ for exp4_method in ${exp4_method_list[@]}; do
   ### Backup for generated workloads
   existed=0
   for exp4_existed_workload in ${exp4_existed_workload_list[@]}; do
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_existed_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp4/${roundnumber}/${exp4_backup_workload_list[${existed}]}-${exp4_method}-static${exp4_server_scale}-client0.out 
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_existed_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp4/${roundnumber}/${exp4_backup_workload_list[${existed}]}-${exp4_method}-static${exp4_server_scale}-client1.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_existed_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client0.out  ${exp4_output_path}/${exp4_backup_workload_list[${existed}]}-${exp4_method}-static${exp4_server_scale}-client0.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_existed_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client1.out  ${exp4_output_path}/${exp4_backup_workload_list[${existed}]}-${exp4_method}-static${exp4_server_scale}-client1.out 
     existed=$((++existed))
   done
 done

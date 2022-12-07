@@ -1,5 +1,5 @@
 #!/bin/bash
-# run this scripts on dl11 (main client)
+# run this scripts on ${MAIN_CLIENT} (main client)
 # exp_key_distribution
 
 source scripts/global.sh
@@ -15,9 +15,10 @@ exp5_method_list=("farreach" "netcache" "nocache")
 exp5_workload_list=("skewness-90" "skewness-95")
 exp5_existed_workload_list=("synthetic")
 exp5_backup_workload_list=("skewness-99")
+exp5_output_path="${EVALUATION_OUTPUT_PREFIX}/exp5/${roundnumber}"
 
-### Create json backup directory
-mkdir -p ${EVALUATION_OUTPUT_PREFIX}/exp5/${roundnumber}/
+### Create output directory
+mkdir -p ${exp5_output_path}
 
 for exp5_method in ${exp5_method_list[@]}; do
   sed -i "/^DIRNAME=/s/=.*/=\"${exp5_method}\"/" ${CLIENT_ROOTPATH}/scripts/common.sh
@@ -63,8 +64,8 @@ for exp5_method in ${exp5_method_list[@]}; do
 
 
     ### Cleanup
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp5_workload}-statistics/${exp5_method}-static${exp5_server_scale}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp5/${roundnumber}/${exp5_workload}-${exp5_method}-static${exp5_server_scale}-client0.out 
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp5_workload}-statistics/${exp5_method}-static${exp5_server_scale}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp5/${roundnumber}/${exp5_workload}-${exp5_method}-static${exp5_server_scale}-client1.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp5_workload}-statistics/${exp5_method}-static${exp5_server_scale}-client0.out  ${exp5_output_path}/${exp5_workload}-${exp5_method}-static${exp5_server_scale}-client0.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp5_workload}-statistics/${exp5_method}-static${exp5_server_scale}-client1.out  ${exp5_output_path}/${exp5_workload}-${exp5_method}-static${exp5_server_scale}-client1.out 
     echo "[exp5][${exp5_method}][${exp5_workload}] stop switchos" 
     ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp5_method}; bash localscripts/stopswitchtestbed.sh"
   done
@@ -72,8 +73,8 @@ for exp5_method in ${exp5_method_list[@]}; do
   ### Backup for generated workloads
   existed=0
   for exp5_existed_workload in ${exp5_existed_workload_list[@]}; do
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp5_existed_workload}-statistics/${exp5_method}-static${exp5_server_scale}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp5/${roundnumber}/${exp5_backup_workload_list[${existed}]}-${exp5_method}-static${exp5_server_scale}-client0.out 
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp5_existed_workload}-statistics/${exp5_method}-static${exp5_server_scale}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp5/${roundnumber}/${exp5_backup_workload_list[${existed}]}-${exp5_method}-static${exp5_server_scale}-client1.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp5_existed_workload}-statistics/${exp5_method}-static${exp5_server_scale}-client0.out  ${exp5_output_path}/${exp5_backup_workload_list[${existed}]}-${exp5_method}-static${exp5_server_scale}-client0.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp5_existed_workload}-statistics/${exp5_method}-static${exp5_server_scale}-client1.out  ${exp5_output_path}/${exp5_backup_workload_list[${existed}]}-${exp5_method}-static${exp5_server_scale}-client1.out 
     existed=$((++existed))
   done
 done

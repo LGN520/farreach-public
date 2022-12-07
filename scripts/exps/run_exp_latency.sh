@@ -1,5 +1,5 @@
 #!/bin/bash
-# run this scripts on dl11 (main client)
+# run this scripts on ${MAIN_CLIENT} (main client)
 # exp_latency
 
 source scripts/global.sh
@@ -15,10 +15,10 @@ exp2_workload="workloada"
 exp2_target_thpt_list=("0.2" "0.4" "0.6" "0.8")
 exp2_server_scale="16"
 exp2_server_scale_bottleneck="14"
+exp2_output_directory="${EVALUATION_OUTPUT_PREFIX}/exp2/${roundnumber}"
 
-
-### Create json backup directory
-mkdir -p ${EVALUATION_OUTPUT_PREFIX}/exp2/${roundnumber}/
+### Create output directory
+mkdir -p ${exp2_output_directory}
 
 # ### THROUPUT
 for exp2_method in ${exp2_method_list[@]}; do
@@ -64,8 +64,8 @@ for exp2_method in ${exp2_method_list[@]}; do
 
 
   ### Cleanup
-  cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-static${exp2_server_scale}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp2/${roundnumber}/${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client0.out 
-  cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-static${exp2_server_scale}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp2/${roundnumber}/${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client1.out 
+  cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-static${exp2_server_scale}-client0.out  ${exp2_output_directory}/${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client0.out 
+  cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-static${exp2_server_scale}-client1.out  ${exp2_output_directory}/${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client1.out 
   echo "[exp2][${exp2_method}] stop switchos" 
   ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
 done
@@ -117,8 +117,8 @@ for exp2_method in ${exp2_method_list[@]}; do
     bash scripts/remote/calculate_statistics.sh 1
 
     ### Cleanup
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-latency-static${exp2_server_scale}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp2/${roundnumber}/${exp2_target_thpt}-${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client0.out 
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-latency-static${exp2_server_scale}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp2/${roundnumber}/${exp2_target_thpt}-${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client1.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-latency-static${exp2_server_scale}-client0.out  ${exp2_output_directory}/${exp2_target_thpt}-${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client0.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-latency-static${exp2_server_scale}-client1.out  ${exp2_output_directory}/${exp2_target_thpt}-${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client1.out 
     echo "[exp2][${exp2_method}][${exp2_target_thpt}] stop switchos" 
     ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
   done

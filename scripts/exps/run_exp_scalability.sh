@@ -1,5 +1,5 @@
 #!/bin/bash
-# run this scripts on dl11 (main client)
+# run this scripts on ${MAIN_CLIENT} (main client)
 # exp_scalability
 
 source scripts/global.sh
@@ -13,9 +13,10 @@ exp3_workload="workloada"
 exp3_method_list=("farreach")
 exp3_scalability_list=("32" "64" "128")
 exp3_scalability_bottleneck_list=("29" "59" "118")
+exp3_output_path="${EVALUATION_OUTPUT_PREFIX}/exp3/${roundnumber}"
 
 ### Create json backup directory
-mkdir -p ${EVALUATION_OUTPUT_PREFIX}/exp3/${roundnumber}/
+mkdir -p ${exp3_output_path}
 
 for exp3_method in ${exp3_method_list[@]}; do
   sed -i "/^DIRNAME=/s/=.*/=\"${exp3_method}\"/" ${CLIENT_ROOTPATH}/scripts/common.sh
@@ -59,13 +60,13 @@ for exp3_method in ${exp3_method_list[@]}; do
 
 
     ### Cleanup
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static${exp3_scalability}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp3/${roundnumber}/${exp3_workload}-${exp3_method}-static${exp3_scalability}-client0.out 
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static${exp3_scalability}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp3/${roundnumber}/${exp3_workload}-${exp3_method}-static${exp3_scalability}-client1.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static${exp3_scalability}-client0.out  ${exp3_output_path}/${exp3_workload}-${exp3_method}-static${exp3_scalability}-client0.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static${exp3_scalability}-client1.out  ${exp3_output_path}/${exp3_workload}-${exp3_method}-static${exp3_scalability}-client1.out 
     echo "[exp3][${exp3_method}] stop switchos" 
     ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp3_method}; bash localscripts/stopswitchtestbed.sh"
     scalability_counter=$((++scalability_counter))
   done
 
-  cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static16-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp3/${roundnumber}/${exp3_workload}-${exp3_method}-static16-client0.out 
-  cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static16-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp3/${roundnumber}/${exp3_workload}-${exp3_method}-static16-client1.out 
+  cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static16-client0.out  ${exp3_output_path}/${exp3_workload}-${exp3_method}-static16-client0.out 
+  cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static16-client1.out  ${exp3_output_path}/${exp3_workload}-${exp3_method}-static16-client1.out 
 done

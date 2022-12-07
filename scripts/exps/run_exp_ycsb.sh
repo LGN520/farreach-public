@@ -1,5 +1,5 @@
 #!/bin/bash
-# run this scripts on dl11 (main client)
+# run this scripts on ${MAIN_CLIENT} (main client)
 # exp_ycsb
 
 source scripts/global.sh
@@ -13,10 +13,10 @@ roundnumber=$1
 exp1_method_list=("farreach" "netcache" "nocache")
 exp1_core_workload_list=("workloada" "workloadb" "workloadc" "workloadd" "workloadf" "workload-load")
 exp1_server_scale="16"
-
+exp1_output_path="${EVALUATION_OUTPUT_PREFIX}/exp1/${roundnumber}"
 
 ### Create json backup directory
-mkdir -p ${EVALUATION_OUTPUT_PREFIX}/exp1/${roundnumber}/
+mkdir -p ${exp1_output_path}/
 
 for exp1_method in ${exp1_method_list[@]}; do
   sed -i "/^DIRNAME=/s/=.*/=\"${exp1_method}\"/" ${CLIENT_ROOTPATH}/scripts/common.sh
@@ -65,8 +65,8 @@ for exp1_method in ${exp1_method_list[@]}; do
 
 
     ### Cleanup
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp1_workload}-statistics/${exp1_method}-static${exp1_server_scale}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp1/${roundnumber}/${exp1_workload}-${exp1_method}-static${exp1_server_scale}-client0.out 
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp1_workload}-statistics/${exp1_method}-static${exp1_server_scale}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp1/${roundnumber}/${exp1_workload}-${exp1_method}-static${exp1_server_scale}-client1.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp1_workload}-statistics/${exp1_method}-static${exp1_server_scale}-client0.out  ${exp1_output_path}/${exp1_workload}-${exp1_method}-static${exp1_server_scale}-client0.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp1_workload}-statistics/${exp1_method}-static${exp1_server_scale}-client1.out  ${exp1_output_path}/${exp1_workload}-${exp1_method}-static${exp1_server_scale}-client1.out 
     echo "[exp1][${exp1_method}][${exp1_workload}] stop switchos" 
     ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp1_method}; bash localscripts/stopswitchtestbed.sh"
   done

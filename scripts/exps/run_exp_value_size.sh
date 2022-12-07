@@ -1,5 +1,5 @@
 #!/bin/bash
-# run this scripts on dl11 (main client)
+# run this scripts on ${MAIN_CLIENT} (main client)
 # exp_value_size
 
 source scripts/global.sh
@@ -15,9 +15,10 @@ exp6_method_list=("farreach" "netcache" "nocache")
 exp6_workload_list=("valuesize-16" "valuesize-32" "valuesize-64")
 exp6_existed_workload_list=("synthetic")
 exp6_backup_workload_list=("valuesize-128")
+exp6_output_path="${EVALUATION_OUTPUT_PREFIX}/exp6/${roundnumber}"
 
 ### Create json backup directory
-mkdir -p ${EVALUATION_OUTPUT_PREFIX}/exp6/${roundnumber}/
+mkdir -p ${exp6_output_path}/
 
 for exp6_method in ${exp6_method_list[@]}; do
   sed -i "/^DIRNAME=/s/=.*/=\"${exp6_method}\"/" ${CLIENT_ROOTPATH}/scripts/common.sh
@@ -60,8 +61,8 @@ for exp6_method in ${exp6_method_list[@]}; do
 
 
     ### Cleanup
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp6/${roundnumber}/${exp6_workload}-${exp6_method}-static${exp6_server_scale}-client0.out 
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp6/${roundnumber}/${exp6_workload}-${exp6_method}-static${exp6_server_scale}-client1.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client0.out  ${exp6_output_path}/${exp6_workload}-${exp6_method}-static${exp6_server_scale}-client0.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client1.out  ${exp6_output_path}/${exp6_workload}-${exp6_method}-static${exp6_server_scale}-client1.out 
     echo "[exp6][${exp6_method}][${exp6_workload}] stop switchos" 
     ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscripts/stopswitchtestbed.sh"
   done
@@ -69,8 +70,8 @@ for exp6_method in ${exp6_method_list[@]}; do
   ### Backup for generated workloads
   existed=0
   for exp6_existed_workload in ${exp6_existed_workload_list[@]}; do
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_existed_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client0.out  ${EVALUATION_OUTPUT_PREFIX}/exp6/${roundnumber}/${exp6_backup_workload_list[${existed}]}-${exp6_method}-static${exp6_server_scale}-client0.out 
-    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_existed_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client1.out  ${EVALUATION_OUTPUT_PREFIX}/exp6/${roundnumber}/${exp6_backup_workload_list[${existed}]}-${exp6_method}-static${exp6_server_scale}-client1.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_existed_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client0.out  ${exp6_output_path}/${exp6_backup_workload_list[${existed}]}-${exp6_method}-static${exp6_server_scale}-client0.out 
+    cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_existed_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client1.out  ${exp6_output_path}/${exp6_backup_workload_list[${existed}]}-${exp6_method}-static${exp6_server_scale}-client1.out 
     existed=$((++existed))
   done
 done

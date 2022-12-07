@@ -69,7 +69,6 @@ if [[ ${with_controller} -eq 1 ]]; then
 fi
 
 ##### Part 1 #####
-
 echo "[part 1] run single bottleneck server thread"
 
 echo "clear tmp files in remote clients/servers and controller"
@@ -79,12 +78,15 @@ ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_
 
 echo ${perrotation_targets[0]}
 
+if [ "x${DIRNAME}" == "xfarreach" ]; then
+	# clear snapshot token every iteration to maintain snapshot id sequence
+	ssh -i "~/.ssh/farreach_id_rsa" root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >tmp_cleanup.out 2>&1"
+fi
+
 source scripts/remote/test_server_rotation_p1.sh 0 ${perrotation_targets[0]}
 
 ##### Part 2 #####
-
 echo "[part 2] run bottleneck server thread + rotated server thread"
-
 rotatecnt=1
 for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); do
 	if [ ${rotateidx} -eq ${bottleneck_serveridx} ]; then
@@ -97,6 +99,11 @@ for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); 
 		ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${rotateidx}.db"            # retrieve rocksdb and reset rotatedservers.snapshotid = 0
 	else
 		ssh ${USER}@${SERVER1} "mv /tmp/${DIRNAME}/worker*.db /tmp/${DIRNAME}/worker${rotateidx}.db"
+	fi
+
+	if [ "x${DIRNAME}" == "xfarreach" ]; then
+		# clear snapshot token every iteration to maintain snapshot id sequence
+		ssh -i "~/.ssh/farreach_id_rsa" root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >>tmp_cleanup.out 2>&1"
 	fi
 
 	source scripts/remote/test_server_rotation_p2.sh 0 ${rotateidx} ${perrotation_targets[${rotatecnt}]}
