@@ -41,7 +41,11 @@
 			+ FarReach + disable snapshot + static(0) / dynamic
 	+ 5 rounds of exp9
 	+ 3-round reuslts: exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8 (only dynamic), exp9
-		- TODO: Update with 5 rounds
+	+ TODO: Update eval with 5 rounds
+		* TODO: Update farreach + avg latency + round 4 in exp2 latency
+		* TODO: Update farreach + 32 servers + round 3 in exp3 scalability
+		* TODO: Update 4th/5th rounds for exp3
+		* TODO: Update numbers in eval
 
 - 11.30
 	+ Siyuan
@@ -54,8 +58,10 @@
 		- TODO: Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
 			- TODO: Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh)
 			- TODO: Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
+				+ NOTE: NEVER source common.sh, which will be modified by run_expXXX.sh
 			- TODO: For each method (nocache/netcache/farreach), copy exp1/method_config.ini into method/configs/config.ini.normal as the template of each exp.sh -> for each other exp, say exp5, diff exp5/method_config.ini with method/configs/config.ini.normal to see if we have to change more lines by sed in exp.sh (e.g., change workloadmode from 0 to 1 for exp5)
 			- TODO: [Difficult?] Rename exps so as to be independent with exp order in paper, including script name, the path in script, and results directory name
+				+ NOTE: you can define a variable in each run_expXXX.sh to construct the exp-related path strings
 		- TODO: Update benchmark.md to make every step of each experiment clear (not only the following to-dos)
 			+ TODO: add how to use scripts for automatic evaluation, but still keep the original content about how to perform evaluation manually under each experiment, such that readers know the details of our experiments
 			+ TODO: How to create SSH key for switch and change private key path in common.sh if necessary
