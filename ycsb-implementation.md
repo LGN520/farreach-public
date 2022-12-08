@@ -52,10 +52,10 @@
 		- Update eval with results of 3 rounds
 	+ HuanCheng
 		- Continue evaluation on 4th/5th rounds
-		- TODO: Add a script for single rotation mode, and update benchmark.md
-		- TODO: Add a script for exp9 recovery time calculation
+		- Add a script for single rotation mode, and update benchmark.md
+		- Add a script for exp9 recovery time calculation
 			- TODO: Update benchmark.md to guide how to test recovery time based on existing recovery information without extra server rotations: use the script to resume recovery information (upstream backups and in-switch snapshot) to clients/servers -> perform exp9.sh with a parameter indicating only-recovery mode
-		- TODO: Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
+		- Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
 			- TODO: Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh, reason for using the last 5 over 6 run times of test_recovery_time.sh)
 			- Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
 				+ NOTE: NEVER source common.sh, which will be modified by run_expXXX.sh
@@ -873,16 +873,6 @@
 		* Convert keystring into 16B key instead of changing workload file
 	+ Implement dynamic array and part of socket helper
 
-## FUTURE
-
-* FUTURE: SYNC read blocking for PUTREQ_LARGEVALUE pktloss to DistFarreach (OBSOLETE due to record embedding)
-	+ Switch: largevalueseq_reg and is_largevalueblock
-	+ Server: per-server blockinfomap and mutex for read blocking
-	+ FUTURE: SYNC record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ to DistFarReach (NOT need blocking for both eviction and large write now)
-* FUTURE: SYNC client-side upstream backup and server-side replay-based recovery for durability to DistFarreach
-* FUTURE: SYNC seq_hdr.snapshot_token for server-side snapshot to DistFarreach
-* FUTURE: SYNC record embedding to avoid read blocking to DistFarReach
-
 ## DEPRECATED
 
 * DEPRECATED: Add YCSB-E in exp2 on different workloads after running all experiments
@@ -911,7 +901,7 @@
 	- Give an individual experiment to reflect the non-trivial trade-off between thpt and latency
 	- In each other experiment, mainly focus on throughput statistics
 
-## Important design changes
+## Important design changes in single-switch setting
 
 * Introduce read blocking for PUTREQ_LARGEVALUE pktloss / pkt-reordering
 	- Introduce ENABLE_LARGEVALUEBLOCK (files: farreach/tofino/main.p4 and farreach/tofino/common.py)
@@ -940,6 +930,8 @@
 		- XXX_BEINGEVICTED and CAHCE_EVICT can also clear the block list of PUTREQ_LARGEVALUE
 			+ Maintain per-server mutex for blockinfomap for the rare case of PUTREQ_LARGEVALUE
 	- Introduce GETREQ_LARGEVALUEBLOCK_SEQ (files: farreach/tofino/main.p4, farreach/tofino/common.py, common/packet_format.h, farreeach/common_impl.h, common/packet_format_impl.h)
+
+
 
 * Implement client-side record preservations
 	- Add seq into GET/PUT/DELRES for FarReach such that snapshot can release part of client-side backup
@@ -983,6 +975,8 @@
 			* Fix issue of invalid type of SNAPSHOT_SENDDATA
 			* Fix issue of upstream backup notification
 
+
+
 * Implement replay-based recovery
 	- Replay cache admissions for in-switch cache based on in-switch snapshot (files: scripts/common.sh scripts/remote/test_recovery_time.sh, farreach/localscripts/launchswitchtestbed.sh, farreach/switchos.c, farreach/localscripts/fetchsnapshot_controller2switch.sh)
 		+ Login bf1 as root -> launch switch data plane -> copy in-switch snapshot data -> configure switch data plane and launch switchos w/ recovery mode
@@ -1007,6 +1001,8 @@
 			* Switchos gets maxseq of cache misses based on per-server latest/snapshotted maxseq
 			* Switchos gets final maxseq based on maxseq of cache hits/misses, and write all seq_reg conservatively by ptf.popserver
 
+
+
 * Add snapshottoken into seqhdr for server-side snapshot
 	- Add snapshottoken into seqhdr (files: farreach/p4src/header.p4)
 	- Fix affected packet formats: GET/PUT/DELRES_SEQ, GETRES_LATEST/DELETED_SEQ, GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1, PUT/DELREQ_SEQ_INSWITCH_CASE1, PUTREQ_SEQ/\_CASE3, PUTREQ_POP_SEQ/\_CASE3, PUTREQ_SEQ_/CASE3_BEINGEVICTED, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, DELREQ_SEQ/\_CASE3, DELREQ_SEQ/\_CASE3_BEINGEVICTED, GETREQ_LARGEVALUEBLOCK_SEQ, PUTREQ_LARGEVALUE_SEQ/\_CASE3, PUTREQ_LARGEVALUE_SEQ/\_CASE3_BEINGEVICTED
@@ -1023,6 +1019,8 @@
 			* Update pktlen related with inswitch_hdr in switch/libcommon (files: farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py, common/packet_format_impl.h)
 			* Set seq_hdr.snapshot_token = inswitch_hdr.snapshot_token for XXX_CASE3, including PUTREQ_LARGEVALUE_CASE3/\_BEINGEVICTED, PUTREQ_SEQ_CASE3/\_BEINGEVICTED, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3/\_BEINGEVICTED
 	- Use snapshottoken for XXX_CASE3 in server (files: farreach/server_impl.h)
+
+
 
 * Implement record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ (NOT need blocking for both eviction and large write now)
 	- Add GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD with val_hdr (must <= 128B), seq_hdr (savedseq), and stat_hdr
@@ -1042,3 +1040,106 @@
 			* Remove case processing of GETREQ_LARGEVALUEBLOCK_SEQ and GETREQ_BEINGEVICTED
 			* Remove clear_blocklist()
 		+ Add processing of GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD (both have the same logic)
+
+## FUTURE in multi-switch setting
+
+* ~~FUTURE: SYNC read blocking for PUTREQ_LARGEVALUE pktloss to DistFarreach (OBSOLETE due to record embedding)~~
+	- Introduce largevalueseq_reg (files: tofino-\*/p4src/regs/largevalueseq.p4, tofino-\*/main.p4, tofino-\*/p4src/header.p4, tofino-\*/p4src/egress_mat.p4, tofino-\*/configure/table_configure.py)
+		- For largevalueseq_reg
+			- If cached=1 and valid=1, GETREQ_INSWITCH reads largevalueseq
+			- If cached=1 and valid=1, PUT/DELREQ_/SEQ_INSWITCH and GETRES_LATEST/DELETED_SEQ_INSWITCH sets latest=1 and largevalueseq=0 and is_largevalueblock=0
+			- CACHE_POP_INSWITCH sets latest=0 and largevalueseq=0 and is_largevalueblock=0
+			- If cached=1 and valid=1, PUTREQ_LARGEVALUE_/SEQ_INSWITCH sets latest=0 and largevalueseq=assignedseq and is_largevalueblock=0
+		- For is_largevalueblock_tbl (keyless), set meta.is_largevalueblock = 1 only if meta.largevalueseq != 0
+		- ~~For another_eg_port_forward_tbl~~
+			+ ~~If cached=1 and valid=1 and latest=0 and largevalueblock=1, convert GETREQ_INSWITCH into GETREQ_LARGEVALUEBLOCK_SEQ, set seq_hdr as meta.largevalueseq, and keep shadowtype_hdr and add seq_hdr~~
+		- ~~For other egress processing~~
+			+ ~~Update pktlen as DELREQ_SEQ and ipmacport as client2server for GETREQ_LARGEVALUEBLOCK_SEQ (including shadowtype and seq)~~
+	+ ~~Server: per-server blockinfomap and mutex for read blocking~~
+
+
+
+* FUTURE: SYNC client-side upstream backup for durability to DistFarreach
+	- Add seq into GET/PUT/DELRES and GET/PUT/DELRES_SERVER for FarReach such that snapshot can release part of client-side backup
+		+ [IMPORTANT] Save assignedseq for PUT/DELREQ_INSWITCH before being overwritten by access_savedseq_tbl if cached=1 and valid=1
+			* NOTE: we must save seq_hdr.seq into clone_hdr.assignedseq_for_farreach between seq_reg and savedseq_reg, yet cannot perform it in other MATs of stage 2 due to the confliction on seq_hdr.seq
+			* Change access_largevalueseq_tbl into access_largevalueseq_and_save_assignedseq_tbl (files: tofino-\*/main.p4, tofino-\*/p4src/header.p4, tofino-\*/p4src/regs/largevalueseq.p4, tofino-\*/configure/table_configure.py, common/packet_format_impl.h)
+				- Save seq_hdr.seq into clone_hdr.assignedseq_for_farreach when reset_largevalueseq for PUT/DELREQ_/SEQ_INSWITCH if cached=1 and valid=1
+				- Change clone_hdr_bytes from 14 as 18 for DistFarReach in libcommon
+			* Set seq_hdr.seq=clone_hdr.assignedseq_for_farreach when converting PUT/DELREQ_/_SEQ_INSWITCH and PUT/DELREQ_SEQ_INSWITCH_CASE1 into PUT/DELRES_SEQ (files: tofino-\*/p4src/egress_mat.p4, tofino-\*/configure/table_configure.py)
+		+ Add GETRES_/SERVER_SEQ, GETRES_LARGEVALUE_/SERVER_SEQ, PUTRES_/SERVER_SEQ, DELRES_/SERVER_SEQ in the following files
+			* Server: common/packet_format\*, distfarreach/common_impl.h, distfarreach/server_impl.h
+			* TODO: Client: new files in inswitchcache-java-lib/core/packets/, inswitchcache-java-lib/core/db/UdpNative.java
+			* Switch: tofino-\*/main.p4, tofino-\*/common.py, tofino-leaf/p4src/ingress_mat.p4, tofino-\*/p4src/egress_mat.p4, tofino-\*/configure/table_configure.py
+				- GETRES_/SERVER_SEQ, GETREQ_INSWITCH, GETRES_LATEST/DELETED_SEQ, GETRES_LATEST/DELETED_SEQ_SERVER, GETRES_LATEST/DELETED_SEQ_SERVER_INSWITCH -> GETRES_SEQ (including ipv4_forward_tbl, ig_port_forward_tbl for GETRES_SERVER_SEQ, access_savedseq_tbl, another_eg_port_forward_tbl, update_pktlen_tbl, update_ipmac_srcport_tbl, add_and_remove_value_header_hdr)
+					+ NOTE: GETREQ_INSWITCH needs to read savedseq
+				- GETRES_LARGEVALUE_/SERVER_SEQ -> GETRES_LARGEVALUE_SEQ (including ipv4_forward_tbl, ig_port_forward_tbl, update_pktlen_tbl, update_ipmac_srcport_tbl)
+				- PUTRES_/SERVER_SEQ, PUTREQ_INSWITCH, PUTREQ_SEQ_INSWITCH_CASE1 -> PUTRES_SEQ (including ipv4_forward_tbl, ig_port_forward_tbl for PUTRES_SERVER_SEQ, eg_port_forward_tbl, update_pktlen_tbl, update_ipmac_srcport_tbl)
+					+ NOTE: PUTREQ_INSWITCH needs to update clone_hdr.assignedseq_for_farreach
+				- DELRES_/SERVER_SEQ, DELREQ_INSWITCH, DELREQ_SEQ_INSWITCH_CASE1 -> GETRES_SEQ (including ipv4_forward_tbl, ig_port_forward_tbl for DELRES_SERVER_SEQ, eg_port_forward_tbl, update_pktlen_tbl, update_ipmac_srcport_tbl)
+					+ NOTE: DELREQ_INSWITCH needs to update clone_hdr.assignedseq_for_farreach
+		+ TODO: Fix server-side compilation errors
+	- TODO: Maintain client-side record preservations in a concurrent map for each logical client
+		+ TODO: Update the record preservation of (key, value, seq) into the map for each GET/PUT/DELRES of a cache hit
+	- TODO: Each client releases record preservations whose seq < snapshotseq after receiving upstream backup notification (keys and seqs) from controller
+		+ TODO: Add outband_packet_format.h and outband_packet_format.c for switchos/controller/server
+			+ TODO: Implement snapshot-related packets including snapshot signal, snapshot getdata ack, and snapshot senddata
+			+ TODO: Implement upstream-backup-related packets
+		+ TODO: Controller sends upstream backup notification to each physical client
+			* TODO: Count the notification of releasing snapshotted data from upstream backup into bandwidth cost
+		+ TODO: For speical case bwcost
+			* TODO: Switchos maintains and embeds per-server speical case bandwidth cost into snapshot data
+			* TODO: Controller dumps localbwcost as well as serveridx
+	- TODO: Dump client-side backup in TerminatorThread
+	- TODO: Debug and test
+		+ TODO: Fix compilation errors of client, switch, and server&controller
+		+ TODO: Pass p4 compilation under range partition
+		+ TODO: Pass p4 compilation under hash partition
+		+ TODO: Send PUT + READ + DEL + READ w/o and w/ warmup to check if client-side seq is correct
+			* TODO: Fix issue of not read seq from deleted set
+			* TODO: Fix issue of sending value with null value data
+			* TODO: Fix issue of invalid type of SNAPSHOT_SENDDATA
+			* TODO: Fix issue of upstream backup notification
+
+=== END HERE ===
+
+
+
+* TODO: FUTURE: SYNC server-side replay-based recovery for durability to DistFarreach
+
+
+
+* TODO: FUTURE: SYNC seq_hdr.snapshot_token for server-side snapshot to DistFarreach
+
+
+
+* FUTURE: SYNC record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ to DistFarReach (NOT need blocking for both eviction and large write now)
+	- Add GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD with val_hdr (must <= 128B), seq_hdr (savedseq), and stat_hdr
+		+ [IMPORTANT] NOTE: seq_hdr.seq in GETREQ_LARGEVALUEBLOCK_SEQ is meta.largevalueseq (the assigned seq of the lastet PUTREQ_LARGEVALUE), while seq_hdr.seq in GETREQ_LARGEVALUEBLOCK_RECORD is savedseq (the assigned seq of the in-switch record)
+		+ TODO: Add packet format in software (files: packet_format.h, packet_format_impl.h, farreach/common_impl.h)
+		+ TODO: Add packet format in hardware (files: tofino-\*/main.p4, tofino-\*/common.py)
+	- Update GETREQ to GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD in spine switch
+		+ TODO: Access update_vallen_tbl (set access_val_mode as 1 for update_val_tbl) and access_deleted_tbl for GETREQ_INSWITCH if cached=1 (same as original)
+		+ TODO: Update access_savedseq_tbl for GETREQ_INSWITCH if cached=1 for GETRES_SEQ, GETRES_BEINGEVICTED/LARGEVALUEBLOCK_RECORD (files: farreach/tofino/configure/table_configure.py)
+		+ TODO: Update another_eg_port_forward_tbl for update_getreq_inswitch_to_getreq_beingevicted/largevalueblock_record (files: farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py)
+		+ TODO: Update update_pktlen_tbl, update_ipmac_srcport_tbl, and add_and_remove_value_header_tbl (files: farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py)
+		+ -> TODO: leaf switch forwards GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD to server
+	- Update GETREQ_SPINE to GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD in leaf switch
+		+ TODO: Access update_vallen_tbl (set access_val_mode as 1 for update_val_tbl) and access_deleted_tbl for GETREQ_INSWITCH if cached=1 (same as original)
+		+ TODO: Update access_savedseq_tbl for GETREQ_INSWITCH if cached=1 for GETRES_SEQ, GETRES_BEINGEVICTED/LARGEVALUEBLOCK_RECORD (files: farreach/tofino/configure/table_configure.py)
+		+ TODO: Update another_eg_port_forward_tbl for update_getreq_inswitch_to_getreq_beingevicted/largevalueblock_record (files: farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py)
+		+ TODO: Update update_pktlen_tbl, update_ipmac_srcport_tbl, and add_and_remove_value_header_tbl (files: farreach/tofino/p4src/egress_mat.p4, farreach/tofino/configure/table_configure.py)
+	- Update server-side code
+		+ TODO: Backup the original server_impl.h as deprecated-src/server_impl.h.readblocking
+		+ TODO: Remove server-side read blocking (files: server_impl.h)
+			* TODO: Remove server_blockinfo_for_readblocking_list, server_blockinfomap_for_largevalueblock_list, server_mutex_for_largevalueblock_list
+			* TODO: Remove read blocking processing of PUTREQ_LARGEVALUE_SEQ/\_CASE3, XXX_BEINGEVICTED, and evictserver
+			* TODO: Remove case processing of GETREQ_LARGEVALUEBLOCK_SEQ and GETREQ_BEINGEVICTED
+			* TODO: Remove clear_blocklist()
+		+ TODO: Add processing of GETREQ_BEINGEVICTED/LARGEVALUEBLOCK_RECORD (both have the same logic)
+
+* ~~FUTURE: distiguish spine/leaf switch idx for distnocache and distfarreach as in distcache~~
+	- ~~Set correct spine/leaf switch idx for responses~~
+	- TODO: Set different SWITCHIDX_FOREVAL in stat_hdr.nodeidx_foreval
+
+* TODO: FUTURE: count per-leaf load to calculate normalized throughput

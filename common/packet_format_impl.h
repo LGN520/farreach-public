@@ -89,7 +89,7 @@ int Packet<key_t>::get_clone_bytes(method_t methodid) {
 			result = 8;
 			break;
 		case DISTFARREACH_ID:
-			result = 14;
+			result = 18; // clonenum + client.udpport + client.ip + client.mac + assignedseq_for_farreach
 			break;
 		case DISTNOCACHE_ID:
 			result = 14;
@@ -787,6 +787,25 @@ void GetResponseSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_
 	}*/
 }
 
+// GetResponseServerSeq (value must <= 128B)
+
+template<class key_t, class val_t>
+GetResponseServerSeq<key_t, val_t>::GetResponseServerSeq(method_t methodid, key_t key, val_t val, uint32_t seq, bool stat, uint16_t nodeidx_foreval) 
+	: GetResponseSeq<key_t, val_t>(methodid, key, val, seq, stat, nodeidx_foreval)
+{	
+	this->_type = optype_t(packet_type_t::GETRES_SERVER_SEQ);
+	INVARIANT(this->_methodid == DISTFARREACH_ID);
+}
+
+template<class key_t, class val_t>
+GetResponseServerSeq<key_t, val_t>::GetResponseServerSeq(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_SERVER_SEQ);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
 // GetRequestBeingevictedRecord (value must <= 128B)
 
 template<class key_t, class val_t>
@@ -977,6 +996,24 @@ PutResponseServer<key_t>::PutResponseServer(method_t methodid, key_t key, bool s
 	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
 }
 
+// PutResponseServerSeq
+
+template<class key_t>
+PutResponseServerSeq<key_t>::PutResponseServerSeq(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t nodeidx_foreval) 
+	: PutResponseSeq<key_t>(methodid, key, seq, stat, nodeidx_foreval)
+{	
+	this->_type = optype_t(packet_type_t::PUTRES_SERVER_SEQ);
+	INVARIANT(methodid == DISTFARREACH_ID);
+}
+
+template<class key_t>
+PutResponseServerSeq<key_t>::PutResponseServerSeq(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTRES_SERVER_SEQ);
+}
+
 // DelResponse
 
 template<class key_t>
@@ -1067,6 +1104,24 @@ DelResponseServer<key_t>::DelResponseServer(method_t methodid, key_t key, bool s
 {	
 	this->_type = optype_t(packet_type_t::DELRES_SERVER);
 	INVARIANT(!Packet<key_t>::is_singleswitch(methodid));
+}
+
+// DelResponseServerSeq
+
+template<class key_t>
+DelResponseServerSeq<key_t>::DelResponseServerSeq(method_t methodid, key_t key, uint32_t seq, bool stat, uint16_t nodeidx_foreval) 
+	: DelResponseSeq<key_t>(methodid, key, seq, stat, nodeidx_foreval)
+{	
+	this->_type = optype_t(packet_type_t::DELRES_SERVER_SEQ);
+	INVARIANT(methodid == DISTFARREACH_ID);
+}
+
+template<class key_t>
+DelResponseServerSeq<key_t>::DelResponseServerSeq(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DELRES_SERVER_SEQ);
 }
 
 // ScanResponseSplit
@@ -4135,6 +4190,30 @@ size_t GetResponseLargevalueServer<key_t, val_t>::get_frag_hdrsize(method_t meth
 	return Packet<key_t>::get_ophdrsize(methodid); // op_hdr
 }
 
+// GetResponseLargevalueServerSeq (value must > 128B)
+
+template<class key_t, class val_t>
+GetResponseLargevalueServerSeq<key_t, val_t>::GetResponseLargevalueServerSeq(method_t methodid, key_t key, val_t val, uint32_t seq, bool stat, uint16_t nodeidx_foreval) 
+	: GetResponseLargevalueSeq<key_t, val_t>(methodid, key, val, seq, stat, nodeidx_foreval)
+{	
+	INVARIANT(methodid == DISTFARREACH_ID);
+	this->_type = static_cast<optype_t>(packet_type_t::GETRES_LARGEVALUE_SERVER_SEQ);
+}
+
+template<class key_t, class val_t>
+GetResponseLargevalueServerSeq<key_t, val_t>::GetResponseLargevalueServerSeq(method_t methodid, const char * data, uint32_t recv_size) {
+	INVARIANT(methodid == DISTFARREACH_ID);
+	this->_methodid = methodid;
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_LARGEVALUE_SERVER_SEQ);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+size_t GetResponseLargevalueServerSeq<key_t, val_t>::get_frag_hdrsize(method_t methodid) {
+	return Packet<key_t>::get_ophdrsize(methodid); // op_hdr
+}
+
 // For key being evicted
 
 // GetRequestBeingevicted
@@ -4436,6 +4515,9 @@ static size_t get_frag_hdrsize(method_t methodid, packet_type_t type) {
 	}
 	else if (type == packet_type_t::GETRES_LARGEVALUE_SEQ) {
 		frag_hdrsize = GetResponseLargevalueSeq<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
+	}
+	else if (type == packet_type_t::GETRES_LARGEVALUE_SERVER_SEQ) {
+		frag_hdrsize = GetResponseLargevalueServerSeq<netreach_key_t, val_t>::get_frag_hdrsize(methodid);
 	}
 	else if (type == packet_type_t::LOADREQ) {
 		frag_hdrsize = LoadRequest<netreach_key_t, val_t>::get_frag_hdrsize(methodid);

@@ -517,23 +517,23 @@ action update_delreq_seq_to_delreq_seq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
-action update_getres_server_to_getres() {
-	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
+action update_getres_server_seq_to_getres_seq() {
+	modify_field(op_hdr.optype, GETRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_SEQ);
 }
 
 action update_scanres_split_server_to_scanres_split() {
 	modify_field(op_hdr.optype, SCANRES_SPLIT);
 }
 
-action update_putres_server_to_putres() {
-	modify_field(op_hdr.optype, PUTRES);
-	modify_field(shadowtype_hdr.shadowtype, PUTRES);
+action update_putres_server_seq_to_putres_seq() {
+	modify_field(op_hdr.optype, PUTRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, PUTRES_SEQ);
 }
 
-action update_delres_server_to_delres() {
-	modify_field(op_hdr.optype, DELRES);
-	modify_field(shadowtype_hdr.shadowtype, DELRES);
+action update_delres_server_seq_to_delres_seq() {
+	modify_field(op_hdr.optype, DELRES_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, DELRES_SEQ);
 }
 
 action update_warmupreq_spine_to_warmupreq() {
@@ -573,9 +573,10 @@ action update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
-action update_getres_largevalue_server_to_getres_largevalue() {
-	modify_field(op_hdr.optype, GETRES_LARGEVALUE);
-	// NOTE: NO shadowtype_hdr for GETRES_LARGEVALUE
+action update_getres_largevalue_server_seq_to_getres_largevalue_seq() {
+	modify_field(op_hdr.optype, GETRES_LARGEVALUE_SEQ);
+	// NOTE: NO shadowtype_hdr for GETRES_LARGEVALUE -> yet with shadowtype_hdr for GETRES_LARGEVALUE_SEQ
+	modify_field(shadowtype_hdr.shadowtype, GETRES_LARGEVALUE_SEQ);
 }
 
 action update_putreq_seq_beingevicted_to_putreq_seq_case3_beingevicted() {
@@ -646,8 +647,8 @@ table ig_port_forward_tbl {
 		update_delreq_seq_to_delreq_seq_inswitch;
 		update_getres_server_to_getres;
 		update_scanres_split_server_to_scanres_split;
-		update_putres_server_to_putres;
-		update_delres_server_to_delres;
+		update_putres_server_seq_to_putres_seq;
+		update_delres_server_seq_to_delres_seq;
 		update_warmupreq_spine_to_warmupreq;
 		update_loadreq_spine_to_loadreq;
 		update_warmupack_server_to_warmupack;
@@ -655,7 +656,7 @@ table ig_port_forward_tbl {
 		update_getres_latest_seq_server_inswitch_to_getres_latest_seq_inswitch;
 		update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch;
 		update_putreq_largevalue_seq_to_putreq_largevalue_seq_inswitch;
-		update_getres_largevalue_server_to_getres_largevalue;
+		update_getres_largevalue_server_seq_to_getres_largevalue_seq;
 		update_putreq_seq_beingevicted_to_putreq_seq_case3_beingevicted;
 		update_delreq_seq_beingevicted_to_delreq_seq_case3_beingevicted;
 		update_putreq_largevalue_seq_beingevicted_to_putreq_largevalue_seq_case3_beingevicted;
