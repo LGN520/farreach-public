@@ -1,7 +1,7 @@
 # README for benchmark (running guide)
 
 ### Method
-farreach / nocache / netcache / distfarreach / distnocache / distcache
+farreach / nocache / netcache
 
 ### Machine Requirements:</br>
 - 1 Main Client </br>
@@ -30,6 +30,11 @@ Table of Contents
    1. [Dynamic Workload](#31-evaluate-dynamic-workloads)
    2. [Static Workload](#32-evaluate-static-workload-single-switch)
 
+</br>
+
+4. Running Experiments
+   1. [Regular Experiments](#41-regular-experiments)
+   2. [Makeup Static Single Rotation](#42-makeup-static-single-rotation)
 
 </br></br>
 
@@ -220,6 +225,55 @@ Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.
 7. <u>[Under Main Client]</u> Aggregate statistics
    - Calculate aggregated statistics by `bash scripts/remote/calculate_statistics.sh` 
 
+</br></br>
+
+## 4.1 Regular Experiments
+To carry out experiments according to paper, we have set up the scripts for running specific tasks. The scripts are placed under `scripts/exps/`.
+1. <u>[Under Main Client]</u> Prepare Configuration
+   - Under `scripts/global.sh`, check on configurations:
+     - `SWITCH_PRIVATEKEY`: path to private key which will be used for remote connection to switch machine with root access;
+     - `CONNECTION_PRIVATEKEY`: path to private key which will be used for remote connection to other server/client machines;
+     - `EVALUATION_SCRIPTS_PATH`: path to these experiment scripts;
+     - `EVALUATION_OUTPUT_PREFIX`: path to the generated raw output
+2. <u>[Under Main Client]</u> Run Experiments
+   - To eliminate influence by rocksdb performance, the scripts target to run experiments for multiple round. Every time running the experiments, we need to define the specific round number `<roundnumber>` for running these experiment.
+   - For a specific experiment (exp_ycsb for example), run its corresponding scripts by `bash scripts/exps/run_exp_ycsb.sh<roundnumber>`.
+3. Experiments List and Scripts
+   | Exp # | Scripts |
+   | :---: | :---: |
+   | 1 | [run_exp_ycsb.sh](scripts/exps/run_exp_ycsb.sh) |
+   | 2 | [run_exp_latency.sh](scripts/exps/run_exp_latency.sh) | 
+   | 3 | [run_exp_scalability.sh](scripts/exps/run_exp_scalability.sh) | 
+   | 4 | [run_exp_write_ratio.sh](scripts/exps/run_exp_write_ratio.sh) |
+   | 5 | [run_exp_key_distribution.sh](scripts/exps/run_exp_key_distribution.sh) |
+   | 6 | [run_exp_value_size.sh](scripts/exps/run_exp_value_size.sh) |
+   | 7 | [run_exp_dynamic.sh](scripts/exps/run_exp_dynamic.sh) |
+   | 8 | [run_exp_snapshot.sh](scripts/exps/run_exp_snapshot.sh) |
+   | 9 | [run_exp_recovery.sh](scripts/exps/run_exp_recovery.sh) |
+
+</br></br>
+
+## 4.2 Makeup Static Single Rotation
+During experiments with static pattern, single rotation failure may happen due to database performance fluctuate or unstable network. We also provide scripts to run one single rotation from server rotations experiements to avoid re-run the whole experiment.
+1. <u>[Under Main Client]</u> Applicable Experiments
+   - All clients, servers and switchs are configured to be running static workload. The script applies for experiments:
+     - exp_key_distribution
+     - exp_latency
+     - exp_scalability
+     - exp_value_size
+     - exp_write_ratio
+     - exp_ycsb
+2. <u>[Under Main Client]</u> Run makeup single rotation
+   - Run experiment with command: `bash scripts/exps/run_makeup_rotation_exp.sh <expname> <roundnumber> <methodname> <workloadname> <serverscale> <bottleneckidx> <targetrotation> [targetthpt]`
+      - `expname`: experiment name (eg.: exp1)
+      - `roundnumber`: experiment round number (eg.: 1)
+      - `methodname`: experiment method (eg.: farreach)
+      - `workloadname`: workload name (eg.: workloada)
+      - `serverscale`: number of servers for rotation (eg.: 16)
+      - `bottleneckidx`: bottleneck server index for rotation with this workload (eg.: 14)
+      - `targetrotation`: makeup rotation index (eg.: 10)
+      - `targetthpt`: throughput target of this rotation, only applicable for exp2.
+  
 
 </br>
 </br>
@@ -227,11 +281,21 @@ Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.
 Appendix
 ====================================
 
-## Static server idx for different workloads and scale
-
+## Static Workload Server Bottleneck Index
 | Workload Name | Scale | Bottleneck Serveridx |
-| --- | --- | --- |
+| :---: | :---: | :---: |
+| workload-load | 16 | 13 |
 | workloada | 16 | 14 |
+| workloadb | 16 | 14 |
+| workloadc | 16 | 14 |
+| workloadd | 16 | 15 |
+| workloadf | 16 | 14 |
+| synthetic | 16 | 14 |
+| synthetic-* | 16 | 14 |
+| value-size-* | 16 | 14 |
+| skewness-90 | 16 | 14 |
+| skewness-95 | 16 | 14 |
+| uniform | 16 | 8 |
 | workloada | 32 | 29 |
 | workloada | 64 | 59 |
 | workloada | 128 | 118 |

@@ -10,9 +10,8 @@ fi
 roundnumber=$1
 
 exp5_server_scale="16"
-exp5_server_scale_bottleneck="14"
 exp5_method_list=("farreach" "netcache" "nocache")
-exp5_workload_list=("skewness-90" "skewness-95")
+exp5_workload_list=("skewness-90" "skewness-95" "uniform")
 exp5_existed_workload_list=("synthetic")
 exp5_backup_workload_list=("skewness-99")
 exp5_output_path="${EVALUATION_OUTPUT_PREFIX}/exp5/${roundnumber}"
@@ -37,10 +36,13 @@ for exp5_method in ${exp5_method_list[@]}; do
     sed -i "/^workload_name=/s/=.*/="${exp5_workload}"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
     sed -i "/^server_total_logical_num=/s/=.*/="${exp5_server_scale}"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
     sed -i "/^server_total_logical_num_for_rotation=/s/=.*/="${exp5_server_scale}"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
-    sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="${exp5_server_scale_bottleneck}"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
     sed -i "/^controller_snapshot_period=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
     sed -i "/^switch_kv_bucket_num=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
-
+    if [ "x${exp6_workload}" == "xuniform" ]; then
+      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="5"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
+    else
+      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="14"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
+    fi
 
     cd ${CLIENT_ROOTPATH}
     echo "[exp5][${exp5_method}][${exp5_workload}] prepare server rotation" 
