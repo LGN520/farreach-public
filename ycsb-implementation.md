@@ -42,8 +42,8 @@
 	+ 5 rounds of exp9
 	+ 3-round reuslts: exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8 (only dynamic), exp9
 	+ TODO: Update eval with 5 rounds
-		* TODO: Update farreach + avg latency + round 4 in exp2 latency
-		* TODO: Update farreach + 32 servers + round 3 in exp3 scalability
+		* Update farreach + avg latency + round 4 in exp2 latency
+		* Update farreach + 32 servers + round 3 in exp3 scalability
 		* TODO: Update 4th/5th rounds for exp3
 		* TODO: Update numbers in eval
 
@@ -51,16 +51,16 @@
 	+ Siyuan
 		- Update eval with results of 3 rounds
 	+ HuanCheng
-		- TODO: Continue evaluation on 4th/5th rounds
+		- Continue evaluation on 4th/5th rounds
 		- TODO: Add a script for single rotation mode, and update benchmark.md
 		- TODO: Add a script for exp9 recovery time calculation
 			- TODO: Update benchmark.md to guide how to test recovery time based on existing recovery information without extra server rotations: use the script to resume recovery information (upstream backups and in-switch snapshot) to clients/servers -> perform exp9.sh with a parameter indicating only-recovery mode
 		- TODO: Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
-			- TODO: Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh)
-			- TODO: Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
+			- TODO: Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh, reason for using the last 5 over 6 run times of test_recovery_time.sh)
+			- Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
 				+ NOTE: NEVER source common.sh, which will be modified by run_expXXX.sh
-			- TODO: For each method (nocache/netcache/farreach), copy exp1/method_config.ini into method/configs/config.ini.normal as the template of each exp.sh -> for each other exp, say exp5, diff exp5/method_config.ini with method/configs/config.ini.normal to see if we have to change more lines by sed in exp.sh (e.g., change workloadmode from 0 to 1 for exp5)
-			- TODO: [Difficult?] Rename exps so as to be independent with exp order in paper, including script name, the path in script, and results directory name
+			- For each method (nocache/netcache/farreach), prepare and sync config.ini based on configs/config.ini.static.setup
+			- Rename exps so as to be independent with exp order in paper, including script name, TODO: the path in script, and results directory name
 				+ NOTE: you can define a variable in each run_expXXX.sh to construct the exp-related path strings
 		- TODO: Update benchmark.md to make every step of each experiment clear (not only the following to-dos)
 			+ TODO: add how to use scripts for automatic evaluation, but still keep the original content about how to perform evaluation manually under each experiment, such that readers know the details of our experiments
@@ -73,6 +73,7 @@
 				+ NOTE: you have to specify the private key in Tofino such that it can scp files from clients/servers into switch
 					* Otherwise, you may have an error message of `Permission denied (public key) for scp` in farreach/localscripts/fetch*.sh 
 			+ TODO: Write down how to calculate average recovery time into benchmark.md
+		- TODO: Compress json files as a tarball file and upload it to google cloud if not extremely large
 
 - 11.29
 	+ Siyuan
@@ -874,12 +875,13 @@
 
 ## FUTURE
 
-* FUTURE: SYNC read blocking for PUTREQ_LARGEVALUE pktloss to DistFarreach
+* FUTURE: SYNC read blocking for PUTREQ_LARGEVALUE pktloss to DistFarreach (OBSOLETE due to record embedding)
 	+ Switch: largevalueseq_reg and is_largevalueblock
 	+ Server: per-server blockinfomap and mutex for read blocking
 	+ FUTURE: SYNC record embedding for GETREQ_BEINGEVICTED and GETREQ_LARGEVALUEBLOCK_SEQ to DistFarReach (NOT need blocking for both eviction and large write now)
 * FUTURE: SYNC client-side upstream backup and server-side replay-based recovery for durability to DistFarreach
 * FUTURE: SYNC seq_hdr.snapshot_token for server-side snapshot to DistFarreach
+* FUTURE: SYNC record embedding to avoid read blocking to DistFarReach
 
 ## DEPRECATED
 
