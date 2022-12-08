@@ -134,6 +134,7 @@ header_type clone_t {
 		client_udpport: 16;
 		client_ip: 32;
 		client_mac: 48;
+		assignedseq_for_farreach: 32;
 	}
 }
 
@@ -172,6 +173,8 @@ header_type metadata_t {
 		is_hot: 1;
 		//validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
+		largevalueseq: 32;
+		is_largevalueblock: 1;
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;
 		is_lastclone_for_pktloss: 1;

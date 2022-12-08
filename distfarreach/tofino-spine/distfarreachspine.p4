@@ -252,6 +252,8 @@
 #include "p4src/regs/val.p4"
 #include "p4src/regs/case1.p4"
 
+#include "p4src/regs/largevalueseq.p4"
+
 #include "p4src/ingress_mat.p4"
 #include "p4src/egress_mat.p4"
 
@@ -326,6 +328,8 @@ control egress {
 
 	// Stage 2
 	apply(access_latest_tbl);
+	// save seq_hdr.seq into clone_hdr.assignedseq_for_farreach for PUT/DELREQ_INSWITCH, which is used by cache hit response of PUT/DELREQ_INSWITCH and PUT/DELREQ_SEQ_INSWITCH_CASE1 -> [IMPORTANT] must be placed between access_seq_tbl and access_savedseq_tbl
+	apply(access_largevalueseq_and_save_assignedseq_tbl); // used for invalidation of PUTREQ_LARGEVALUE
 	apply(save_client_info_tbl); // save srcip/srcmac/udp.dstport (client ip/mac/udpport) for cache hit response of GET/PUT/DELREQ_INSWITCH
 
 	// NOTE: we do NOT need seq and savedseq now if using serverstatus
@@ -335,6 +339,9 @@ control egress {
 	// TODO: apply(serverstatus_tbl);
 
 	// Stage 3
+	if (meta.largevalueseq != 0) {
+		apply(is_largevalueblock_tbl); // used for invalidation of PUTREQ_LARGEVALUE
+	}
 	apply(access_deleted_tbl);
 	apply(update_vallen_tbl);
 	apply(access_savedseq_tbl);

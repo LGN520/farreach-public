@@ -57,6 +57,21 @@ table save_client_info_tbl {
 	size: 4;
 }
 
+// Stage 3
+
+action set_is_largevalueblock() {
+	modify_field(meta.is_largevalueblock, 1);
+}
+
+@pragma stage 3
+table is_largevalueblock_tbl {
+	actions {
+		set_is_largevalueblock;
+	}
+	default_action: set_is_largevalueblock();
+	size: 1;
+}
+
 // Stage 8
 
 #ifdef DEBUG

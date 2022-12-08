@@ -134,6 +134,7 @@ header_type clone_t {
 		client_udpport: 16;
 		client_ip: 32;
 		client_mac: 48;
+		assignedseq_for_farreach: 32;
 	}
 }
 
@@ -165,6 +166,8 @@ header_type metadata_t {
 		hashval_for_partition: 16; // at most 32K
 #endif
 		is_latest: 1; // if the entry is latest
+		largevalueseq: 32;
+		is_largevalueblock: 1;
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;
 		is_lastclone_for_pktloss: 1;
