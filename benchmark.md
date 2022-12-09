@@ -151,9 +151,9 @@ To carry out experiments according to paper, we have set up the scripts for runn
 		- If you have an error message of `hot key verification failed`, check the ssh connectivity between the switch and all clients/servers
 		- If you have an error message of `permission denied`, check the correctness of ownership for /tmp/farreach in the switch and servers
 		- If you have an error message of `permission denied (public key)`, check whether you spefcify the correct private key in the switch such that it can copy files from clients/servers
-	- If you want to test recovery time based on existing recovery information instead of running server rotations again
+	- If you want to test recovery time based on existing recovery information instead of running server rotations again, in run_exp_recovery.sh:
       - Step 1: make sure `EVALUATION_OUTPUT_PREFIX` points to the path of existing recovery files.  
-      - Step 2: start experiment with argument `recoeveryonly` set to `1`.
+      - Step 2: run the script with argument `recoeveryonly` set to `1`.
 
 </br></br>
 
@@ -289,6 +289,13 @@ Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.
 - [calculate_statistics.sh](scripts/remote/calculate_statistics.sh): calculate throughput and latency under static or dynamic workload
 - [calculate_bwcost.sh](scripts/remote/calculate_bwcost.sh): calculate bandwidth cost
 - [calculate_recovery_time.sh](scripts/remote/calculate_recovery_time.sh): calculate recovery time
+- NOTEs
+	- If you use [automatic way (3.1 and 3.2)](#31-regular-experiments) to perform evaluation
+		- As the exp scripts have aggregated the statistics automatically, you can redirect scripts' output and find aggregate statistics in the output file
+		- For example, after `nohup bash scripts/exps/run_exp_ycsb.sh >tmp.out 2>&1 &`, you can find statistics in tmp.out
+	- If you use [manual way (4.1 and 4.2)](#41-evaluate-dynamic-workload) to perform evaluation
+		- You can run the aggregate scripts (e.g., calculate_statistics.sh) guided in [5.2](#52-scripts-usage-and-example) to get the aggregate statistics
+		- The aggregate scripts will calculate the statistics based on the setting in global.sh, common.sh, and {method}/config.ini
 
 </br></br>
 
