@@ -10,6 +10,15 @@
 	+ [READ-ONLY; OBSELETE-AFTER-EXTENSION] NetBuffer-backup/: the backup of latest version for the private repo (to avoid bugs of `git rm --cached`)
 		* Condidential files + submodule of benchmark/ + multi-switch files
 
+- [OBSOLETE now] Trial of in-memory KVS to reproduce NetCache
+	- Prepare TommyDS
+		+ Run `bash scripts-inmemory/local/changeto_inmemory_testbed.sh` to perform the following steps
+			+ In common/helper.h: uncomment `USE_TOMMYDS_KVS`
+			+ In farreach/Makefile: use `TOMMYDS_LDLIBS` instead of `ROCKSDB_LDLIBS` for `server`
+		+ Run `bash scripts-inmemory/remote/sync.sh` to sync required files including tommyds-2.2/ to all machines
+		+ In each server, enter tommyds-2.2/ and run `make staticlib` to compile TommyDS before `bash scripts/remote/makeserver.sh`
+	- NOTE: use `git checkout -- <filename>` to cancel the changes of the above files
+
 ## TODO list
 
 - END of FarReach
@@ -41,11 +50,11 @@
 			+ FarReach + disable snapshot + static(0) / dynamic
 	+ 5 rounds of exp9
 	+ 3-round reuslts: exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8 (only dynamic), exp9
-	+ TODO: Update eval with 5 rounds
+	+ Update eval with 5 rounds
 		* Update farreach + avg latency + round 4 in exp2 latency
 		* Update farreach + 32 servers + round 3 in exp3 scalability
-		* TODO: Update 4th/5th rounds for exp3
-		* TODO: Update numbers in eval
+		* Update 4th/5th rounds for exp3
+		* Update numbers in eval
 
 - 11.30
 	+ Siyuan
@@ -56,16 +65,16 @@
 		- Add a script for exp9 recovery time calculation
 			- TODO: Update benchmark.md to guide how to test recovery time based on existing recovery information without extra server rotations: use the script to resume recovery information (upstream backups and in-switch snapshot) to clients/servers -> perform exp9.sh with a parameter indicating only-recovery mode
 		- Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
-			- TODO: Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh, reason for using the last 5 over 6 run times of test_recovery_time.sh)
+			- Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh, reason for using the last 5 over 6 run times of test_recovery_time.sh)
 			- Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
 				+ NOTE: NEVER source common.sh, which will be modified by run_expXXX.sh
 			- For each method (nocache/netcache/farreach), prepare and sync config.ini based on configs/config.ini.static.setup
-			- Rename exps so as to be independent with exp order in paper, including script name, TODO: the path in script, and results directory name
+			- Rename exps so as to be independent with exp order in paper, including script name, the path in script, and results directory name
 				+ NOTE: you can define a variable in each run_expXXX.sh to construct the exp-related path strings
-		- TODO: Update benchmark.md to make every step of each experiment clear (not only the following to-dos)
-			+ TODO: add how to use scripts for automatic evaluation, but still keep the original content about how to perform evaluation manually under each experiment, such that readers know the details of our experiments
-			+ TODO: How to create SSH key for switch and change private key path in common.sh if necessary
-			+ TODO: add the following two notes to benchmark.md for exp10
+		- Update benchmark.md to make every step of each experiment clear (not only the following to-dos)
+			+ add how to use scripts for automatic evaluation, but still keep the original content about how to perform evaluation manually under each experiment, such that readers know the details of our experiments
+			+ OBSOLETE: How to create SSH key for switch and change private key path in common.sh if necessary
+			+ add the following two notes to benchmark.md for exp9
 				+ NOTE: you have to execute `ssh` from bf1 to all clients/servers, and from each server to all clients such that bf1/server has the host key of clients/servers (note that you should have the file of ~/.ssh/know_hosts in advance)
 					* Otherwise, you will have an error message of `host key verification failed` for scp in farreach/localscripts/fetch*.sh
 				+ NOTE: you have to use the correct ownership for /tmp/farreach in bf1 and servers

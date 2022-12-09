@@ -31,9 +31,11 @@ function getTiming(){
 # Collect recovery information for servers
 echo "Collect recovery information for servers"
 begin_time_2=`date +%s.%N`
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
+#ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
 end_time_2_1=`date +%s.%N`
-ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
+#ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
+ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
 end_time_2_2=`date +%s.%N`
 collect_time_2_1=$(getTiming ${begin_time_2} ${end_time_2_1})
 collect_time_2_2=$(getTiming ${begin_time_2} ${end_time_2_2})

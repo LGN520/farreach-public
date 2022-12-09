@@ -41,11 +41,17 @@ rm -r ./nocache/deprecated-synthetic
 rm -r ./nocache/deprecated-tofino
 rm -r ./nocache/deprecatedscripts
 rm -r ./ovs
+rm ./scripts/local/calculate_statistics_helper.py.bak.*
+rm -r ./scripts/remote/deprecated
 rm -r ./tommyds-2.2
 rm evaluation-progress.md
 rm rmhistory.sh
 rm update_public_repo.sh
 rm ycsb-implementation.md
+
+# Rename benchmark.md
+mv benchmark.md README.md
+git add README.md
 
 # Remove submodule information
 rm .gitmodules
