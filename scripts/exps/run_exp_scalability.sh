@@ -10,7 +10,7 @@ fi
 roundnumber=$1
 
 exp3_workload="workloada"
-exp3_method_list=("farreach")
+exp3_method_list=("farreach" "netcache" "nocache")
 exp3_scalability_list=("32" "64" "128")
 exp3_scalability_bottleneck_list=("29" "59" "118")
 exp3_output_path="${EVALUATION_OUTPUT_PREFIX}/exp3/${roundnumber}"
