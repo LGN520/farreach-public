@@ -19,6 +19,7 @@ lastcommitid=$(git show --summary | head -n 1 | awk '{print $2}')
 mv benchmark benchmark-tmp
 git submodule deinit benchmark
 git rm --cached benchmark
+rm -r benchmark
 mv benchmark-tmp benchmark
 git add benchmark
 
