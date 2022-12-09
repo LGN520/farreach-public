@@ -19,7 +19,7 @@ exp9_server_scale="16"
 exp9_server_scale_bottleneck="14"
 exp9_round_list=("0" "1" "2" "3" "4" "5") # do one extra round 0 to wait for database to finish flush and compaction
 exp9_cachesize_list=("100" "1000" "10000")
-exp9_output_path="${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}"
+
 
 ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
 
@@ -59,6 +59,7 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
   fi
 
   for exp9_roundnumber in ${exp9_round_list[@]}; do
+    exp9_output_path="${EVALUATION_OUTPUT_PREFIX}/exp9/${exp9_roundnumber}"
     mkdir -p ${exp9_output_path}/${exp9_cachesize}
 
     if [ ${exp9_recoveryonly} -eq 0 ]; then
