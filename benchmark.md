@@ -17,26 +17,20 @@ Table of Contents
    1. [Environment Installation](#11-environment-installation)
    2. [Code Compilation](#12-code-compilation)
    3. [Testbed Configuration](#13-testbed-configuration)
-
-</br>
-
 2. Data Preperation
    1. [Loading Procedure](#21-loading-phase)
    2. [Keydump Procedure](#22-workload-analysis--dump-keys)
-
-</br>
-
 3. Running Experiments (Automatic Evaluation)
    1. [Regular Experiments](#31-regular-experiments)
    2. [Makeup Static Single Rotation](#32-makeup-static-single-rotation)
-
-</br>
-
 4. Running Workloads (Manual Evaluation)
    1. [Dynamic Workload](#41-evaluate-dynamic-workload)
    2. [Static Workload](#42-evaluate-static-workload-server-rotation)
+5. Aggregate Statistics
+   1. [Aggregate Scripts](#51-aggregate-scripts)
+   2. [Scripts Usage and Example](#52-scripts-usage-and-example)
 
-</br></br>
+</br>
 
 Contents
 ====================================
@@ -127,27 +121,30 @@ Contents
 
 ## 3.1 Regular Experiments
 To carry out experiments according to paper, we have set up the scripts for running specific tasks. The scripts are placed under `scripts/exps/`.
-1. <u>[Under Main Client]</u> Prepare Configuration
+
+1. Experiments List and Scripts:
+
+   | Exp # |                                 Scripts                                 |
+   | :---: | :---------------------------------------------------------------------: |
+   |   1   |             [run_exp_ycsb.sh](scripts/exps/run_exp_ycsb.sh)             |
+   |   2   |          [run_exp_latency.sh](scripts/exps/run_exp_latency.sh)          |
+   |   3   |      [run_exp_scalability.sh](scripts/exps/run_exp_scalability.sh)      |
+   |   4   |      [run_exp_write_ratio.sh](scripts/exps/run_exp_write_ratio.sh)      |
+   |   5   | [run_exp_key_distribution.sh](scripts/exps/run_exp_key_distribution.sh) |
+   |   6   |       [run_exp_value_size.sh](scripts/exps/run_exp_value_size.sh)       |
+   |   7   |          [run_exp_dynamic.sh](scripts/exps/run_exp_dynamic.sh)          |
+   |   8   |         [run_exp_snapshot.sh](scripts/exps/run_exp_snapshot.sh)         |
+   |   9   |         [run_exp_recovery.sh](scripts/exps/run_exp_recovery.sh)         |
+
+2. <u>[Under Main Client]</u> Prepare Configuration
    - Under `scripts/global.sh`, check on configurations:
      - `SWITCH_PRIVATEKEY`: path to private key which will be used for remote connection to switch machine with root access;
      - `CONNECTION_PRIVATEKEY`: path to private key which will be used for remote connection to other server/client machines;
      - `EVALUATION_SCRIPTS_PATH`: path to these experiment scripts;
      - `EVALUATION_OUTPUT_PREFIX`: path to the generated raw output
-2. <u>[Under Main Client]</u> Run Experiments
+3. <u>[Under Main Client]</u> Run Experiments
    - To eliminate influence by rocksdb performance, the scripts target to run experiments for multiple round. Every time running the experiments, we need to define the specific round number `<roundnumber>` for running these experiment.
    - For a specific experiment (exp_ycsb for example), run its corresponding scripts by `bash scripts/exps/run_exp_ycsb.sh<roundnumber>`.
-3. Experiments List and Scripts
-   | Exp # | Scripts |
-   | :---: | :---: |
-   | 1 | [run_exp_ycsb.sh](scripts/exps/run_exp_ycsb.sh) |
-   | 2 | [run_exp_latency.sh](scripts/exps/run_exp_latency.sh) | 
-   | 3 | [run_exp_scalability.sh](scripts/exps/run_exp_scalability.sh) | 
-   | 4 | [run_exp_write_ratio.sh](scripts/exps/run_exp_write_ratio.sh) |
-   | 5 | [run_exp_key_distribution.sh](scripts/exps/run_exp_key_distribution.sh) |
-   | 6 | [run_exp_value_size.sh](scripts/exps/run_exp_value_size.sh) |
-   | 7 | [run_exp_dynamic.sh](scripts/exps/run_exp_dynamic.sh) |
-   | 8 | [run_exp_snapshot.sh](scripts/exps/run_exp_snapshot.sh) |
-   | 9 | [run_exp_recovery.sh](scripts/exps/run_exp_recovery.sh) |
 
 - NOTEs for exp9
 	- Error messages for scp in farreach/localscripts/fetch\*.sh
@@ -155,15 +152,8 @@ To carry out experiments according to paper, we have set up the scripts for runn
 		- If you have an error message of `permission denied`, check the correctness of ownership for /tmp/farreach in the switch and servers
 		- If you have an error message of `permission denied (public key)`, check whether you spefcify the correct private key in the switch such that it can copy files from clients/servers
 	- If you want to test recovery time based on existing recovery information instead of running server rotations again
-		- TODO
-
-4. Aggregate statistics
-- Scripts
-	- [calculate_statistics.sh](scripts/remote/calculate_statistics.sh): calculate throughput and latency
-	- [calculate_bwcost.sh](scripts/remote/calculate_bwcost.sh): calculate bandwidth cost
-	- [calculate_recovery_time_helper.py](scripts/local/calculate_recovery_time_helper.py): calculate recovery time
-- Usage
-	- TODO
+      - Step 1: make sure `EVALUATION_OUTPUT_PREFIX` points to the path of existing recovery files.  
+      - Step 2: start experiment with argument `recoeveryonly` set to `1`.
 
 </br></br>
 
@@ -293,6 +283,76 @@ Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.
 7. <u>[Under Main Client]</u> Aggregate statistics
    - Calculate aggregated statistics by `bash scripts/remote/calculate_statistics.sh` 
   
+</br></br>
+
+## 5.1 Aggregate Scripts 
+- [calculate_statistics.sh](scripts/remote/calculate_statistics.sh): calculate throughput and latency under static or dynamic workload
+- [calculate_bwcost.sh](scripts/remote/calculate_bwcost.sh): calculate bandwidth cost
+- [calculate_recovery_time.sh](scripts/remote/calculate_recovery_time.sh): calculate recovery time
+
+</br></br>
+
+## 5.2 Scripts Usage and Example
+- Calculate throughput and latency of static workload with no target throughput specified
+  - `bash scripts/remote/calculate_statistics.sh 0`
+  - Applicable experiments: exp1, exp3, exp4, exp5, exp6, exp9.
+  - Output example:
+   ```bash
+      ...
+      [STATIC] average bottleneck totalthpt: 0.092875 MOPS; switchthpt: 0.0245 MOPS; serverthpt: 0.0675625 MOPS
+      [STATIC] aggregate throughput: 1.31126577666 MOPS; normalized throughput: 19.4081891088, imbalanceratio: 1.01388888889
+      [STATIC] average latency 286.901026111 us, medium latency 85 us, 90P latency 584 us, 95P latency 1717 us, 99P latency 2597 us
+   ```
+- Calculate throughput and latency of static workload with target aggregate throughput specified
+  - `bash scripts/remote/calculate_statistics.sh 1`
+  - Applicable experiments: exp2.
+  - Output example:
+   ```bash
+      ...
+      [STATIC] average bottleneck totalthpt: 0.0173125 MOPS; switchthpt: 0.00975 MOPS; serverthpt: 0.006875 MOPS
+      [STATIC] aggregate throughput: 0.190073026316 MOPS; normalized throughput: 27.6469856459, imbalanceratio: 1.0
+      [STATIC] average latency 94.8354988254 us, medium latency 57 us, 90P latency 90 us, 95P latency 123 us, 99P latency 1123 us
+   ```
+
+- Calculate throughput and latency of dynamic workload
+   - `bash scripts/remote/calculate_statistics.sh 0`
+   - Applicable experiments: exp7, exp8.
+   - Output example:
+   ```bash
+      ...
+      [DYNAMIC] per-second statistics:
+      thpt (MOPS): [0.178, 0.245, ... , 0.215]
+      normalized thpt: [3.2962962962962963, 3.310810810810811, ... , 3.2575757575757573]
+      imbalanceratio: [1.0, 1.0, ... , 1.0153846153846153]
+      avg latency (us): [497.21625182852614, 517.8129587343011, ... , 501.72249302450666]
+      medium latency (us): [120, 95, ... , 132]
+      90P latency (us): [1487, 1571, ... , 1579]
+      95P latency (us): [1535, 1610, ... , 1642]
+      99P latency (us): [1614, 1687, ... , 1729]
+      [DYNAMIC][OVERALL] avgthpt 0.228106666667 MOPS, avelat 0 us, medlat 0 us, 90Plat 0 us, 95Plat 0 us, 99Plat 0 us
+   ```
+- Calculate system bandwidth cost 
+  - `bash scripts/remote/calculate_bwcost.sh`
+  - Applicable experiment: exp8.
+  - Output example:
+   ```bash
+      perserver avglocalbwcost: [0.18816512500000002, 0.18981975, ... s, 0.19562]
+      average bwcost of entire control plane: 4.18830950595 MiB/s
+   ```
+
+- Calculate system recovery time
+  - `bash scripts/remote/calculate_recovery_time.sh`
+  - Applicable experiment: exp9.
+  - Output example:
+   ```bash
+      Server collect time: 1.0 s
+      Server preprocess time: 0.016991 s
+      Server replay time: 0.0106864375 s
+      Server total recovery time: 1.0276774375 s
+      Switch collect time: 0.9605 s
+      Switch replay time: 0.338202 s
+      Switch total recovery time: 1.298702 s
+   ```
 
 </br>
 </br>
@@ -302,22 +362,22 @@ Appendix
 
 ## Static Workload Server Bottleneck Index
 | Workload Name | Scale | Bottleneck Serveridx |
-| :---: | :---: | :---: |
-| workload-load | 16 | 13 |
-| workloada | 16 | 14 |
-| workloadb | 16 | 14 |
-| workloadc | 16 | 14 |
-| workloadd | 16 | 15 |
-| workloadf | 16 | 14 |
-| synthetic | 16 | 14 |
-| synthetic-\* | 16 | 14 |
-| valuesize-\* | 16 | 14 |
-| skewness-90 | 16 | 14 |
-| skewness-95 | 16 | 14 |
-| uniform | 16 | 8 |
-| workloada | 32 | 29 |
-| workloada | 64 | 59 |
-| workloada | 128 | 118 |
+| :-----------: | :---: | :------------------: |
+| workload-load |  16   |          13          |
+|   workloada   |  16   |          14          |
+|   workloadb   |  16   |          14          |
+|   workloadc   |  16   |          14          |
+|   workloadd   |  16   |          15          |
+|   workloadf   |  16   |          14          |
+|   synthetic   |  16   |          14          |
+| synthetic-\*  |  16   |          14          |
+| valuesize-\*  |  16   |          14          |
+|  skewness-90  |  16   |          8           |
+|  skewness-95  |  16   |          8           |
+|    uniform    |  16   |          8           |
+|   workloada   |  32   |          29          |
+|   workloada   |  64   |          59          |
+|   workloada   |  128  |         118          |
 
 </br>
 

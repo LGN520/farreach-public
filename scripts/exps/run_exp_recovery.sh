@@ -10,6 +10,11 @@ fi
 exp9_workloadmode=$1
 exp9_recoveryonly=$2
 
+if [ ${exp9_recoveryonly} -ne 1 ] && [ ${exp9_recoveryonly} -ne 0 ]; then
+	echo "recoveryonly should be either 1 or 0"
+	exit
+fi
+
 exp9_server_scale="16"
 exp9_server_scale_bottleneck="14"
 exp9_round_list=("0" "1" "2" "3" "4" "5") # do one extra round 0 to wait for database to finish flush and compaction

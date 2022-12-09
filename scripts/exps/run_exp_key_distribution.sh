@@ -41,7 +41,7 @@ for exp5_method in ${exp5_method_list[@]}; do
     if [ "x${exp6_workload}" == "xuniform" ]; then
       sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="5"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
     else
-      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="14"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
+      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="8"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
     fi
 
     cd ${CLIENT_ROOTPATH}
