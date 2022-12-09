@@ -15,6 +15,13 @@ git show --summary
 # Get last commit ID
 lastcommitid=$(git show --summary | head -n 1 | awk '{print $2}')
 
+# Remove submodule information
+mv benchmark benchmark-tmp
+git submodule deinit benchmark
+git rm --cached benchmark
+mv benchmark-tmp benchmark
+git add benchmark
+
 # Add link for publich repo, and remove link for remote repo
 git remote add publicrepo ${publicrepo}
 
@@ -30,6 +37,7 @@ rm -r ./farreach/deprecated-src
 rm -r ./farreach/deprecated-synthetic
 rm -r ./farreach/deprecated-tofino
 rm -r ./farreach/deprecatedscripts
+rm -r ./farreach/tofino/deprecate
 rm -r ./farreach/workloadparser
 rm -r ./futuretrials
 rm -r ./netcache/deprecated-src
@@ -53,13 +61,9 @@ rm ycsb-implementation.md
 mv benchmark.md README.md
 git add README.md
 
-# Remove submodule information
-rm .gitmodules
-rm -r benchmark/.git
-git add benchmark
-
 # Update projects/NetBuffer/ as projects/farreach-public/
 tmpfiles=($(find nocache/ netcache/ farreach/ common/ scripts/ benchmark/ -type f -name "*.sh" -o -name "*.c" -o -name "*.h" | xargs grep -r -e "NetBuffer/" -e "/NetBuffer" -l | grep -v "update_publich_repo.sh"))
+echo "${tmpfiles}"
 # In Linux
 #echo "${tmpfiles}" | xargs sed -i 's!/NetBuffer!/farreach-public!g'
 #echo "${tmpfiles}" | xargs sed -i 's!NetBuffer/!farreach-public/!g'
@@ -78,6 +82,13 @@ git remote remove publicrepo
 
 # Reset private repo
 git reset --hard ${lastcommitid}
+
+# Resume submodule
+git submodule init
+git submodule update
+cd benchmark
+git checkout master
+cd ..
 
 # Show the latest commit for double-check, which should be the same at the beginning of the shell
 git show --summary
