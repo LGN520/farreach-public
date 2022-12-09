@@ -23,14 +23,14 @@
 
 - END of FarReach
 	+ Create backup repos
-		* TODO: Fork benchmark-backup/ and NetBuffer-backup/ (w/ comment: before removing confidential files) as an online backup with the list label of farreach in github
-		* TODO: Rename dl11:NetBuffer as dl11:NetBuffer-backup as the offline backup for the latest version of private repo (remove large generated files)
+		* Fork benchmark-backup/ and NetBuffer-backup/ (w/ comment: before removing confidential files) as an online backup with the list label of farreach in github
+		* Rename dl11:NetBuffer as dl11:NetBuffer-backup as the offline backup for the latest version of private repo (remove large generated files)
 	+ In local machine
-		* TODO: Use rmhistory.sh to remove confidential files and update remote NetBuffer/
-		* TODO: Create public repo farreach-public/, use update_public_repo.sh to update project root-paths in config, re-organize repo, and update farreach-public/
+		* Use tmp.sh (copied from rmhistory.sh) to remove confidential files and update remote repo NetBuffer/
+		* Create public repo farreach-public/, use update_public_repo.sh to update project root-paths in config, re-organize repo, and update farreach-public/
 	+ TODO: In dl11, pull remote farreach-public/ into dl11:farreach-public
 		* TODO: Run farreach + static + workload A, and netcache + dynamic w/ hotin + synthetic -> TODO: work??? (NetBuffer-backup/ can be removed in the future)
-	+ TODO: Create an anonymous link for the public repo farreach-public/
+	+ Create an anonymous link for the public repo farreach-public/
 
 - Evaluation writing
 	+ Missing numbers
@@ -63,7 +63,7 @@
 		- Continue evaluation on 4th/5th rounds
 		- Add a script for single rotation mode, and update benchmark.md
 		- Add a script for exp9 recovery time calculation
-			- TODO: Update benchmark.md to guide how to test recovery time based on existing recovery information without extra server rotations: use the script to resume recovery information (upstream backups and in-switch snapshot) to clients/servers -> perform exp9.sh with a parameter indicating only-recovery mode
+			- Update benchmark.md to guide how to test recovery time based on existing recovery information without extra server rotations: use the script to resume recovery information (upstream backups and in-switch snapshot) to clients/servers -> perform exp9.sh with a parameter indicating only-recovery mode
 		- Re-organize scripts from benchmark/scripts/ into NetBuffer/scripts/
 			- Add comments to scripts (e.g., reason for sleep, reason for cleanup_obselete_snapshottoken.sh, reason for using the last 5 over 6 run times of test_recovery_time.sh)
 			- Use username, private key, SWITCH/CLIENT/SERVER_ROOTPATH defined in global.sh for each exp.sh
@@ -81,7 +81,7 @@
 					* Otherwise, you will have an error message of `Permission denied` for scp in farreach/localscripts/fetch*.sh 
 				+ NOTE: you have to specify the private key in Tofino such that it can scp files from clients/servers into switch
 					* Otherwise, you may have an error message of `Permission denied (public key) for scp` in farreach/localscripts/fetch*.sh 
-			+ TODO: Write down how to calculate average recovery time into benchmark.md
+			+ Write down how to calculate average recovery time into benchmark.md
 		- TODO: Compress json files as a tarball file and upload it to google cloud if not extremely large
 
 - 11.29
