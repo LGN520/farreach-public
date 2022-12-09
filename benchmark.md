@@ -341,7 +341,7 @@ Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.
    ```
 
 - Calculate system recovery time
-  - `bash scripts/remote/calculate_recovery_time.sh`
+  - `bash scripts/remote/calculate_recovery_time.sh <roundnumber>`
   - Applicable experiment: exp9.
   - Output example:
    ```bash

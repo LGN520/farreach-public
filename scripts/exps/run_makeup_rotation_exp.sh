@@ -47,7 +47,7 @@ sed -i "/^server_total_logical_num=/s/=.*/="${serverscale}"/" ${CLIENT_ROOTPATH}
 sed -i "/^server_total_logical_num_for_rotation=/s/=.*/="${serverscale}"/" ${CLIENT_ROOTPATH}/${methodname}/config.ini
 sed -i "/^controller_snapshot_period=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${methodname}/config.ini
 sed -i "/^switch_kv_bucket_num=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${methodname}/config.ini
-sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="${bottleneckidx}"/" configs/${methodname}-config.ini
+sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="${bottleneckidx}"/" ${CLIENT_ROOTPATH}/${methodname}/config.ini
 
 cd ${CLIENT_ROOTPATH}
 echo "[expmakeup][${methodname}][${workloadname}] prepare server rotation" 
@@ -62,9 +62,9 @@ sleep 20s
 ### Evaluation
 echo "[expmakeup][${methodname}][${workloadname}] test server rotation" 
 if [ $# -eq 8 ]; then
-	bash scripts/remote/test_server_rotation_p2.sh 1 targetrotation targetthpt
+	bash scripts/remote/test_server_rotation_p2.sh 1 ${targetrotation} ${targetthpt}
 else
-	bash scripts/remote/test_server_rotation_p2.sh 1 targetrotation
+	bash scripts/remote/test_server_rotation_p2.sh 1 ${targetrotation}
 fi
 
 echo "[expmakeup][${methodname}][${workloadname}] stop server rotation"
