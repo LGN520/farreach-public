@@ -37,7 +37,7 @@ cp ${exp_makeup_output_path}/${workloadname}-${methodname}-static${serverscale}-
 scp ${exp_makeup_output_path}/${workloadname}-${methodname}-static${serverscale}-client1.out ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/${workloadname}-statistics/${methodname}-static${serverscale}-client1.out  
 
 ### Stop running switch
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${methodname}; bash localscripts/stopswitchtestbed.sh"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${methodname}; bash localscripts/stopswitchtestbed.sh"
 
 ### Prepare config file
 echo "[expmakeup][${methodname}][${workloadname}] update ${methodname} config with ${workloadname}"
@@ -54,8 +54,8 @@ echo "[expmakeup][${methodname}][${workloadname}] prepare server rotation"
 bash scripts/remote/prepare_server_rotation.sh
 
 echo "[expmakeup][${methodname}][${workloadname}] start switchos" 
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${methodname}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${methodname}; bash localscripts/launchswitchostestbed.sh"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${methodname}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${methodname}; bash localscripts/launchswitchostestbed.sh"
 
 sleep 20s
 
@@ -81,4 +81,4 @@ fi
 cp ${CLIENT_ROOTPATH}/benchmark/output/${workloadname}-statistics/${methodname}-static${serverscale}-client0.out  ${exp_makeup_output_path}/${workloadname}-${methodname}-static${serverscale}-client0.out 
 cp ${CLIENT_ROOTPATH}/benchmark/output/${workloadname}-statistics/${methodname}-static${serverscale}-client1.out  ${exp_makeup_output_path}/${workloadname}-${methodname}-static${serverscale}-client1.out 
 echo "[[expmakeup][${methodname}][${workloadname}] stop switchos" 
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${methodname}; bash localscripts/stopswitchtestbed.sh"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${methodname}; bash localscripts/stopswitchtestbed.sh"

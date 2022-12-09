@@ -20,7 +20,7 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
   for exp8_snapshot in ${exp8_snapshot_list[@]}; do
     ### Preparation
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] run rulemap with ${exp8_rule}"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
     
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] update farreach config with snapshot"
     cp ${CLIENT_ROOTPATH}/${exp8_method}/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
@@ -38,8 +38,8 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
     bash scripts/remote/sync_file.sh farreach config.ini
 
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] start switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/launchswitchostestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/launchswitchostestbed.sh"
 
     sleep 20s
 
@@ -56,7 +56,7 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
     cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/farreach-${exp8_rule}-client0.out  ${exp8_output_path}/${exp8_snapshot}-farreach-${exp8_rule}-client0.out
     cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/farreach-${exp8_rule}-client1.out  ${exp8_output_path}/${exp8_snapshot}-farreach-${exp8_rule}-client1.out
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] stop switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
 
     scp ${USER}@${SERVER0}:${SERVER_ROOTPATH}/farreach/tmp_controller_bwcost.out ${exp8_output_path}/${exp8_snapshot}_${exp8_rule}_tmp_controller_bwcost.out
   done

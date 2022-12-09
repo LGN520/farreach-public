@@ -2,8 +2,8 @@
 
 USER="theodorepuyang"
 
-SWITCH_PRIVATEKEY=".ssh/id_rsa_forbf1"
-CONNECTION_PRIVATEKEY=".ssh/n2sys_new"
+SWITCH_PRIVATEKEY=".ssh/switch-private-key"
+CONNECTION_PRIVATEKEY=".ssh/connection-private-key"
 
 MAIN_CLIENT="dl11" # used in recovery mode
 SECONDARY_CLIENT="dl15"
@@ -12,8 +12,9 @@ SECONDARY_CLIENT="dl15"
 SERVER0="dl16"
 SERVER1="dl13"
 
-#LEAFSWITCH="bf1"
-#SPINESWITCH="bf3"
+LEAFSWITCH="bf1"
+# NOTE:SPINESWITCH is not used at this stage
+# SPINESWITCH="bf3" 
 
 CLIENT_ROOTPATH="/home/${USER}/projects/NetBuffer"
 SWITCH_ROOTPATH="/home/${USER}/NetBuffer"

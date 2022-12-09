@@ -26,7 +26,7 @@ for exp7_method in ${exp7_method_list[@]}; do
     echo "[exp7][${exp7_method}][${exp7_rule}]"
 
     echo "[exp7][${exp7_method}][${exp7_rule}] run rulemap with ${exp7_rule}"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp7_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp7_method}; bash localscripts/stopswitchtestbed.sh"
     
     echo "[exp7][${exp7_method}][${exp7_rule}] update ${exp7_method} config"
     cp ${CLIENT_ROOTPATH}/${exp7_method}/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
@@ -44,8 +44,8 @@ for exp7_method in ${exp7_method_list[@]}; do
     bash scripts/remote/sync_file.sh ${exp7_method} config.ini
 
     echo "[exp7][${exp7_method}][${exp7_rule}] start switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp7_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp7_method}; bash localscripts/launchswitchostestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp7_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp7_method}; bash localscripts/launchswitchostestbed.sh"
 
     sleep 20s
 
@@ -62,7 +62,7 @@ for exp7_method in ${exp7_method_list[@]}; do
     cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp7_method}-${exp7_rule}-client0.out  ${exp7_output_path}/synthetic-${exp7_method}-${exp7_rule}-client0.out
     cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp7_method}-${exp7_rule}-client1.out  ${exp7_output_path}/synthetic-${exp7_method}-${exp7_rule}-client1.out
     echo "[exp7][${exp7_method}] stop switchos"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp7_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp7_method}; bash localscripts/stopswitchtestbed.sh"
   done
 done
 

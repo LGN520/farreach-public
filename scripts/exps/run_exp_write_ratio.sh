@@ -30,7 +30,7 @@ for exp4_method in ${exp4_method_list[@]}; do
 
     ### Preparation
     echo "[exp4][${exp4_method}][${exp4_workload}] run workload with $exp4_workload" servers
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd /${SWITCH_ROOTPATH}/${exp4_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd /${SWITCH_ROOTPATH}/${exp4_method}; bash localscripts/stopswitchtestbed.sh"
     
     echo "[exp4][${exp4_method}][${exp4_workload}] update ${exp4_method} config with ${exp4_workload}"
     cp ${CLIENT_ROOTPATH}/${exp4_method}/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/${exp4_method}/config.ini
@@ -46,8 +46,8 @@ for exp4_method in ${exp4_method_list[@]}; do
     bash scripts/remote/prepare_server_rotation.sh
 
     echo "[exp4][${exp4_method}][${exp4_workload}] start switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd /${SWITCH_ROOTPATH}/${exp4_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd /${SWITCH_ROOTPATH}/${exp4_method}; bash localscripts/launchswitchostestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd /${SWITCH_ROOTPATH}/${exp4_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd /${SWITCH_ROOTPATH}/${exp4_method}; bash localscripts/launchswitchostestbed.sh"
 
     sleep 20s
 
@@ -66,7 +66,7 @@ for exp4_method in ${exp4_method_list[@]}; do
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client0.out  ${exp4_output_path}/${exp4_workload}-${exp4_method}-static${exp4_server_scale}-client0.out 
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp4_workload}-statistics/${exp4_method}-static${exp4_server_scale}-client1.out  ${exp4_output_path}/${exp4_workload}-${exp4_method}-static${exp4_server_scale}-client1.out 
     echo "[exp4][${exp4_method}][${exp4_workload}] stop switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd /${SWITCH_ROOTPATH}/${exp4_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd /${SWITCH_ROOTPATH}/${exp4_method}; bash localscripts/stopswitchtestbed.sh"
   done
   
   ### Backup for generated workloads

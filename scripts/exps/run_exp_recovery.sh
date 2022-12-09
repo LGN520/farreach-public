@@ -21,7 +21,7 @@ exp9_round_list=("0" "1" "2" "3" "4" "5") # do one extra round 0 to wait for dat
 exp9_cachesize_list=("100" "1000" "10000")
 
 
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
 
 ### Recovery
 for exp9_cachesize in ${exp9_cachesize_list[@]}; do
@@ -43,8 +43,8 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
 
   if [ ${exp9_recoveryonly} -eq 0 ]; then
     echo "[exp9][${exp9_cachesize}] start switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/launchswitchostestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/launchswitchostestbed.sh"
 
     sleep 20s
 
@@ -55,7 +55,7 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
     bash scripts/remote/stop_server_rotation.sh
 
     echo "[exp9][${exp9_cachesize}] stop switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
   fi
 
   for exp9_roundnumber in ${exp9_round_list[@]}; do
@@ -100,8 +100,8 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
     echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Backup statistics files to ${exp9_output_path}/${exp9_cachesize}"
     sleep 10s
     cp tmp_test_recovery_time.out ${exp9_output_path}/${exp9_cachesize}
-    scp -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1:${SWITCH_ROOTPATH}/farreach/tmp_launchswitchostestbed.out ${exp9_output_path}/${exp9_cachesize}
-    scp -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1:${SWITCH_ROOTPATH}/farreach/tmp_switchos.out ${exp9_output_path}/${exp9_cachesize}
+    scp -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH}:${SWITCH_ROOTPATH}/farreach/tmp_launchswitchostestbed.out ${exp9_output_path}/${exp9_cachesize}
+    scp -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH}:${SWITCH_ROOTPATH}/farreach/tmp_switchos.out ${exp9_output_path}/${exp9_cachesize}
     scp ${USER}@${SERVER0}:${CLIENT_ROOTPATH}/farreach/tmp_server.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_0.out
     scp ${USER}@${SERVER1}:${CLIENT_ROOTPATH}/farreach/tmp_server.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_1.out
 

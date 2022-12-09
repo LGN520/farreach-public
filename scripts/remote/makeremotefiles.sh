@@ -15,7 +15,7 @@ ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/local/makec
 
 # NOTE: comment commands of "makeswitchos" for nocache/distnocache
 echo "make spine/leaf switchos"
-ssh ${USER}@bf1 "cd ${SWITCH_ROOTPATH}; bash scripts/local/makeswitchos.sh"
+ssh ${USER}@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}; bash scripts/local/makeswitchos.sh"
 ssh ${USER}@bf3 "cd ${SWITCH_ROOTPATH}; bash scripts/local/makeswitchos.sh"
 
 echo "make servers"

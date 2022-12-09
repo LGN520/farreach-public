@@ -61,7 +61,7 @@ source scripts/remote/launchservertestbed.sh recover
 echo "Collect recovery information for in-switch cache"
 begin_time_1=`date +%s.%N`
 # Fetch all to switch
-ssh ${USER}@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/fetchall_all2switch.sh >/dev/null 2>&1"
+ssh ${USER}@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/fetchall_all2switch.sh >/dev/null 2>&1"
 # Fetch client-side backups to server
 end_time_1=`date +%s.%N`
 collect_time_1=$(getTiming ${begin_time_1} ${end_time_1})
@@ -69,12 +69,12 @@ echo "[Statistics] collect time switchos: ${collect_time_1} s"
 
 # Launch switch
 echo "Launch switch data plane"
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; rm tmp_switch.out; nohup bash start_switch.sh >tmp_switch.out 2>&1 &"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; rm tmp_switch.out; nohup bash start_switch.sh >tmp_switch.out 2>&1 &"
 sleep 10s
 
 # Configure switch and launch switchos w/ recovery mode
 echo "Configure switch data plane and launch switch control plane w/ recovery mode"
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; rm tmp_launchswitchostestbed.out; bash localscripts/launchswitchostestbed.sh recover >tmp_launchswitchostestbed.out 2>&1"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}; rm tmp_launchswitchostestbed.out; bash localscripts/launchswitchostestbed.sh recover >tmp_launchswitchostestbed.out 2>&1"
 sleep 5s
 
 # Close server
@@ -83,7 +83,7 @@ source scripts/remote/stopservertestbed.sh
 
 # Close switchos
 echo "Stop switch and switchos"
-ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/stopswitchtestbed.sh >/dev/null 2>&1"
+ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/stopswitchtestbed.sh >/dev/null 2>&1"
 
 echo "Resume ${DIRNAME}/config.ini with ${DIRNAME}/config.ini.bak if any"
 mv ${DIRNAME}/config.ini.bak ${DIRNAME}/config.ini

@@ -26,7 +26,7 @@ for exp3_method in ${exp3_method_list[@]}; do
 
     ### Preparation
     echo "[exp3][${exp3_method}][${exp3_scalability}] run workload with ${exp3_scalability}" servers
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp3_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp3_method}; bash localscripts/stopswitchtestbed.sh"
     
     echo "[exp3][${exp3_method}][${exp3_scalability}] update ${exp3_method} config with workloada"
     cp ${CLIENT_ROOTPATH}/${exp3_method}/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/${exp3_method}/config.ini
@@ -43,8 +43,8 @@ for exp3_method in ${exp3_method_list[@]}; do
     bash scripts/remote/prepare_server_rotation.sh
 
     echo "[exp3][${exp3_method}][${exp3_scalability}] start switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp3_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp3_method}; bash localscripts/launchswitchostestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp3_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp3_method}; bash localscripts/launchswitchostestbed.sh"
 
     sleep 20s
 
@@ -63,7 +63,7 @@ for exp3_method in ${exp3_method_list[@]}; do
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static${exp3_scalability}-client0.out  ${exp3_output_path}/${exp3_workload}-${exp3_method}-static${exp3_scalability}-client0.out 
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp3_workload}-statistics/${exp3_method}-static${exp3_scalability}-client1.out  ${exp3_output_path}/${exp3_workload}-${exp3_method}-static${exp3_scalability}-client1.out 
     echo "[exp3][${exp3_method}] stop switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp3_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp3_method}; bash localscripts/stopswitchtestbed.sh"
     scalability_counter=$((++scalability_counter))
   done
 

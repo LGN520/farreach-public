@@ -28,7 +28,7 @@ for exp6_method in ${exp6_method_list[@]}; do
   for exp6_workload in ${exp6_workload_list[@]}; do
     ### Preparation
     echo "[exp6][${exp6_method}][${exp6_workload}] run workload with $exp6_workload" servers
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscripts/stopswitchtestbed.sh"
     
     echo "[exp6][${exp6_method}][${exp6_workload}] update ${exp6_method} config with ${exp6_workload}"
     cp ${CLIENT_ROOTPATH}/${exp6_method}/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/${exp6_method}/config.ini
@@ -44,8 +44,8 @@ for exp6_method in ${exp6_method_list[@]}; do
     bash scripts/remote/prepare_server_rotation.sh
 
     echo "[exp6][${exp6_method}][${exp6_workload}] start switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp6_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscripts/launchswitchostestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp6_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscripts/launchswitchostestbed.sh"
 
     sleep 20s
 
@@ -64,7 +64,7 @@ for exp6_method in ${exp6_method_list[@]}; do
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client0.out  ${exp6_output_path}/${exp6_workload}-${exp6_method}-static${exp6_server_scale}-client0.out 
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client1.out  ${exp6_output_path}/${exp6_workload}-${exp6_method}-static${exp6_server_scale}-client1.out 
     echo "[exp6][${exp6_method}][${exp6_workload}] stop switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscripts/stopswitchtestbed.sh"
   done
   
   ### Backup for generated workloads

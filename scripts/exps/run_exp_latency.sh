@@ -30,7 +30,7 @@ for exp2_method in ${exp2_method_list[@]}; do
 
   ### Preparation
   echo "[exp2][${exp2_method}] run workload with $exp2_workload" servers
-  ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
+  ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
   
   echo "[exp2][${exp2_method}] update ${exp2_method} config with ${exp2_workload}"
   cp ${CLIENT_ROOTPATH}/${exp2_method}/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/${exp2_method}/config.ini
@@ -46,8 +46,8 @@ for exp2_method in ${exp2_method_list[@]}; do
   bash scripts/remote/prepare_server_rotation.sh
 
   echo "[exp2][${exp2_method}] start switchos" 
-  ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-  ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/launchswitchostestbed.sh"
+  ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp2_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+  ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/launchswitchostestbed.sh"
 
   sleep 20s
 
@@ -67,7 +67,7 @@ for exp2_method in ${exp2_method_list[@]}; do
   cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-static${exp2_server_scale}-client0.out  ${exp2_output_directory}/${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client0.out 
   cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-static${exp2_server_scale}-client1.out  ${exp2_output_directory}/${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client1.out 
   echo "[exp2][${exp2_method}] stop switchos" 
-  ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
+  ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
 done
 
 
@@ -82,7 +82,7 @@ for exp2_method in ${exp2_method_list[@]}; do
   for exp2_target_thpt in ${exp2_target_thpt_list[@]}; do
     ### Preparation
     echo "[exp2][${exp2_method}][${exp2_target_thpt}] run workload with $exp2_workload" servers
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
 
     echo "[exp2][${exp2_method}][${exp2_target_thpt}] update ${exp2_method} config with ${exp2_workload}"
     cp ${CLIENT_ROOTPATH}/${exp2_method}/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/${exp2_method}/config.ini
@@ -101,8 +101,8 @@ for exp2_method in ${exp2_method_list[@]}; do
     sed -i "/^TARGET_AGGTHPT=/s/=.*/="${exp2_target_thpt}"/" scripts/local/calculate_target_helper.py
 
     echo "[exp2][${exp2_method}][${exp2_target_thpt}] start switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/launchswitchostestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp2_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/launchswitchostestbed.sh"
 
     sleep 20s
 
@@ -120,6 +120,6 @@ for exp2_method in ${exp2_method_list[@]}; do
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-latency-static${exp2_server_scale}-client0.out  ${exp2_output_directory}/${exp2_target_thpt}-${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client0.out 
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp2_workload}-statistics/${exp2_method}-latency-static${exp2_server_scale}-client1.out  ${exp2_output_directory}/${exp2_target_thpt}-${exp2_workload}-${exp2_method}-static${exp2_server_scale}-client1.out 
     echo "[exp2][${exp2_method}][${exp2_target_thpt}] stop switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@bf1 "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp2_method}; bash localscripts/stopswitchtestbed.sh"
   done
 done
