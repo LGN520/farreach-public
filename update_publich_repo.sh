@@ -99,6 +99,7 @@ git submodule init
 git submodule update
 cd benchmark
 git checkout master
+git reset --hard HEAD
 cd ..
 
 # Show the latest commit for double-check, which should be the same at the beginning of the shell
