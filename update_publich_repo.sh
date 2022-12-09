@@ -15,6 +15,11 @@ git show --summary
 # Get last commit ID
 lastcommitid=$(git show --summary | head -n 1 | awk '{print $2}')
 
+# Backup submodule git files
+mkdir ../tmp-farreach
+mv .gitmodules ../tmp-farreach
+mv benchmark/.git ../tmp-farreach
+
 # Remove submodule information
 mv benchmark benchmark-tmp
 git submodule deinit benchmark
@@ -83,6 +88,11 @@ git remote remove publicrepo
 
 # Reset private repo
 git reset --hard ${lastcommitid}
+
+# Resume submodule git files
+mv ../tmp-farreach/.gitmodules ./
+mv ../tmp-farreach/.git benchmark/
+rm -r ../tmp-farreach
 
 # Resume submodule
 git submodule init
