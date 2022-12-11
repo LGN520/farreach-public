@@ -38,11 +38,11 @@ for exp1_method in ${exp1_method_list[@]}; do
     sed -i "/^controller_snapshot_period=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp1_method}/config.ini
     sed -i "/^switch_kv_bucket_num=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp1_method}/config.ini
     if [ "x${exp1_workload}" == "xworkload-load" ]; then
-      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="13"/" configs/${exp1_method}-config.ini
+      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="13"/" ${CLIENT_ROOTPATH}/${exp1_method}/config.ini
     elif [ "x${exp1_workload}" == "xworkloadd" ]; then
-      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="15"/" configs/${exp1_method}-config.ini
+      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="15"/" ${CLIENT_ROOTPATH}/${exp1_method}/config.ini
     else
-      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="14"/" configs/${exp1_method}-config.ini
+      sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="14"/" ${CLIENT_ROOTPATH}/${exp1_method}/config.ini
     fi
 
     cd ${CLIENT_ROOTPATH}
