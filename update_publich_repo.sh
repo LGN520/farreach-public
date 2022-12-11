@@ -27,6 +27,7 @@ git rm --cached benchmark
 rm -r benchmark
 mv benchmark-tmp benchmark
 git add benchmark
+git add -f benchmark/output/.placeholder
 
 # Add link for publich repo, and remove link for remote repo
 git remote add publicrepo ${publicrepo}
