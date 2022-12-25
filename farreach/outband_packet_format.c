@@ -383,6 +383,7 @@ void deserialize_perclient_upstream_backup_files(char *dirname, std::vector<std:
 	if (dir != NULL) {
 		struct dirent *tmpent = NULL;
 		char tmpfilepath[256];
+		int tmpfilecnt = 0;
 		while ((tmpent = readdir(dir)) != NULL) {
 			if (strstr(tmpent->d_name, "static") == NULL && strstr(tmpent->d_name, "dynamic") == NULL) { // filter for static or dynamic backup files
 				continue;
@@ -413,6 +414,12 @@ void deserialize_perclient_upstream_backup_files(char *dirname, std::vector<std:
 			fflush(stdout);
 
 			munmap(tmpcontent, tmpfilesize);
+
+			tmpfilecnt += 1;
+		}
+		if (tmpfilecnt == 0) {
+			printf("[WARN] no backup files under %s\n", dirname);
+			fflush(stdout);
 		}
 		closedir(dir);
 	} else {

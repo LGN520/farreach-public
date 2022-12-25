@@ -30,8 +30,8 @@ rm -r /tmp/${DIRNAME}/*
 #cd ..
 #if [ "x${workloadmode}" == "x0" ]
 #then
-#	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}*client0.out ${SWITCH_ROOTPATH}/${tmpdir}
-#	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}*client1.out ${SWITCH_ROOTPATH}/${tmpdir}
+#	# Copy client0 and client1 backup records in parallel
+#	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}-${bottleneck_serveridx}*client0.out ${SERVER_ROOTPATH}/${tmpdir}; scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}-${bottleneck_serveridx}*client1.out ${SERVER_ROOTPATH}/${tmpdir}
 #elif [ "x${workloadmode}" == "x1" ]
 #then
 #	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/dynamic-client0.out ${SWITCH_ROOTPATH}/${tmpdir}

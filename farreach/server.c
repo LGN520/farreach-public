@@ -146,7 +146,7 @@ void recover() {
 	// (3) aggregate per-client backups
 	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
 	server_aggregated_backupmap_list = new std::map<netreach_key_t, snapshot_record_t>[current_server_logical_num];
-	//int clientbackup_totalcnt = 0;
+	int clientbackup_totalcnt = 0;
 	//int clientbackup_validcnt = 0;
 	for (int i = 0; i < perclient_keyarray.size(); i++) {
 		for (int j = 0; j < perclient_keyarray[i].size(); j++) {
@@ -173,9 +173,16 @@ void recover() {
 							tmpkey, snapshot_record_t(tmpval, tmpseq, tmpstat)));
 				//clientbackup_validcnt += 1;
 			}
-			//clientbackup_totalcnt += 1;
+			clientbackup_totalcnt += 1;
 		}
 	}
+
+	int clientbackup_uniquecnt = 0;
+	for (int i = 0; i < current_server_logical_num; i++) {
+		clientbackup_uniquecnt += server_aggregated_backupmap_list[i].size();
+	}
+	printf("[INFO] client-side backup uniquecnt: %d, totalcnt: %d\n", clientbackup_uniquecnt, clientbackup_totalcnt);
+	fflush(stdout);
 
 	// (4) extract in-switch snapshot data
 

@@ -10,6 +10,23 @@ then
 	cd ${DIRNAME}
 fi
 
+function getTiming(){
+    start=$1
+    end=$2
+ 
+    start_s=`echo $start | cut -d '.' -f 1`
+    start_ns=`echo $start | cut -d '.' -f 2`
+    end_s=`echo $end | cut -d '.' -f 1`
+    end_ns=`echo $end | cut -d '.' -f 2`
+ 
+    time_micro=$(( (10#$end_s-10#$start_s)*1000000 + (10#$end_ns/1000 - 10#$start_ns/1000) ))
+    #time_ms=`expr $time_micro/1000  | bc `
+ 
+    #echo "$time_micro microseconds"
+    #echo "$time_ms ms"
+	echo $(echo "scale=4; ${time_micro} / 1000.0 / 1000.0" | bc)
+}
+
 #set -x
 
 tmpdir="benchmark/output/upstreambackups"
@@ -17,12 +34,13 @@ tmpdir="benchmark/output/upstreambackups"
 # Copy client-side backups to current server
 echo "Copy client-side backups to server"
 cd ..
+begin_time_1=`date +%s.%N`
 if [ "x${workloadmode}" == "x0" ]
 then
 	mkdir -p ${SERVER_ROOTPATH}/${tmpdir}
 	rm -r ${SERVER_ROOTPATH}/${tmpdir}/*
-	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}*client0.out ${SERVER_ROOTPATH}/${tmpdir}
-	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}client1.out ${SERVER_ROOTPATH}/${tmpdir}
+	# Copy client0 and client1 backup records in parallel
+	scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${MAIN_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}-${bottleneck_serveridx}*client0.out ${SERVER_ROOTPATH}/${tmpdir}; scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/${tmpdir}/static${server_total_logical_num_for_rotation}-${bottleneck_serveridx}*client1.out ${SERVER_ROOTPATH}/${tmpdir}
 elif [ "x${workloadmode}" == "x1" ]
 then
 	mkdir -p ${SERVER_ROOTPATH}/${tmpdir}
@@ -33,6 +51,9 @@ else
 	echo "[ERROR] invalid workload mode: ${workloadmode}"
 	exit
 fi
+end_time_1=`date +%s.%N`
+collect_time_1=$(getTiming ${begin_time_1} ${end_time_1})
+echo "[Statistics] per-client backups collect time in ${tmp_curserver}: ${collect_time_1} s"
 cd ${DIRNAME}
 
 # Copy in-switch snapshot id/data from controller in dl16 to secondary server(s) in dl13

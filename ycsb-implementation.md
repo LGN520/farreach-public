@@ -23,10 +23,12 @@
 
 - 12.26
 	+ Siyuan
-		* TODO: Fix bug on server collect time in test_recovery_time.sh
-		* TODO: Dump per-client backup collect time in fetchbackup_client2server.sh
-		* TODO: Fix bug on fetching extra backup records in fetchbackup_client2server.sh (only fetch backup files static16-14\*)
-		* TODO: Fix issues of NO backup files during crash recovery
+		* Fix bug on server collect time in test_recovery_time.sh
+		* Dump per-client backup collect time in fetchbackup_client2server.sh
+		* Fix bug on fetching extra backup records in fetchbackup_client2server.sh (only fetch backup files static16-14\*)
+		* Fix issues of NO backup files during crash recovery -> pose a warning (it is okay only if snapshot period = 0)
+		* TODO: Add explanation/guide for SWITCH_PRIVATEKEY and CONNECTION_PRIVATEDKEY in benchmark.md
+			- For example: Why we need the two privatekeys? Connect which componenets? How to configure them?
 	+ Huancheng
 		* TODO: Create run_exp_recovery_vs_snapshotperiod.sh to test recovery time vs. snapshot period (0/2.5/5/7.5/10)
 			- NOTE: record average collect time of per-client backups dumped by fetchbackup_client2server.sh

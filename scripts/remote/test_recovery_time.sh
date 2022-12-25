@@ -29,18 +29,25 @@ function getTiming(){
 }
 
 # Collect recovery information for servers
+#echo "Collect recovery information for servers"
+#begin_time_2=`date +%s.%N`
+#ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
+#end_time_2_1=`date +%s.%N`
+#ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
+#end_time_2_2=`date +%s.%N`
+#collect_time_2_1=$(getTiming ${begin_time_2} ${end_time_2_1})
+#collect_time_2_2=$(getTiming ${end_time_2_1} ${end_time_2_2})
+#avg_collect_time_2=$(echo "(${collect_time_2_1} + ${collect_time_2_2}) / 2.0" | bc)
+#echo "[Statistics] collect time server: ${avg_collect_time_2} s"
+
+# Collect recovery information for servers
 echo "Collect recovery information for servers"
 begin_time_2=`date +%s.%N`
-#ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
-end_time_2_1=`date +%s.%N`
-#ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh >/dev/null 2>&1"
-ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
-end_time_2_2=`date +%s.%N`
-collect_time_2_1=$(getTiming ${begin_time_2} ${end_time_2_1})
-collect_time_2_2=$(getTiming ${begin_time_2} ${end_time_2_2})
-avg_collect_time_2=$(echo "(${collect_time_2_1} + ${collect_time_2_2}) / 2.0" | bc)
-echo "[Statistics] collect time server: ${avg_collect_time_2} s"
+# Let server0 and server1 collect client-side backup files simultaneously
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"; ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
+end_time_2=`date +%s.%N`
+collect_time_2=$(getTiming ${begin_time_2} ${end_time_2})
+echo "[Statistics] collect time server: ${collect_time_2} s"
 
 # Create and sync config.ini for full scale of server rotation
 echo "Create and sync config.ini for full scale of server rotation"
@@ -61,7 +68,7 @@ source scripts/remote/launchservertestbed.sh recover
 echo "Collect recovery information for in-switch cache"
 begin_time_1=`date +%s.%N`
 # Fetch all to switch
-ssh ${USER}@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/fetchall_all2switch.sh >/dev/null 2>&1"
+ssh ${USER}@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/fetchall_all2switch.sh"
 # Fetch client-side backups to server
 end_time_1=`date +%s.%N`
 collect_time_1=$(getTiming ${begin_time_1} ${end_time_1})
