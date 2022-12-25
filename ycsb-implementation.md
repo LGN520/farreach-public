@@ -19,7 +19,21 @@
 		+ In each server, enter tommyds-2.2/ and run `make staticlib` to compile TommyDS before `bash scripts/remote/makeserver.sh`
 	- NOTE: use `git checkout -- <filename>` to cancel the changes of the above files
 
-## TODO list
+## TODO list (for ATC'23)
+
+- 12.26
+	+ Siyuan
+		* TODO: Fix bug on server collect time in test_recovery_time.sh
+		* TODO: Dump per-client backup collect time in fetchbackup_client2server.sh
+		* TODO: Fix bug on fetching extra backup records in fetchbackup_client2server.sh (only fetch backup files static16-14\*)
+		* TODO: Fix issues of NO backup files during crash recovery
+	+ Huancheng
+		* TODO: Create run_exp_recovery_vs_snapshotperiod.sh to test recovery time vs. snapshot period (0/2.5/5/7.5/10)
+			- NOTE: record average collect time of per-client backups dumped by fetchbackup_client2server.sh
+		* TODO: Rerun exp9 for recovery time vs. cache size
+			- NOTE: double-check whether we only copy static16-14\* to each server (without unnecessary files, e.g., static16-5\*)
+
+## TODO list (for OSDI'23)
 
 - END of FarReach
 	+ Create backup repos
@@ -28,8 +42,8 @@
 	+ In local machine
 		* Use tmp.sh (copied from rmhistory.sh) to remove confidential files and update remote repo NetBuffer/
 		* Create public repo farreach-public/, use update_public_repo.sh to update project root-paths in config, re-organize repo, and update farreach-public/
-	+ TODO: In dl11, pull remote farreach-public/ into dl11:farreach-public
-		* TODO: Run farreach + static + workload A, and netcache + dynamic w/ hotin + synthetic -> TODO: work??? (NetBuffer-backup/ can be removed in the future)
+	+ In dl11, pull remote farreach-public/ into dl11:farreach-public
+		* Run farreach + static + workload A, and netcache + dynamic w/ hotin + synthetic -> work (NetBuffer-backup/ can be removed in the future)
 	+ Create an anonymous link for the public repo farreach-public/
 
 - Evaluation writing
