@@ -9,6 +9,9 @@ if [ $# -ne 1 ]; then
 fi
 roundnumber=$1
 
+exp8_server_scale=16
+exp8_server_scale_bottleneck=14
+exp8_method="farreach"
 exp8_dynamic_rule_list=(hotin hotout random)
 exp8_snapshot_list=("0" "2500" "5000" "7500" "10000")
 exp8_output_path="${EVALUATION_OUTPUT_PREFIX}/exp8/${roundnumber}"
@@ -35,7 +38,7 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
 
     cd ${CLIENT_ROOTPATH}
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] prepare config.ini" 
-    bash scripts/remote/sync_file.sh farreach config.ini
+    bash scripts/remote/sync_file.sh ${exp8_method} config.ini
 
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] start switchos" 
     ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"

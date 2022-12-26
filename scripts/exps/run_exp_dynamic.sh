@@ -9,6 +9,9 @@ if [ $# -ne 1 ]; then
 fi
 roundnumber=$1
 
+exp7_workload="synthetic"
+exp7_server_scale=16
+exp7_server_scale_bottleneck=14
 exp7_method_list=("farreach" "netcache" "nocache")
 exp7_dynamic_rule_list=(hotin hotout random stable)
 exp7_output_path="${EVALUATION_OUTPUT_PREFIX}/exp7/${roundnumber}"
