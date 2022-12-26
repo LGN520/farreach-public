@@ -58,6 +58,8 @@ Contents
 
 - Update scripts/global.sh for your testbed accordingly
 	+ Set specific USER (username), XXX_PRIVATEKEY, MAIN/SECONDARY_CLIENT, and XXX_ROOTPATH (directory path)
+		* SWITCH_PRIVATEKEY: the ssh key used for the connection from {client0} to {switch} as root user
+		* CONNECTION_PRIVATEKEY: the ssh key used for the connections from servers/controller to {switch}, and those from clients/controller to each server as non-root user
 - For each {method} (e.g., farreach)
 	+ Under the main client
 		* Set DIRNAME as the {method} in scripts/common.sh
@@ -151,7 +153,7 @@ To carry out experiments according to paper, we have set up the scripts for runn
 		- If you have an error message of `hot key verification failed`, check the ssh connectivity between the switch and all clients/servers
 		- If you have an error message of `permission denied`, check the correctness of ownership for /tmp/farreach in the switch and servers
 		- If you have an error message of `permission denied (public key)`, check whether you spefcify the correct private key in the switch such that it can copy files from clients/servers
-	- If you want to test recovery time based on existing recovery information instead of running server rotations again, in run_exp_recovery.sh:
+	- If you want to test recovery time based on existing recovery information instead of running server rotations again, in global.sh and run_exp_recovery.sh:
       - Step 1: make sure `EVALUATION_OUTPUT_PREFIX` points to the path of existing recovery files.  
       - Step 2: run the script with argument `recoeveryonly` set to `1`.
 

@@ -53,11 +53,11 @@ else
 fi
 end_time_1=`date +%s.%N`
 collect_time_1=$(getTiming ${begin_time_1} ${end_time_1})
-echo "[Statistics] per-client backups collect time in ${tmp_curserver}: ${collect_time_1} s"
 cd ${DIRNAME}
 
 # Copy in-switch snapshot id/data from controller in dl16 to secondary server(s) in dl13
 tmp_curserver=$(hostname)
+echo "[Statistics] per-client backups collect time in ${tmp_curserver}: ${collect_time_1} s"
 if [ "x${tmp_curserver}" == "x${SERVER1}" ]
 then
 	echo "Copy in-switch snapshot from controller to ${tmp_curserver}"
