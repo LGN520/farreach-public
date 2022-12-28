@@ -383,7 +383,7 @@ Appendix
 | valuesize-\*  |  16   |          14          |
 |  skewness-90  |  16   |          8           |
 |  skewness-95  |  16   |          8           |
-|    uniform    |  16   |          8           |
+|    uniform    |  16   |          5           |
 |   workloada   |  32   |          29          |
 |   workloada   |  64   |          59          |
 |   workloada   |  128  |         118          |

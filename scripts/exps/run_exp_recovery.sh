@@ -27,7 +27,7 @@ ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPA
 for exp9_cachesize in ${exp9_cachesize_list[@]}; do
   echo "[exp9][${exp9_cachesize}] Recovery with cache size of ${exp9_cachesize}"
   cp ${CLIENT_ROOTPATH}/farreach/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/farreach/config.ini
-  sed -i "/^workload_name=/s/=.*/=farreach/" ${CLIENT_ROOTPATH}/farreach/config.ini
+  sed -i "/^workload_name=/s/=.*/=synthetic/" ${CLIENT_ROOTPATH}/farreach/config.ini
   sed -i "/^workload_mode=/s/=.*/="${exp9_workloadmode}"/" ${CLIENT_ROOTPATH}/farreach/config.ini
   sed -i "/^server_total_logical_num=/s/=.*/="${exp9_server_scale}"/" ${CLIENT_ROOTPATH}/farreach/config.ini
   sed -i "/^server_total_logical_num_for_rotation=/s/=.*/="${exp9_server_scale}"/" ${CLIENT_ROOTPATH}/farreach/config.ini

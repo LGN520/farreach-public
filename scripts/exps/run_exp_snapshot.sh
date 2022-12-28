@@ -12,6 +12,7 @@ roundnumber=$1
 exp8_server_scale=16
 exp8_server_scale_bottleneck=14
 exp8_method="farreach"
+exp8_workload="synthetic"
 exp8_dynamic_rule_list=(hotin hotout random)
 exp8_snapshot_list=("0" "2500" "5000" "7500" "10000")
 exp8_output_path="${EVALUATION_OUTPUT_PREFIX}/exp8/${roundnumber}"

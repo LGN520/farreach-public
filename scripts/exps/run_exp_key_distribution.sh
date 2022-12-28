@@ -38,7 +38,7 @@ for exp5_method in ${exp5_method_list[@]}; do
     sed -i "/^server_total_logical_num_for_rotation=/s/=.*/="${exp5_server_scale}"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
     sed -i "/^controller_snapshot_period=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
     sed -i "/^switch_kv_bucket_num=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
-    if [ "x${exp6_workload}" == "xuniform" ]; then
+    if [ "x${exp5_workload}" == "xuniform" ]; then
       sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="5"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini
     else
       sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="8"/" ${CLIENT_ROOTPATH}/${exp5_method}/config.ini

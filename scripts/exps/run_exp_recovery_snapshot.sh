@@ -27,7 +27,7 @@ ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPA
 for exp10_snapshot in ${exp10_snapshot_list[@]}; do
   echo "[exp9][${exp10_snapshot}] Recovery with snapshot interval of ${exp10_snapshot} ms"
   cp ${CLIENT_ROOTPATH}/farreach/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/farreach/config.ini
-  sed -i "/^workload_name=/s/=.*/=farreach/" ${CLIENT_ROOTPATH}/farreach/config.ini
+  sed -i "/^workload_name=/s/=.*/=synthetic/" ${CLIENT_ROOTPATH}/farreach/config.ini
   sed -i "/^workload_mode=/s/=.*/="${exp10_workloadmode}"/" ${CLIENT_ROOTPATH}/farreach/config.ini
   sed -i "/^server_total_logical_num=/s/=.*/="${exp10_server_scale}"/" ${CLIENT_ROOTPATH}/farreach/config.ini
   sed -i "/^server_total_logical_num_for_rotation=/s/=.*/="${exp10_server_scale}"/" ${CLIENT_ROOTPATH}/farreach/config.ini
