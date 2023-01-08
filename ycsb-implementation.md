@@ -27,14 +27,14 @@
 		* Dump per-client backup collect time in fetchbackup_client2server.sh
 		* Fix bug on fetching extra backup records in fetchbackup_client2server.sh (only fetch backup files static16-14\*)
 		* Fix issues of NO backup files during crash recovery -> pose a warning (it is okay only if snapshot period = 0)
-		* TODO: Add explanation/guide for SWITCH_PRIVATEKEY and CONNECTION_PRIVATEDKEY in benchmark.md
+		* Add explanation/guide for SWITCH_PRIVATEKEY and CONNECTION_PRIVATEDKEY in benchmark.md
 			- For example: Why we need the two privatekeys? Connect which componenets? How to configure them?
 	+ Huancheng
 		* TODO: Double-check workload name and other variables in scripts/exp/exp\*.sh
-		* TODO: Create run_exp_recovery_vs_snapshotperiod.sh to test recovery time vs. snapshot period (0/2.5/5/7.5/10)
-			- NOTE: record average collect time of per-client backups dumped by fetchbackup_client2server.sh
 		* TODO: Rerun exp9 for recovery time vs. cache size
 			- NOTE: double-check whether we only copy static16-14\* to each server (without unnecessary files, e.g., static16-5\*)
+		* TODO: Create run_exp_recovery_vs_snapshotperiod.sh to test recovery time vs. snapshot period (0/2.5/5/7.5/10)
+			- NOTE: record average collect time of per-client backups dumped by fetchbackup_client2server.sh
 
 ## TODO list (for OSDI'23)
 
