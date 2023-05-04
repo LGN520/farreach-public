@@ -6,9 +6,9 @@ Table of Contents
 0. [Overview](#0-overview)
 1. System Preperation
    1. [Dependency Installation](#11-dependency-installation)
-   2. [Network Configuration](#12-network-configuration)
+   2. [Configuration changes](#12-confiugration-changes)
    3. [Code Compilation](#13-code-compilation)
-   4. [Testbed Configuration](#14-testbed-configuration)
+   4. [Testbed Building](#14-testbed-building)
 2. Data Preperation
    1. [Loading Procedure](#21-loading-phase)
    2. [Keydump Procedure](#22-workload-analysis--dump-keys)
@@ -51,18 +51,18 @@ Contents
 </br>
 
 - Network configuration and topology
-	+ All clients/servers/switch are in the same data center (IP mask: 172.16.255.255)
+	+ All clients/servers/switch are in the same local area network (IP mask: 172.16.255.255; NOT bypass {switch} data plane)
 		* Main client: 172.16.112.11
 		* Secondary client: 172.16.112.20
 		* First server (co-located with controller): 172.16.112.21
 		* Second server: 172.16.112.30
-		* Tofino switch: 172.16.112.19
-	+ Testbed topology
-		* Main client (NIC: enp129s0f0) <-> Tofino switch (front panel port: 5/0)
-		* Secondary client (NIC: ens2f0) <-> Tofino switch (front panel port: 21/0)
-		* First server (NIC: ens2f1) <-> Tofino switch (front panel port: 6/0)
-		* Second server (NIC: ens3f1) <-> Tofino switch (front panel port: 3/0)
-		* Tofino switch (front panel port: 1/0) <-> Tofino switch (front panel port: 12/0) (for in-switch cross-pipeline recirculation)
+		* Tofino switch OS: 172.16.112.19
+	+ Testbed topology of programmable-switch-based network (bypass {switch} data plane)
+		* Main client (NIC: enp129s0f0; MAC: 3c:fd:fe:bb:ca:78) <-> Tofino switch (front panel port: 5/0)
+		* Secondary client (NIC: ens2f0; MAC: 9c:69:b4:60:34:f4) <-> Tofino switch (front panel port: 21/0)
+		* First server (NIC: ens2f1; MAC: 9c:69:b4:60:34:e1) <-> Tofino switch (front panel port: 6/0)
+		* Second server (NIC: ens3f1; MAC: 9c:69:b4:60:ef:c1) <-> Tofino switch (front panel port: 3/0)
+		* Tofino switch (front panel port: 7/0) <-> Tofino switch (front panel port: 12/0) (for in-switch cross-pipeline recirculation)
 
 ## 1.1 Dependency Installation
 
@@ -84,9 +84,9 @@ Contents
 <!--	+ `sudo hugeadm \-\-thp-never` -->
 <!--	+ `cat /sys/kernel/mm/transparent_hugepage/enabled` to check -->
 
-## 1.2 Network Configuration
+## 1.2 Configuration Changes
 
-- Update scripts/global.sh based on your own testbed
+- Update the following configurations in scripts/global.sh based on your own testbed
 	+ USER: Linux username (e.g., ssy)
 	+ SWITCH_PRIVATEKEY: the passwd-free ssh key used for the connection from {main client} to {switch} as **root user** (e.g., .ssh/switch-private-key)
 	+ CONNECTION_PRIVATEKEY: the passwd-free ssh key used for the connections from two servers to {switch}, from two clients to two servers, and from {first server} (controller) to {second server} as **non-root user** (e.g., .ssh/connection-private-key)
@@ -122,9 +122,19 @@ Contents
 			- SERVER1_TOSWITCH_PIPEIDX: the pipeline index (0 or 1) for SERVER1_TOSWITCH_FPPORT
 			- SERVER1_LOCAL_IP: the local IP address of NIC for {second server} connecting to the local area network (NOT bypass {switch} data plane)
 		* Controller (co-located with first server)
-			- TODO (END HERE)
+			- CONTROLLER_LOCAL_IP: the IP address of NIC for {controller} connecting to {switch} (same as SERVER0_TOSWITCH_IP in our testbed)
+		* Switch
+			- SWITCHOS_LOCAL_IP: the IP address of NIC for {switch} OS connecting to the local area network (NOT bypass {switch} data plane)
+			- SWITCH_RECIRPORT_PIPELINE1TO0: the front panel port in {switch} data plane for pipeline 1 to connect with pipeline 0 for in-switch recirculation
+			- SWITCH_RECIRPORT_PIPELINE0TO1: the front panel port in {switch} data plane for pipeline 0 to connect with pipeline 1 for in-switch recirculation
 
-- SSH configuration
+</br>
+
+- Run `bash scripts/local/update_network_settings.sh` to update ini configuration files based on network settings
+
+</br>
+
+- Update SSH configuration
 	+ In any of above machines (2 clients, 2 servers, and 1 switch), if you need to manually type yes/no to check the hostname when using ssh command to connect other machines, add the following content to `~/.ssh/config` under the machine:
 	```
 	Host *
@@ -141,10 +151,6 @@ Contents
 		* For each pair of source to destination
 			- Under {source}, if the ssh key has not been created, run `ssh-keygen -t rsa -f ~/.ssh/connection-private-key` (**use empty passwd for no passphrase**)
 			- Append the content of ~/.ssh/connection-private-key.pub of {source}, into ~/.ssh/authorized_keys of {destination}
-
-- Update ini configuration files (based on network settings in scripts/global.sh)
-	+ TODO: Update configure_xxx.sh based on global.sh
-	+ TODO: Update config files to replace ip and ports based on global.sh
 
 ## 1.3 Code Compilation
 
@@ -175,7 +181,11 @@ Contents
 
 </br>
 
-## 1.4 Testbed Configuration
+## 1.4 Testbed Building
+
+- Apply network settings provided by scripts/global.sh
+	+ TODO: Update configure_xxx.sh based on global.sh
+
 - Building your testbed
 	+ Modify scripts/local/configure_\<client/server/switchos\>.sh based on your own testbed settings
 	+ In each physical client, run `bash scripts/local/confiugre_client.sh`

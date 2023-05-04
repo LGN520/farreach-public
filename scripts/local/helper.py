@@ -62,6 +62,33 @@ def aggregate_2dlist(locallist, remotelist, objidx, role):
         result.append(tmpaggsublist)
     return result
 
+def misscheck(localjsonarray, remotejsonarray):
+    for i in range(len(localjsonarray)):
+        localjsonobj = localjsonarray[i]
+        localstrid = getstrid(localjsonobj)
+        is_miss = True
+        for j in range(len(remotejsonarray)):
+            remotejsonobj = remotejsonarray[j]
+            remotestrid = getstrid(remotejsonobj)
+            if localstrid == remotestrid:
+                is_miss = False
+                break
+        if is_miss == True:
+            print "[client 0] miss {}".format(localstrid)
+    for i in range(len(remotejsonarray)):
+        remotejsonobj = remotejsonarray[i]
+        remotestrid = getstrid(remotejsonobj)
+        is_miss = True
+        for j in range(len(localjsonarray)):
+            localjsonobj = localjsonarray[j]
+            localstrid = getstrid(localjsonobj)
+            if localstrid == remotestrid:
+                is_miss = False
+                break
+        if is_miss == True:
+            print "[client 1] miss {}".format(remotestrid)
+    print "Please refer to README.md for static single rotation to fix each missing number by scripts/exps/run_makeup_rotation_exp.sh"
+
 def aggregate(localjsonarray, remotejsonarray, length):
     global GLOBAL_PEROBJ_EXECUTION_MILLIS
 

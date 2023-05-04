@@ -11,6 +11,7 @@ from helper import *
 def staticprocess(localjsonarray, remotejsonarray, bottleneckidx):
     if (len(localjsonarray) != len(remotejsonarray)):
         print "[ERROR][STATIC] client 0 jsonarray size {} != client 1 jsonarray size {}".format(len(localjsonarray), len(remotejsonarray))
+        misscheck(localjsonarray, remotejsonarray)
         exit(-1)
 
     workloadmode = 0
