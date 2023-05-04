@@ -14,7 +14,7 @@ CFLAGS += -std=c++14 -O3 -g -Wall -march=native -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS_SHARED += $(CFLAGS) -fPIC
 
-INCDIR += -I/usr/include
+INCDIR += -I../boost_1_81_0/install/include -I/usr/include
 
 ##############################################################################
 # RocksDB configuration

@@ -13,53 +13,53 @@ CC := g++
 CFLAGS += -std=c++14 -O3 -g -Wall -march=native -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS_SHARED += $(CFLAGS) -fPIC
-LDLIBS += -lpthread -ldl -lstdc++fs -lboost_system -lcommon
+LDLIBS += -lpthread -ldl -lstdc++fs -lboost_system -lboost_thread -lcommon
 #-ljemalloc 
 LDLIBS += $(EXTRA_LDLIBS)
 
-LDDIR += -L/usr/lib/x86_64-linux-gnu -L../common
-INCDIR += -I/usr/include
+LDDIR += -L../boost_1_81_0/install/lib -L/usr/lib/x86_64-linux-gnu -L../common
+INCDIR += -I../boost_1_81_0/install/include -I/usr/include
 
 ##############################################################################
-# DPDK configuration
-
-# Prefix for dpdk
-#RTE_SDK ?= /usr/
-# mpdts to compile
-DPDK_PMDS ?= ixgbe i40e tap virtio
-
-DPDK_INCDIR += -I$(RTE_SDK)/$(RTE_TARGET)/include
-DPDK_LDDIR += -L$(RTE_SDK)/$(RTE_TARGET)/lib/
-DPDK_LDLIBS += \
-  -Wl,--whole-archive \
-   $(addprefix -lrte_pmd_,$(DPDK_PMDS)) \
-  -lrte_eal \
-  -lrte_mempool \
-  -lrte_mempool_ring \
-  -lrte_hash \
-  -lrte_ring \
-  -lrte_kvargs \
-  -lrte_ethdev \
-  -lrte_mbuf \
-  -lnuma \
-  -lrte_bus_pci \
-  -lrte_pci \
-  -lrte_cmdline \
-  -lrte_timer \
-  -lrte_net \
-  -lrte_kni \
-  -lrte_bus_vdev \
-  -lrte_gso \
-  -Wl,--no-whole-archive \
-  -ldl \
-  $(EXTRA_LIBS_DPDK)
-
-DEPS += dpdk_helper.d
-CLEAN += dpdk_helper.o
-DPDK_OBJECTS += dpdk_helper.o
-
-INCDIR += $(DPDK_INCDIR)
-LDDIR += $(DPDK_LDDIR)
+## DPDK configuration
+#
+## Prefix for dpdk
+##RTE_SDK ?= /usr/
+## mpdts to compile
+#DPDK_PMDS ?= ixgbe i40e tap virtio
+#
+#DPDK_INCDIR += -I$(RTE_SDK)/$(RTE_TARGET)/include
+#DPDK_LDDIR += -L$(RTE_SDK)/$(RTE_TARGET)/lib/
+#DPDK_LDLIBS += \
+#  -Wl,--whole-archive \
+#   $(addprefix -lrte_pmd_,$(DPDK_PMDS)) \
+#  -lrte_eal \
+#  -lrte_mempool \
+#  -lrte_mempool_ring \
+#  -lrte_hash \
+#  -lrte_ring \
+#  -lrte_kvargs \
+#  -lrte_ethdev \
+#  -lrte_mbuf \
+#  -lnuma \
+#  -lrte_bus_pci \
+#  -lrte_pci \
+#  -lrte_cmdline \
+#  -lrte_timer \
+#  -lrte_net \
+#  -lrte_kni \
+#  -lrte_bus_vdev \
+#  -lrte_gso \
+#  -Wl,--no-whole-archive \
+#  -ldl \
+#  $(EXTRA_LIBS_DPDK)
+#
+#DEPS += dpdk_helper.d
+#CLEAN += dpdk_helper.o
+#DPDK_OBJECTS += dpdk_helper.o
+#
+#INCDIR += $(DPDK_INCDIR)
+#LDDIR += $(DPDK_LDDIR)
 
 ##############################################################################
 # RocksDB configuration

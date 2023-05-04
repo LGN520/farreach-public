@@ -6,7 +6,7 @@ Table of Contents
 0. [Overview](#0-overview)
 1. System Preperation
    1. [Dependency Installation](#11-dependency-installation)
-   2. [Configuration changes](#12-confiugration-changes)
+   2. [Configuration settings](#12-confiugration-settings)
    3. [Code Compilation](#13-code-compilation)
    4. [Testbed Building](#14-testbed-building)
 2. Data Preperation
@@ -64,10 +64,16 @@ Contents
 		* Second server (NIC: ens3f1; MAC: 9c:69:b4:60:ef:c1) <-> Tofino switch (front panel port: 3/0)
 		* Tofino switch (front panel port: 7/0) <-> Tofino switch (front panel port: 12/0) (for in-switch cross-pipeline recirculation)
 
+# System Preperation
+
 ## 1.1 Dependency Installation
 
-- Install boost if not
-	+ `sudo apt-get install libboost-all-dev`
+- Install libboost 1.81.0 into project directory
+	+ Under project directory (e.g., /home/ssy/projects/farreach-public)
+	+ `wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz`
+	+ `tar -xzvf boost_1_81_0.tar.gz`
+	+ `cd boost_1_81_0; ./bootstrap.sh --with-libraries=system,thread --prefix=./install && sudo ./b2 install`
+	<!-- + `sudo apt-get install libboost-all-dev` -->
 - Install Maven 3.3.9 if not
 - Install Java OpenJDK-8 if not
 - Install Tofino SDE 8.9.1 if not
@@ -84,9 +90,9 @@ Contents
 <!--	+ `sudo hugeadm \-\-thp-never` -->
 <!--	+ `cat /sys/kernel/mm/transparent_hugepage/enabled` to check -->
 
-## 1.2 Configuration Changes
+## 1.2 Configuration Settings
 
-- Update the following configurations in scripts/global.sh based on your own testbed
+- Update the following configuration settings in scripts/global.sh based on your own testbed
 	+ USER: Linux username (e.g., ssy)
 	+ SWITCH_PRIVATEKEY: the passwd-free ssh key used for the connection from {main client} to {switch} as **root user** (e.g., .ssh/switch-private-key)
 	+ CONNECTION_PRIVATEKEY: the passwd-free ssh key used for the connections from two servers to {switch}, from two clients to two servers, and from {first server} (controller) to {second server} as **non-root user** (e.g., .ssh/connection-private-key)
@@ -134,7 +140,7 @@ Contents
 
 </br>
 
-- Update SSH configuration
+- Update SSH configuration settings
 	+ In any of above machines (2 clients, 2 servers, and 1 switch), if you need to manually type yes/no to check the hostname when using ssh command to connect other machines, add the following content to `~/.ssh/config` under the machine:
 	```
 	Host *
@@ -154,56 +160,56 @@ Contents
 
 ## 1.3 Code Compilation
 
-- For each method (e.g., farreach)
-	+ Under {main client}
-		* Set DIRNAME as the {method} in scripts/common.sh
-		* `bash scripts/remote/sync.sh` to sync code of the method to all machines
-			- NOTE: rocksdb-6.22.1/ is not synced by default (i.e., line 64 in scripts/remote/sync.sh is commented by default). You only need to sync it at most once (uncomment line 64 ONLY for the first time of executing scripts/remote/synch.sh, and comment line 64 after that)
-	+ Under each server (NOT including client/switch), compile RocksDB (**NOTE: only need to compile once**)
-		+ `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev`
+- Sync and compile (**need around 3 hours**) RocksDB (ONLY need to perform once)
+	+ Under {main client}, run `bash scripts/sync_kvs.sh` to sync rocksdb-6.22.1/ to each server (ONLY need to sync once)
+	+ Under {first server} and {second server}, compile RocksDB (ONLY need to compile once)
+		+ Run `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev` to install necessary dependencies for RocksDB
 		+ `cd rocksdb-6.22.1`
 		+ `PORTABLE=1 make static_lib`
-			* We comment -Wstrict-prototype and -Werror in Makefile to fix compilation failures due to strict-alias warning
+			* We already comment -Wstrict-prototype and -Werror in Makefile to fix compilation failures due to strict-alias warning
 			* We use PORTABLE=1 to fix runtime error of illegal instruction when open()
+		+ For each method (farreach or nocache or netcache)
 			* Run `mkdir /tmp/{method}` to prepare the directory (e.g., /tmp/farreach) for database in advance
+
+- For each method (farreach or nocache or netcache)
+	+ Under {main client}
+		* Set DIRNAME as {method} in scripts/common.sh
+		* `bash scripts/remote/sync.sh` to sync code of the method to all machines
 	+ Compile software code
 		* Manual way
-			- Under each client, run `bash scripts/local/makeclient.sh`
-			- Under each switch, run `bash scripts/local/makeswitch.sh`
-				+ Note: if you have compiled P4 of the current method before, you should delete the corresponding directory under $SDE/pkgsrc/p4-build/tofino/ before re-compilation.
-			- Under each server, run `bash scripts/local/makeserver.sh`
-		* Automatic way (NOT used now due to slow sequential compialtion)
-			- Under the main client, `bash scripts/remote/makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server
+			- Under each client, run `bash scripts/local/makeclient.sh` (need around 10 minutes especially for the first time with Maven downloading time)
+			- Under each switch
+				+ Run `bash scripts/local/makeswitchos.sh` to make switch OS (need around 1 minute)
+				+ Run `su` to enter root mode, and run `cd {method}/tofino; bash compile.sh` to make P4 code (**need around 3 hours**)
+					* Note: if you have compiled P4 code of {method} before, you do NOT need to re-compile it agina. If you really want to re-compile it (maybe due to P4 code modification), you should delete the corresponding directory (netbufferv4, nocache, or netcache) under $SDE/pkgsrc/p4-build/tofino/ before re-compilation.
+			- Under each server, run `bash scripts/local/makeserver.sh` (need around 5 minutes)
 		* NOTE: if with "make: warning:  Clock skew detected.  Your build may be incomplete" during make, run `find . -type f | xargs touch` and then re-make files
-	+ Compile hardware code (NOT need to run now as we have compiled hardware code)
-		* Under each Tofino OS, enter directory of {method}/tofino/
-			- `bash compile.sh` (NOTE: if we have already compiled for all methods, we do NOT need to run this command unless we change in-switch implementation)
-
-</br>
+		* ~~Automatic way (NOT used now due to very slow sequential compialtion)~~
+			- ~~Under the main client, `bash scripts/remote/makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server~~
 
 ## 1.4 Testbed Building
 
-- Apply network settings provided by scripts/global.sh
-	+ TODO: Update configure_xxx.sh based on global.sh
+- Building your testbed basedon network settings provided by scripts/global.sh
+	+ In {main client}, run `bash scripts/local/confiugre_client.sh 0`
+	+ In {secondary client}, run `bash scripts/local/configure_client.sh 1`
+	+ In {first server}, run `bash scripts/local/confiugre_server.sh 0`
+	+ In {second server}, run `bash scripts/local/confiugre_server.sh 1`
+	+ In {switch} OS, run `bash scripts/local/confiugre_switchos.sh`
 
-- Building your testbed
-	+ Modify scripts/local/configure_\<client/server/switchos\>.sh based on your own testbed settings
-	+ In each physical client, run `bash scripts/local/confiugre_client.sh`
-	+ In each physical server, run `bash scripts/local/confiugre_server.sh`
-	+ In each physical switch, run `bash scripts/local/confiugre_switchos.sh`
+# Data Preperation
 
-</br></br>
+TODO: === END HERE ===
 
 ## 2.1 Loading Phase
+
 - Under the main client, perform the loading phase and backup for evaluation time reduction
 	+ Run `bash scripts/remote/prepare_load.sh`, which will copy recordload/config.ini to switch/server::nocache/config.ini
 	+ In switch, launch and configure nocache switch by nocache/tofino/start_switch.sh and nocache/localscripts/launchswitchtestbed.sh
 	+ Run `bash scripts/remote/load_and_backup.sh`, which will launch and kill servers automatically
     	+ NOTE: at the end of load_and_backup.sh, we copy nocache/config.ini to resume switch/server::nocache/config.ini
 
-</br>
-
 ## 2.2 Workload Analysis & Dump Keys
+
 - Under the main client
   - Update `<workload_name>` with the workload in file `keydump/config.ini`
   - (Recommend) Automatic way
@@ -217,7 +223,7 @@ Contents
   		+ Generates key popularity changing rules in `benchmark/output/<workloadname>-\*rules/` for dynamic pattern later
   	- `bash scripts/remote/deprecated/synckeydump.sh <workloadname>` to sync the above files of the workload to another client
 
-</br></br>
+# Running Experiments (Automatic Evaluation)
 
 ## 3.1 Regular Experiments
 - To carry out experiments according to paper, we have set up the scripts for running specific tasks. The scripts are placed under `scripts/exps/`.
@@ -279,7 +285,7 @@ During experiments with static pattern, single rotation failure may happen due t
       - `targetrotation`: makeup rotation index (eg.: 10)
       - `targetthpt`: throughput target of this rotation, only applicable for exp2.
 
-</br></br>
+# Running Workloads (Automatic Evaluation)
 
 ## 4.1 Evaluate Dynamic Workload
 Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.

@@ -59,11 +59,6 @@ function syncoutputfiles_toall(){
 	rsync -av -e ssh --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" $TMPDIRNAME/$TMPFILENAME ${USER}@${SERVER1}:${SERVER_ROOTPATH}/$TMPDIRNAME >/dev/null
 }
 
-# NOTE: comment only if you have not copied databases to each machine and have not compiled databases in server.
-# 	Otherwise, it will overwrite databases in server and you have re-compiled them again.
-#syncfiles_toall rocksdb-6.22.1 \*
-##syncfiles_toall tommyds-2.2 \*
-
 syncfiles_toall scripts \*
 syncfiles_toclient benchmark/inswitchcache-java-lib/ \*
 syncfiles_toclient benchmark/ycsb/ \*

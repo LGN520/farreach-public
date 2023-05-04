@@ -17,8 +17,8 @@ LDLIBS += -lpthread -ldl -lstdc++fs -lboost_system -lcommon
 #-ljemalloc 
 LDLIBS += $(EXTRA_LDLIBS)
 
-LDDIR += -L/usr/lib/x86_64-linux-gnu -L../common
-INCDIR += -I/usr/include
+LDDIR += -L../boost_1_81_0/install/lib -L/usr/lib/x86_64-linux-gnu -L../common
+INCDIR += -I../boost_1_81_0/install/include -I/usr/include
 
 ##############################################################################
 # DPDK configuration
