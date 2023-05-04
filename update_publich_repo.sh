@@ -68,15 +68,15 @@ rm ycsb-implementation.md
 mv benchmark.md README.md
 git add README.md
 
-# Update projects/NetBuffer/ as projects/farreach-public/
-tmpfiles=($(find nocache/ netcache/ farreach/ common/ scripts/ benchmark/ -type f -name "*.sh" -o -name "*.c" -o -name "*.h" | xargs grep -r -e "NetBuffer/" -e "/NetBuffer" -l | grep -v "update_publich_repo.sh"))
+# Update projects/farreach-private/ as projects/farreach-public/
+tmpfiles=($(find nocache/ netcache/ farreach/ common/ scripts/ benchmark/ -type f -name "*.sh" -o -name "*.c" -o -name "*.h" | xargs grep -r -e "farreach-private/" -e "/NetBuffer" -l | grep -v "update_publich_repo.sh"))
 echo "${tmpfiles}"
 # In Linux
-#echo "${tmpfiles}" | xargs sed -i 's!/NetBuffer!/farreach-public!g'
-#echo "${tmpfiles}" | xargs sed -i 's!NetBuffer/!farreach-public/!g'
+#echo "${tmpfiles}" | xargs sed -i 's!/farreach-private!/farreach-public!g'
+#echo "${tmpfiles}" | xargs sed -i 's!farreach-private/!farreach-public/!g'
 # In MacOS
-echo "${tmpfiles}" | xargs sed -i '' 's!/NetBuffer!/farreach-public!g'
-echo "${tmpfiles}" | xargs sed -i '' 's!NetBuffer/!farreach-public/!g'
+echo "${tmpfiles}" | xargs sed -i '' 's!/farreach-private!/farreach-public!g'
+echo "${tmpfiles}" | xargs sed -i '' 's!farreach-private/!farreach-public/!g'
 
 # Commit
 git commit -am 're-organize for public repo'

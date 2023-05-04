@@ -1,22 +1,14 @@
-# README for benchmark (running guide)
-
-### Method
-farreach / nocache / netcache
-
-### Machine Requirements in Our Testbed:</br>
-- 1 Main Client </br>
-- 1 Secondary Client </br>
-- 2 Servers </br>
-- 1 Physical Switch </br>
-
-</br>
+# README of FarReach
 
 Table of Contents
 ====================================
+
+0. [Overview](#0-overview)
 1. System Preperation
-   1. [Environment Installation](#11-environment-installation)
-   2. [Code Compilation](#12-code-compilation)
-   3. [Testbed Configuration](#13-testbed-configuration)
+   1. [Dependency Installation](#11-dependency-installation)
+   2. [Network Configuration](#12-network-configuration)
+   3. [Code Compilation](#13-code-compilation)
+   4. [Testbed Configuration](#14-testbed-configuration)
 2. Data Preperation
    1. [Loading Procedure](#21-loading-phase)
    2. [Keydump Procedure](#22-workload-analysis--dump-keys)
@@ -30,19 +22,59 @@ Table of Contents
    1. [Aggregate Scripts](#51-aggregate-scripts)
    2. [Scripts Usage and Example](#52-scripts-usage-and-example)
 
-</br>
-
 Contents
 ====================================
-## 1.1 Environment Installation
 
-- Install boost
+## 0 Overview
+
+### Methods
+
+- farreach: our in-switch write-back caching
+- nocache: a baseline without in-switch caching
+- netcache: a baseline with in-switch write-through caching
+
+### Our Testbed
+
+- You can follow our settings below to build your own testbed
+
+</br>
+
+- Machine requirements
+	+ Four physical machines with Ubuntu 16.04/18.04
+		* One main client (hostname: dl11)
+		* One secondary client (hostname: dl20)
+		* Two servers (hostnames: dl21 and dl30)
+			- Note: controller is co-located in the first server (dl21)
+	+ One 2-pipeline Tofino switch with SDE 8.9.1 (hostname: bf3)
+		* **Note: larger version (e.g., 9.0.1) cannot support P4\_14 correctly due to compiler its own bugs**
+
+</br>
+
+- Network configuration and topology
+	+ All clients/servers/switch are in the same data center (IP mask: 172.16.255.255)
+		* Main client: 172.16.112.11
+		* Secondary client: 172.16.112.20
+		* First server (co-located with controller): 172.16.112.21
+		* Second server: 172.16.112.30
+		* Tofino switch: 172.16.112.19
+	+ Testbed topology
+		* Main client (NIC: enp129s0f0) <-> Tofino switch (front panel port: 5/0)
+		* Secondary client (NIC: ens2f0) <-> Tofino switch (front panel port: 21/0)
+		* First server (NIC: ens2f1) <-> Tofino switch (front panel port: 6/0)
+		* Second server (NIC: ens3f1) <-> Tofino switch (front panel port: 3/0)
+		* Tofino switch (front panel port: 1/0) <-> Tofino switch (front panel port: 12/0) (for in-switch cross-pipeline recirculation)
+
+## 1.1 Dependency Installation
+
+- Install boost if not
 	+ `sudo apt-get install libboost-all-dev`
-- Install Maven and Java
-	+ Please use openjdk-8/11 to avoid version-related issues
-- Tofino compiler version: 8.9.1
-- Use gcc-7.5.0 and g++-7.5.0
-- Use RocksDB 6.22.1
+- Install Maven 3.3.9 if not
+- Install Java OpenJDK-8 if not
+- Install Tofino SDE 8.9.1 if not
+	+ **Note: larger version (e.g., 9.0.1) cannot support P4\_14 correctly due to compiler its own bugs**
+- Install gcc-7.5.0 and g++-7.5.0 if not
+- Use RocksDB 6.22.1 (already embedded in the project; not need extra installation)
+
 <!-- - ONLY for multi-switch setting: Install bpftools for spine reflector -->
 <!--	+ `git clone https://github.com/cloudflare/bpftools.git` -->
 <!--	+ `cd bpftools` -->
@@ -52,31 +84,87 @@ Contents
 <!--	+ `sudo hugeadm \-\-thp-never` -->
 <!--	+ `cat /sys/kernel/mm/transparent_hugepage/enabled` to check -->
 
-</br>
+## 1.2 Network Configuration
 
-## 1.2 Code compilation
+- Update scripts/global.sh based on your own testbed
+	+ USER: Linux username (e.g., ssy)
+	+ SWITCH_PRIVATEKEY: the passwd-free ssh key used for the connection from {main client} to {switch} as **root user** (e.g., .ssh/switch-private-key)
+	+ CONNECTION_PRIVATEKEY: the passwd-free ssh key used for the connections from two servers to {switch}, from two clients to two servers, and from {first server} (controller) to {second server} as **non-root user** (e.g., .ssh/connection-private-key)
+	+ MAIN_CLIENT: hostname of {main client} (e.g., dl11)
+	+ SECONDARY_CLIENT: hostname of {secondary client} (e.g., dl20)
+	+ SERVER0: hostname of {first server} co-located with controller (e.g., dl21)
+	+ SERVER1: hostname of {second server} (e.g., dl30)
+	+ LEAFSWITCH: hostname of the Tofino {switch} (e.g., bf3)
+	+ CLIENT/SWITCH/SERVER_ROOTPATH: project directory path in clients/switch/servers (e.g., /home/ssy/projects/farreach-public)
+	+ Network settings
+		* Main client
+			- MAIN_CLIENT_TOSWITCH_IP: the IP address of NIC for {main client} connecting to {switch}
+			- MAIN_CLIENT_TOSWITCH_MAC: the MAC address of NIC for {main client} connecting to {switch}
+			- MAIN_CLIENT_TOSWITCH_FPPORT: the front panel port in {switch} data plane corresponding to {main client}
+			- MAIN_CLIENT_TOSWITCH_PIPEIDX: the pipeline index (0 or 1) for MAIN_CLIENT_TOSWITCH_FPPORT
+			- MAIN_CLIENT_LOCAL_IP: the local IP address of NIC for {main client} connecting to the local area network (NOT bypass {switch} data plane)
+		* Secondary client
+			- SECONDARY_CLIENT_TOSWITCH_IP: the IP address of NIC for {secondary client} connecting to {switch}
+			- SECONDARY_CLIENT_TOSWITCH_MAC: the MAC address of NIC for {secondary client} connecting to {switch}
+			- SECONDARY_CLIENT_TOSWITCH_FPPORT: the front panel port in {switch} data plane corresponding to {secondary client}
+			- SECONDARY_CLIENT_TOSWITCH_PIPEIDX: the pipeline index (0 or 1) for SECONDARY_CLIENT_TOSWITCH_FPPORT
+			- SECONDARY_CLIENT_LOCAL_IP: the local IP address of NIC for {secondary client} connecting to the local area network (NOT bypass {switch} data plane)
+		* First server
+			- SERVER0_TOSWITCH_IP: the IP address of NIC for {first server} connecting to {switch}
+			- SERVER0_TOSWITCH_MAC: the MAC address of NIC for {first server} connecting to {switch}
+			- SERVER0_TOSWITCH_FPPORT: the front panel port in {switch} data plane corresponding to {first server}
+			- SERVER0_TOSWITCH_PIPEIDX: the pipeline index (0 or 1) for SERVER0_TOSWITCH_FPPORT
+			- SERVER0_LOCAL_IP: the local IP address of NIC for {first server} connecting to the local area network (NOT bypass {switch} data plane)
+		* Secondary server
+			- SERVER1_TOSWITCH_IP: the IP address of NIC for {second server} connecting to {switch}
+			- SERVER1_TOSWITCH_MAC: the MAC address of NIC for {second server} connecting to {switch}
+			- SERVER1_TOSWITCH_FPPORT: the front panel port in {switch} data plane corresponding to {second server}
+			- SERVER1_TOSWITCH_PIPEIDX: the pipeline index (0 or 1) for SERVER1_TOSWITCH_FPPORT
+			- SERVER1_LOCAL_IP: the local IP address of NIC for {second server} connecting to the local area network (NOT bypass {switch} data plane)
+		* Controller (co-located with first server)
+			- TODO (END HERE)
 
-- Update scripts/global.sh for your testbed accordingly
-	+ Set specific USER (username), XXX_PRIVATEKEY, MAIN/SECONDARY_CLIENT, and XXX_ROOTPATH (directory path)
-		* SWITCH_PRIVATEKEY: the ssh key used for the connection from {client0} to {switch} as root user
-		* CONNECTION_PRIVATEKEY: the ssh key used for the connections from servers/controller to {switch}, and those from clients/controller to each server as non-root user
-- For each {method} (e.g., farreach)
-	+ Under the main client
+- SSH configuration
+	+ In any of above machines (2 clients, 2 servers, and 1 switch), if you need to manually type yes/no to check the hostname when using ssh command to connect other machines, add the following content to `~/.ssh/config` under the machine:
+	```
+	Host *
+		StrictHostKeyChecking no
+	```
+	+ Generate SWITCH_PRIVATEKEY
+		* Under {main client}, if the ssh key has not been created, run `sudo ssh-keygen -t rsa -f ~/.ssh/switch-private-key` (**use empty passwd for no passphrase**)
+		* Append the content of ~/.ssh/switch-private-key.pub of {main client}, into /home/root/.ssh/authorized_keys of {switch}
+	+ Generate CONNECTION_PRIVATEKEY
+		* Consider the following source-to-destination pairs:
+			- {first server}-to-{switch} and {second server}-to-{switch}
+			- {main client}-to-{first server}, {main client}-to-{second server}, {secondary client}-to-{first server}, and {secondary client}-to-{second server}
+			- {first server}-to-{second server} (controller is co-located with {first server})
+		* For each pair of source to destination
+			- Under {source}, if the ssh key has not been created, run `ssh-keygen -t rsa -f ~/.ssh/connection-private-key` (**use empty passwd for no passphrase**)
+			- Append the content of ~/.ssh/connection-private-key.pub of {source}, into ~/.ssh/authorized_keys of {destination}
+
+- Update ini configuration files (based on network settings in scripts/global.sh)
+	+ TODO: Update configure_xxx.sh based on global.sh
+	+ TODO: Update config files to replace ip and ports based on global.sh
+
+## 1.3 Code Compilation
+
+- For each method (e.g., farreach)
+	+ Under {main client}
 		* Set DIRNAME as the {method} in scripts/common.sh
-		* `bash scripts/remote/sync.sh` to sync code of the method to all machines (NOTE: rocksdb-6.22.1/ only needs to be synced at most once)
-	+ Under each server (NOT including client/switch), compile RocksDB (NOTE: only need to compile once)
-		+ `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev`
+		* `bash scripts/remote/sync.sh` to sync code of the method to all machines
+			- NOTE: rocksdb-6.22.1/ is not synced by default (i.e., line 64 in scripts/remote/sync.sh is commented by default). You only need to sync it at most once (uncomment line 64 ONLY for the first time of executing scripts/remote/synch.sh, and comment line 64 after that)
+	+ Under each server (NOT including client/switch), compile RocksDB (**NOTE: only need to compile once**)
+		+ `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev`
 		+ `cd rocksdb-6.22.1`
 		+ `PORTABLE=1 make static_lib`
-			* Comment -Wstrict-prototype and -Werror if compilation fails due to strict-alias warning
-			* Add PORTABLE=1 if with runtime error of illegal instruction when open()
-			* Possible error: compression type Snappy is not linked with the binary
-				- Install libsnappy and remake static lib of rocksdb
-				- Prepare the directory for database in advance
+			* We comment -Wstrict-prototype and -Werror in Makefile to fix compilation failures due to strict-alias warning
+			* We use PORTABLE=1 to fix runtime error of illegal instruction when open()
+			* Run `mkdir /tmp/{method}` to prepare the directory (e.g., /tmp/farreach) for database in advance
 	+ Compile software code
 		* Manual way
 			- Under each client, run `bash scripts/local/makeclient.sh`
 			- Under each switch, run `bash scripts/local/makeswitch.sh`
+				+ Note: if you have compiled P4 of the current method before, you should delete the corresponding directory under $SDE/pkgsrc/p4-build/tofino/ before re-compilation.
 			- Under each server, run `bash scripts/local/makeserver.sh`
 		* Automatic way (NOT used now due to slow sequential compialtion)
 			- Under the main client, `bash scripts/remote/makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server
@@ -87,7 +175,7 @@ Contents
 
 </br>
 
-## 1.3 Testbed Configuration
+## 1.4 Testbed Configuration
 - Building your testbed
 	+ Modify scripts/local/configure_\<client/server/switchos\>.sh based on your own testbed settings
 	+ In each physical client, run `bash scripts/local/confiugre_client.sh`
@@ -122,7 +210,8 @@ Contents
 </br></br>
 
 ## 3.1 Regular Experiments
-To carry out experiments according to paper, we have set up the scripts for running specific tasks. The scripts are placed under `scripts/exps/`.
+- To carry out experiments according to paper, we have set up the scripts for running specific tasks. The scripts are placed under `scripts/exps/`.
+	+ **Note that due to server rotation to cope with limited machines, each experiment may take 1-8 hour(s).**
 
 1. Experiments List and Scripts:
 

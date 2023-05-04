@@ -9,7 +9,7 @@ function readini() {
 	echo ${result}
 }
 
-DIRNAME="netcache"
+DIRNAME="farreach"
 
 ##### method-related variables #####
 
