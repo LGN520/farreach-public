@@ -635,6 +635,8 @@ class CachePopInswitchAck : public WarmupRequest<key_t> { // ophdr
 		CachePopInswitchAck(method_t methodid, const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+		bool is_valid_ = true;
 };
 
 // NOTE: only used in end-hosts
@@ -844,6 +846,8 @@ class SetvalidInswitchAck : public WarmupRequest<key_t> { // ophdr
 		SetvalidInswitchAck(method_t methodid, const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+		bool is_valid_ = true;
 };
 
 template<class key_t>

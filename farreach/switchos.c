@@ -665,7 +665,7 @@ void *run_switchos_popworker(void *param) {
 
 						setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
 						//INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
-						if (unlikely(tmp_setvalid_rsp.key() != tmp_cache_pop_ptr->key())) {
+						if (unlikely(!tmp_setvalid_rsp.is_valid_ || (tmp_setvalid_rsp.key() != tmp_cache_pop_ptr->key()))) {
 							printf("invalid key of SETVALID_INSWITCH_ACK %x which should be %x\n", tmp_setvalid_rsp.key().keyhihi, tmp_cache_pop_ptr->key().keyhihi);
 							continue;
 						}
@@ -780,7 +780,11 @@ void *run_switchos_popworker(void *param) {
 						}
 
 						setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
-						INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
+						//INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
+						if (unlikely(!tmp_setvalid_rsp.is_valid_ || (tmp_setvalid_rsp.key() != cur_evictkey))) {
+							printf("invalid key of SETVALID_INSWITCH_ACK %x which should be %x\n", tmp_setvalid_rsp.key().keyhihi, cur_evictkey.keyhihi);
+							continue;
+						}
 						break;
 					}
 					
@@ -870,7 +874,11 @@ void *run_switchos_popworker(void *param) {
 						}
 
 						setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
-						INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
+						//INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
+						if (unlikely(!tmp_setvalid_rsp.is_valid_ || (tmp_setvalid_rsp.key() != cur_evictkey))) {
+							printf("invalid key of SETVALID_INSWITCH_ACK %x which should be %x\n", tmp_setvalid_rsp.key().keyhihi, cur_evictkey.keyhihi);
+							continue;
+						}
 						break;
 					}
 
@@ -939,7 +947,7 @@ void *run_switchos_popworker(void *param) {
 						}
 
 						cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
-						if (tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_ptr->key()) {
+						if (tmp_cache_pop_inswitch_ack.is_valid_ && tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_ptr->key()) {
 							with_correctack = true;
 							break;
 						}
@@ -976,7 +984,11 @@ void *run_switchos_popworker(void *param) {
 					}
 
 					setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
-					INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
+					//INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
+					if (unlikely(!tmp_setvalid_rsp.is_valid_ || (tmp_setvalid_rsp.key() != tmp_cache_pop_ptr->key()))) {
+						printf("invalid key of SETVALID_INSWITCH_ACK %x which should be %x\n", tmp_setvalid_rsp.key().keyhihi, tmp_cache_pop_ptr->key().keyhihi);
+						continue;
+					}
 					break;
 				}
 

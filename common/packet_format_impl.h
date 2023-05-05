@@ -2248,8 +2248,9 @@ CachePopInswitchAck<key_t>::CachePopInswitchAck(method_t methodid, const char *d
 	this->deserialize(data, recv_size);
 	//INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_POP_INSWITCH_ACK);
 	if (unlikely(static_cast<packet_type_t>(this->_type) != PacketType::CACHE_POP_INSWITCH_ACK)) {
-		printf("[CachePopInswitchAck] invalid packet type: %x\n", this->_type);
-		exit(-1);
+		printf("[CachePopInswitchAck] WARN: invalid packet type: %x\n", this->_type);
+		//exit(-1);
+		is_valid_ = false;
 	}
 }
 
@@ -2939,7 +2940,12 @@ SetvalidInswitchAck<key_t>::SetvalidInswitchAck(method_t methodid, const char *d
 {
 	this->_methodid = methodid;
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::SETVALID_INSWITCH_ACK);
+	//INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::SETVALID_INSWITCH_ACK);
+	if (unlikely(static_cast<packet_type_t>(this->_type) != PacketType::SETVALID_INSWITCH_ACK)) {
+		printf("[SetvalidInswitchAck] WARN: invalid packet type: %x\n", this->_type);
+		//exit(-1);
+		is_valid_ = false;
+	}
 }
 
 template<class key_t>

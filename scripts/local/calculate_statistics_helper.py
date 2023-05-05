@@ -94,6 +94,8 @@ def dynamicprocess(localjsonarray, remotejsonarray):
         seconds = len(remotejsonarray)
     print "[DYNAMIC] common seconds: {}".format(seconds)
 
+    misscheck(localjsonarray, remotejsonarray)
+
     workloadmode = 1
 
     aggjsonarray = aggregate(localjsonarray, remotejsonarray, seconds)
