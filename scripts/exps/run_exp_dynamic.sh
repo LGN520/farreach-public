@@ -10,7 +10,8 @@ fi
 roundnumber=$1
 
 exp7_workload="synthetic"
-exp7_server_scale=16
+exp7_server_scale=2
+exp7_server_scale_for_rotation=16
 exp7_server_scale_bottleneck=14
 exp7_method_list=("farreach" "netcache" "nocache")
 exp7_dynamic_rule_list=(hotin hotout random stable)
@@ -37,10 +38,12 @@ for exp7_method in ${exp7_method_list[@]}; do
     sed -i "/^workload_mode=/s/=.*/=1/" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
     sed -i "/^dynamic_ruleprefix=/s/=.*/=${exp7_rule}/" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
     sed -i "/^server_total_logical_num=/s/=.*/="${exp7_server_scale}"/" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
-    sed -i "/^server_total_logical_num_for_rotation=/s/=.*/="${exp7_server_scale}"/" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
+    sed -i "/^server_total_logical_num_for_rotation=/s/=.*/="${exp7_server_scale_for_rotation}"/" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
     sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="${exp7_server_scale_bottleneck}"/" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
     sed -i "/^controller_snapshot_period=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
     sed -i "/^switch_kv_bucket_num=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
+	sed -i "s/^server_logical_idxes=TODO0/server_logical_idxes=0/g" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
+	sed -i "s/^server_logical_idxes=TODO1/server_logical_idxes=1/g" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
 
     cd ${CLIENT_ROOTPATH}
     echo "[exp7][${exp7_method}][${exp7_rule}] prepare config.ini" 

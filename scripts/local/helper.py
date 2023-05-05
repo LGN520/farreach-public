@@ -87,7 +87,7 @@ def misscheck(localjsonarray, remotejsonarray):
                 break
         if is_miss == True:
             print "[client 1] miss {}".format(remotestrid)
-    print "Please refer to README.md for static single rotation to fix each missing number by scripts/exps/run_makeup_rotation_exp.sh"
+    print "Please refer to README.md to makeup single rotation and fix each missing number by scripts/exps/run_makeup_rotation_exp.sh"
 
 def aggregate(localjsonarray, remotejsonarray, length):
     global GLOBAL_PEROBJ_EXECUTION_MILLIS

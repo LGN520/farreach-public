@@ -10,8 +10,8 @@ Table of Contents
    3. [Code Compilation](#13-code-compilation)
    4. [Testbed Building](#14-testbed-building)
 2. Data Preperation
-   1. [Loading Procedure](#21-loading-phase)
-   2. [Keydump Procedure](#22-workload-analysis--dump-keys)
+   1. [Loading Phase](#21-loading-phase)
+   2. [Workload Analysis & Dump Keys](#22-workload-analysis--dump-keys)
 3. Running Experiments (Automatic Evaluation)
    1. [Regular Experiments](#31-regular-experiments)
    2. [Makeup Static Single Rotation](#32-makeup-static-single-rotation)
@@ -94,14 +94,15 @@ Contents
 
 - Update the following configuration settings in scripts/global.sh based on your own testbed
 	+ USER: Linux username (e.g., ssy)
-	+ SWITCH_PRIVATEKEY: the passwd-free ssh key used for the connection from {main client} to {switch} as **root user** (e.g., .ssh/switch-private-key)
-	+ CONNECTION_PRIVATEKEY: the passwd-free ssh key used for the connections from two servers to {switch}, from two clients to two servers, and from {first server} (controller) to {second server} as **non-root user** (e.g., .ssh/connection-private-key)
-	+ MAIN_CLIENT: hostname of {main client} (e.g., dl11)
-	+ SECONDARY_CLIENT: hostname of {secondary client} (e.g., dl20)
+	+ SWITCH\_PRIVATEKEY: the passwd-free ssh key used by {main client} to connect with {switch} as **root user** (e.g., .ssh/switch-private-key)
+	+ CONNECTION\_PRIVATEKEY: the passwd-free ssh key used by {switch} to connect with two servers (for maxseq and in-switch snapshot), by two servers to connect with two clients (for client-side backups), and by {second server} to connect with {first server} (controller) (for in-switch snapshot) as **non-root user** (e.g., .ssh/connection-private-key)
+	+ MAIN\_CLIENT: hostname of {main client} (e.g., dl11)
+	+ SECONDARY\_CLIENT: hostname of {secondary client} (e.g., dl20)
 	+ SERVER0: hostname of {first server} co-located with controller (e.g., dl21)
 	+ SERVER1: hostname of {second server} (e.g., dl30)
 	+ LEAFSWITCH: hostname of the Tofino {switch} (e.g., bf3)
-	+ CLIENT/SWITCH/SERVER_ROOTPATH: project directory path in clients/switch/servers (e.g., /home/ssy/projects/farreach-public)
+	+ CLIENT/SWITCH/SERVER\_ROOTPATH: project directory path in clients/switch/servers (e.g., /home/ssy/projects/farreach-public)
+    + EVALUATION\_OUTPUT\_PREFIX: path to store the raw statistics of each experiment for aggregate analysis
 	+ Network settings
 		* Main client
 			- MAIN_CLIENT_TOSWITCH_IP: the IP address of NIC for {main client} connecting to {switch}
@@ -155,13 +156,14 @@ Contents
 	```
 	+ Generate SWITCH_PRIVATEKEY
 		* Under {main client}, if the ssh key has not been created, run `sudo ssh-keygen -t rsa -f ~/.ssh/switch-private-key` (**use empty passwd for no passphrase**)
+			- Also run `sudo chown {USER}:{USER} ~/.ssh/switch-private-key` (use your Linux username) to change the owner
 		* Append the content of ~/.ssh/switch-private-key.pub of {main client}, into /home/root/.ssh/authorized_keys of {switch}
 	+ Generate CONNECTION_PRIVATEKEY
-		* Consider the following source-to-destination pairs:
-			- {first server}-to-{switch} and {second server}-to-{switch}
-			- {main client}-to-{first server}, {main client}-to-{second server}, {secondary client}-to-{first server}, and {secondary client}-to-{second server}
-			- {first server}-to-{second server} (controller is co-located with {first server})
-		* For each pair of source to destination
+		* Consider the following source-connectwith-destination pairs:
+			- {switch}-connectwith-{first server} and {switch}-connectwith-{second server}
+			- {first server}-connectwith-{main client}, {first server}-connectwith-{secondary client}, {second server}-connectwith-{main client}, and {second server}-to-{secondary client}
+			- {second server}-connectwith-{first server} (controller is co-located with {first server})
+		* For each pair of source connecting with destination
 			- Under {source}, if the ssh key has not been created, run `ssh-keygen -t rsa -f ~/.ssh/connection-private-key` (**use empty passwd for no passphrase**)
 			- Append the content of ~/.ssh/connection-private-key.pub of {source}, into ~/.ssh/authorized_keys of {destination}
 
@@ -178,23 +180,26 @@ Contents
 		+ For each method (farreach or nocache or netcache)
 			* Run `mkdir /tmp/{method}` to prepare the directory (e.g., /tmp/farreach) for database in advance
 
+</br>
+
 - For each {method}
 	+ Options of method name: farreach, nocache, or netcache
 	+ Under {main client}
 		* Set DIRNAME as {method} in scripts/common.sh
 		* `bash scripts/remote/sync.sh` to sync code of the method to all machines
 	+ Compile software code
-		* Manual way
-			- Under each client, run `bash scripts/local/makeclient.sh` (TIME: around 10 minutes especially for the first time with Maven downloading time)
-			- Under each switch
-				+ Run `bash scripts/local/makeswitchos.sh` to make switch OS (TIME: around 1 minute)
-				+ Run `su` to enter root mode, and run `cd {method}/tofino; bash compile.sh` to make P4 code (**TIME: around 3 hours**)
-					* Note: if you have compiled P4 code of {method} before, you do NOT need to re-compile it agina. If you really want to re-compile it (maybe due to P4 code modification), you should delete the corresponding directory (netbufferv4, nocache, or netcache) under $SDE/pkgsrc/p4-build/tofino/ before re-compilation.
-			- Under each server, run `bash scripts/local/makeserver.sh` (TIME: around 5 minutes)
+		* Under each client, run `bash scripts/local/makeclient.sh` (TIME: around 10 minutes especially for the first time with Maven downloading time)
+		* Under each switch
+			- Run `bash scripts/local/makeswitchos.sh` to make switch OS (TIME: around 1 minute)
+			- Run `su` to enter root mode, and run `cd {method}/tofino; bash compile.sh` to make P4 code (**TIME: around 3 hours**)
+				+ Note: if you have compiled P4 code of {method} before, you do NOT need to re-compile it agina. If you really want to re-compile it (maybe due to P4 code modification), you should delete the corresponding directory (netbufferv4, nocache, or netcache) under $SDE/pkgsrc/p4-build/tofino/ before re-compilation.
+		* Under each server, run `bash scripts/local/makeserver.sh` (TIME: around 5 minutes)
 		* NOTE: if with "make: warning:  Clock skew detected.  Your build may be incomplete" during make, run `find . -type f | xargs touch` and then re-make files
 
-<!-- * ~~Automatic way (NOT used now due to very slow sequential compialtion)~~
-	- ~~Under the main client, `bash scripts/remote/makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server~~ -->
+<!--
+* Automatic way (NOT used now due to very slow sequential compialtion) vs. makeclient/server/switchos.sh
+	- Under the main client, `bash scripts/remote/makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server
+-->
 
 ## 1.4 Testbed Building
 
@@ -216,7 +221,7 @@ Contents
 	+ Under {switch}
 		* Run `bash nocache/tofino/start_switch.sh` to launch nocache switch, which will open a CLI terminal
 		* Run `cd nocache; bash localscripts/launchswitchtestbed.sh` to configure nocache switch
-	+ Under {main client} (**TIME: around 40 minutes**)
+	+ Under {main client} (**TIME: around 30 minutes**)
 		* Run `bash scripts/remote/load_and_backup.sh` to launch and kill servers and clients automatically for loading and backup
 			- Note: scripts/remote/load_and_backup.sh will resume the original nocache/config.ini in all clients, server, and switch after all steps
 	+ Under {switch}
@@ -225,66 +230,98 @@ Contents
 
 ## 2.2 Workload Analysis & Dump Keys
 
-- Analyze workloads to dump hot keys and bottleneck partition (ONLY need to perform once)
-	- For each {workload} (per-workload TIME: around TODO minutes)
+- Analyze workloads to dump hot keys, dynamic patterns, and bottleneck partition (ONLY need to perform once)
+	- For each {workload} (TIME: around 5 minutes per workload)
 		- Options of workload name: workloada, workloadb, workloadc, workloadd, workloadf, workload-load, synthetic, synthetic-25, synthetic-75, skewness-90, skewness-95, uniform, valuesize-16, valuesize-32, valuesize-64
 		- Under {main client}
 			- Update workload\_name as {workload} in keydump/config.ini
-			- (Recommend) Automatic way
-				- Run `bash scripts/remote/keydump_and_sync.sh`, which will sync required files to clients/server after keydump
+			- Run `bash scripts/remote/keydump_and_sync.sh` to dump workload-related information and sync to all clients, servers, and switch
   
-<!-- - (DEPRECATED) Manual way 
+<!--
+- (DEPRECATED) Manual way vs. keydump_and_sync.sh
     - `cd benchmark/ycsb; ./bin/ycsb run keydump; cd ../../`
   		+ Dump hottest/nearhot/coldest keys into `benchmark/output/<workloadname>-\*.out` for warmup phase later
   		+ Dump bottleneckt serveridx for different server rotation scales for server rotation later
   		+ Pre-generate workload files in `benchmark/output/<workloadname>-pregeneration/` for server rotation later
   	- `cd benchmark/ycsb; python generate_dynamicrules.py <workloadname>; cd ../../`
   		+ Generates key popularity changing rules in `benchmark/output/<workloadname>-\*rules/` for dynamic pattern later
-  	- `bash scripts/remote/deprecated/synckeydump.sh <workloadname>` to sync the above files of the workload to another client -->
+  	- `bash scripts/remote/deprecated/synckeydump.sh <workloadname>` to sync the above files of the workload to another client
+-->
 
 # Running Experiments (Automatic Evaluation)
 
 ## 3.1 Regular Experiments
+
 - To carry out experiments according to paper, we have set up the scripts for running specific tasks. The scripts are placed under `scripts/exps/`.
-	+ **Note that due to server rotation to cope with limited machines, each experiment may take 1-8 hour(s).**
+	+ **Note that due to server rotation to cope with limited machines, each number may take 1-8 hour(s), and each experiment will test multiple numbers.**
 
-1. Experiments List and Scripts:
+</br>
 
-   | Exp # |                                 Scripts                                 |
-   | :---: | :---------------------------------------------------------------------: |
-   |   1   |             [run_exp_ycsb.sh](scripts/exps/run_exp_ycsb.sh)             |
-   |   2   |          [run_exp_latency.sh](scripts/exps/run_exp_latency.sh)          |
-   |   3   |      [run_exp_scalability.sh](scripts/exps/run_exp_scalability.sh)      |
-   |   4   |      [run_exp_write_ratio.sh](scripts/exps/run_exp_write_ratio.sh)      |
-   |   5   | [run_exp_key_distribution.sh](scripts/exps/run_exp_key_distribution.sh) |
-   |   6   |       [run_exp_value_size.sh](scripts/exps/run_exp_value_size.sh)       |
-   |   7   |          [run_exp_dynamic.sh](scripts/exps/run_exp_dynamic.sh)          |
-   |   8   |         [run_exp_snapshot.sh](scripts/exps/run_exp_snapshot.sh)         |
-   |   9   |         [run_exp_recovery.sh](scripts/exps/run_exp_recovery.sh)         |
+- Scripts for different experiments
 
-2. <u>[Under Main Client]</u> Prepare Configuration
-   - Under `scripts/global.sh`, check on configurations:
-     - `SWITCH_PRIVATEKEY`: path to private key which will be used for remote connection to switch machine with root access;
-     - `CONNECTION_PRIVATEKEY`: path to private key which will be used for remote connection to other server/client machines;
-     - `EVALUATION_SCRIPTS_PATH`: path to these experiment scripts;
-     - `EVALUATION_OUTPUT_PREFIX`: path to the generated raw output
-3. <u>[Under Main Client]</u> Run Experiments
-   - To eliminate influence by rocksdb performance, the scripts target to run experiments for multiple round. Every time running the experiments, we need to define the specific round number `<roundnumber>` for running these experiment.
-   - For a specific experiment (exp_ycsb for example), run its corresponding scripts by `bash scripts/exps/run_exp_ycsb.sh<roundnumber>`.
+   | Exp # |                                 Scripts                                 | Description |
+   | :---: | :---------------------------------------------------------------------: | --- |
+   |   1   |             [run_exp_ycsb.sh](scripts/exps/run_exp_ycsb.sh)             | Throughput analysis for different YCSB core workloads |
+   |   2   |          [run_exp_latency.sh](scripts/exps/run_exp_latency.sh)          | Latency analysis for different target throughputs |
+   |   3   |      [run_exp_scalability.sh](scripts/exps/run_exp_scalability.sh)      | Scalability for different # of simulated servers |
+   |   4   |      [run_exp_write_ratio.sh](scripts/exps/run_exp_write_ratio.sh)      | Synthetic workloads with different write ratios |
+   |   5   | [run_exp_key_distribution.sh](scripts/exps/run_exp_key_distribution.sh) | Synthetic workloads with different key distributions |
+   |   6   |       [run_exp_value_size.sh](scripts/exps/run_exp_value_size.sh)       | Synthetic workloads with different value sizes |
+   |   7   |          [run_exp_dynamic.sh](scripts/exps/run_exp_dynamic.sh)          | Synthetic workloads with different dynamic workload patterns |
+   |   8   |         [run_exp_snapshot.sh](scripts/exps/run_exp_snapshot.sh)         | Performance and control-plane bandwidth overhead of snapshot generation |
+   |   9   |         [run_exp_recovery.sh](scripts/exps/run_exp_recovery.sh)         | Crash recovery time |
 
-- NOTEs for exp9
+</br>
+
+- Other useful scripts
+	+ scripts/remote/stopall.sh: forcely to stop and kill clients, servers (including controller and simulated reflector), and switch (including data plane and switch OS).
+		- Note: you can run this script to clear remaining threads, if the previous experiment fails due to incorrect configurations
+
+</br>
+
+- Run each {experiment} except exp_dynamic
+	- Options: exp_ycsb, exp_latency, exp_scalability, exp_write_ratio, exp_key_distribution, exp_value_size, exp_snapshot, and exp_recovery.
+	- Under {main client}, take exp_ycsb as an example
+		- Run `bash scripts/exps/run_exp_ycsb.sh <roundnumber>`
+		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of current round.
+
+</br>
+
+- Run exp_dynamic (NOT use server rotation)
+	- Under {main client}
+		- Comment line 82 (#define SERVER_ROTATION) in common/helper.h to diable server rotation
+		- `bash scripts/remote/sync_file.sh common helper.h`
+	- Re-compile software code (NO need for P4 code)
+		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
+		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
+		- Under {switch}, run `bash scripts/local/makeswithos.sh`
+	- Run `bash scripts/exps/run_exp_dynamic.sh <roundnumber>`
+	- After running all rounds of exp_dynamic, as most experiments use server rotation for static workload pattern instead of dynamic workload patterns
+		- Under {main client}
+			- Uncomment line 82 (#define SERVER_ROTATION) in common/helper.h to enable server rotation
+			- `bash scripts/remote/sync_file.sh common helper.h`
+		- Re-compile software code (NO need for P4 code)
+			- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
+			- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
+			- Under {switch}, run `bash scripts/local/makeswithos.sh`
+
+</br>
+
+- Possible errors for exp_recovery due to testbed mis-configurations
 	- Error messages for scp in farreach/localscripts/fetch\*.sh
-		- If you have an error message of `hot key verification failed`, check the ssh connectivity between the switch and all clients/servers
-		- If you have an error message of `permission denied`, check the correctness of ownership for /tmp/farreach in the switch and servers
+		- If you have an error message of `hot key verification failed`, check the ssh connectivity between {switch} and all clients and servers
+		- If you have an error message of `permission denied`, check the correctness of ownership for /tmp/farreach in {switch} and two servers
 		- If you have an error message of `permission denied (public key)`, check whether you spefcify the correct private key in the switch such that it can copy files from clients/servers
-	- If you want to test recovery time based on existing recovery information instead of running server rotations again, in global.sh and run_exp_recovery.sh:
-      - Step 1: make sure `EVALUATION_OUTPUT_PREFIX` points to the path of existing recovery files.  
-      - Step 2: run the script with argument `recoeveryonly` set to `1`.
-
-</br></br>
+	- If you want to test recovery time based on existing recovery-based data instead of running server-rotation-based experiments again, in scripts/global.sh and scripts/exps/run_exp_recovery.sh:
+    	- Step 1: make sure `EVALUATION_OUTPUT_PREFIX` points to the path of recovery-related data (in-switch snapshot, client-side backups, and maxseq) generated by previous server-rotation-based experiments
+		- Step 2: run `scripts/exps/run_exp_recovery.sh <workloadmode> 1`, where we set the argument <recoveryonly> as 1 to skip the step of server rotations
 
 ## 3.2 Makeup Static Single Rotation
-During experiments with static pattern, single rotation failure may happen due to database performance fluctuate or unstable network. We also provide scripts to run one single rotation from server rotations experiements to avoid re-run the whole experiment.
+
+- During experiments with static pattern, single rotation failure may happen due to database performance fluctuate or unstable network. We also provide scripts to run one single rotation from server rotations experiements to avoid re-run the whole experiment.
+
+</br>
+
 1. <u>[Under Main Client]</u> Applicable Experiments
    - All clients, servers and switchs are configured to be running static workload. The script applies for experiments:
      - exp_key_distribution
@@ -304,7 +341,7 @@ During experiments with static pattern, single rotation failure may happen due t
       - `targetrotation`: makeup rotation index (eg.: 10)
       - `targetthpt`: throughput target of this rotation, only applicable for exp2.
 
-# Running Workloads (Automatic Evaluation)
+# Running Workloads (Manual Evaluation)
 
 ## 4.1 Evaluate Dynamic Workload
 Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.

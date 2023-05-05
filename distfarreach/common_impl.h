@@ -290,7 +290,9 @@ inline void parse_ini(const char* config_file) {
 	max_server_total_logical_num = server_total_logical_num;
 #endif
 	bottleneck_serveridx_for_rotation = ini.get_bottleneck_serveridx_for_rotation();
+#ifdef SERVER_ROTATION
 	INVARIANT(bottleneck_serveridx_for_rotation < server_total_logical_num_for_rotation);
+#endif
 
 	if (workload_mode == 0) { // static workload
 #ifndef SERVER_ROTATION
