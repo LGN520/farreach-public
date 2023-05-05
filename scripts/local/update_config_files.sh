@@ -111,4 +111,22 @@ for tmp_configfile in ${configfile_list[@]}; do
 	tmp_keyname="switch_recirport_pipeline0to1"
 	tmp_linenum=$(getlinenum ${tmp_configfile} ${tmp_secname} ${tmp_keyname})
 	sed -i "${tmp_linenum}s/^${tmp_keyname}=.*/${tmp_keyname}=${SWITCH_RECIRPORT_PIPELINE0TO1}/g" ${tmp_configfile}
+
+	# Update CPU settings for first server
+	tmp_secname="server0"
+	tmp_keyname="server_worker_corenum"
+	tmp_linenum=$(getlinenum ${tmp_configfile} ${tmp_secname} ${tmp_keyname})
+	sed -i "${tmp_linenum}s/^${tmp_keyname}=.*/${tmp_keyname}=${SERVER0_WORKER_CORENUM}/g" ${tmp_configfile}
+	tmp_keyname="server_total_corenum"
+	tmp_linenum=$(getlinenum ${tmp_configfile} ${tmp_secname} ${tmp_keyname})
+	sed -i "${tmp_linenum}s/^${tmp_keyname}=.*/${tmp_keyname}=${SERVER0_TOTAL_CORENUM}/g" ${tmp_configfile}
+
+	# Update CPU settings for second server
+	tmp_secname="server1"
+	tmp_keyname="server_worker_corenum"
+	tmp_linenum=$(getlinenum ${tmp_configfile} ${tmp_secname} ${tmp_keyname})
+	sed -i "${tmp_linenum}s/^${tmp_keyname}=.*/${tmp_keyname}=${SERVER1_WORKER_CORENUM}/g" ${tmp_configfile}
+	tmp_keyname="server_total_corenum"
+	tmp_linenum=$(getlinenum ${tmp_configfile} ${tmp_secname} ${tmp_keyname})
+	sed -i "${tmp_linenum}s/^${tmp_keyname}=.*/${tmp_keyname}=${SERVER1_TOTAL_CORENUM}/g" ${tmp_configfile}
 done

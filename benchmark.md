@@ -133,10 +133,17 @@ Contents
 			- SWITCHOS_LOCAL_IP: the IP address of NIC for {switch} OS connecting to the local area network (NOT bypass {switch} data plane)
 			- SWITCH_RECIRPORT_PIPELINE1TO0: the front panel port in {switch} data plane for pipeline 1 to connect with pipeline 0 for in-switch recirculation
 			- SWITCH_RECIRPORT_PIPELINE0TO1: the front panel port in {switch} data plane for pipeline 0 to connect with pipeline 1 for in-switch recirculation
+	+ CPU settings
+		* First server
+			- SERVER0_WORKER_CORENUM: the number of CPU cores specifically used for processing requests in first server
+			- SERVER0_TOTAL_CORENUM: the total number of CPU cores in first server
+		* Second server
+			- SERVER1_WORKER_CORENUM: the number of CPU cores specifically used for processing requests in second server
+			- SERVER1_TOTAL_CORENUM: the total number of CPU cores in second server
 
 </br>
 
-- Run `bash scripts/local/update_network_settings.sh` to update ini configuration files based on network settings
+- Run `bash scripts/local/update_config_files.sh` to update ini configuration files based on network and CPU settings
 
 </br>
 
