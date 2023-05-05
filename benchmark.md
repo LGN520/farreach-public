@@ -167,9 +167,9 @@ Contents
 
 ## 1.3 Code Compilation
 
-- Sync and compile (**need around 3 hours**) RocksDB (ONLY need to perform once)
-	+ Under {main client}, run `bash scripts/sync_kvs.sh` to sync rocksdb-6.22.1/ to each server (ONLY need to sync once)
-	+ Under {first server} and {second server}, compile RocksDB (ONLY need to compile once)
+- Sync and compile (**TIME: around 3 hours**) RocksDB (ONLY need to perform once)
+	+ Under {main client}, run `bash scripts/sync_kvs.sh` to sync rocksdb-6.22.1/ to each server
+	+ Under {first server} and {second server}, compile RocksDB
 		+ Run `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev` to install necessary dependencies for RocksDB
 		+ `cd rocksdb-6.22.1`
 		+ `PORTABLE=1 make static_lib`
@@ -178,21 +178,23 @@ Contents
 		+ For each method (farreach or nocache or netcache)
 			* Run `mkdir /tmp/{method}` to prepare the directory (e.g., /tmp/farreach) for database in advance
 
-- For each method (farreach or nocache or netcache)
+- For each {method}
+	+ Options of method name: farreach, nocache, or netcache
 	+ Under {main client}
 		* Set DIRNAME as {method} in scripts/common.sh
 		* `bash scripts/remote/sync.sh` to sync code of the method to all machines
 	+ Compile software code
 		* Manual way
-			- Under each client, run `bash scripts/local/makeclient.sh` (need around 10 minutes especially for the first time with Maven downloading time)
+			- Under each client, run `bash scripts/local/makeclient.sh` (TIME: around 10 minutes especially for the first time with Maven downloading time)
 			- Under each switch
-				+ Run `bash scripts/local/makeswitchos.sh` to make switch OS (need around 1 minute)
-				+ Run `su` to enter root mode, and run `cd {method}/tofino; bash compile.sh` to make P4 code (**need around 3 hours**)
+				+ Run `bash scripts/local/makeswitchos.sh` to make switch OS (TIME: around 1 minute)
+				+ Run `su` to enter root mode, and run `cd {method}/tofino; bash compile.sh` to make P4 code (**TIME: around 3 hours**)
 					* Note: if you have compiled P4 code of {method} before, you do NOT need to re-compile it agina. If you really want to re-compile it (maybe due to P4 code modification), you should delete the corresponding directory (netbufferv4, nocache, or netcache) under $SDE/pkgsrc/p4-build/tofino/ before re-compilation.
-			- Under each server, run `bash scripts/local/makeserver.sh` (need around 5 minutes)
+			- Under each server, run `bash scripts/local/makeserver.sh` (TIME: around 5 minutes)
 		* NOTE: if with "make: warning:  Clock skew detected.  Your build may be incomplete" during make, run `find . -type f | xargs touch` and then re-make files
-		* ~~Automatic way (NOT used now due to very slow sequential compialtion)~~
-			- ~~Under the main client, `bash scripts/remote/makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server~~
+
+<!-- * ~~Automatic way (NOT used now due to very slow sequential compialtion)~~
+	- ~~Under the main client, `bash scripts/remote/makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server~~ -->
 
 ## 1.4 Testbed Building
 
@@ -205,30 +207,40 @@ Contents
 
 # Data Preperation
 
-TODO: === END HERE ===
-
 ## 2.1 Loading Phase
 
-- Under the main client, perform the loading phase and backup for evaluation time reduction
-	+ Run `bash scripts/remote/prepare_load.sh`, which will copy recordload/config.ini to switch/server::nocache/config.ini
-	+ In switch, launch and configure nocache switch by nocache/tofino/start_switch.sh and nocache/localscripts/launchswitchtestbed.sh
-	+ Run `bash scripts/remote/load_and_backup.sh`, which will launch and kill servers automatically
-    	+ NOTE: at the end of load_and_backup.sh, we copy nocache/config.ini to resume switch/server::nocache/config.ini
+- Perform the loading phase and backup for evaluation time reduction (ONLY need to perform once)
+	+ Under {main client}
+		* Set DIRNAME as nocache in scripts/common.sh and run `bash scripts/remote/sync_file.sh scripts common.sh` to sync scripts/common.sh
+		* Run `bash scripts/remote/prepare_load.sh` to copy recordload/config.ini to overwrite nocache/config.ini in all clients, servers, and switch
+	+ Under {switch}
+		* Run `bash nocache/tofino/start_switch.sh` to launch nocache switch, which will open a CLI terminal
+		* Run `cd nocache; bash localscripts/launchswitchtestbed.sh` to configure nocache switch
+	+ Under {main client} (**TIME: around 40 minutes**)
+		* Run `bash scripts/remote/load_and_backup.sh` to launch and kill servers and clients automatically for loading and backup
+			- Note: scripts/remote/load_and_backup.sh will resume the original nocache/config.ini in all clients, server, and switch after all steps
+	+ Under {switch}
+		* Type Ctrl+C in the CLI terminal to stop switch
+		* Run `cd nocache; bash localscripts/stopswitchtestbed.sh` to clear switch testbed
 
 ## 2.2 Workload Analysis & Dump Keys
 
-- Under the main client
-  - Update `<workload_name>` with the workload in file `keydump/config.ini`
-  - (Recommend) Automatic way
-    - Run `bash scripts/remote/keydump_and_sync.sh`, which will sync required files to clients/server after keydump
-  - (DEPRECATED) Manual way 
+- Analyze workloads to dump hot keys and bottleneck partition (ONLY need to perform once)
+	- For each {workload} (per-workload TIME: around TODO minutes)
+		- Options of workload name: workloada, workloadb, workloadc, workloadd, workloadf, workload-load, synthetic, synthetic-25, synthetic-75, skewness-90, skewness-95, uniform, valuesize-16, valuesize-32, valuesize-64
+		- Under {main client}
+			- Update workload\_name as {workload} in keydump/config.ini
+			- (Recommend) Automatic way
+				- Run `bash scripts/remote/keydump_and_sync.sh`, which will sync required files to clients/server after keydump
+  
+<!-- - (DEPRECATED) Manual way 
     - `cd benchmark/ycsb; ./bin/ycsb run keydump; cd ../../`
   		+ Dump hottest/nearhot/coldest keys into `benchmark/output/<workloadname>-\*.out` for warmup phase later
   		+ Dump bottleneckt serveridx for different server rotation scales for server rotation later
   		+ Pre-generate workload files in `benchmark/output/<workloadname>-pregeneration/` for server rotation later
   	- `cd benchmark/ycsb; python generate_dynamicrules.py <workloadname>; cd ../../`
   		+ Generates key popularity changing rules in `benchmark/output/<workloadname>-\*rules/` for dynamic pattern later
-  	- `bash scripts/remote/deprecated/synckeydump.sh <workloadname>` to sync the above files of the workload to another client
+  	- `bash scripts/remote/deprecated/synckeydump.sh <workloadname>` to sync the above files of the workload to another client -->
 
 # Running Experiments (Automatic Evaluation)
 

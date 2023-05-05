@@ -65,4 +65,8 @@ ssh ${USER}@${SERVER0} "scp -r ${BACKUPS_ROOTPATH}/* ${USER}@${SERVER1}:${BACKUP
 #	done
 #fi
 
+echo "resume and sync original nocache/config.ini"
+mv ${DIRNAME}/config.ini.bak ${DIRNAME}/config.ini
+bash scripts/remote/sync_file.sh ${DIRNAME} config.ini
+
 echo "[WARNING] if you are cooperated with other uses, please change the permission of ${BACKUPS_ROOTPATH} to all users in each physical server!"

@@ -25,7 +25,7 @@ BACKUPS_ROOTPATH="/tmp/rocksdbbackups"
 
 # experiment
 EVALUATION_SCRIPTS_PATH="${CLIENT_ROOTPATH}/scripts"
-EVALUATION_OUTPUT_PREFIX="/home/${USER}/results"
+EVALUATION_OUTPUT_PREFIX="/home/${USER}/aeresults"
 
 # network settings
 

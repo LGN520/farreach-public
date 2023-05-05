@@ -155,7 +155,7 @@ switch_recirport_pipeline0to1=12/0
 
 ; NOTE: we place reflector at the first physical server
 [reflector]
-reflector_ip_for_switchos=172.16.112.16
+reflector_ip_for_switchos=172.16.112.21
 ; a single port
 reflector_dp2cpserver_port=5008
 ; a single port

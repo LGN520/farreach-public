@@ -16,7 +16,7 @@ function getlinenum() {
 	echo ${result}
 }
 
-configfile_list=("farreach/config.ini" "farreach/configs/config.ini.static.setup" "nocache/config.ini" "nocache/configs/config.ini.static.setup" "netcache/config.ini" "netcache/configs/config.ini.static.setup")
+configfile_list=("farreach/config.ini" "farreach/configs/config.ini.static.setup" "nocache/config.ini" "nocache/configs/config.ini.static.setup" "netcache/config.ini" "netcache/configs/config.ini.static.setup" "recordload/config.ini")
 
 for tmp_configfile in ${configfile_list[@]}; do
 	# Update network settings for main client
@@ -129,4 +129,10 @@ for tmp_configfile in ${configfile_list[@]}; do
 	tmp_keyname="server_total_corenum"
 	tmp_linenum=$(getlinenum ${tmp_configfile} ${tmp_secname} ${tmp_keyname})
 	sed -i "${tmp_linenum}s/^${tmp_keyname}=.*/${tmp_keyname}=${SERVER1_TOTAL_CORENUM}/g" ${tmp_configfile}
+
+	# Update network settings for simulated link
+	tmp_secname="reflector"
+	tmp_keyname="reflector_ip_for_switchos"
+	tmp_linenum=$(getlinenum ${tmp_configfile} ${tmp_secname} ${tmp_keyname})
+	sed -i "${tmp_linenum}s/^${tmp_keyname}=.*/${tmp_keyname}=${SERVER0_LOCAL_IP}/g" ${tmp_configfile}
 done
