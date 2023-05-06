@@ -82,7 +82,7 @@
 	+ **Configure JAVA_HOME**: add sth like `export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/` (based on your own JAVA path) to ~/.bashrc
 - Install Tofino SDE 8.9.1 in {switch} if not
 	+ **Note: larger version (e.g., 9.0.1) cannot support P4\_14 correctly due to compiler its own bugs**
-- Install gcc-7.5.0 and g++-7.5.0 in two clients and two servers (NO need for {switch}) if not
+- Install gcc-7.5.0 and g++-7.5.0 in two clients and two servers if not (NO need for {switch})
 - Use RocksDB 6.22.1 (already embedded in the project; NO need for extra installation)
 
 <!-- - ONLY for multi-switch setting: Install bpftools for spine reflector -->
@@ -163,7 +163,7 @@
 	+ Generate SWITCH_PRIVATEKEY
 		* Under {main client}, if the ssh key has not been created, run `sudo ssh-keygen -t rsa -f /home/{USER}/.ssh/switch-private-key` (**use empty passwd for no passphrase**)
 			- Also run `sudo chown {USER}:{USER} /home/{USER}/.ssh/switch-private-key` (use your Linux username) to change the owner
-		* Append the content of ~/.ssh/switch-private-key.pub of {main client}, into /home/root/.ssh/authorized_keys of {switch}
+		* Append the content of ~/.ssh/switch-private-key.pub of {main client}, into /root/.ssh/authorized_keys of {switch}
 	+ Generate CONNECTION_PRIVATEKEY
 		* Consider the following source-connectwith-destination pairs:
 			- {switch}-connectwith-{first server} and {switch}-connectwith-{second server}
@@ -176,7 +176,7 @@
 ## 1.3 Code Compilation
 
 - Sync and compile RocksDB (**TIME: around 3 hours**; ONLY need to perform once)
-	+ Under {main client}, run `bash scripts/sync_kvs.sh` to sync rocksdb-6.22.1/ to {first server} and {second server}
+	+ Under {main client}, run `bash scripts/remote/sync_kvs.sh` to sync rocksdb-6.22.1/ to {first server} and {second server}
 	+ Under {first server} and {second server}, compile RocksDB
 		+ Run `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev` to install necessary dependencies for RocksDB
 		+ `cd rocksdb-6.22.1`
@@ -213,11 +213,11 @@
 ## 1.4 Testbed Building
 
 - Building your testbed based on network settings provided by scripts/global.sh
-	+ In {main client}, run `bash scripts/local/confiugre_client.sh 0`
+	+ In {main client}, run `bash scripts/local/configure_client.sh 0`
 	+ In {secondary client}, run `bash scripts/local/configure_client.sh 1`
-	+ In {first server}, run `bash scripts/local/confiugre_server.sh 0`
-	+ In {second server}, run `bash scripts/local/confiugre_server.sh 1`
-	+ In {switch} OS, run `bash scripts/local/confiugre_switchos.sh`
+	+ In {first server}, run `bash scripts/local/configure_server.sh 0`
+	+ In {second server}, run `bash scripts/local/configure_server.sh 1`
+	+ In {switch} OS, run `su` to enter root mode and run `bash scripts/local/configure_switchos.sh`
 
 # 2 Data Preperation
 
@@ -235,10 +235,11 @@
 			- Run `bash start_switch.sh` to launch nocache switch data plane, which will open a CLI
 		* In the second terminal
 			- `cd nocache`
-			- Run `bash localscripts/launchswitchtestbed.sh` to launch nocache switch OS and other daemon processes
+			- Run `su` to enter root mode
+			- Run `bash localscripts/launchswitchostestbed.sh` to launch nocache switch OS and other daemon processes
 	+ Under {main client}
 		* Run `bash scripts/remote/load_and_backup.sh` to launch servers and clients automatically for loading and backup
-			- Note: scripts/remote/load_and_backup.sh will kills servers and clients at the end automatically
+			- Note: scripts/remote/load_and_backup.sh will kill servers and clients at the end automatically
 				- You can also run `bash scripts/stopall.sh` manually under {main client} in case that some processses are NOT killed
 			- Note: scripts/remote/load_and_backup.sh will resume the original nocache/config.ini in all clients, server, and switch after all steps
 	+ Under {switch}
@@ -247,6 +248,7 @@
 			- If CLI is still NOT closed, type Ctrl+C in the CLI to stop switch data plane
 		- In the second terminal
 			- `cd nocache`
+			- Run `su` to enter root mode
 			- Run `bash localscripts/stopswitchtestbed.sh` to stop switch OS and other daemon processes
 
 ## 2.2 Workload Analysis & Dump Keys
@@ -418,7 +420,7 @@
 	- Launch switch OS and other daemon processes (for cache management and snapshot generation) in the second terminal
 		- `cd {method}`
 		- `su`
-		- `bash localscripts/launchswitchtestbed.sh`
+		- `bash localscripts/launchswitchostestbed.sh`
 	- NOTE: if you encounter any problem, you can check the log files of {method}/tmp_\*.out and {method}/tofino/tmp_\*.out in {switch}
 
 </br>
@@ -502,7 +504,7 @@
 	- Launch switch OS and other daemon processes (for cache management and snapshot generation) in the second terminal
 		- `cd {method}`
 		- `su`
-		- `bash localscripts/launchswitchtestbed.sh`
+		- `bash localscripts/launchswitchostestbed.sh`
 	- NOTE: if you encounter any problem, you can check the log files of {method}/tmp_\*.out and {method}/tofino/tmp_\*.out in {switch}
 
 </br>
