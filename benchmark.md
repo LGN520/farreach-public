@@ -71,6 +71,8 @@
 
 ## 1.1 Dependency Installation
 
+- Install python libraries for python 2.7.12 in {main client} if not
+	+ `pip install -r requirement.txt`
 - Install libboost 1.81.0 in {first server} and {second server} if not
 	+ Under project directory (e.g., /home/ssy/projects/farreach-public)
 		+ `wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz`
@@ -100,7 +102,7 @@
 	+ USER: Linux username (e.g., ssy)
 	+ SWITCH\_PRIVATEKEY: the passwd-free ssh key used by {main client} to connect with {switch} as **root user** (e.g., ~/.ssh/switch-private-key)
 		* See detailed steps in "Update SSH configuration settings" at the end of this Section 1.2
-	+ CONNECTION\_PRIVATEKEY: the passwd-free ssh key used by {switch} to connect with two servers (for maxseq and in-switch snapshot), by two servers to connect with two clients (for client-side backups), and by {second server} to connect with {first server} (co-located with controller) (for in-switch snapshot) as **non-root user** (e.g., ~/.ssh/connection-private-key)
+	+ CONNECTION\_PRIVATEKEY: the passwd-free ssh key used by {main client} to connect with two servers and {first server} to connect with {second server} (for loading_and_backup), {switch} to connect with two servers (for maxseq and in-switch snapshot), by two servers to connect with two clients (for client-side backups), and by {second server} to connect with {first server} (co-located with controller) (for in-switch snapshot) as **non-root user** (e.g., ~/.ssh/connection-private-key)
 		* See detailed steps in "Update SSH configuration settings" at the end of this Section 1.2
 	+ MAIN\_CLIENT: hostname of {main client} (e.g., dl11)
 	+ SECONDARY\_CLIENT: hostname of {secondary client} (e.g., dl20)
@@ -166,6 +168,8 @@
 		* Append the content of ~/.ssh/switch-private-key.pub of {main client}, into /root/.ssh/authorized_keys of {switch}
 	+ Generate CONNECTION_PRIVATEKEY
 		* Consider the following source-connectwith-destination pairs:
+			- {main client}-connectwith-{first server} and {main client}-connectwith-{second server}
+			- {first server}-connectwith-{second server}
 			- {switch}-connectwith-{first server} and {switch}-connectwith-{second server}
 			- {first server}-connectwith-{main client}, {first server}-connectwith-{secondary client}, {second server}-connectwith-{main client}, and {second server}-to-{secondary client}
 			- {second server}-connectwith-{first server} (controller is co-located with {first server})
@@ -240,8 +244,7 @@
 	+ Under {main client}
 		* Run `bash scripts/remote/load_and_backup.sh` to launch servers and clients automatically for loading and backup
 			- Note: scripts/remote/load_and_backup.sh will kill servers and clients at the end automatically
-				- You can also run `bash scripts/stopall.sh` manually under {main client} in case that some processses are NOT killed
-			- Note: scripts/remote/load_and_backup.sh will resume the original nocache/config.ini in all clients, server, and switch after all steps
+			- Note: scripts/remote/load_and_backup.sh will also resume the original nocache/config.ini in all clients, server, and switch after all steps
 	+ Under {switch}
 		- In the first terminal
 			- Type exit and press enter to stop switch data plane
@@ -250,6 +253,7 @@
 			- `cd nocache`
 			- Run `su` to enter root mode
 			- Run `bash localscripts/stopswitchtestbed.sh` to stop switch OS and other daemon processes
+	+ Note: you can run `bash scripts/stopall.sh` manually under {main client} in case that some processses are NOT killed
 
 ## 2.2 Workload Analysis & Dump Keys
 

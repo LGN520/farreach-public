@@ -50,7 +50,7 @@ source scripts/remote/stopservertestbed.sh
 echo "backup files from /tmp/${DIRNAME} to ${BACKUPS_ROOTPATH} in each storage server"
 ssh ${USER}@${SERVER0} "mkdir -p ${BACKUPS_ROOTPATH}; mv /tmp/${DIRNAME}/* ${BACKUPS_ROOTPATH}/"
 ssh ${USER}@${SERVER1} "mkdir -p ${BACKUPS_ROOTPATH}"
-ssh ${USER}@${SERVER0} "scp -r ${BACKUPS_ROOTPATH}/* ${USER}@${SERVER1}:${BACKUPS_ROOTPATH}"
+ssh ${USER}@${SERVER0} "scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} -r ${BACKUPS_ROOTPATH}/* ${USER}@${SERVER1}:${BACKUPS_ROOTPATH}"
 
 #ssh ${USER}@${SERVER0} "mkdir -p ${BACKUPS_ROOTPATH}/${serverscale}; mv /tmp/${DIRNAME}/* ${BACKUPS_ROOTPATH}/${serverscale}/"
 #ssh ${USER}@${SERVER1} "mkdir -p ${BACKUPS_ROOTPATH}/${serverscale}; mv /tmp/${DIRNAME}/* ${BACKUPS_ROOTPATH}/${serverscale}/"
