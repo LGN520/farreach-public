@@ -346,10 +346,10 @@
 			- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
 		- For each {method} (farreach or netcache or nocache), re-compile software code (NO need for P4 code of switch data plane)
 			- Set DIRNAME as {method} in scripts/common.sh
-			- Run `bash scripts/remote_sync_file.sh scripts common.sh`
+			- Run `bash scripts/remote/sync_file.sh scripts common.sh`
 			- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 			- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
-			- Under {switch}, run `bash scripts/local/makeswithos.sh`
+			- Under {switch}, run `bash scripts/local/makeswitchos.sh`
 	- Under {main client}, take exp_dynamic as an example
 		- Run `bash scripts/exps/run_exp_dynamic.sh <roundnumber>`
 		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round
@@ -359,10 +359,10 @@
 			- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
 		- Under {main client}, for each {method}, re-compile software code (NO need for P4 code of switch data plane)
 			- Set DIRNAME as {method} in scripts/common.sh
-			- Run `bash scripts/remote_sync_file.sh scripts common.sh`
+			- Run `bash scripts/remote/sync_file.sh scripts common.sh`
 			- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 			- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
-			- Under {switch}, run `bash scripts/local/makeswithos.sh`
+			- Under {switch}, run `bash scripts/local/makeswitchos.sh`
 
 </br>
 
@@ -434,10 +434,10 @@
 		- Run `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
 	- Under {main client}, for the current {method}, re-compile software code (NO need for P4 code)
 		- Set DIRNAME as {method} in scripts/common.sh
-		- Run `bash scripts/remote_sync_file.sh scripts common.sh`
+		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
 		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
-		- Under {switch}, run `bash scripts/local/makeswithos.sh`
+		- Under {switch}, run `bash scripts/local/makeswitchos.sh`
 
 </br>
 
@@ -489,10 +489,10 @@
 		- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
 	- Under {main client}, for the current {method}, re-compile software code (NO need for P4 code)
 		- Set DIRNAME as {method} in scripts/common.sh
-		- Run `bash scripts/remote_sync_file.sh scripts common.sh`
+		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
 		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
-		- Under {switch}, run `bash scripts/local/makeswithos.sh`
+		- Under {switch}, run `bash scripts/local/makeswitchos.sh`
 
 ## 4.2 Static Workload (Server Rotation)
 
