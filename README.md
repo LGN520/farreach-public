@@ -179,7 +179,7 @@
 
 ## 1.3 Code Compilation
 
-- Sync and compile RocksDB (**TIME: around 3 hours**; ONLY need to perform once)
+- Sync and compile RocksDB (**TIME: around 3 hours**; **ONLY need to perform once**)
 	+ Under {main client}, run `bash scripts/remote/sync_kvs.sh` to sync rocksdb-6.22.1/ to {first server} and {second server}
 	+ Under {first server} and {second server}, compile RocksDB
 		+ Run `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libjemalloc-dev libsnappy-dev` to install necessary dependencies for RocksDB
@@ -227,7 +227,7 @@
 
 ## 2.1 Loading Phase
 
-- Perform the loading phase and backup for evaluation time reduction (**TIME: around 40 minutes**; ONLY need to perform once)
+- Perform the loading phase and backup for evaluation time reduction (**TIME: around 40 minutes**; **ONLY need to perform once**)
 	+ Under {main client}
 		* Set DIRNAME as nocache in scripts/common.sh
 		* Run `bash scripts/remote/sync_file.sh scripts common.sh` to sync scripts/common.sh to all clients, servers, and switch
@@ -257,12 +257,11 @@
 
 ## 2.2 Workload Analysis & Dump Keys
 
-- Analyze workloads to generate workload-related information before evaluation (ONLY need to perform once)
+- Analyze workloads to generate workload-related information before evaluation (**ONLY need to perform once**)
 	- Workload-related information includes:
 		- Dump hot keys and per-client-thread pregenerated workloads (independent with server rotation scale (i.e., # of simulated servers))
 		- Generate key poularity change rules for dynamic patterns (independent with server rotation scale)
 		- Calculate bottleneck partitions for different server rotation scales (i.e., 16, 32, 64, and 128)
-			- NOTE: you do NOT need to change configurations related with server rotation scales (i.e., server\_total\_logical\_num and server\_total\_logical\_num\_for_rotation) in keydump/config.ini, which is NOT used here
 	- For each {workload}
 		- Options of workload name
 			- YCSB core workloads: workloada, workloadb, workloadc, workloadd, workloadf, workload-load
@@ -270,13 +269,14 @@
 			- Note: NO need to analyze the following workloads due to duplication
 				- synthetic-50 is the same as workloada
 				- synthetic-100, skewness-99, and valuesize-128 are the same as synthetic
-		- TIME cost
-			- **Each of most workloads only needs around 5 minutes** (including workloada, workloadb, workloadc, workloadd, workloadf, workload-load, synthetic, valuesize-16, valuesize-32, and valuesize-64)
-			- **Each of other workloads needs around 1 hour** (including skewness-90, skewness-95, and uniform)
+		- TIME cost of workload analysis
+			- **Each of most workloads needs around 5 minutes** (including workloada, workloadb, workloadc, workloadd, workloadf, workload-load, synthetic, valuesize-16, valuesize-32, and valuesize-64)
+			- **Each of other workloads needs 20 minutes to 1 hour** (including skewness-90 of 20m, skewness-95 of 40m, and uniform of 1h)
 				- The reason is that YCSB uses Zipfian key generator with small skewness and uniform key generator for these workloads, which incurs large computation overhead
 				- Although workload-load is also uniform distribution, YCSB uses counter generator which has small computation overhead
 		- Under {main client}
 			- Update workload\_name as {workload} in keydump/config.ini
+				- NOTE: you do NOT need to change configurations related with server rotation scales (i.e., server\_total\_logical\_num and server\_total\_logical\_num\_for_rotation) in keydump/config.ini, which is NOT used here
 			- Run `bash scripts/remote/keydump_and_sync.sh` to dump workload-related information (e.g., hot keys and bottleneck serveridx), and sync them to all clients, servers, and switch
   
 <!--
@@ -341,20 +341,25 @@
 
 - Without server rotation: run exp_dynamic or exp_snapshot
 	- Under {main client}, re-compile code to disable server rotation if not
-		- Comment line 82 (#define SERVER_ROTATION) in common/helper.h to disable server rotation
-		- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
-	- Re-compile software code (NO need for P4 code of switch data plane)
-		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
-		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
-		- Under {switch}, run `bash scripts/local/makeswithos.sh`
+		- Disable server rotation
+			- Comment line 82 (#define SERVER_ROTATION) in common/helper.h to disable server rotation
+			- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
+		- For each {method} (farreaech or netcache or nocache), re-compile software code (NO need for P4 code of switch data plane)
+			- Set DIRNAME as {method} in scripts/common.sh
+			- Run `bash scripts/remote_sync_file.sh scripts common.sh`
+			- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
+			- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
+			- Under {switch}, run `bash scripts/local/makeswithos.sh`
 	- Under {main client}, take exp_dynamic as an example
 		- Run `bash scripts/exps/run_exp_dynamic.sh <roundnumber>`
 		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round
 	- After running all rounds of exp_dynamic or exp_snapshot, as most experiments use server rotation for static workload pattern instead of dynamic workload patterns, you may want to re-compile your code to enable server rotation again
-		- Under {main client}
+		- Under {main client}, enable server rotation
 			- Uncomment line 82 (#define SERVER_ROTATION) in common/helper.h to enable server rotation
 			- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
-		- Re-compile software code (NO need for P4 code of switch data plane)
+		- Under {main client}, for each {method}, re-compile software code (NO need for P4 code of switch data plane)
+			- Set DIRNAME as {method} in scripts/common.sh
+			- Run `bash scripts/remote_sync_file.sh scripts common.sh`
 			- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 			- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
 			- Under {switch}, run `bash scripts/local/makeswithos.sh`
@@ -413,7 +418,7 @@
 	- Update settings in the config file {method}/config.ini (e.g., farreach/config.ini):
 		- Set global::workload_mode=1
 		- Set global::workload_name={workload} 
-		- Set global::dynaic_ruleprefix={dynamic pattern}
+		- Set global::dynamic_ruleprefix={dynamic pattern}
 		- Set global::server_physical_num=2
 		- Set global::server_total_logical_num=2
 		- Set server0::server_logical_idxes=0
@@ -424,9 +429,12 @@
 </br>
 
 - Step 2: if server rotation is enabled (default setting), re-compile code to disable server rotation
-	- Comment line 82 (#define SERVER_ROTATION) in common/helper.h to diable server rotation
-	- Run `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
-	- Re-compile software code (NO need for P4 code)
+	- Under {main client}, disable server rotation
+		- Comment line 82 (#define SERVER_ROTATION) in common/helper.h to diable server rotation
+		- Run `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
+	- Under {main client}, for the current {method}, re-compile software code (NO need for P4 code)
+		- Set DIRNAME as {method} in scripts/common.sh
+		- Run `bash scripts/remote_sync_file.sh scripts common.sh`
 		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
 		- Under {switch}, run `bash scripts/local/makeswithos.sh`
@@ -476,10 +484,12 @@
 </br>
 
 - Step 7: if you do NOT run dynamic workload patterns, you should re-compile code to enable server rotation
-	- Under {main client}
+	- Under {main client}, enable server rotation
 		- Uncomment line 82 (#define SERVER_ROTATION) in common/helper.h to enable server rotation
 		- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
-	- Re-compile software code (NO need for P4 code)
+	- Under {main client}, for the current {method}, re-compile software code (NO need for P4 code)
+		- Set DIRNAME as {method} in scripts/common.sh
+		- Run `bash scripts/remote_sync_file.sh scripts common.sh`
 		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
 		- Under {switch}, run `bash scripts/local/makeswithos.sh`
