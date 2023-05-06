@@ -12,11 +12,18 @@ roundnumber=$1
 exp8_server_scale=2
 exp8_server_scale_for_rotation=16
 exp8_server_scale_bottleneck=14
+# NOTE: do NOT change exp8_method, which MUST be farreach!!!
 exp8_method="farreach"
 exp8_workload="synthetic"
 exp8_dynamic_rule_list=(hotin hotout random)
 exp8_snapshot_list=("0" "2500" "5000" "7500" "10000")
 exp8_output_path="${EVALUATION_OUTPUT_PREFIX}/exp8/${roundnumber}"
+
+if [ "x${exp8_method}" != "xfarreach" ]
+then
+	echo "[ERROR] you can only use this script for FarReach!"
+	exit
+fi
 
 ### Create json backup directory
 mkdir -p ${exp8_output_path}
@@ -30,9 +37,9 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
   for exp8_snapshot in ${exp8_snapshot_list[@]}; do
     ### Preparation
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] run rulemap with ${exp8_rule}"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp8_method}; bash localscripts/stopswitchtestbed.sh"
     
-    echo "[exp8][${exp8_rule}][${exp8_snapshot}] update farreach config with snapshot"
+    echo "[exp8][${exp8_rule}][${exp8_snapshot}] update ${exp8_method} config with snapshot"
     cp ${CLIENT_ROOTPATH}/${exp8_method}/configs/config.ini.static.setup ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
     sed -i "/^workload_name=/s/=.*/="${exp8_workload}"/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
     sed -i "/^workload_mode=/s/=.*/=1/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
@@ -50,8 +57,8 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
     bash scripts/remote/sync_file.sh ${exp8_method} config.ini
 
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] start switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/launchswitchostestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp8_method}/tofino; nohup bash start_switch.sh > tmp_start_switch.out 2>&1 &"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp8_method}; bash localscripts/launchswitchostestbed.sh"
 
     sleep 20s
 
@@ -65,12 +72,16 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
 
 
     ### Cleanup
-    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/farreach-${exp8_rule}-client0.out  ${exp8_output_path}/${exp8_snapshot}-farreach-${exp8_rule}-client0.out
-    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/farreach-${exp8_rule}-client1.out  ${exp8_output_path}/${exp8_snapshot}-farreach-${exp8_rule}-client1.out
+    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp8_method}-${exp8_rule}-client0.out  ${exp8_output_path}/${exp8_snapshot}-${exp8_method}-${exp8_rule}-client0.out
+    cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp8_method}-${exp8_rule}-client1.out  ${exp8_output_path}/${exp8_snapshot}-${exp8_method}-${exp8_rule}-client1.out
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] stop switchos" 
-    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/farreach; bash localscripts/stopswitchtestbed.sh"
+    ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp8_method}; bash localscripts/stopswitchtestbed.sh"
 
-    scp ${USER}@${SERVER0}:${SERVER_ROOTPATH}/farreach/tmp_controller_bwcost.out ${exp8_output_path}/${exp8_snapshot}_${exp8_rule}_tmp_controller_bwcost.out
+    scp ${USER}@${SERVER0}:${SERVER_ROOTPATH}/${exp8_method}/tmp_controller_bwcost.out ${exp8_output_path}/${exp8_snapshot}_${exp8_rule}_tmp_controller_bwcost.out
+
+	cd scripts/local/
+	python calculate_bwcost_helper.py ${exp8_output_path}/${exp8_snapshot}_${exp8_rule}_tmp_controller_bwcost.out
+	cd ../../
   done
 done
 
