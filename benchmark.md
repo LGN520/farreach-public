@@ -703,17 +703,17 @@
 			- You can also backup the raw statistics files for the current experiment if necessary, which will be overwritten next time
 		- Note: the scripts of automatic way for evaluation in [Section 3](#3-running-experiments-automatic-evaluation) will automatically aggregate and backup raw statistics, so you do NOT need to do it manually
 
-+ **Slight differences on results of dynamic workload patterns** (exp\_dynamic and exp\_snapshot; take hotin pattern as an example)
++ **Slight larger numbers of evaluation results** (take hotin pattern in exp_dynamic as an example)
 	- In the evaluation version, FarReach can achieve around 0.23MOPS (nocache/netcache achieve 0.13MOPS) in Exp#7 and Exp#8
 	- In the latest AE version, FarReach can achieve around 0.28MOPS (nocache/netcache achieve 0.16MOPS) in Exp#7 and Exp#8
-	- Reason 1
+	- Main reason
+		- In the evaluation version, each server in our testbed only has 24 CPU cores
+		- However, in the latest AE version, due to the unavailability of our evaluation testbed, we use a new testbed where each server has 48 CPU cores, which can process loading phase more quickly and hence incur fewer write stalls
+	- Secondary reason
 		- In the evaluation version, we kill servers immediately after storing 100M records into server-side KVS for loading phase
 			- When we evaluate dynamic workload patterns, server-side KVS still have background compression operations (caused by writes of loading phase) and hence incur some write stalls to undermine performance
 		- However, in the latest AE version, we kill servers 10 minutes after storing 100M records into server-side KVS for loading phase, such that all background compression operations caused by writes of loading phase will be completed
 			- When we evaluate dynamic workload patterns, server-side KVS will NOT perform compression operations for writes of loading phase and hence NOT incur write stalls
-	- Reason 2
-		- In the evaluation version, each server in our testbed only has 24 CPU cores
-		- However, in the latest AE version, due to the unavailability of our evaluation testbed, we use a new testbed where each server has 48 CPU cores, which can process loading phase more quickly and hence incur fewer write stalls
 	- Summary
-		- First, we emphasize that the performance changes are minor and both versions can achieve a fair comparison between FarReach and baselines, thus **the throughput of nocache/netcache is always around 57% of that of farreach in each version**, which does **NOT affect our conclusions**
-		- Second, **the performance is also strongly related with the power of specific testbed**, so it is **reasonable** to have such differences in the two versions
+		- First, **the performance is also strongly related with the power of specific testbed**, so it is **reasonable** to have slightly larger numbers under a more powerful testbed
+		- Second, we emphasize that the performance changes are minor and both versions can achieve a fair comparison between FarReach and baselines, thus **the throughput of nocache/netcache is always around 57% of that of farreach in each version**, which does **NOT affect our conclusions**

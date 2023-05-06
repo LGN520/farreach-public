@@ -21,6 +21,11 @@ exp8_output_path="${EVALUATION_OUTPUT_PREFIX}/exp8/${roundnumber}"
 ### Create json backup directory
 mkdir -p ${exp8_output_path}
 
+### Prepare for DIRNAME
+sed -i "/^DIRNAME=/s/=.*/=\"${exp8_method}\"/" ${CLIENT_ROOTPATH}/scripts/common.sh
+cd ${CLIENT_ROOTPATH}
+bash scripts/remote/sync_file.sh scripts common.sh
+
 for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
   for exp8_snapshot in ${exp8_snapshot_list[@]}; do
     ### Preparation
@@ -37,8 +42,8 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
     sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="${exp8_server_scale_bottleneck}"/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
     sed -i "/^controller_snapshot_period=/s/=.*/="${exp8_snapshot}"/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
     sed -i "/^switch_kv_bucket_num=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
-	sed -i "s/^server_logical_idxes=TODO0/server_logical_idxes=0/g" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
-	sed -i "s/^server_logical_idxes=TODO1/server_logical_idxes=1/g" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
+	sed -i "s/^server_logical_idxes=TODO0/server_logical_idxes=0/g" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
+	sed -i "s/^server_logical_idxes=TODO1/server_logical_idxes=1/g" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
 
     cd ${CLIENT_ROOTPATH}
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] prepare config.ini" 
