@@ -51,7 +51,12 @@ tmpworkloadname=$(readini keydump/config.ini "global" "workload_name")
 echo "Run keydump for workload: ${tmpworkloadname}"
 cd benchmark/ycsb
 # Generate hottest/nearhot/coldest keys; calculate bottleneck serveridx; pre-generate workloads for server rotation under static pattern
-./bin/ycsb run keydump
+if [ "x${tmpworkloadname}" == "xworkload-load" ]
+then
+	./bin/ycsb load keydump
+else
+	./bin/ycsb run keydump
+fi
 # Generate key populairty change rules for dynamic pattern
 python generate_dynamicrules.py ${tmpworkloadname}
 cd ../../
