@@ -19,7 +19,7 @@
 4. [Running Workloads (Manual Evaluation)](#4-running-workloads-manual-evaluation)
 	1. [Dynamic Workload (No Server Rotation)](#41-dynamic-workload-no-server-rotation)
 	2. [Static Workload (Server Rotation)](#42-static-workload-server-rotation)
-5. [Aggregate Statistics](#5-aggregate-statistics)
+5. [Aggregate Statistics (Manual Evaluation)](#5-aggregate-statistics-manual-evaluation)
 	1. [Scripts](#51-scripts)
 	2. [Usage and Example](#52-usage-and-example)
 6. [Appendix](#6-appendix)
@@ -569,7 +569,7 @@
 - Step 6: aggregate statistics
    - Under {main client}, run `bash scripts/remote/calculate_statistics.sh`
 
-# 5. Aggregate Statistics
+# 5. Aggregate Statistics (Manual Evaluation)
 
 ## 5.1 Scripts 
 
