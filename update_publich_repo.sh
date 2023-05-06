@@ -69,7 +69,7 @@ mv benchmark.md README.md
 git add README.md
 
 # Update projects/farreach-private/ as projects/farreach-public/
-tmpfiles=($(find nocache/ netcache/ farreach/ common/ scripts/ benchmark/ -type f -name "*.sh" -o -name "*.c" -o -name "*.h" | xargs grep -r -e "farreach-private/" -e "/NetBuffer" -l | grep -v "update_publich_repo.sh"))
+tmpfiles=($(find nocache/ netcache/ farreach/ common/ scripts/ benchmark/ -type f -name "*.sh" -o -name "*.c" -o -name "*.h" | xargs grep -r -e "farreach-private/" -e "/farreach-private" -l | grep -v "update_publich_repo.sh"))
 echo "${tmpfiles}"
 # In Linux
 #echo "${tmpfiles}" | xargs sed -i 's!/farreach-private!/farreach-public!g'

@@ -9,7 +9,8 @@ if [ $# -ne 1 ]; then
 fi
 roundnumber=$1
 
-exp8_server_scale=16
+exp8_server_scale=2
+exp8_server_scale_for_rotation=16
 exp8_server_scale_bottleneck=14
 exp8_method="farreach"
 exp8_workload="synthetic"
@@ -32,10 +33,12 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
     sed -i "/^workload_mode=/s/=.*/=1/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
     sed -i "/^dynamic_ruleprefix=/s/=.*/=${exp8_rule}/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
     sed -i "/^server_total_logical_num=/s/=.*/="${exp8_server_scale}"/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
-    sed -i "/^server_total_logical_num_for_rotation=/s/=.*/="${exp8_server_scale}"/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
+    sed -i "/^server_total_logical_num_for_rotation=/s/=.*/="${exp8_server_scale_for_rotation}"/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
     sed -i "/^bottleneck_serveridx_for_rotation=/s/=.*/="${exp8_server_scale_bottleneck}"/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
     sed -i "/^controller_snapshot_period=/s/=.*/="${exp8_snapshot}"/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
     sed -i "/^switch_kv_bucket_num=/s/=.*/=10000/" ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
+	sed -i "s/^server_logical_idxes=TODO0/server_logical_idxes=0/g" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
+	sed -i "s/^server_logical_idxes=TODO1/server_logical_idxes=1/g" ${CLIENT_ROOTPATH}/${exp7_method}/config.ini
 
     cd ${CLIENT_ROOTPATH}
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] prepare config.ini" 
