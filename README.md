@@ -72,7 +72,7 @@
 ## 1.1 Dependency Installation
 
 - Install python libraries for python 2.7.12 in {main client} if not
-	+ `pip install -r requirement.txt`
+	+ `pip install -r requirements.txt`
 - Install libboost 1.81.0 in {first server} and {second server} if not
 	+ Under project directory (e.g., /home/ssy/projects/farreach-public)
 		+ `wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz`
@@ -257,9 +257,16 @@
 
 ## 2.2 Workload Analysis & Dump Keys
 
-- Analyze workloads to dump hot keys, dynamic patterns, and bottleneck partition (ONLY need to perform once)
+- Analyze workloads to generate workload-related information before evaluation (ONLY need to perform once)
+	- Workload-related information includes:
+		- Dump hot keys and per-client-thread pregenerated workloads (independent with server rotation scale (i.e., # of simulated servers))
+		- Generate key poularity change rules for dynamic patterns (independent with server rotation scale)
+		- Calculate bottleneck partitions for different server rotation scales (i.e., 16, 32, 64, and 128)
+			- NOTE: you do NOT need to change server\_total\_logical\_num in keydump/config.ini, which is NOT used here
 	- For each {workload} (TIME: around 5 minutes per workload)
-		- Options of workload name: workloada, workloadb, workloadc, workloadd, workloadf, workload-load, synthetic, synthetic-25, synthetic-75, skewness-90, skewness-95, uniform, valuesize-16, valuesize-32, valuesize-64
+		- Options of workload name
+			- YCSB core workloads: workloada, workloadb, workloadc, workloadd, workloadf, workload-load
+			- Synthetic workloads: synthetic, synthetic-25, synthetic-75, skewness-90, skewness-95, uniform, valuesize-16, valuesize-32, valuesize-64
 		- Under {main client}
 			- Update workload\_name as {workload} in keydump/config.ini
 			- Run `bash scripts/remote/keydump_and_sync.sh` to dump workload-related information (e.g., hot keys and bottleneck serveridx), and sync them to all clients, servers, and switch
