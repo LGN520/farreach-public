@@ -271,7 +271,7 @@
 				- synthetic-100, skewness-99, and valuesize-128 are the same as synthetic
 		- TIME cost of workload analysis
 			- **Each of most workloads needs around 5 minutes** (including workloada, workloadb, workloadc, workloadd, workloadf, workload-load, synthetic, valuesize-16, valuesize-32, and valuesize-64)
-			- **Each of other workloads needs 20 minutes to 1 hour** (including skewness-90 of 20m, skewness-95 of 40m, and uniform of 1h)
+			- **Each of other workloads needs 20 minutes to 40 minutes** (including skewness-90 of 20m, skewness-95 of 40m, and uniform of 30m)
 				- The reason is that YCSB uses Zipfian key generator with small skewness and uniform key generator for these workloads, which incurs large computation overhead
 				- Although workload-load is also uniform distribution, YCSB uses counter generator which has small computation overhead
 		- Under {main client}
