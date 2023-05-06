@@ -161,7 +161,7 @@ def dynamicprocess(localjsonarray, remotejsonarray):
     print "[DYNAMIC][OVERALL] avgthpt {} MOPS, avelat {} us, medlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us".format(avgthpt, avglatency, latencymedium, latency90p, latency95p, latency99p)
 
 if len(sys.argv) != 5:
-    print "Invalid usage of calculate_statistics_helper.py"
+    print "[ERROR] Usage: python calculate_statistics_helper.py <workloadmode> <main-client-file> <secondary-client-file> <bottleneckidx>"
     print "Arguments: {}".format(sys.argv)
     exit(-1)
 

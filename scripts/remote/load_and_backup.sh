@@ -41,6 +41,9 @@ cd benchmark/ycsb
 ./bin/ycsb load recordload
 cd ../../
 
+echo "Sleep 10 minutes to wait for servers to finish compression operations..."
+sleep 10m
+
 echo "stop storage servers of ${DIRNAME}"
 source scripts/remote/stopservertestbed.sh
 

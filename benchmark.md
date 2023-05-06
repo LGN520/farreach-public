@@ -1,31 +1,35 @@
 # README of FarReach
 
-Table of Contents
-====================================
+# Table of Contents
+---
 
 0. [Overview](#0-overview)
-1. System Preperation
-   1. [Dependency Installation](#11-dependency-installation)
-   2. [Configuration settings](#12-confiugration-settings)
-   3. [Code Compilation](#13-code-compilation)
-   4. [Testbed Building](#14-testbed-building)
-2. Data Preperation
-   1. [Loading Phase](#21-loading-phase)
-   2. [Workload Analysis & Dump Keys](#22-workload-analysis--dump-keys)
-3. Running Experiments (Automatic Evaluation)
-   1. [Regular Experiments](#31-regular-experiments)
-   2. [Perform Static Single Rotation](#32-perform-static-single-rotation)
-4. Running Workloads (Manual Evaluation)
-   1. [Dynamic Workload](#41-evaluate-dynamic-workload)
-   2. [Static Workload](#42-evaluate-static-workload-server-rotation)
-5. Aggregate Statistics
-   1. [Aggregate Scripts](#51-aggregate-scripts)
-   2. [Scripts Usage and Example](#52-scripts-usage-and-example)
+1. [System Preperation](#1-system-preperation)
+	1. [Dependency Installation](#11-dependency-installation)
+	2. [Configuration settings](#12-confiugration-settings)
+	3. [Code Compilation](#13-code-compilation)
+	4. [Testbed Building](#14-testbed-building)
+2. [Data Preperation](#2-data-preperation)
+	1. [Loading Phase](#21-loading-phase)
+	2. [Workload Analysis & Dump Keys](#22-workload-analysis-dump-keys)
+3. [Running Experiments (Automatic Evaluation)](#3-running-experiments-automatic-evaluation)
+	1. [Regular Experiments](#31-regular-experiments)
+	2. [Perform Single Iteration](#32-perform-single-iteration)
+4. [Running Workloads (Manual Evaluation)](#4-running-workloads-manual-evaluation)
+	1. [Dynamic Workload (No Server Rotation)](#41-dynamic-workload-no-server-rotation)
+	2. [Static Workload (Server Rotation)](#42-static-workload-server-rotation)
+5. [Aggregate Statistics](#5-aggregate-statistics)
+	1. [Scripts](#51-scripts)
+	2. [Usage and Example](#52-usage-and-example)
+6. [Appendix](#6-appendix)
+	1. [Bottleneck Index for Server Rotation](#61-bottleneck-idx-for-server-rotation)
+	2. [Other Notes](#62-other-notes)
 
-Contents
-====================================
+# Contents
+---
 
 ## 0 Overview
+---
 
 ### Methods
 
@@ -64,7 +68,8 @@ Contents
 		* Second server (NIC: ens3f1; MAC: 9c:69:b4:60:ef:c1) <-> Tofino switch (front panel port: 3/0)
 		* Tofino switch (front panel port: 7/0) <-> Tofino switch (front panel port: 12/0) (for in-switch cross-pipeline recirculation)
 
-# System Preperation
+# 1 System Preperation
+---
 
 ## 1.1 Dependency Installation
 
@@ -193,7 +198,8 @@ Contents
 		* Under each switch
 			- Run `bash scripts/local/makeswitchos.sh` to make switch OS (TIME: around 1 minute)
 			- Run `su` to enter root mode, and run `cd {method}/tofino; bash compile.sh` to make P4 code (**TIME: around 3 hours**)
-				+ Note: if you have compiled P4 code of {method} before, you do NOT need to re-compile it agina. If you really want to re-compile it (maybe due to P4 code modification), you should delete the corresponding directory (netbufferv4, nocache, or netcache) under $SDE/pkgsrc/p4-build/tofino/ before re-compilation.
+				+ If you have compiled P4 code of {method} before, you do **NOT need to re-compile it again**.
+				+ If you really want to re-compile it (maybe due to P4 code modification), you should delete the corresponding directory (netbufferv4, nocache, or netcache) under $SDE/pkgsrc/p4-build/tofino/ before re-compilation.
 		* Under each server, run `bash scripts/local/makeserver.sh` (TIME: around 5 minutes)
 		* NOTE: if with "make: warning:  Clock skew detected.  Your build may be incomplete" during make, run `find . -type f | xargs touch` and then re-make files
 
@@ -211,18 +217,19 @@ Contents
 	+ In {second server}, run `bash scripts/local/confiugre_server.sh 1`
 	+ In {switch} OS, run `bash scripts/local/confiugre_switchos.sh`
 
-# Data Preperation
+# 2 Data Preperation
+---
 
 ## 2.1 Loading Phase
 
-- Perform the loading phase and backup for evaluation time reduction (ONLY need to perform once)
+- Perform the loading phase and backup for evaluation time reduction (ONLY need to perform once) (**TIME: around 30+10 minutes**)
 	+ Under {main client}
 		* Set DIRNAME as nocache in scripts/common.sh and run `bash scripts/remote/sync_file.sh scripts common.sh` to sync scripts/common.sh
 		* Run `bash scripts/remote/prepare_load.sh` to copy recordload/config.ini to overwrite nocache/config.ini in all clients, servers, and switch
 	+ Under {switch}
 		* Run `bash nocache/tofino/start_switch.sh` to launch nocache switch, which will open a CLI terminal
 		* Run `cd nocache; bash localscripts/launchswitchtestbed.sh` to configure nocache switch
-	+ Under {main client} (**TIME: around 30 minutes**)
+	+ Under {main client}
 		* Run `bash scripts/remote/load_and_backup.sh` to launch and kill servers and clients automatically for loading and backup
 			- Note: scripts/remote/load_and_backup.sh will resume the original nocache/config.ini in all clients, server, and switch after all steps
 	+ Under {switch}
@@ -249,12 +256,13 @@ Contents
   	- `bash scripts/remote/deprecated/synckeydump.sh <workloadname>` to sync the above files of the workload to another client
 -->
 
-# Running Experiments (Automatic Evaluation)
+# 3 Running Experiments (Automatic Evaluation)
+---
 
 ## 3.1 Regular Experiments
 
 - To carry out experiments according to paper, we have set up the scripts for running specific tasks. The scripts are placed under `scripts/exps/`.
-	+ **Note that due to server rotation to cope with limited machines, each number may take 1-8 hour(s), and each experiment will test multiple numbers.**
+	+ Note that due to server rotation to cope with limited machines, **each number under a given <method, parameter settings> takes around 1-8 hour(s)**, and each experiment needs multiple numbers for different methods and parameter settings.
 
 </br>
 
@@ -262,15 +270,15 @@ Contents
 
    | Exp # |                                 Scripts                                 | Description |
    | :---: | :---------------------------------------------------------------------: | --- |
-   |   1   |             [run_exp_ycsb.sh](scripts/exps/run_exp_ycsb.sh)             | Throughput analysis for different YCSB core workloads |
-   |   2   |          [run_exp_latency.sh](scripts/exps/run_exp_latency.sh)          | Latency analysis for different target throughputs |
-   |   3   |      [run_exp_scalability.sh](scripts/exps/run_exp_scalability.sh)      | Scalability for different # of simulated servers |
-   |   4   |      [run_exp_write_ratio.sh](scripts/exps/run_exp_write_ratio.sh)      | Synthetic workloads with different write ratios |
-   |   5   | [run_exp_key_distribution.sh](scripts/exps/run_exp_key_distribution.sh) | Synthetic workloads with different key distributions |
-   |   6   |       [run_exp_value_size.sh](scripts/exps/run_exp_value_size.sh)       | Synthetic workloads with different value sizes |
-   |   7   |          [run_exp_dynamic.sh](scripts/exps/run_exp_dynamic.sh)          | Synthetic workloads with different dynamic workload patterns |
-   |   8   |         [run_exp_snapshot.sh](scripts/exps/run_exp_snapshot.sh)         | Performance and control-plane bandwidth overhead of snapshot generation |
-   |   9   |         [run_exp_recovery.sh](scripts/exps/run_exp_recovery.sh)         | Crash recovery time |
+   |   1   |             [run_exp_ycsb.sh](scripts/exps/run_exp_ycsb.sh)             | Throughput analysis for different YCSB core workloads under static workload pattern (with server rotation) |
+   |   2   |          [run_exp_latency.sh](scripts/exps/run_exp_latency.sh)          | Latency analysis for different target throughputs under static workload pattern (with server rotation) |
+   |   3   |      [run_exp_scalability.sh](scripts/exps/run_exp_scalability.sh)      | Scalability for different # of simulated servers  under static workload pattern (with server rotation)|
+   |   4   |      [run_exp_write_ratio.sh](scripts/exps/run_exp_write_ratio.sh)      | Synthetic workloads with different write ratios under static workload pattern (with server rotation) |
+   |   5   | [run_exp_key_distribution.sh](scripts/exps/run_exp_key_distribution.sh) | Synthetic workloads with different key distributions under static workload pattern (with server rotation) |
+   |   6   |       [run_exp_value_size.sh](scripts/exps/run_exp_value_size.sh)       | Synthetic workloads with different value sizes under static workload pattern (with server rotation) |
+   |   7   |          [run_exp_dynamic.sh](scripts/exps/run_exp_dynamic.sh)          | Synthetic workloads with different dynamic workload patterns (NO server rotation) |
+   |   8   |         [run_exp_snapshot.sh](scripts/exps/run_exp_snapshot.sh)         | Performance and control-plane bandwidth overhead of snapshot generation under different dynamic workload patterns (NO server rotation) |
+   |   9   |         [run_exp_recovery.sh](scripts/exps/run_exp_recovery.sh)         | Crash recovery time under static workload pattern (with server rotation) |
 
 </br>
 
@@ -280,7 +288,7 @@ Contents
 
 </br>
 
-- Run each {experiment} except exp_dynamic
+- Run each {experiment} except exp_dynamic and exp_snapshot
 	- Options: exp_ycsb, exp_latency, exp_scalability, exp_write_ratio, exp_key_distribution, exp_value_size, exp_snapshot, and exp_recovery.
 	- Under {main client}, take exp_ycsb as an example
 		- Run `bash scripts/exps/run_exp_ycsb.sh <roundnumber>`
@@ -288,7 +296,7 @@ Contents
 
 </br>
 
-- Run exp_dynamic (NOT use server rotation)
+- Run exp_dynamic or exp_snapshot (NOT use server rotation)
 	- Under {main client}
 		- Comment line 82 (#define SERVER_ROTATION) in common/helper.h to diable server rotation
 		- `bash scripts/remote/sync_file.sh common helper.h`
@@ -296,8 +304,8 @@ Contents
 		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
 		- Under {switch}, run `bash scripts/local/makeswithos.sh`
-	- Run `bash scripts/exps/run_exp_dynamic.sh <roundnumber>`
-	- After running all rounds of exp_dynamic, as most experiments use server rotation for static workload pattern instead of dynamic workload patterns
+	- Run `bash scripts/exps/run_exp_dynamic.sh <roundnumber>` or `bash scripts/exps/run_exp_snapshot.sh <roundnumber>`
+	- After running all rounds of exp_dynamic or exp_snapshot, as most experiments use server rotation for static workload pattern instead of dynamic workload patterns
 		- Under {main client}
 			- Uncomment line 82 (#define SERVER_ROTATION) in common/helper.h to enable server rotation
 			- `bash scripts/remote/sync_file.sh common helper.h`
@@ -317,14 +325,15 @@ Contents
     	- Step 1: make sure `EVALUATION_OUTPUT_PREFIX` points to the path of recovery-related data (in-switch snapshot, client-side backups, and maxseq) generated by previous server-rotation-based experiments
 		- Step 2: run `scripts/exps/run_exp_recovery.sh <workloadmode> 1`, where we set the argument <recoveryonly> as 1 to skip the step of server rotations
 
-## 3.2 Perform Static Single Rotation
+## 3.2 Perform Single Iteration
 
-- During experiments with static pattern, single rotation failure may happen due to database performance fluctuate or unstable network. We also provide scripts to run one single rotation from server rotations experiements to avoid re-run the whole experiment.
+- During experiments with server rotation, some iterations may fail due to database performance fluctuation or unstable network
+	- To fix this issue, we provide scripts to run a single iteration for each failed iteration instead of re-running all iterations of the whole experiment.
 
 </br>
 
-- Under {main client}
-	- Launch a single rotation with command: `bash scripts/exps/run_makeup_rotation_exp.sh <expname> <roundnumber> <methodname> <workloadname> <serverscale> <bottleneckidx> <targetrotation> [targetthpt]`
+- If scripts (e.g., scripts/local/calculate_statistics.sh) say that you need to perform a single iteration for each missing number (**TIME: around 1-8 hour(s)**), then under {main client}
+	- Launch a single iteration with this command: `bash scripts/exps/run_makeup_rotation_exp.sh <expname> <roundnumber> <methodname> <workloadname> <serverscale> <bottleneckidx> <targetrotation> [targetthpt]`
 		- `expname`: experiment name (eg.: exp1)
 			- Note: expname only determines the path to store generated statistics, yet not affect experiment results
 		- `roundnumber`: experiment round number (eg.: 1)
@@ -336,199 +345,268 @@ Contents
 		- `targetthpt`: throughput target of this rotation, only applicable for exp2.
 	- Note: the arguments of scripts/exps/run_makeup_rotation_exp.sh are determined by each specific experiment
 		- For example, for exp_ycsb, you may pass arguments with expname=exp1, roundnumber=0, methodname=farreach, workloadname=workloada, serverscale=16, bottleneckidx=14, targetrotation=10
-	- Note: scripts/exps/run_makeup_rotation_exp.sh does NOT support exp_dynamic, as the experiment of dynamic workload patterns does NOT use server rotation
+	- Note: scripts/exps/run_makeup_rotation_exp.sh does NOT support exp_dynamic or exp_snapshot, as the experiments of dynamic workload patterns do NOT use server rotation
 		- Therefore, this script ONLY works for experiments with server rotation: exp_key_distribution, exp_latency, exp_scalability, exp_value_size, exp_write_ratio, and exp_ycsb
 
-# Running Workloads (Manual Evaluation)
+# 4 Running Workloads (Manual Evaluation)
+---
 
-## 4.1 Evaluate Dynamic Workload
-Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.
+## 4.1 Dynamic Workload (No Server Rotation)
 
-1.  <u>[Under Main Client]</u> Prepare config files
-    - Set file {method}/config.ini:
-      - `workload_mode`=1
-      - `workload_name`={workload} 
-	  - `dynaic_ruleprefix`=hotin/hotout/random
-      - `server_physical_num`=2
-      - `server0::server_logical_idxes`=0
-      - `server1::server_logical_idxes`=1
-    - Set file scripts/global.sh accordingly
+- Decide {workload} (e.g., workloada), {method} (e.g., farreach), and {dynamic pattern} (e.g., hotin) to use
+	- Options for dynamic pattern: hotin, hotout, and random
+	- Note: scripts/exps/run_exp_dynamic.sh or scripts/exps/run_exp_snapshot.sh include all the following steps (except step 2, as the two scripts assume that you have already disabled server rotation in advance)
+
+</br>
+
+- Step 1: prepare ini config files (under {main client})
+	- Update settings in the config file {method}/config.ini (e.g., farreach/config.ini):
+		- Set global::workload_mode=1
+		- Set global::workload_name={workload} 
+		- Set global::dynaic_ruleprefix={dynamic pattern}
+		- Set global::server_physical_num=2
+		- Set global::server_total_logical_num=2
+		- Set server0::server_logical_idxes=0
+		- Set server1::server_logical_idxes=1
+	- Set DIRNAME as {method} in scripts/common.sh
+    - Double-check the global testbed settings in scripts/global.sh based on your testbed
+
+</br>
+
+- Step 2: if server rotation is enabled (default setting), re-compile code to disable server rotation
+	- Comment line 82 (#define SERVER_ROTATION) in common/helper.h to diable server rotation
+	- Run `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
+	- Re-compile software code (NO need for P4 code)
+		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
+		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
+		- Under {switch}, run `bash scripts/local/makeswithos.sh`
+
+</br>
+
+- Step 3: launch switch data plane and switch OS
+	- Create two terminals in {switch}
+	- Launch switch data plane in the first terminal
+		- `cd {method}/tofino` 
+		- `su`
+		- Run `bash start_switch.sh`, which will open a CLI
+	- Launch switch OS and other daemon processes (for cache management and snapshot generation) in the second terminal
+		- `cd {method}`
+		- `su`
+		- `bash localscripts/launchswitchtestbed.sh`
+	- NOTE: if you encounter any problem, you can check the log files of {method}/tmp_\*.out and {method}/tofino/tmp_\*.out in {switch}
+
+</br>
+
+- Step 4: launch servers and clients without server rotation
+	- Under {main client}: `bash scripts/remote/test_dynamic.sh`
+	- NOTE: if you encouter any problem
+		- You can check the output of {main client}
+		- You can check the log files of benchmark/ycsb/tmp_\*.out in {secondary client}
+		- You can check the log files of {method}/tmp_\*.out in {first server} and {second server}
+
+</br>
+
+- Step 5: cleanup testbed
+	- Under {switch}
+		- Stop switch data plane in the CLI of the first terminal
+			- Type exit and press enter
+			- If CLI is not closed, type Ctrl+C
+		- Stop switch OS and other daemon processes in the second terminal
+			- `cd {method}`
+			- `su`
+			- `bash localscripts/stopswitchtestbed.sh`
+	- Under {main client}, run `bash scripts/remote/stopservertestbed.sh` to stop servers
+	- Note: if some processes are still NOT stopped, under {main client}, you can run `bash scripts/remote/stopall.sh`
+
+</br>
+
+- Step 6: aggregate statistics
+   - Under {main client}, run `bash scripts/remote/calculate_statistics.sh`
+
+</br>
+
+- Step 7: if you do NOT run dynamic workload patterns, you should re-compile code to enable server rotation
+	- Under {main client}
+		- Uncomment line 82 (#define SERVER_ROTATION) in common/helper.h to enable server rotation
+		- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
+	- Re-compile software code (NO need for P4 code)
+		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
+		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
+		- Under {switch}, run `bash scripts/local/makeswithos.sh`
+
+## 4.2 Static Workload (Server Rotation)
+
+- Decide {workload} (e.g., workloada) and {method} (e.g., farreach) to use
+	- Note: we assmue that you have analyzed {workload} to get {bottleneck serveridx} for your {server rotation scale}
+		- If not, please refer to [Section 2.2](#22-workload-analysis-dump-keys)
+		- As bottleneck server index is fixed for a given <{workload}, {server rotation scale}>, you can directly refer to the appendix table in [Section 6.1](#61-bottleneck-index-for-server-rotation)
+	- Note: we assume that you have already compiled code enabling server rotation
+		- If not, please refer to step 7 in [Section 4.1](#41-dynamic-workload-no-server-rotation) mentioned before
+	- Note: the scripts in scripts/exps/ (except run_exp_dynamic.sh and run_exp_snapshot.sh) include all the following steps
+
+</br>
+
+- Step 1: prepare ini config files (under {main client})
+	- Update settings in the config file {method}/config.ini (e.g., farreach/config.ini):
+		- Set workload_name={workload}
+		- Set workload_mode=0
+		- Set bottleneck_serveridx_for_rotation={bottleneck serveridx}
+		- Set server_total_logical_num_for_rotation={server rotation scale}
+		- NOTE: {method}/config.ini must have the correct {bottleneck serveridx} and {server rotation scale}
+			- Otherwise, client-side PregeneratedWorkload will issue the requests of incorrect partitions (corresponding to non-running servers) and hence timeout
+	- Set DIRNAME as {method} in scripts/common.sh
+    - Double-check the global testbed settings in scripts/global.sh based on your testbed
+
+</br>
+
+- Step 2: prepare for launching switch data plane and switch OS
+	- Under {main client}, run `bash scripts/remote/prepare_server_rotation.sh`
+		- This script can generate and sync a new {method}/config.ini based on the existing {method}/config.ini with the configurations you set in step 1
+			- The main changes in the new {method}/config.ini is that it sets server0::server_logical_idxes as ${bottleneck serveridx} (e.g., 14), and sets server1::server_logical_idxes as all other serveridxes except ${bottleneck serveridx} (e.g., 0:1:2:3:4:5:6:7:8:9:10:11:12:13:15)
+		- The goal is that {switch} can use the new ${method}/config.ini to configure packet forwarding rules, such that we do NOT need to re-launch switch during server rotation
+
+</br>
+
+- Step 3: launch switch data plane and switch OS
+	- Create two terminals in {switch}
+	- Launch switch data plane in the first terminal
+		- `cd {method}/tofino` 
+		- `su`
+		- Run `bash start_switch.sh`, which will open a CLI
+	- Launch switch OS and other daemon processes (for cache management and snapshot generation) in the second terminal
+		- `cd {method}`
+		- `su`
+		- `bash localscripts/launchswitchtestbed.sh`
+	- NOTE: if you encounter any problem, you can check the log files of {method}/tmp_\*.out and {method}/tofino/tmp_\*.out in {switch}
+
+</br>
+
+- Step 4: launch servers and clients with server rotation
+	- Under {main client}, run `bash scripts/remote/test_server_rotation.sh`
+		- Phase 1: test_server_rotation.sh invokes scripts/remote/test_server_rotation_p1.sh to run the first iteration (the bottleneck partition is deployed into {first server})
+		- Phase 2: test_server_rotation.sh invokes scripts/remote/test_server_rotation_p2.sh to run the ith iteration (the bottleneck partition is deployed into {first server}, and the ith non-bottleneck partition is deployed into {second server}), where 1 <= i <= {server rotation scale}-1
+	- Under {main client}, perform a single iteration for each failed iteration if any
+		- If strid=server-x is missed, run `bash scripts/remote/test_server_rotation_p1.sh 1`
+		- If strid=server-x-y is missed, run: `bash scripts/remote/test_server_rotation_p2.sh 1 y`
 
 
-2. <u>[Under Main Client]</u> Check SERVER_ROTATION option
-   - In common/helper.h, disable `SERVER_ROTATION` 
-   - Sync code to all machines: `bash scripts/remote/sync.sh`
-   - Re-compile clients/servers/switchos as mentioned before
+</br>
 
+- Step 5: cleanup testbed
+	- Under {switch}
+		- Stop switch data plane in the CLI of the first terminal
+			- Type exit and press enter
+			- If CLI is not closed, type Ctrl+C
+		- Stop switch OS and other daemon processes in the second terminal
+			- `cd {method}`
+			- `su`
+			- `bash localscripts/stopswitchtestbed.sh`
+	- Under {main client}, run `bash scripts/remote/stopservertestbed.sh` to stop servers
+	- Note: if some processes are still NOT stopped, under {main client}, you can run `bash scripts/remote/stopall.sh`
 
-3. <u>[Under Physical Switch]</u> Start switch services
-   - Create two terminals in switch machine
-   - Start switch on terminal 1 by: 
-     - `cd {method}/tofino` 
-     - `su`
-     - `bash start_switch.sh`
-   - Launch switch testbed in terminal 2 by:
-     - `cd {method}`
-     - `su`
-     - `bash localscripts/launchswitchtestbed.sh`
+</br>
 
-	*NOTE: if encounter any problem, check tmp_\*.out and tofino/tmp_\*.out in switch first*
+- Step 6: aggregate statistics
+   - Under {main client}, run `bash scripts/remote/calculate_statistics.sh`
 
+# 5. Aggregate Statistics
+---
 
-4. <u>[Under Main Client]</u> Start dynamic evaluation
-   - Evaluate by: `bash scripts/remote/test_dynamic.sh` </br>
+## 5.1 Scripts 
 
-
-5. <u>[Under Main Client & Physical Switch]</u> Evaluation cleanup
-   - Under physcial switch, stop service by:
-     - `cd method`
-     - `su`
-     - `bash localscripts/stopswitchtestbed.sh`
-   - Under main client, run `bash scripts/remote/stopservertestbed.sh`
-
-
-6. <u>[Under Main Client]</u> Aggregate statistics
-   - Calculate aggregated statistics by `bash scripts/remote/calculate_statistics.sh` 
-
-</br></br>
-
-## 4.2 Evaluate Static Workload (Server Rotation)
-Decide {workload} and {method} to use. E.g.: *farreach* and *workloada*.
-
-1. <u>[Under Main Client]</u> Prepare Config Files
-   - Set file {method}/config.ini:
-     - `workload_name`={workload}
-     - `workload_mode`=0
-     - `bottleneck_serveridx_for_rotation`
-     - `server_total_logical_num_for_rotation`
-
-	*NOTE: config.ini must have the correct bottleneckidx and rotation scale, otherwise PregeneratedWorkload will choose the incorrect requests of non-running servers and hence timeout*
-   - Set scripts/common.sh accordingly
-
-2. <u>[Under Main Client]</u> Check SERVER_ROTATION option
-   - In common/helper.h, disable `SERVER_ROTATION` 
-   - Sync code to all machines: `bash scripts/remote/sync.sh`
-   - Re-compile clients/servers/switchos as mentioned before
-
-3. <u>[Under Main Client]</u> Setup hot keys and forwarding rules into switch
-   - Generate and sync config.ini for setup phase by: `bash scripts/remote/prepare_server_rotation.sh`
-
-4. <u>[Under Physical Switch]</u> Start switch services
-   - Create two terminals to switch machine
-   - Start switch in terminal 1 by: 
-     - `cd {method}/tofino` 
-     - `su`
-     - `bash start_switch.sh`
-   - Launch switch testbed in terminal 2 by:
-     - `cd {method}`
-     - `su`
-     - `bash localscripts/launchswitchtestbed.sh`
-
-	*NOTE: if encounter any problem, check tmp_\*.out and tofino/tmp_\*.out in switch first*
-
-5. <u>[Under Main Client]</u> Start static evaluation by server rotation
-   - Start evaluation by `bash scripts/remote/test_server_rotation.sh`
-      - Phase 1: the first rotation (physical server 0 runs the bottleneck server)
-      - Phase 2: each subsequent rotation (physical server 0 runs the bottleneck server; physical server 1 runs each non-bottleneck server) </br>
-   - Make up failed iteration
-     - If strid=server-x is missed, run: `bash scripts/remote/test_server_rotation_p1.sh 1`
-     - If strid=server-x-y is missed, run: `bash scripts/remote/test_server_rotation_p2.sh 1 y`
-
-6. <u>[Under Main Client & Physical Switch]</u> Evaluation cleanup
-   - Under physcial switch, stop service by:
-     - `cd method`
-     - `su`
-     - `bash localscripts/stopswitchtestbed.sh`
-   - Under main client, run `bash scripts/remote/stop_server_rotation.sh`
-
-7. <u>[Under Main Client]</u> Aggregate statistics
-   - Calculate aggregated statistics by `bash scripts/remote/calculate_statistics.sh` 
-  
-</br></br>
-
-## 5.1 Aggregate Scripts 
-- [calculate_statistics.sh](scripts/remote/calculate_statistics.sh): calculate throughput and latency under static or dynamic workload
-- [calculate_bwcost.sh](scripts/remote/calculate_bwcost.sh): calculate bandwidth cost
-- [calculate_recovery_time.sh](scripts/remote/calculate_recovery_time.sh): calculate recovery time
+- We provide the following scripts to help aggregate statistics
+	- [calculate_statistics.sh](scripts/remote/calculate_statistics.sh): calculate throughput and latency with or without server rotation
+	- [calculate_bwcost.sh](scripts/remote/calculate_bwcost.sh): calculate control-plane bandwidth cost
+	- [calculate_recovery_time.sh](scripts/remote/calculate_recovery_time.sh): calculate crash recovery time
 - NOTEs
-	- If you use [automatic way (3.1 and 3.2)](#31-regular-experiments) to perform evaluation
-		- As the exp scripts have aggregated the statistics automatically, you can redirect scripts' output and find aggregate statistics in the output file
-		- For example, after `nohup bash scripts/exps/run_exp_ycsb.sh >tmp.out 2>&1 &`, you can find statistics in tmp.out
-	- If you use [manual way (4.1 and 4.2)](#41-evaluate-dynamic-workload) to perform evaluation
-		- You can run the aggregate scripts (e.g., calculate_statistics.sh) guided in [5.2](#52-scripts-usage-and-example) to get the aggregate statistics
-		- The aggregate scripts will calculate the statistics based on the setting in global.sh, common.sh, and {method}/config.ini
+	- If you use [automatic way in Section 3](#3-running-experiments-automatic-evaluation) for evaluation
+		- As the run_exp_\* scripts have aggregated the statistics automatically, you can redirect stdout of the script into a file and find aggregated results in the file
+		- For example, after `nohup bash scripts/exps/run_exp_ycsb.sh >tmp.out 2>&1 &`, you can find aggregated results in tmp.out
+	- If you use [manual way in Section 4](#4-running-workloads-manual-evaluation) for evaluation
+		- You can follow [Section 5.2](#52-usage-and-example) to run a script (e.g., calculate_statistics.sh) and get the corresponding gggregated statistics
+		- The scripts will aggregate the statistics based on the settings in scripts/global.sh, scripts/common.sh, and {method}/config.ini
 
-</br></br>
+## 5.2 Usage and Example
 
-## 5.2 Scripts Usage and Example
-- Calculate throughput and latency of static workload with no target throughput specified
-  - `bash scripts/remote/calculate_statistics.sh 0`
-  - Applicable experiments: exp1, exp3, exp4, exp5, exp6, exp9.
-  - Output example:
-   ```bash
-      ...
-      [STATIC] average bottleneck totalthpt: 0.092875 MOPS; switchthpt: 0.0245 MOPS; serverthpt: 0.0675625 MOPS
-      [STATIC] aggregate throughput: 1.31126577666 MOPS; normalized throughput: 19.4081891088, imbalanceratio: 1.01388888889
-      [STATIC] average latency 286.901026111 us, medium latency 85 us, 90P latency 584 us, 95P latency 1717 us, 99P latency 2597 us
-   ```
-- Calculate throughput and latency of static workload with target aggregate throughput specified
-  - `bash scripts/remote/calculate_statistics.sh 1`
-  - Applicable experiments: exp2.
-  - Output example:
-   ```bash
-      ...
-      [STATIC] average bottleneck totalthpt: 0.0173125 MOPS; switchthpt: 0.00975 MOPS; serverthpt: 0.006875 MOPS
-      [STATIC] aggregate throughput: 0.190073026316 MOPS; normalized throughput: 27.6469856459, imbalanceratio: 1.0
-      [STATIC] average latency 94.8354988254 us, medium latency 57 us, 90P latency 90 us, 95P latency 123 us, 99P latency 1123 us
-   ```
+- Calculate throughput and latency with server rotation yet without target throughput
+	- Under {main client}, run `bash scripts/remote/calculate_statistics.sh 0`
+	- Supported experiments: exp1, exp3, exp4, exp5, and exp6
+	- Output example:
+	```bash
+		...
+		[STATIC] average bottleneck totalthpt: 0.092875 MOPS; switchthpt: 0.0245 MOPS; serverthpt: 0.0675625 MOPS
+		[STATIC] aggregate throughput: 1.31126577666 MOPS; normalized throughput: 19.4081891088, imbalanceratio: 1.01388888889
+		[STATIC] average latency 286.901026111 us, medium latency 85 us, 90P latency 584 us, 95P latency 1717 us, 99P latency 2597 us
+		...
+	```
+
+</br>
+
+- Calculate throughput and latency with server rotation and with target throughput
+	- Under {main client}, run `bash scripts/remote/calculate_statistics.sh 1`
+	- Supported experiment: exp2
+	- Output example:
+	```bash
+		...
+		[STATIC] average bottleneck totalthpt: 0.0173125 MOPS; switchthpt: 0.00975 MOPS; serverthpt: 0.006875 MOPS
+		[STATIC] aggregate throughput: 0.190073026316 MOPS; normalized throughput: 27.6469856459, imbalanceratio: 1.0
+		[STATIC] average latency 94.8354988254 us, medium latency 57 us, 90P latency 90 us, 95P latency 123 us, 99P latency 1123 us
+		...
+	```
+
+</br>
 
 - Calculate throughput and latency of dynamic workload
-   - `bash scripts/remote/calculate_statistics.sh 0`
-   - Applicable experiments: exp7, exp8.
-   - Output example:
-   ```bash
-      ...
-      [DYNAMIC] per-second statistics:
-      thpt (MOPS): [0.178, 0.245, ... , 0.215]
-      normalized thpt: [3.2962962962962963, 3.310810810810811, ... , 3.2575757575757573]
-      imbalanceratio: [1.0, 1.0, ... , 1.0153846153846153]
-      avg latency (us): [497.21625182852614, 517.8129587343011, ... , 501.72249302450666]
-      medium latency (us): [120, 95, ... , 132]
-      90P latency (us): [1487, 1571, ... , 1579]
-      95P latency (us): [1535, 1610, ... , 1642]
-      99P latency (us): [1614, 1687, ... , 1729]
-      [DYNAMIC][OVERALL] avgthpt 0.228106666667 MOPS, avelat 0 us, medlat 0 us, 90Plat 0 us, 95Plat 0 us, 99Plat 0 us
-   ```
-- Calculate system bandwidth cost 
-  - `bash scripts/remote/calculate_bwcost.sh`
-  - Applicable experiment: exp8.
-  - Output example:
-   ```bash
-      perserver avglocalbwcost: [0.18816512500000002, 0.18981975, ... s, 0.19562]
-      average bwcost of entire control plane: 4.18830950595 MiB/s
-   ```
-
-- Calculate system recovery time
-  - `bash scripts/remote/calculate_recovery_time.sh <roundnumber>`
-  - Applicable experiment: exp9.
-  - Output example:
-   ```bash
-      Server collect time: 1.0 s
-      Server preprocess time: 0.016991 s
-      Server replay time: 0.0106864375 s
-      Server total recovery time: 1.0276774375 s
-      Switch collect time: 0.9605 s
-      Switch replay time: 0.338202 s
-      Switch total recovery time: 1.298702 s
-   ```
+	- Under {main client}, run `bash scripts/remote/calculate_statistics.sh 0`
+	- Supported experiments: exp7, exp8
+	- Output example:
+	```bash
+		...
+		[DYNAMIC] per-second statistics:
+		thpt (MOPS): [0.178, 0.245, ... , 0.215]
+		normalized thpt: [3.2962962962962963, 3.310810810810811, ... , 3.2575757575757573]
+		imbalanceratio: [1.0, 1.0, ... , 1.0153846153846153]
+		avg latency (us): [497.21625182852614, 517.8129587343011, ... , 501.72249302450666]
+		medium latency (us): [120, 95, ... , 132]
+		90P latency (us): [1487, 1571, ... , 1579]
+		95P latency (us): [1535, 1610, ... , 1642]
+		99P latency (us): [1614, 1687, ... , 1729]
+		[DYNAMIC][OVERALL] avgthpt 0.228106666667 MOPS, avelat 0 us, medlat 0 us, 90Plat 0 us, 95Plat 0 us, 99Plat 0 us
+		...
+	```
 
 </br>
+
+- Calculate control-plane bandwidth cost 
+	- Under {main client}, run `bash scripts/remote/calculate_bwcost.sh`
+	- Supported experiment: exp8
+	- Output example:
+	```bash
+		perserver avglocalbwcost: [0.18816512500000002, 0.18981975, ... s, 0.19562]
+		average bwcost of entire control plane: 4.18830950595 MiB/s
+	```
+
 </br>
 
-Appendix
-====================================
+- Calculate crash recovery time
+	- Under {main client}, run `bash scripts/remote/calculate_recovery_time.sh <roundnumber>`
+	- Supported experiment: exp9
+	- Output example:
+	```bash
+		Server collect time: 1.0 s
+		Server preprocess time: 0.016991 s
+		Server replay time: 0.0106864375 s
+		Server total recovery time: 1.0276774375 s
+		Switch collect time: 0.9605 s
+		Switch replay time: 0.338202 s
+		Switch total recovery time: 1.298702 s
+	```
 
-## Static Workload Server Bottleneck Index
+# 6 Appendix
+---
+
+## 6.1 Bottleneck Index for Server Rotation
+
 | Workload Name | Scale | Bottleneck Serveridx |
 | :-----------: | :---: | :------------------: |
 | workload-load |  16   |          13          |
@@ -547,18 +625,22 @@ Appendix
 |   workloada   |  64   |          59          |
 |   workloada   |  128  |         118          |
 
-</br>
+## 6.2 Other NOTEs
 
-## Other NOTEs
-
-- Change parameters of workload profiles in benchmark/ycsb/workloads/
-	+ For write ratio, change read/updateproportion in workloads/synthetic as workloadssynthetic-XXX
-	+ For value size, change fieldlength in workloads/synthetic as workloads/valuesize-XXX
-	+ For skewness, change requestdistribution/zipfianconstant in workloads/synthetic as workloads/skewness-XXX and workloads/uniform
-- Dump and aggregate statistics
-	- Under static pattern, each physical client should dump statistics into benchmark/output/{workloadname}-statistics/{method}-static{staticscale}-client{physicalidx}.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out) without parameter info
-	- NOTE: before changing parameter for the next time of experiment
-		+ Run `bash scripts/remote/calculate_statistics.sh` to get results of the current parameter
-		+ Backup the statistics files of the current parameter if necessary, which will be overwritten next time
+- We haved changed parameters of some workload profiles in benchmark/ycsb/workloads/ for sysnthetic workloads
+	+ For write ratio (e.g., 25%), change readproportion and updateproportion in workloads/synthetic as workloads/synthetic-XXX (e.g., workloads/synthetic-25)
+	+ For value size (e.g., 32), change fieldlength in workloads/synthetic as workloads/valuesize-XXX (e.g., workloads/valuesize-32)
+	+ For skewness (e.g., 0.9), change requestdistribution and zipfianconstant in workloads/synthetic as workloads/skewness-XXX (e.g., workloads/skewness-0.9) and workloads/uniform
 
 </br>
+
+- Paths for raw statistics and aggregated results
+	- Under static pattern with server rotation
+		- {main client} and {secondary client} should dump raw statistics into benchmark/output/{workloadname}-statistics/{method}-static{server rotation scale}-client{physicalidx}.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out)
+	- Under dynamic pattern without server rotation
+		- {main client} and {secondary client} should dump raw statistics into benchmark/output/{workloadname}-statistics/{method}-{dynamic pattern}-client{physicalidx}.out (e.g., benchmark/output/synthetic-statistics/farreach-hotin-client0.out)
+	- If you use manual way as in [Section 4](#4-running-workloads-manual-evaluation) for evaluation
+		- As the paths of raw statistics do NOT have other parameter information (e.g., write ratio or skewness), **you need to aggregate the raw statistics before running the next experiment, which may overwrite them**
+			- You can refer to [Section 5](#5-aggregate-statistics) to get aggregated results for the current experiment
+			- You can also backup the raw statistics files for the current experiment if necessary, which will be overwritten next time
+		- Note: the scripts of automatic way for evaluation in [Section 3](#3-running-experiments-automatic-evaluation) will automatically aggregate and backup raw statistics, so you do NOT need to do it manually

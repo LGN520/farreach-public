@@ -74,7 +74,7 @@ def misscheck(localjsonarray, remotejsonarray):
                 is_miss = False
                 break
         if is_miss == True:
-            print "[client 0] miss {}".format(localstrid)
+            print "[client 1] miss {}".format(localstrid)
     for i in range(len(remotejsonarray)):
         remotejsonobj = remotejsonarray[i]
         remotestrid = getstrid(remotejsonobj)
@@ -86,8 +86,8 @@ def misscheck(localjsonarray, remotejsonarray):
                 is_miss = False
                 break
         if is_miss == True:
-            print "[client 1] miss {}".format(remotestrid)
-    print "[NOTE] If you are not running exp_dynamic, please refer to README.md Section 3.2 to perform static single rotation and fix each missing number by scripts/exps/run_makeup_rotation_exp.sh"
+            print "[client 0] miss {}".format(remotestrid)
+    print "[NOTE] If you are not running exp_dynamic, please refer to README.md Section 3.2 to perform a single rotation for each missing number by scripts/exps/run_makeup_rotation_exp.sh"
 
 def aggregate(localjsonarray, remotejsonarray, length):
     global GLOBAL_PEROBJ_EXECUTION_MILLIS
