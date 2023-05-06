@@ -64,7 +64,7 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
 
 
     ### Evaluation
-    echo "[exp8][${exp8_rule}][${exp8_snapshot}] test server rotation" 
+    echo "[exp8][${exp8_rule}][${exp8_snapshot}] test dynamic workload pattern without server rotation" 
     bash scripts/remote/test_dynamic.sh
 
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] sync json file and calculate"

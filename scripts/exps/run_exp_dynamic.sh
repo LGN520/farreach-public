@@ -57,7 +57,7 @@ for exp7_method in ${exp7_method_list[@]}; do
 
 
     ### Evaluation
-    echo "[exp7][${exp7_method}][${exp7_rule}] test server rotation" 
+    echo "[exp7][${exp7_method}][${exp7_rule}] test dynamic workload pattern without server rotation" 
     bash scripts/remote/test_dynamic.sh
 
     echo "[exp7][${exp7_method}][${exp7_rule}] sync json file and calculate"
