@@ -300,6 +300,7 @@
    |   7   |          [run_exp_dynamic.sh](scripts/exps/run_exp_dynamic.sh)          | Synthetic workloads with different dynamic workload patterns (NO server rotation) |
    |   8   |         [run_exp_snapshot.sh](scripts/exps/run_exp_snapshot.sh)         | Performance and control-plane bandwidth overhead of snapshot generation under different dynamic workload patterns (NO server rotation) |
    |   9   |         [run_exp_recovery.sh](scripts/exps/run_exp_recovery.sh)         | Crash recovery time under static workload pattern (with server rotation) |
+   |  10   | N/A | See hardware reousrce usage of {method} in corresponding directory in {switch} (e.g., $SDE/pkgsrc/p4-build/tofino/nocache/visualization, $SDE/pkgsrc/p4-build/tofino/netcache/visualization, and $SDE/pkgsrc/p4-build/tofino/netbufferv4/visualization, where netbufferv4 corresponds to farreach) |
 
 </br>
 
