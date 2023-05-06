@@ -72,11 +72,11 @@ git add README.md
 tmpfiles=($(find nocache/ netcache/ farreach/ common/ scripts/ benchmark/ -type f -name "*.sh" -o -name "*.c" -o -name "*.h" | xargs grep -r -e "farreach-private/" -e "/farreach-private" -l | grep -v "update_publich_repo.sh"))
 echo "${tmpfiles}"
 # In Linux
-#echo "${tmpfiles}" | xargs sed -i 's!/farreach-private!/farreach-public!g'
-#echo "${tmpfiles}" | xargs sed -i 's!farreach-private/!farreach-public/!g'
+echo "${tmpfiles}" | xargs sed -i 's!/farreach-private!/farreach-public!g'
+echo "${tmpfiles}" | xargs sed -i 's!farreach-private/!farreach-public/!g'
 # In MacOS
-echo "${tmpfiles}" | xargs sed -i '' 's!/farreach-private!/farreach-public!g'
-echo "${tmpfiles}" | xargs sed -i '' 's!farreach-private/!farreach-public/!g'
+#echo "${tmpfiles}" | xargs sed -i '' 's!/farreach-private!/farreach-public!g'
+#echo "${tmpfiles}" | xargs sed -i '' 's!farreach-private/!farreach-public/!g'
 
 # Commit
 git commit -am 're-organize for public repo'
