@@ -6,28 +6,29 @@ Here are the detailed instructions to reproduce experiments in our paper.
 
 1. [Artifact Claims](#1-artifact-claims)
 2. [AE Testbed Overview](#2-ae-testbed-overview)
-3. [AE on YCSB Core Workloads](#3-ae-on-ycsb-core-workloads)
-	1. [Throughput Analysis](#31-throughput-analysis)
-	2. [Latency Analysis](#32-latency-analysis)
-	3. [Scalability Analysis](#33-scalability-analysis)
-4. [AE on Synthetic Workloads](#4-ae-on-synthetic-workloads)
-	1. [Impact of Write Ratio](#41-impact-of-write-ratio)
-	2. [Impact of Key Distribution](#42-impact-of-key-distribution)
-	3. [Impact of Value Size](#43-impact-of-value-size)
-	4. [Impact of Key Popularity Changes](#44-impact-of-key-popularity-changes)
-5. [AE on Snapshot Generation and Recovery](#5-ae-on-snapshot-generation-and-recovery)
+3. [Notes for Artifact Evaluation](#3-notes-for-artifact-evaluation)
+4. [AE on YCSB Core Workloads](#4-ae-on-ycsb-core-workloads)
+	1. [Throughput Analysis](#41-throughput-analysis)
+	2. [Latency Analysis](#42-latency-analysis)
+	3. [Scalability Analysis](#43-scalability-analysis)
+5. [AE on Synthetic Workloads](#5-ae-on-synthetic-workloads)
+	1. [Impact of Write Ratio](#51-impact-of-write-ratio)
+	2. [Impact of Key Distribution](#52-impact-of-key-distribution)
+	3. [Impact of Value Size](#53-impact-of-value-size)
+	4. [Impact of Key Popularity Changes](#54-impact-of-key-popularity-changes)
+6. [AE on Snapshot Generation and Crash Recovery](#6-ae-on-snapshot-generation-and-crash-recovery)
+	1. [Performance of Snapshot Generation](#61-performance-of-snapshot-generation)
+	2. [Crash Recovery Time](#62-crash-recovery-time)
 
 ## 1. Artifact Claims
 
 - First, we claim that **the results of experiments in AE may be different from those in our paper**, as the AE testbed is different from our evaluation testbed (unavailable now), including but not limited to different OSs, different numbers of CPU cores, different memory sizes, different disk I/O capabilities, different network interfaces, and different software packages.
-
-- However, we emphasize that **the conclusions of our paper will still hold**, i.e., FarReach can achieve larger throughput and smaller latency compared with the baselines (NoCache and Netcache).
+	- However, we emphasize that **the conclusions of our paper still hold**, i.e., FarReach can achieve larger throughput and smaller latency compared with the baselines (NoCache and Netcache).
 
 </br>
 
-- Second, we claim that **you may encouter some problem when executing scripts during AE** due to different reasons, e.g., testbed misconfiguration, script misusage, resource confliction (AE testbed is shared with other researchers instead of our exclusive, while Tofino switch data plane cannot support multiple P4 programs simultaneously), and our code bugs not found in evaluation.
-
-- However, we have tried our best to avoid such problems via executing scripts in AE testbed by ourselves in advance. If you still encouter any problem and need helps, you can contact us if available (sysheng21@cse.cuhk.edu.hk).
+- Second, we claim that **you may encouter some problem when executing scripts during AE** due to different reasons, e.g., testbed misconfiguration, script misusage, resource confliction (AE testbed is shared with other researchers instead of our exclusive, while Tofino switch data plane cannot support multiple P4 programs simultaneously), Tofino hardware bugs (front panel ports sometimes cannot be activated unless waiting for several minutes), and our code bugs (not found in evaluation).
+	- However, we have tried our best to avoid such problems via executing scripts in AE testbed by ourselves in advance. If you still encouter any problem and need helps, you can contact us if available (sysheng21@cse.cuhk.edu.hk).
 
 ## 2. AE Testbed Overview
 
@@ -55,9 +56,9 @@ Here are the detailed instructions to reproduce experiments in our paper.
 		* Second server (NIC: ens3f1; MAC: 9c:69:b4:60:ef:c1) <-> Tofino switch (front panel port: 3/0).
 		* Tofino switch (front panel port: 7/0) <-> Tofino switch (front panel port: 12/0) (for in-switch cross-pipeline recirculation to fix atomicity issue of crash-consistent snapshot generation in FarReach).
 
-## 3. AE on YCSB Core Workloads
+## 3. Notes for Artifact Evaluation
 
-- **Note: we have finished system and data preparation, such that you can directly execute scripts to reproduce experiments.**
+- **Note: we have finished system preparation and data preparation, such that you can directly execute scripts to reproduce experiments.**
 	- System preparation includes software dependency installation, testbed configuration settings (e.g., Linux username, involved machines, and SSH settings), and code compilation **(server rotation is enabled by default for most experiments)**.
 	- Data preparation includes loading phase (pre-loading 100M records into server-side key-value storage) and workload analysis (calculate bottleneck partition by consistent hashing and generate workload files for server rotation).
 	- Although we have configured `scripts/global.sh` based on AE testbed and the AE account (username: atc2023ae), **please also make a double-check on `scripts/global.sh` by yourself.**
@@ -70,7 +71,7 @@ Here are the detailed instructions to reproduce experiments in our paper.
 	- Each experiment needs multiple server rotations for different methods and parameter settings (**TIME: around 1-3 day(s)**).
 	- Each round includes multiple experiments to evaluate from different perspectives (**TIME: around 1-2 week(s)**).
 	- We need multiple rounds to reduce runtime variation (**TIME: around 1-2 month(s)**).
-- **You can follow the guides of each experiment later to select the methods and parameter settings you want before executing the corresponding script.**
+- **To save time, you can follow the guides of each experiment later to select a part of methods and parameter settings that you want before executing the corresponding script.**
 
 </br>
 
@@ -87,13 +88,15 @@ Here are the detailed instructions to reproduce experiments in our paper.
 			- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
 		- Re-compile code of NoCache and NetCache similar as FarReach:
 			- The only difference is to set `DIRNAME` as `nocache` and `netcache`, respectively.
-	- For the two experiments on impact of key popularity changes and performance of snapshot generation, we need to copile code in all machines to disable server rotation if not. Here is the **detailed compilation to disable server rotation under main client (dl11)**:
+	- For the two experiments on impact of key popularity changes and performance of snapshot generation, we need to compile code in all machines to disable server rotation if not. Here is the **detailed compilation to disable server rotation under main client (dl11)**:
 		- Disable server rotation:
 			- Comment line 82 (//#define SERVER_ROTATION) in `common/helper.h` to enable server rotation.
 			- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines.
 		- Re-compile code of FarReach, NoCache, and NetCache with the same steps as mentioned above.
 
-### 3.1 Throughput Analysis
+## 4. AE on YCSB Core Workloads
+
+### 4.1 Throughput Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_throughput.sh`:
@@ -124,7 +127,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp1\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 $ awk -v flag=0 'flag == 0 && /\[exp1\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_throughput.out
 ```
 
-### 3.2 Latency Analysis
+### 4.2 Latency Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_latency.sh`:
@@ -155,7 +158,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp2\]\[netcache\]\[.*\] sync/ {flag = 1; print
 $ awk -v flag=0 'flag == 0 && /\[exp2\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average latency/ {flag = 0; print $0; next}' tmp_exp_latency.out
 ```
 
-### 3.3 Scalability Analysis
+### 4.3 Scalability Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_scalability.sh`:
@@ -190,9 +193,9 @@ $ TODO
 $ TODO
 ```
 
-## 4. AE on Synthetic Workloads
+## 5. AE on Synthetic Workloads
 
-### 4.1 Impact of Write Ratio
+### 5.1 Impact of Write Ratio
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_write_ratio.sh`:
@@ -223,7 +226,7 @@ $ TODO
 $ TODO
 ```
 
-### 4.2 Impact of Key Distribution
+### 5.2 Impact of Key Distribution
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_key_distribution.sh`:
@@ -254,7 +257,7 @@ $ TODO
 $ TODO
 ```
 
-### 4.3 Impact of Value Size
+### 5.3 Impact of Value Size
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_value_size.sh`:
@@ -285,7 +288,7 @@ $ TODO
 $ TODO
 ```
 
-### 4.4 Impact of Key Populairty Changes
+### 5.4 Impact of Key Popularity Changes
 
 - **Pre-requisite: code is compiled with disabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_dynamic.sh`:
@@ -316,9 +319,9 @@ $ awk -v flag=0 'flag == 0 && /\[exp7\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
 ```
 
-## 5. AE on Snapshot Generation and Crash Recovery
+## 6. AE on Snapshot Generation and Crash Recovery
 
-### 5.1 Performance of Snapshot Generation
+### 6.1 Performance of Snapshot Generation
 
 - **Pre-requisite: code is compiled with disabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_snapshot.sh`:
@@ -353,7 +356,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average bwcost/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
 ```
 
-### 5.2 Crash Recovery Time
+### 6.2 Crash Recovery Time
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_recovery.sh`:
