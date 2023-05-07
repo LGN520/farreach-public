@@ -217,13 +217,13 @@ $ nohup bash scripts/exps/run_exp_write_ratio.sh 0 >tmp_exp_write_ratio.out 2>&1
 $ bash scripts/remote/stopall.sh
 
 # Get throughput results of FarReach if any
-$ TODO
+$ awk -v flag=0 'flag == 0 && /\[exp4\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_write_ratio.out
 
 # Get throughput results of NoCache if any
-$ TODO
+$ awk -v flag=0 'flag == 0 && /\[exp4\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_write_ratio.out
 
 # Get throughput results of NetCache if any
-$ TODO
+$ awk -v flag=0 'flag == 0 && /\[exp4\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_write_ratio.out
 ```
 
 ### 5.2 Impact of Key Distribution
