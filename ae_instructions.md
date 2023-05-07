@@ -1,6 +1,6 @@
 # AE Instructions
 
-Here are the detailed instructions to reproduce experiments in our paper
+Here are the detailed instructions to reproduce experiments in our paper.
 
 # Table of Contents
 
@@ -31,29 +31,29 @@ Here are the detailed instructions to reproduce experiments in our paper
 
 ## 2. AE Testbed Overview
 
-- Here are the machines in AE testbed
-	+ Four physical machines with Ubuntu 16.04 or Ubuntu 18.04
-		* One main client (hostname: dl11)
-		* One secondary client (hostname: dl20)
-		* Two servers (hostnames: dl21 and dl30)
-			- Note: controller is co-located in the first server (dl21)
-	+ One 2-pipeline Tofino switch with SDE 8.9.1 (hostname: bf3)
+- Here are the machines in AE testbed.
+	+ Four physical machines with Ubuntu 16.04 or Ubuntu 18.04:
+		* One main client (hostname: dl11).
+		* One secondary client (hostname: dl20).
+		* Two servers (hostnames: dl21 and dl30).
+			- Note: controller is co-located in the first server (dl21).
+	+ One 2-pipeline Tofino switch with SDE 8.9.1 (hostname: bf3).
 
 </br>
 
-- Here are the network settings in AE testbed
-	+ All machines are in the same local area network (IP mask: 172.16.255.255; NOT bypass Tofino switch data plane)
+- Here are the network settings in AE testbed,
+	+ All machines are in the same local area network (IP mask: 172.16.255.255; NOT bypass Tofino switch data plane):
 		* Main client: 172.16.112.11
 		* Secondary client: 172.16.112.20
 		* First server (co-located with controller): 172.16.112.21
 		* Second server: 172.16.112.30
 		* Tofino switch OS: 172.16.112.19
-	+ All machines are also in the same Tofino-based network (bypass Tofino switch data plane)
-		* Main client (NIC: enp129s0f0; MAC: 3c:fd:fe:bb:ca:78) <-> Tofino switch (front panel port: 5/0)
-		* Secondary client (NIC: ens2f0; MAC: 9c:69:b4:60:34:f4) <-> Tofino switch (front panel port: 21/0)
-		* First server (NIC: ens2f1; MAC: 9c:69:b4:60:34:e1) <-> Tofino switch (front panel port: 6/0)
-		* Second server (NIC: ens3f1; MAC: 9c:69:b4:60:ef:c1) <-> Tofino switch (front panel port: 3/0)
-		* Tofino switch (front panel port: 7/0) <-> Tofino switch (front panel port: 12/0) (for in-switch cross-pipeline recirculation to fix atomicity issue of crash-consistent snapshot generation in FarReach)
+	+ All machines are also in the same Tofino-based network (bypass Tofino switch data plane):
+		* Main client (NIC: enp129s0f0; MAC: 3c:fd:fe:bb:ca:78) <-> Tofino switch (front panel port: 5/0).
+		* Secondary client (NIC: ens2f0; MAC: 9c:69:b4:60:34:f4) <-> Tofino switch (front panel port: 21/0).
+		* First server (NIC: ens2f1; MAC: 9c:69:b4:60:34:e1) <-> Tofino switch (front panel port: 6/0).
+		* Second server (NIC: ens3f1; MAC: 9c:69:b4:60:ef:c1) <-> Tofino switch (front panel port: 3/0).
+		* Tofino switch (front panel port: 7/0) <-> Tofino switch (front panel port: 12/0) (for in-switch cross-pipeline recirculation to fix atomicity issue of crash-consistent snapshot generation in FarReach).
 
 ## 3. AE on YCSB Core Workloads
 
@@ -65,38 +65,37 @@ Here are the detailed instructions to reproduce experiments in our paper
 </br>
 
 - **Note: most experiments use server rotation to simulate a large scale of servers, which is time-consuming:**
-	- Each iteration fixes the bottleneck partition (and deploys a non-bottleneck partition) (**TIME: around 5 minutes**)
-	- Each server rotation comprises tens of iterations (16-128) to simulate multiple machines (**TIME: around 1.5-12 hours**)
-	- Each experiment needs multiple server rotations for different methods and parameter settings (**TIME: around 1-3 day(s)**)
-	- Each round includes multiple experiments to evaluate from different perspectives (**TIME: around 1-2 week(s)**)
-	- We need multiple rounds to reduce runtime variation (**TIME: around 1-2 month(s)**)
-- **You can follow the guides of each experiment later to select the methods and parameter settings you want before executing the corresponding script**
+	- Each iteration fixes the bottleneck partition (and deploys a non-bottleneck partition) (**TIME: around 5 minutes**).
+	- Each server rotation comprises tens of iterations (16-128) to simulate multiple machines (**TIME: around 1.5-12 hours**).
+	- Each experiment needs multiple server rotations for different methods and parameter settings (**TIME: around 1-3 day(s)**).
+	- Each round includes multiple experiments to evaluate from different perspectives (**TIME: around 1-2 week(s)**).
+	- We need multiple rounds to reduce runtime variation (**TIME: around 1-2 month(s)**).
+- **You can follow the guides of each experiment later to select the methods and parameter settings you want before executing the corresponding script.**
 
 </br>
 
 - **Please ensure that our code is correctly compiled before running each experiment.**
-	- For most experiments, we need to compile code in all machines to enable server rotation if not. Here is the **detailed compilation to enable server rotation**:
-		- Under main client (dl11):
-			- Enable server rotation:
-				- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation
-				- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines
-			- Re-compile code of FarReach:
-				- Set `DIRNAME` as `farreach` in `scripts/common.sh`
-				- Run bash scripts/remote/sync_file.sh scripts common.sh
-				- Under main client (dl11) and secondary client (dl20), run `bash scripts/local/makeclient.sh`
-				- Under first server (dl21) and second server (dl30), run `bash scripts/local/makeserver.sh`
-				- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
-			- Re-compile code of NoCache and NetCache similar as FarReach
-				- The only difference is to set `DIRNAME` as `nocache` and `netcache`, respectively
-	- For the two experiments on impact of key popularity changes and performance of snapshot generation, we need to copile code in all machines to disable server rotation if not. Here is the **detailed compilation to disable serverr otation**:
-		- Under main client (dl11):
-			- Disable server rotation:
-				- Comment line 82 (//#define SERVER_ROTATION) in `common/helper.h` to enable server rotation
-				- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines
-			- Re-compile code of FarReach, NoCache, and NetCache with the same steps as mentioned above.
+	- For most experiments, we need to compile code in all machines to enable server rotation if not. Here is the **detailed compilation to enable server rotation under main client (dl11)**:
+		- Enable server rotation:
+			- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation.
+			- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines.
+		- Re-compile code of FarReach:
+			- Set `DIRNAME` as `farreach` in `scripts/common.sh`
+			- Run `bash scripts/remote/sync_file.sh scripts common.sh`
+			- Under main client (dl11) and secondary client (dl20), run `bash scripts/local/makeclient.sh`
+			- Under first server (dl21) and second server (dl30), run `bash scripts/local/makeserver.sh`
+			- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
+		- Re-compile code of NoCache and NetCache similar as FarReach:
+			- The only difference is to set `DIRNAME` as `nocache` and `netcache`, respectively.
+	- For the two experiments on impact of key popularity changes and performance of snapshot generation, we need to copile code in all machines to disable server rotation if not. Here is the **detailed compilation to disable server rotation under main client (dl11)**:
+		- Disable server rotation:
+			- Comment line 82 (//#define SERVER_ROTATION) in `common/helper.h` to enable server rotation.
+			- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines.
+		- Re-compile code of FarReach, NoCache, and NetCache with the same steps as mentioned above.
 
 ### 3.1 Throughput Analysis
 
+- **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_ycsb.sh`:
 	- You can keep a part of methods in `exp1_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp1_core_workload_list` to save time (default value is `"workloada" "workloadb" "workloadc" "workloadd" " workladf" "workload-load"`).
@@ -127,6 +126,7 @@ $ TODO
 
 ### 3.2 Latency Analysis
 
+- **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_latency.sh`:
 	- You can keep a part of methods in `exp2_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of target throughput values `exp2_target_thpt_list` to save time (default value is `"0.2" "0.4" "0.6" "0.8"`).
@@ -157,6 +157,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp2\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 
 ### 3.3 Scalability Analysis
 
+- **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_scalability.sh`:
 	- You can keep a part of methods in `exp3_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of scalability values in `exp3_scalability_list` to save time (default value is `"32" "64" "128"`).
@@ -193,6 +194,7 @@ $ TODO
 
 ### 4.1 Impact of Write Ratio
 
+- **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_write_ratio.sh`:
 	- You can keep a part of methods in `exp4_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp4_workload_list` to save time (default value is `"synthetic-25" "synthetic-75" "synthetic"`).
@@ -223,6 +225,7 @@ $ TODO
 
 ### 4.2 Impact of Key Distribution
 
+- **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_key_distribution.sh`:
 	- You can keep a part of methods in `exp5_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp5_workload_list` to save time (default value is `"skewness-90" "skewness-95" "uniform"`).
@@ -253,6 +256,7 @@ $ TODO
 
 ### 4.3 Impact of Value Size
 
+- **Pre-requisite: code is compiled with enabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_value_size.sh`:
 	- You can keep a part of methods in `exp6_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp6_workload_list` to save time (default value is `"valuesize-16" "valuesize-32" "valuesize-64"`).
@@ -283,6 +287,7 @@ $ TODO
 
 ### 4.4 Impact of Key Populairty Changes
 
+- **Pre-requisite: code is compiled with disabling server rotation.**
 - Under main client (dl11), for `scripts/exps/run_exp_dynamic.sh`:
 	- You can keep a part of methods in `exp7_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp7_dynamic_rule_list` to save time (default value is `"hotin" "hotout" "random" "stable"`).
@@ -315,8 +320,10 @@ $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print
 
 ### 5.1 Performance of Snapshot Generation
 
+- **Pre-requisite: code is compiled with disabling server rotation.**
 - TODO
 
 ### 5.2 Crash Recovery Time
 
+- **Pre-requisite: code is compiled with enabling server rotation.**
 - TODO
