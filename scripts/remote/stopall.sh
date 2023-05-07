@@ -13,6 +13,10 @@ ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scripts/local/local
 # Stop and kill servers and controller (w/ reflector)
 echo "Stop and kill servers..."
 bash scripts/remote/stopservertestbed.sh
+echo "Stop exps if any..."
+source scripts/local/localkill.sh run_exp >/dev/null 2>&1
+echo "Stop server rotation if any..."
+bash scripts/remote/stop_server_rotation.sh
 
 # Stop and kill switch
 ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscripts/stopswitchtestbed.sh"

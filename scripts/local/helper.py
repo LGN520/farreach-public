@@ -20,6 +20,9 @@ STATIC_PEROBJ_EXECUTION_MILLIS = 10 * 1000
 DYNAMIC_PEROBJ_EXECUTION_MILLIS = 1 * 1000
 GLOBAL_PEROBJ_EXECUTION_MILLIS = -1
 
+
+DEBUG_MODE=False
+
 # Utils
 
 def getmops(opsperms):
@@ -230,10 +233,12 @@ def calculate_perobjstat(aggjsonarray, workloadmode, bottleneckidx):
             print "[{}] tmp_maxserverops is 0, tmp_perserverops: {}".format(tmpstrid, tmp_perserverops)
         else:
             tmp_normalizedthpt = float(tmptotalops) / float(tmp_maxserverops)
-            print "[{}] overall thpt {} MOPS; cache hit rate {}; cache miss rate {}; normalized thpt {}".format(tmpstrid, getmops(float(tmptotalops) / float(tmptotaltime)), float(tmp_cachehitcnt) / float(tmptotalops), float(tmp_cachemisscnt) / float(tmptotalops), tmp_normalizedthpt)
+            if DEBUG_MODE == True:
+                print "[{}] overall thpt {} MOPS; cache hit rate {}; cache miss rate {}; normalized thpt {}".format(tmpstrid, getmops(float(tmptotalops) / float(tmptotaltime)), float(tmp_cachehitcnt) / float(tmptotalops), float(tmp_cachemisscnt) / float(tmptotalops), tmp_normalizedthpt)
 
         for j in range(len(tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCY])):
-            print "[idx {}]".format(j)
+            if DEBUG_MODE == True:
+                print "[idx {}]".format(j)
 
             #tmp_cachehit_totallatency = tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCY][j]
             #tmp_cachehit_totallatencynum = tmpjsonobj[PERSERVER_CACHEHIT_TOTAL_LATENCYNUM][j]
@@ -245,12 +250,16 @@ def calculate_perobjstat(aggjsonarray, workloadmode, bottleneckidx):
             tmp_totallatencyhist, tmp_cachehit_totallatencyhist, tmp_cachemiss_totallatencyhist = get_total_cachehit_cachemiss_latencyhist(aggjsonarray, i, j)
 
             tmp_cachehit_avglatency, tmp_cachehit_latencymedium, tmp_cachehit_latency90p, tmp_cachehit_latency95p, tmp_cachehit_latency99p, tmp_cachehit_minlatency, tmp_cachehit_maxlatency = calculatelatency(tmp_cachehit_totallatencyhist)
-            print "cache hits: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_cachehit_avglatency, tmp_cachehit_latencymedium, tmp_cachehit_latency90p, tmp_cachehit_latency95p, tmp_cachehit_latency99p, tmp_cachehit_minlatency, tmp_cachehit_maxlatency)
+            if DEBUG_MODE == True:
+                print "cache hits: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_cachehit_avglatency, tmp_cachehit_latencymedium, tmp_cachehit_latency90p, tmp_cachehit_latency95p, tmp_cachehit_latency99p, tmp_cachehit_minlatency, tmp_cachehit_maxlatency)
             tmp_cachemiss_avglatency, tmp_cachemiss_latencymedium, tmp_cachemiss_latency90p, tmp_cachemiss_latency95p, tmp_cachemiss_latency99p, tmp_cachemiss_minlatency, tmp_cachemiss_maxlatency = calculatelatency(tmp_cachemiss_totallatencyhist)
-            print "cache misses: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_cachemiss_avglatency, tmp_cachemiss_latencymedium, tmp_cachemiss_latency90p, tmp_cachemiss_latency95p, tmp_cachemiss_latency99p, tmp_cachemiss_minlatency, tmp_cachemiss_maxlatency)
+            if DEBUG_MODE == True:
+                print "cache misses: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_cachemiss_avglatency, tmp_cachemiss_latencymedium, tmp_cachemiss_latency90p, tmp_cachemiss_latency95p, tmp_cachemiss_latency99p, tmp_cachemiss_minlatency, tmp_cachemiss_maxlatency)
             tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p, tmp_minlatency, tmp_maxlatency = calculatelatency(tmp_totallatencyhist)
-            print "cache hits+misses: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p, tmp_minlatency, tmp_maxlatency)
+            if DEBUG_MODE == True:
+                print "cache hits+misses: avglat {} us, midlat {} us, 90Plat {} us, 95Plat {} us, 99Plat {} us, minlat {} us, maxlat {} us".format(tmp_avglatency, tmp_latencymedium, tmp_latency90p, tmp_latency95p, tmp_latency99p, tmp_minlatency, tmp_maxlatency)
 
             tmptotalthpt, tmpswitchthpt, tmpserverthpt = get_total_switch_server_thpts(aggjsonarray, i, j, workloadmode, bottleneckidx)
-            print "totalthpt {} MOPS, switchthpt {} MOPS, serverthpt {} MOPS, overflow latencynum: {}".format(tmptotalthpt, tmpswitchthpt, tmpserverthpt, tmp_totallatencyhist[-1])
+            if DEBUG_MODE == True:
+                print "totalthpt {} MOPS, switchthpt {} MOPS, serverthpt {} MOPS, overflow latencynum: {}".format(tmptotalthpt, tmpswitchthpt, tmpserverthpt, tmp_totallatencyhist[-1])
     return
