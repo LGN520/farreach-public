@@ -96,15 +96,15 @@ Here are the detailed instructions to reproduce experiments in our paper.
 ### 3.1 Throughput Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
-- Under main client (dl11), for `scripts/exps/run_exp_ycsb.sh`:
+- Under main client (dl11), for `scripts/exps/run_exp_throughput.sh`:
 	- You can keep a part of methods in `exp1_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp1_core_workload_list` to save time (default value is `"workloada" "workloadb" "workloadc" "workloadd" " workladf" "workload-load"`).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
 ```shell
-# Usage: bash scripts/exps/run_exp_ycsb.sh <roundnumber>, where roundnumber is the index of current round
+# Usage: bash scripts/exps/run_exp_throughput.sh <roundnumber>, where roundnumber is the index of current round
 # You can run this script multiple times with different roundnumbers to get results of multiple rounds
-$ nohup bash scripts/exps/run_exp_ycsb.sh 0 >tmp_exp_ycsb.out 2>&1 &
+$ nohup bash scripts/exps/run_exp_throughput.sh 0 >tmp_exp_throughput.out 2>&1 &
 ```
 
 </br>

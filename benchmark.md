@@ -328,7 +328,7 @@
 
    | Exp # |                                 Scripts                                 | Description |
    | :---: | :---------------------------------------------------------------------: | --- |
-   |   1   |             [run_exp_ycsb.sh](scripts/exps/run_exp_ycsb.sh)             | Throughput analysis for different YCSB core workloads under static workload pattern (with server rotation) |
+   |   1   |             [run_exp_throughput.sh](scripts/exps/run_exp_throughput.sh)             | Throughput analysis for different YCSB core workloads under static workload pattern (with server rotation) |
    |   2   |          [run_exp_latency.sh](scripts/exps/run_exp_latency.sh)          | Latency analysis for different target throughputs under static workload pattern (with server rotation) |
    |   3   |      [run_exp_scalability.sh](scripts/exps/run_exp_scalability.sh)      | Scalability for different # of simulated servers  under static workload pattern (with server rotation)|
    |   4   |      [run_exp_write_ratio.sh](scripts/exps/run_exp_write_ratio.sh)      | Synthetic workloads with different write ratios under static workload pattern (with server rotation) |
@@ -348,7 +348,7 @@
 </br>
 
 - With server rotation: run each {experiment} except exp_dynamic and exp_snapshot
-	- Options of {experiment}: exp_ycsb, exp_latency, exp_scalability, exp_write_ratio, exp_key_distribution, exp_value_size, and exp_recovery
+	- Options of {experiment}: exp_throughput, exp_latency, exp_scalability, exp_write_ratio, exp_key_distribution, exp_value_size, and exp_recovery
 	- Under {main client}
 		- Run `bash scripts/exps/run_{experiment}.sh <roundnumber>`
 		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round
@@ -413,10 +413,10 @@
 		- `targetrotation`: the non-bottleneck server index in the iteration (eg.: 10)
 		- `targetthpt`: throughput target of this rotation, only applicable for exp2
 		- The above arguments of `scripts/exps/run_makeup_rotation_exp.sh` are determined by the missing iteration of the server rotation for the specific experiment
-			- For example, for exp_ycsb, you may pass arguments with `expname=exp1, roundnumber=0, methodname=farreach, workloadname=workloada, serverscale=16, bottleneckidx=14, targetrotation=10`
+			- For example, for exp_throughput, you may pass arguments with `expname=exp1, roundnumber=0, methodname=farreach, workloadname=workloada, serverscale=16, bottleneckidx=14, targetrotation=10`
 				- The script will deploy the bottleneck serveridx 14 in {first server} and the non-bottleneck serveridx 10 in {second server} for the single iteration, and update the raw statistics in place
 	- Note: `scripts/exps/run_makeup_rotation_exp.sh` **should NOT support exp_dynamic or exp_snapshot**, as the experiments of dynamic workload patterns do NOT use server rotation
-		- Therefore, this script ONLY works for experiments with server rotation: exp_key_distribution, exp_latency, exp_scalability, exp_value_size, exp_write_ratio, and exp_ycsb
+		- Therefore, this script ONLY works for experiments with server rotation: exp_key_distribution, exp_latency, exp_scalability, exp_value_size, exp_write_ratio, and exp_throughput
 	- Note: `scripts/exps/run_makeup_rotation_exp.sh` **now does NOT support the failure of the first iteration** (i.e., ONLY the bottleneck partition is deployed in {first server})
 		- You may refer to [Section 4.2](#42-static-workload-server-rotation) (especially for Step 4) to use `scripts/remote/test_server_rotation_p1.sh`
 		- Make sure `scripts/global.sh`, `scripts/common.sh`, and `${method}/config.ini` are correctly configured before running `scripts/remote/test_server_rotation_p1.sh`
@@ -600,7 +600,7 @@
 - Notes
 	- If you use [automatic way in Section 3](#3-running-experiments-automatic-evaluation) for evaluation
 		- As `scripts/exps/run_exp_\*` scripts have aggregated the statistics automatically, you can redirect stdout of the script into a file and find aggregated results in the file
-		- For example, after `nohup bash scripts/exps/run_exp_ycsb.sh >tmp.out 2>&1 &`, you can find aggregated results in tmp.out
+		- For example, after `nohup bash scripts/exps/run_exp_throughput.sh >tmp.out 2>&1 &`, you can find aggregated results in tmp.out
 	- If you use [manual way in Section 4](#4-running-workloads-manual-evaluation) for evaluation
 		- You can follow [Section 5.2](#52-usage-and-example) to run a script (e.g., calculate_statistics.sh) and get the corresponding gggregated statistics
 		- The scripts will aggregate the statistics based on the settings in `scripts/global.sh`, `scripts/common.sh`, and `{method}/config.ini`
