@@ -227,7 +227,13 @@
 
 ## 1.4 Testbed Building
 
-- Building your testbed based on network settings provided by scripts/global.sh
+- Building your testbed based on network settings provided by `scripts/global.sh`
+	+ Before running the following scripts, in each of clients and servers (NO need for Tofino switch)
+		* Append the following content into `/etc/security/limits.conf` by `sudo vim`:
+		```
+		{USER} hard nofile 1024000
+		{USER} soft nofile 1024000
+		```
 	+ In {main client}, run `bash scripts/local/configure_client.sh 0`
 	+ In {secondary client}, run `bash scripts/local/configure_client.sh 1`
 	+ In {first server}, run `bash scripts/local/configure_server.sh 0`
