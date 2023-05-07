@@ -62,6 +62,8 @@ for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); 
 		ssh ${USER}@${SERVER0} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db" # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
 		ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${rotateidx}.db" # retrieve rocksdb and reset rotatedservers.snapshotid = 0
 	else
+		# NOTE: worker*.db = worker${rotateidx}.db does NOT affect correctness
+		# Although it will report an error of "mv: cannot move '/tmp/${DIRNAME}/worker${rotateidx}.db' to a subdirectory of itself", the database of /tmp/${DIRNAME}/worker${rotateidx}.db still exists for server rotation
 		ssh ${USER}@${SERVER1} "mv /tmp/${DIRNAME}/worker*.db /tmp/${DIRNAME}/worker${rotateidx}.db"
 	fi
 
