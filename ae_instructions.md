@@ -335,6 +335,7 @@ $ nohup bash scripts/exps/run_exp_snapshot.sh 0 >tmp_exp_snapshot.out 2>&1 &
 </br>
 
 - After this experiment finishes, under main client (dl11):
+	- If awk cannot find the results of average bandwidth cost, you may consider to use `bash scripts/local/calculate_bwcost_helper.h <statistics filepath>` to get results manually, where `<statistics filepath>` is a raw statistics file named `{EVALUATION_OUTPUT_PREFIX}/exp8/{roundnumber}/{snapshot period}_{dynamic patter}_tmp_controller_bwcost.out` if existing (e.g., `~/aeresults/exp8/0/2500_hotin_tmp_controller_bwcost.out`).
 ```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
