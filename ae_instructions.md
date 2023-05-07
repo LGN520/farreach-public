@@ -114,14 +114,14 @@ $ nohup bash scripts/exps/run_exp_throughput.sh 0 >tmp_exp_throughput.out 2>&1 &
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
-# Get latency results of FarReach if any
-$ TODO
+# Get throughput results of FarReach if any
+$ awk -v flag=0 'flag == 0 && /\[exp1\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_throughput.out
 
-# Get latency results of NoCache if any
-$ TODO
+# Get throughput results of NoCache if any
+$ awk -v flag=0 'flag == 0 && /\[exp1\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_throughput.out
 
-# Get latency results of NetCache if any
-$ TODO
+# Get throughput results of NetCache if any
+$ awk -v flag=0 'flag == 0 && /\[exp1\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_throughput.out
 ```
 
 ### 3.2 Latency Analysis
@@ -180,13 +180,13 @@ $ nohup bash scripts/exps/run_exp_scalability.sh 0 >tmp_exp_scalability.out 2>&1
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
-# Get latency results of FarReach if any
+# Get throughput results of FarReach if any
 $ TODO
 
-# Get latency results of NoCache if any
+# Get throughput results of NoCache if any
 $ TODO
 
-# Get latency results of NetCache if any
+# Get throughput results of NetCache if any
 $ TODO
 ```
 
@@ -213,13 +213,13 @@ $ nohup bash scripts/exps/run_exp_write_ratio.sh 0 >tmp_exp_write_ratio.out 2>&1
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
-# Get latency results of FarReach if any
+# Get throughput results of FarReach if any
 $ TODO
 
-# Get latency results of NoCache if any
+# Get throughput results of NoCache if any
 $ TODO
 
-# Get latency results of NetCache if any
+# Get throughput results of NetCache if any
 $ TODO
 ```
 
@@ -244,13 +244,13 @@ $ nohup bash scripts/exps/run_exp_key_distribution.sh 0 >tmp_exp_key_distributio
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
-# Get latency results of FarReach if any
+# Get throughput results of FarReach if any
 $ TODO
 
-# Get latency results of NoCache if any
+# Get throughput results of NoCache if any
 $ TODO
 
-# Get latency results of NetCache if any
+# Get throughput results of NetCache if any
 $ TODO
 ```
 
@@ -275,13 +275,13 @@ $ nohup bash scripts/exps/run_exp_value_size.sh 0 >tmp_exp_value_size.out 2>&1 &
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
-# Get latency results of FarReach if any
+# Get throughput results of FarReach if any
 $ TODO
 
-# Get latency results of NoCache if any
+# Get throughput results of NoCache if any
 $ TODO
 
-# Get latency results of NetCache if any
+# Get throughput results of NetCache if any
 $ TODO
 ```
 
@@ -306,13 +306,13 @@ $ nohup bash scripts/exps/run_exp_dynamic.sh 0 >tmp_exp_dynamic.out 2>&1 &
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
-# Get latency results of FarReach if any
+# Get throughput results of FarReach if any
 $ awk -v flag=0 'flag == 0 && /\[exp7\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
 
-# Get latency results of NoCache if any
+# Get throughput results of NoCache if any
 $ awk -v flag=0 'flag == 0 && /\[exp7\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
 
-# Get latency results of NetCache if any
+# Get throughput results of NetCache if any
 $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
 ```
 
@@ -321,9 +321,62 @@ $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print
 ### 5.1 Performance of Snapshot Generation
 
 - **Pre-requisite: code is compiled with disabling server rotation.**
-- TODO
+- Under main client (dl11), for `scripts/exps/run_exp_snapshot.sh`:
+	- You can keep a part of dynamic patterns in `exp8_dynamic_rule_list` to save time (default value is `"hotin" "hotout" "random"`).
+	- You can keep a part of snapshot periods in `exp8_snapshot_list` to save time (default value is `"0" "2500" "5000" "7500" "10000"`).
+	- **Note: do NOT launch any other experiment before this experiment finishes.**
+
+```shell
+# Usage: bash scripts/exps/run_exp_snapshot.sh <roundnumber>, where roundnumber is the index of current round
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds
+$ nohup bash scripts/exps/run_exp_snapshot.sh 0 >tmp_exp_snapshot.out 2>&1 &
+```
+
+</br>
+
+- After this experiment finishes, under main client (dl11):
+```shell
+# Kill all involved processes
+$ bash scripts/remote/stopall.sh
+
+# Get throughput and bandwidth results of hotin if any
+$ awk -v flag=0 'flag == 0 && /\[exp8\]\[hotin\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
+$ awk -v flag=0 'flag == 0 && /\[exp8\]\[hotin\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average bwcost/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
+
+# Get throughput results of hotout if any
+$ awk -v flag=0 'flag == 0 && /\[exp8\]\[hotout\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
+$ awk -v flag=0 'flag == 0 && /\[exp8\]\[hotout\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average bwcost/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
+
+# Get throughput results of random if any
+$ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
+$ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average bwcost/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
+```
 
 ### 5.2 Crash Recovery Time
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
-- TODO
+- Under main client (dl11), for `scripts/exps/run_exp_recovery.sh`:
+	- You can keep a part of round indexes in `exp9_round_list` to save time (default value is `"0" "1" "2" "3" "4" "5"`, i.e., 6 rounds).
+	- You can keep a part of cache sizes in `exp9_cachesize_list` to save time (default value is `"100" "1000" "10000"`).
+	- **Note: do NOT launch any other experiment before this experiment finishes.**
+
+```shell
+# Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode = 0> <recoveryonly = 0>, where workloadmode = 0 means static pattern and recoveryonly = 0 means running a server rotation first to get raw statistics before crash recovery
+# Note: this script does NOT support dynamic pattern now; if you really want to test crash recovery time of dynamic patterns (NOT in our paper), you can refer to the manual way for evaluation in our [README](./README.md)
+# Note: we use recoveryonly = 0 by default; if you really want to use recoveryonly mode, see defails in [README](./README.md)
+$ nohup bash scripts/exps/run_exp_recovery.sh 0 0 >tmp_exp_recovery.out 2>&1 &
+```
+
+</br>
+
+- After this experiment finishes, under main client (dl11):
+```shell
+# Kill all involved processes
+$ bash scripts/remote/stopall.sh
+
+# Get server-side and switch-side crash recovery time results of round index 0 if any
+$ awk -v flag=0 'flag == 0 && /\[exp9\]\[0\]\[.*\] Get recovery time/ {flag = 1; print $0; next} flag == 1 && /Server total/ {flag = 0; print $0; next}' tmp_exp_recovery.out
+$ awk -v flag=0 'flag == 0 && /\[exp9\]\[0\]\[.*\] Get recovery time/ {flag = 1; print $0; next} flag == 1 && /Switch total/ {flag = 0; print $0; next}' tmp_exp_recovery.out
+
+# Note: getting server-side and switch-side crash recovery time results of any other round index if any is similar as above
+```
