@@ -44,10 +44,12 @@ function getTiming(){
 echo "Collect recovery information for servers"
 begin_time_2=`date +%s.%N`
 # Let server0 and server1 collect client-side backup files simultaneously
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"; ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh &"
+ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
 end_time_2=`date +%s.%N`
 collect_time_2=$(getTiming ${begin_time_2} ${end_time_2})
 echo "[Statistics] collect time server: ${collect_time_2} s"
+sleep 5s # Wait for fetching task in SERVER0
 
 # Create and sync config.ini for full scale of server rotation
 echo "Create and sync config.ini for full scale of server rotation"

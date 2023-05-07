@@ -116,9 +116,9 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
         exit
       fi
 
-      scp ${USER}@${SERVER0}:/tmp/${exp_method}/controller.snapshot* ${exp9_output_path}/${exp9_cachesize}
-      scp ${USER}@${SERVER0}:/tmp/${exp_method}/*maxseq* ${exp9_output_path}/${exp9_cachesize}
-      scp ${USER}@${SERVER1}:/tmp/${exp_method}/*maxseq* ${exp9_output_path}/${exp9_cachesize}
+      scp ${USER}@${SERVER0}:/tmp/${exp9_method}/controller.snapshot* ${exp9_output_path}/${exp9_cachesize}
+      scp ${USER}@${SERVER0}:/tmp/${exp9_method}/*maxseq* ${exp9_output_path}/${exp9_cachesize}
+      scp ${USER}@${SERVER1}:/tmp/${exp9_method}/*maxseq* ${exp9_output_path}/${exp9_cachesize}
     else
       if [ ${exp9_workloadmode} -eq 0 ]; then
         cp ${exp9_output_path}/${exp9_cachesize}/static${exp9_server_scale}*client0.out benchmark/output/upstreambackups/
