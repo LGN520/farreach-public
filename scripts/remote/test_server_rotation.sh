@@ -42,7 +42,7 @@ ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_
 
 if [ "x${DIRNAME}" == "xfarreach" ]; then
 	# clear snapshot token every iteration to maintain snapshot id sequence
-	ssh -i "~/.ssh/farreach_id_rsa" root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >tmp_cleanup.out 2>&1"
+	ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >tmp_cleanup.out 2>&1"
 fi
 
 source scripts/remote/test_server_rotation_p1.sh 0
@@ -67,7 +67,7 @@ for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); 
 
 	if [ "x${DIRNAME}" == "xfarreach" ]; then
 		# clear snapshot token every iteration to maintain snapshot id sequence
-		ssh -i "~/.ssh/farreach_id_rsa" root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >>tmp_cleanup.out 2>&1"
+		ssh -i /home/${USER}/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${DIRNAME}/tofino; bash cleanup_obselete_snapshottoken.sh >>tmp_cleanup.out 2>&1"
 	fi
 
 	source scripts/remote/test_server_rotation_p2.sh 0 ${rotateidx}
