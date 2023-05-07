@@ -49,8 +49,8 @@ function syncoutputfiles_toall(){
 
 	echo "sync ${TMPDIRNAME}/$TMPFILENAME to ${LEAFSWITCH}"
 	rsync -av -e ssh --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" $TMPDIRNAME/$TMPFILENAME ${USER}@${LEAFSWITCH}:${SWITCH_ROOTPATH}/${TMPDIRNAME} >/dev/null
-	echo "sync ${TMPDIRNAME}/$TMPFILENAME to bf3"
-	rsync -av -e ssh --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" $TMPDIRNAME/$TMPFILENAME ${USER}@bf3:${SWITCH_ROOTPATH}/$TMPDIRNAME >/dev/null
+	#echo "sync ${TMPDIRNAME}/$TMPFILENAME to ${SPINESWITCH}"
+	#rsync -av -e ssh --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" $TMPDIRNAME/$TMPFILENAME ${USER}@${SPINESWITCH}:${SWITCH_ROOTPATH}/$TMPDIRNAME >/dev/null
 	echo "sync ${TMPDIRNAME}/$TMPFILENAME to ${SECONDARY_CLIENT}"
 	rsync -av -e ssh --exclude "*.a" --exclude "*.bak" --exclude "*.o" --exclude "*.d" --exclude "*.html" $TMPDIRNAME/$TMPFILENAME ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/$TMPDIRNAME >/dev/null
 	echo "sync ${TMPDIRNAME}/$TMPFILENAME to ${SERVER0}"
