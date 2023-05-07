@@ -75,9 +75,11 @@
 	+ `pip install -r requirements.txt`
 - Install libboost 1.81.0 in {first server} and {second server} if not
 	+ Under project directory (e.g., /home/ssy/projects/farreach-public)
-		+ `wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz`
-		+ `tar -xzvf boost_1_81_0.tar.gz`
-		+ `cd boost_1_81_0; ./bootstrap.sh --with-libraries=system,thread --prefix=./install && sudo ./b2 install`
+	```
+	wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz
+	tar -xzvf boost_1_81_0.tar.gz
+	cd boost_1_81_0; ./bootstrap.sh --with-libraries=system,thread --prefix=./install && sudo ./b2 install
+	```
 	<!-- + `sudo apt-get install libboost-all-dev` -->
 - Install Maven 3.3.9 in {main client} and {secondary client} if not 
 - Install Java OpenJDK-8 in {main client} and {secondary client} if not
@@ -99,56 +101,60 @@
 ## 1.2 Configuration Settings
 
 - Update the following configuration settings in scripts/global.sh based on your own testbed
-	+ USER: Linux username (e.g., ssy)
-	+ SWITCH\_PRIVATEKEY: the passwd-free ssh key used by {main client} to connect with {switch} as **root user** (e.g., ~/.ssh/switch-private-key)
+	+ `USER`: Linux username (e.g., ssy)
+	+ `SWITCH\_PRIVATEKEY`: the passwd-free ssh key used by {main client} to connect with {switch} as **root user** (e.g., ~/.ssh/switch-private-key)
 		* See detailed steps in "Update SSH configuration settings" at the end of this Section 1.2
-	+ CONNECTION\_PRIVATEKEY: the passwd-free ssh key used by {main client} to connect with two servers and {first server} to connect with {second server} (for loading_and_backup), {switch} to connect with two servers (for maxseq and in-switch snapshot), by two servers to connect with two clients (for client-side backups), and by {second server} to connect with {first server} (co-located with controller) (for in-switch snapshot) as **non-root user** (e.g., ~/.ssh/connection-private-key)
-		* See detailed steps in "Update SSH configuration settings" at the end of this Section 1.2
-	+ MAIN\_CLIENT: hostname of {main client} (e.g., dl11)
-	+ SECONDARY\_CLIENT: hostname of {secondary client} (e.g., dl20)
-	+ SERVER0: hostname of {first server} co-located with controller (e.g., dl21)
-	+ SERVER1: hostname of {second server} (e.g., dl30)
-	+ LEAFSWITCH: hostname of the Tofino {switch} (e.g., bf3)
-	+ CLIENT/SWITCH/SERVER\_ROOTPATH: project directory path in clients/switch/servers (e.g., /home/ssy/projects/farreach-public)
-    + EVALUATION\_OUTPUT\_PREFIX: path to store the raw statistics of each experiment for aggregating analysis
+	+ `CONNECTION\_PRIVATEKEY`: the passwd-free ssh key used  by the following connections as **non-root user** (e.g., ~/.ssh/connection-private-key)
+		* By {main client} to connect with two servers and {first server} to connect with {second server} (for loading_and_backup)
+		* By {switch} to connect with two servers (for maxseq and in-switch snapshot)
+		* By two servers to connect with two clients (for client-side backups)
+		* By {second server} to connect with {first server} (co-located with controller) (for in-switch snapshot)
+		* Note: see detailed steps in "Update SSH configuration settings" at the end of this Section 1.2
+	+ `MAIN\_CLIENT`: hostname of {main client} (e.g., dl11)
+	+ `SECONDARY\_CLIENT`: hostname of {secondary client} (e.g., dl20)
+	+ `SERVER0`: hostname of {first server} co-located with controller (e.g., dl21)
+	+ `SERVER1`: hostname of {second server} (e.g., dl30)
+	+ `LEAFSWITCH`: hostname of the Tofino {switch} (e.g., bf3)
+	+ `CLIENT/SWITCH/SERVER\_ROOTPATH`: project directory path in clients/switch/servers (e.g., /home/ssy/projects/farreach-public)
+    + `EVALUATION\_OUTPUT\_PREFIX`: path to store the raw statistics of each experiment for aggregating analysis
 	+ Network settings
 		* Main client
-			- MAIN_CLIENT_TOSWITCH_IP: the IP address of NIC for {main client} connecting to {switch}
-			- MAIN_CLIENT_TOSWITCH_MAC: the MAC address of NIC for {main client} connecting to {switch}
-			- MAIN_CLIENT_TOSWITCH_FPPORT: the front panel port in {switch} data plane corresponding to {main client}
-			- MAIN_CLIENT_TOSWITCH_PIPEIDX: the pipeline index (0 or 1) for MAIN_CLIENT_TOSWITCH_FPPORT
-			- MAIN_CLIENT_LOCAL_IP: the local IP address of NIC for {main client} connecting to the local area network (NOT bypass {switch} data plane)
+			- `MAIN_CLIENT_TOSWITCH_IP`: the IP address of NIC for {main client} connecting to {switch}
+			- `MAIN_CLIENT_TOSWITCH_MAC`: the MAC address of NIC for {main client} connecting to {switch}
+			- `MAIN_CLIENT_TOSWITCH_FPPORT`: the front panel port in {switch} data plane corresponding to {main client}
+			- `MAIN_CLIENT_TOSWITCH_PIPEIDX`: the pipeline index (0 or 1) for MAIN_CLIENT_TOSWITCH_FPPORT
+			- `MAIN_CLIENT_LOCAL_IP`: the local IP address of NIC for {main client} connecting to the local area network (NOT bypass {switch} data plane)
 		* Secondary client
-			- SECONDARY_CLIENT_TOSWITCH_IP: the IP address of NIC for {secondary client} connecting to {switch}
-			- SECONDARY_CLIENT_TOSWITCH_MAC: the MAC address of NIC for {secondary client} connecting to {switch}
-			- SECONDARY_CLIENT_TOSWITCH_FPPORT: the front panel port in {switch} data plane corresponding to {secondary client}
-			- SECONDARY_CLIENT_TOSWITCH_PIPEIDX: the pipeline index (0 or 1) for SECONDARY_CLIENT_TOSWITCH_FPPORT
-			- SECONDARY_CLIENT_LOCAL_IP: the local IP address of NIC for {secondary client} connecting to the local area network (NOT bypass {switch} data plane)
+			- `SECONDARY_CLIENT_TOSWITCH_IP`: the IP address of NIC for {secondary client} connecting to {switch}
+			- `SECONDARY_CLIENT_TOSWITCH_MAC`: the MAC address of NIC for {secondary client} connecting to {switch}
+			- `SECONDARY_CLIENT_TOSWITCH_FPPORT`: the front panel port in {switch} data plane corresponding to {secondary client}
+			- `SECONDARY_CLIENT_TOSWITCH_PIPEIDX`: the pipeline index (0 or 1) for SECONDARY_CLIENT_TOSWITCH_FPPORT
+			- `SECONDARY_CLIENT_LOCAL_IP`: the local IP address of NIC for {secondary client} connecting to the local area network (NOT bypass {switch} data plane)
 		* First server
-			- SERVER0_TOSWITCH_IP: the IP address of NIC for {first server} connecting to {switch}
-			- SERVER0_TOSWITCH_MAC: the MAC address of NIC for {first server} connecting to {switch}
-			- SERVER0_TOSWITCH_FPPORT: the front panel port in {switch} data plane corresponding to {first server}
-			- SERVER0_TOSWITCH_PIPEIDX: the pipeline index (0 or 1) for SERVER0_TOSWITCH_FPPORT
-			- SERVER0_LOCAL_IP: the local IP address of NIC for {first server} connecting to the local area network (NOT bypass {switch} data plane)
+			- `SERVER0_TOSWITCH_IP`: the IP address of NIC for {first server} connecting to {switch}
+			- `SERVER0_TOSWITCH_MAC`: the MAC address of NIC for {first server} connecting to {switch}
+			- `SERVER0_TOSWITCH_FPPORT`: the front panel port in {switch} data plane corresponding to {first server}
+			- `SERVER0_TOSWITCH_PIPEIDX`: the pipeline index (0 or 1) for SERVER0_TOSWITCH_FPPORT
+			- `SERVER0_LOCAL_IP`: the local IP address of NIC for {first server} connecting to the local area network (NOT bypass {switch} data plane)
 		* Secondary server
-			- SERVER1_TOSWITCH_IP: the IP address of NIC for {second server} connecting to {switch}
-			- SERVER1_TOSWITCH_MAC: the MAC address of NIC for {second server} connecting to {switch}
-			- SERVER1_TOSWITCH_FPPORT: the front panel port in {switch} data plane corresponding to {second server}
-			- SERVER1_TOSWITCH_PIPEIDX: the pipeline index (0 or 1) for SERVER1_TOSWITCH_FPPORT
-			- SERVER1_LOCAL_IP: the local IP address of NIC for {second server} connecting to the local area network (NOT bypass {switch} data plane)
+			- `SERVER1_TOSWITCH_IP`: the IP address of NIC for {second server} connecting to {switch}
+			- `SERVER1_TOSWITCH_MAC`: the MAC address of NIC for {second server} connecting to {switch}
+			- `SERVER1_TOSWITCH_FPPORT`: the front panel port in {switch} data plane corresponding to {second server}
+			- `SERVER1_TOSWITCH_PIPEIDX`: the pipeline index (0 or 1) for SERVER1_TOSWITCH_FPPORT
+			- `SERVER1_LOCAL_IP`: the local IP address of NIC for {second server} connecting to the local area network (NOT bypass {switch} data plane)
 		* Controller (co-located with first server)
-			- CONTROLLER_LOCAL_IP: the IP address of NIC for {controller} connecting to {switch} (the same as SERVER0_TOSWITCH_IP in our testbed)
+			- `CONTROLLER_LOCAL_IP`: the IP address of NIC for {controller} connecting to {switch} (the same as SERVER0_TOSWITCH_IP in our testbed)
 		* Switch
-			- SWITCHOS_LOCAL_IP: the IP address of NIC for {switch} OS connecting to the local area network (NOT bypass {switch} data plane)
-			- SWITCH_RECIRPORT_PIPELINE1TO0: the front panel port in {switch} data plane for pipeline 1 to connect with pipeline 0 for in-switch recirculation
-			- SWITCH_RECIRPORT_PIPELINE0TO1: the front panel port in {switch} data plane for pipeline 0 to connect with pipeline 1 for in-switch recirculation
+			- `SWITCHOS_LOCAL_IP`: the IP address of NIC for {switch} OS connecting to the local area network (NOT bypass {switch} data plane)
+			- `SWITCH_RECIRPORT_PIPELINE1TO0`: the front panel port in {switch} data plane for pipeline 1 to connect with pipeline 0 for in-switch recirculation
+			- `SWITCH_RECIRPORT_PIPELINE0TO1`: the front panel port in {switch} data plane for pipeline 0 to connect with pipeline 1 for in-switch recirculation
 	+ CPU settings
 		* First server
-			- SERVER0_WORKER_CORENUM: the number of CPU cores specifically used for processing requests in {first server} (e.g. 16)
-			- SERVER0_TOTAL_CORENUM: the total number of CPU cores in {first server} (MUST larger than SERVER0_WORKER_CORENUM; e.g., 48)
+			- `SERVER0_WORKER_CORENUM`: the number of CPU cores specifically used for processing requests in {first server} (e.g. 16)
+			- `SERVER0_TOTAL_CORENUM`: the total number of CPU cores in {first server} (MUST larger than SERVER0_WORKER_CORENUM; e.g., 48)
 		* Second server
-			- SERVER1_WORKER_CORENUM: the number of CPU cores specifically used for processing requests in {second server} (e.g., 16)
-			- SERVER1_TOTAL_CORENUM: the total number of CPU cores in {second server} (MUST larger than SERVER1_TOTAL_CORENUM; e.g., 48)
+			- `SERVER1_WORKER_CORENUM`: the number of CPU cores specifically used for processing requests in {second server} (e.g., 16)
+			- `SERVER1_TOTAL_CORENUM`: the total number of CPU cores in {second server} (MUST larger than SERVER1_TOTAL_CORENUM; e.g., 48)
 
 </br>
 
@@ -162,11 +168,11 @@
 	Host *
 		StrictHostKeyChecking no
 	```
-	+ Generate SWITCH_PRIVATEKEY
+	+ Generate `SWITCH_PRIVATEKEY`
 		* Under {main client}, if the ssh key has not been created, run `sudo ssh-keygen -t rsa -f /home/{USER}/.ssh/switch-private-key` (**use empty passwd for no passphrase**)
 			- Also run `sudo chown {USER}:{USER} /home/{USER}/.ssh/switch-private-key` (use your Linux username) to change the owner
-		* Append the content of ~/.ssh/switch-private-key.pub of {main client}, into /root/.ssh/authorized_keys of {switch}
-	+ Generate CONNECTION_PRIVATEKEY
+		* Append the content of `~/.ssh/switch-private-key.pub` of {main client}, into `/root/.ssh/authorized_keys` of {switch}
+	+ Generate `CONNECTION_PRIVATEKEY`
 		* Consider the following source-connectwith-destination pairs:
 			- {main client}-connectwith-{first server} and {main client}-connectwith-{second server}
 			- {first server}-connectwith-{second server}
@@ -174,8 +180,8 @@
 			- {first server}-connectwith-{main client}, {first server}-connectwith-{secondary client}, {second server}-connectwith-{main client}, and {second server}-to-{secondary client}
 			- {second server}-connectwith-{first server} (controller is co-located with {first server})
 		* For each pair of source connecting with destination
-			- Under {source}, if the ssh key has not been created, run `ssh-keygen -t rsa -f ~/.ssh/connection-private-key` (**use empty passwd for no passphrase**)
-			- Append the content of ~/.ssh/connection-private-key.pub of {source}, into ~/.ssh/authorized_keys of {destination}
+			- Under {source}, if the ssh key has not been created, run `ssh-keygen -t rsa -f ./connection-private-key; mv ./connection-private-key* ~/.ssh` (**use empty passwd for no passphrase**)
+			- Append the content of `~/.ssh/connection-private-key.pub` of {source}, into `~/.ssh/authorized_keys` of {destination}
 
 ## 1.3 Code Compilation
 
@@ -193,9 +199,9 @@
 </br>
 
 - For each {method}
-	+ Options of method name: farreach, nocache, or netcache
+	+ Options of {method}: farreach, nocache, or netcache
 	+ Under {main client}
-		* Set DIRNAME as {method} in scripts/common.sh
+		* Set DIRNAME as {method} in `scripts/common.sh`
 		* `bash scripts/remote/sync.sh` to sync code of {method} to all machines
 	+ Compile software code
 		* Under {main client} and {secondary client}
@@ -207,7 +213,7 @@
 				+ If you really want to re-compile it (maybe due to P4 code modification), you should delete the corresponding directory (netbufferv4, nocache, or netcache) under $SDE/pkgsrc/p4-build/tofino/ before re-compilation
 		* Under {first server} and {second server}
 			- Run `bash scripts/local/makeserver.sh` (TIME: around 5 minutes)
-		* NOTE: if with "make: warning:  Clock skew detected.  Your build may be incomplete" during make, run `cd {method}; find . -type f | xargs touch` and then re-make files
+		* Note: if with "make: warning:  Clock skew detected.  Your build may be incomplete" during make, run `cd {method}; find . -type f | xargs touch` and then re-make files
 
 <!--
 * Automatic way (NOT used now due to very slow sequential compialtion) vs. makeclient/server/switchos.sh
@@ -229,7 +235,7 @@
 
 - Perform the loading phase and backup for evaluation time reduction (**TIME: around 40 minutes**; **ONLY need to perform once**)
 	+ Under {main client}
-		* Set DIRNAME as nocache in scripts/common.sh
+		* Set DIRNAME as nocache in `scripts/common.sh`
 		* Run `bash scripts/remote/sync_file.sh scripts common.sh` to sync scripts/common.sh to all clients, servers, and switch
 		* Run `bash scripts/remote/prepare_load.sh` to copy recordload/config.ini to overwrite nocache/config.ini in all clients, servers, and switch
 	+ Under {switch}, create two terminals
@@ -247,8 +253,8 @@
 			- Note: scripts/remote/load_and_backup.sh will also resume the original nocache/config.ini in all clients, server, and switch after all steps
 	+ Under {switch}
 		- In the first terminal
-			- Type exit and press enter to stop switch data plane
-			- If CLI is still NOT closed, type Ctrl+C in the CLI to stop switch data plane
+			- `Type exit and press enter` to stop switch data plane
+			- If CLI is still NOT closed, `type Ctrl+C` in the CLI to stop switch data plane
 		- In the second terminal
 			- `cd nocache`
 			- Run `su` to enter root mode
@@ -263,7 +269,7 @@
 		- Generate key poularity change rules for dynamic patterns (independent with server rotation scale)
 		- Calculate bottleneck partitions for different server rotation scales (i.e., 16, 32, 64, and 128)
 	- For each {workload}
-		- Options of workload name
+		- Options of {workload}
 			- YCSB core workloads: workloada, workloadb, workloadc, workloadd, workloadf, workload-load
 			- Synthetic workloads: synthetic (i.e., 100% writes, 0.99 skewness, 128B valuesize), synthetic-25, synthetic-75, skewness-90, skewness-95, uniform, valuesize-16, valuesize-32, valuesize-64
 			- Note: NO need to analyze the following workloads due to duplication
@@ -275,8 +281,8 @@
 				- The reason is that YCSB uses Zipfian key generator with small skewness and uniform key generator for these workloads, which incurs large computation overhead
 				- Although workload-load is also uniform distribution, YCSB uses counter generator which has small computation overhead
 		- Under {main client}
-			- Update workload\_name as {workload} in keydump/config.ini
-				- NOTE: you do NOT need to change configurations related with server rotation scales (i.e., server\_total\_logical\_num and server\_total\_logical\_num\_for_rotation) in keydump/config.ini, which is NOT used here
+			- Update workload\_name as {workload} in `keydump/config.ini`
+				- Note: you do NOT need to change configurations related with server rotation scales (i.e., server\_total\_logical\_num and server\_total\_logical\_num\_for_rotation) in keydump/config.ini, which is NOT used here
 			- Run `bash scripts/remote/keydump_and_sync.sh` to dump workload-related information (e.g., hot keys and bottleneck serveridx), and sync them to all clients, servers, and switch
   
 <!--
@@ -303,9 +309,10 @@
 		- We need multiple rounds to reduce runtime variation (**TIME: around 1-2 month(s)**)
 		- Note: as the time for evaluation is relatively long, you may want to run scripts in the background
 			- **Make sure that you use `screen` or `nohup` to run each script in the background, otherwise the script will be killed by OS after you log out from the ssh connection**
-		+ Note: **before/after each experiment, run `scripts/remote/stopall.sh` to forcely kill all processes to avoid confliction**
-	+ Note: if you encouter any problem (maybe due to testbed mis-configuration, script mis-usage, resource confliction (e.g., Tofino switch data plane cannot support multiple P4 programs simultaneously), and our code bugs), you can **keep the critical information and contact us (sysheng21@cse.cuhk.edu.hk) for help**
-		- The critical information could include: command history of terminal, dumped information of scripts, log files generated by scripts(e.g., {method}/tmp\_\*.out in servers and switch, benchmark/ycsb/tmp\_\*.out in clients, and {method}/tofino/tmp\_\*.out in switch), and raw statistics generated by YCSB clients (e.g., benchmark/ycsb/{method}-statistics/)
+		+ Note: **before and after each experiment, run `scripts/remote/stopall.sh` to forcely kill all processes to avoid confliction**
+	+ Note: if you encouter any problem, and our code bugs), you can **keep the critical information and contact us (sysheng21@cse.cuhk.edu.hk) for help**
+		- The causes of problem may be testbed mis-configuration, script mis-usage, resource confliction (e.g., Tofino switch data plane cannot support multiple P4 programs simultaneously)
+		- The critical information should include: command history of terminal, dumped information of scripts, log files generated by scripts(e.g., `{method}/tmp\_\*.out` in servers and switch, `benchmark/ycsb/tmp\_\*.out` in clients, and `{method}/tofino/tmp\_\*.out` in switch), and raw statistics generated by YCSB clients (e.g., `benchmark/ycsb/{method}-statistics/`)
 
 </br>
 
@@ -322,7 +329,7 @@
    |   7   |          [run_exp_dynamic.sh](scripts/exps/run_exp_dynamic.sh)          | Synthetic workloads with different dynamic workload patterns (NO server rotation) |
    |   8   |         [run_exp_snapshot.sh](scripts/exps/run_exp_snapshot.sh)         | Performance and control-plane bandwidth overhead of snapshot generation under different dynamic workload patterns (NO server rotation) |
    |   9   |         [run_exp_recovery.sh](scripts/exps/run_exp_recovery.sh)         | Crash recovery time under static workload pattern (with server rotation) |
-   |  10   | N/A | See hardware reousrce usage of {method} in corresponding directory in {switch} (e.g., $SDE/pkgsrc/p4-build/tofino/nocache/visualization, $SDE/pkgsrc/p4-build/tofino/netcache/visualization, and $SDE/pkgsrc/p4-build/tofino/netbufferv4/visualization, where netbufferv4 corresponds to farreach) |
+   |  10   | N/A | See hardware reousrce usage of {method} in corresponding directory in {switch} (e.g., `$SDE/pkgsrc/p4-build/tofino/nocache/visualization`, `$SDE/pkgsrc/p4-build/tofino/netcache/visualization`, and `$SDE/pkgsrc/p4-build/tofino/netbufferv4/visualization`, where netbufferv4 corresponds to farreach) |
 
 </br>
 
@@ -333,33 +340,33 @@
 </br>
 
 - With server rotation: run each {experiment} except exp_dynamic and exp_snapshot
-	- Options: exp_ycsb, exp_latency, exp_scalability, exp_write_ratio, exp_key_distribution, exp_value_size, and exp_recovery
-	- Under {main client}, take exp_ycsb as an example
-		- Run `bash scripts/exps/run_exp_ycsb.sh <roundnumber>`
+	- Options of {experiment}: exp_ycsb, exp_latency, exp_scalability, exp_write_ratio, exp_key_distribution, exp_value_size, and exp_recovery
+	- Under {main client}
+		- Run `bash scripts/exps/run_{experiment}.sh <roundnumber>`
 		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round
 
 </br>
 
-- Without server rotation: run exp_dynamic or exp_snapshot
+- Without server rotation: run {experiment} of exp_dynamic or exp_snapshot
 	- Under {main client}, re-compile code to disable server rotation if not
 		- Disable server rotation
-			- Comment line 82 (#define SERVER_ROTATION) in common/helper.h to disable server rotation
+			- Comment line 82 (#define SERVER_ROTATION) in `common/helper.h` to disable server rotation
 			- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
 		- For each {method} (farreach or netcache or nocache), re-compile software code (NO need for P4 code of switch data plane)
-			- Set DIRNAME as {method} in scripts/common.sh
+			- Set DIRNAME as {method} in `scripts/common.sh`
 			- Run `bash scripts/remote/sync_file.sh scripts common.sh`
 			- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 			- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
 			- Under {switch}, run `bash scripts/local/makeswitchos.sh`
-	- Under {main client}, take exp_dynamic as an example
-		- Run `bash scripts/exps/run_exp_dynamic.sh <roundnumber>`
+	- Under {main client}
+		- Run `bash scripts/exps/run_{experiment} <roundnumber>`
 		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round
-	- After running all rounds of exp_dynamic or exp_snapshot, as most experiments use server rotation for static workload pattern instead of dynamic workload patterns, you may want to re-compile your code to enable server rotation again
+	- After running all rounds of current {experiment}, as most experiments use server rotation for static pattern instead of dynamic patterns, you may want to re-compile your code to enable server rotation again
 		- Under {main client}, enable server rotation
-			- Uncomment line 82 (#define SERVER_ROTATION) in common/helper.h to enable server rotation
+			- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation
 			- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
 		- Under {main client}, for each {method}, re-compile software code (NO need for P4 code of switch data plane)
-			- Set DIRNAME as {method} in scripts/common.sh
+			- Set DIRNAME as {method} in `scripts/common.sh`
 			- Run `bash scripts/remote/sync_file.sh scripts common.sh`
 			- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 			- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
@@ -367,13 +374,13 @@
 
 </br>
 
-- NOTEs for exp_recovery
-	- Possible error messages for scp in farreach/localscripts/fetch\*.sh (maybe due to testbed mis-configurations)
-		- If you have an error message of `hot key verification failed`, check whether {switch} can connect with two servers, two servers can connect with two clients, and {second server} can connect with {first server}, by CONNECTION_PRIVATEKEY
-		- If you have an error message of `permission denied` when transfering files, check the correctness of ownership for /tmp/farreach in {switch} and two servers
-		- If you have an error message of `permission denied (public key)`, check whether you spefcify the correct CONNECTION_PRIVATEKEY in {switch} and two servers
+- Notes for exp_recovery
+	- Possible errors for scp in `farreach/localscripts/fetch\*.sh` (maybe due to testbed mis-configurations)
+		- If you have an error of `hot key verification failed`, check whether {switch} can connect with two servers, two servers can connect with two clients, and {second server} can connect with {first server}, by CONNECTION_PRIVATEKEY
+		- If you have an error of `permission denied` when transfering files, check the correctness of ownership for /tmp/farreach in {switch} and two servers
+		- If you have an error of `permission denied (public key)`, check whether you spefcify the correct CONNECTION_PRIVATEKEY in {switch} and two servers
 	- If you want to test recovery time based on existing raw statistics instead of running server-rotation-based experiments again
-    	- Step 1: check scripts/global.sh under {main client}
+    	- Step 1: check `scripts/global.sh` under {main client}
 			- Make sure `EVALUATION_OUTPUT_PREFIX` points to the path of existing raw statistics (including in-switch snapshot, client-side backups, and maxseq) generated by previous server-rotation-based experiments
 		- Step 2: under {main client}
 			- Run `scripts/exps/run_exp_recovery.sh <workloadmode> 1`, where we set the argument <recoveryonly> as 1 to skip the step of running a new server-rotation-based experiment
@@ -385,10 +392,10 @@
 
 </br>
 
-- If scripts (e.g., scripts/local/calculate_statistics.sh) say that you need to perform a single iteration for each missing number
+- If scripts (e.g., `scripts/local/calculate_statistics.sh`) say that you need to perform a single iteration for each missing number
 	- Under {main client}, run `bash scripts/exps/run_makeup_rotation_exp.sh <expname> <roundnumber> <methodname> <workloadname> <serverscale> <bottleneckidx> <targetrotation> [targetthpt]` to launch a single iteration
 		- `expname`: experiment name (eg.: exp1)
-			- Note: expname only determines the path to store generated statistics, yet not affect experiment results
+			- Note: `expname` only indicates the path to store rawstatistics, yet NOT affect experiment results
 		- `roundnumber`: experiment round number (eg.: 1)
 		- `methodname`: experiment method (eg.: farreach)
 		- `workloadname`: workload name (eg.: workloada)
@@ -396,45 +403,46 @@
 		- `bottleneckidx`: bottleneck server index for rotation with this workload (eg.: 14)
 		- `targetrotation`: the non-bottleneck server index in the iteration (eg.: 10)
 		- `targetthpt`: throughput target of this rotation, only applicable for exp2
-		- The above arguments of scripts/exps/run_makeup_rotation_exp.sh are determined by the missing iteration of the server rotation for the specific experiment
-			- For example, for exp_ycsb, you may pass arguments with expname=exp1, roundnumber=0, methodname=farreach, workloadname=workloada, serverscale=16, bottleneckidx=14, targetrotation=10 -> the script will deploy the bottleneck serveridx 14 in {first server} and the non-bottleneck serveridx 10 in {second server} for the single iteration, and update the raw statistics in place
-	- Note: scripts/exps/run_makeup_rotation_exp.sh **should NOT support exp_dynamic or exp_snapshot**, as the experiments of dynamic workload patterns do NOT use server rotation
+		- The above arguments of `scripts/exps/run_makeup_rotation_exp.sh` are determined by the missing iteration of the server rotation for the specific experiment
+			- For example, for exp_ycsb, you may pass arguments with `expname=exp1, roundnumber=0, methodname=farreach, workloadname=workloada, serverscale=16, bottleneckidx=14, targetrotation=10`
+				- The script will deploy the bottleneck serveridx 14 in {first server} and the non-bottleneck serveridx 10 in {second server} for the single iteration, and update the raw statistics in place
+	- Note: `scripts/exps/run_makeup_rotation_exp.sh` **should NOT support exp_dynamic or exp_snapshot**, as the experiments of dynamic workload patterns do NOT use server rotation
 		- Therefore, this script ONLY works for experiments with server rotation: exp_key_distribution, exp_latency, exp_scalability, exp_value_size, exp_write_ratio, and exp_ycsb
-	- Note: scripts/exps/run_makeup_rotation_exp.sh **now does NOT support the failure of the first iteration** (i.e., ONLY the bottleneck partition is deployed in {first server})
-		- You may refer to [Section 4.2](#42-static-workload-server-rotation) (especially for Step 4) to use scripts/remote/test_server_rotation_p1.sh
-		- Make sure scripts/global.sh, scripts/common.sh, and ${method}/config.ini are correctly configured before running scripts/remote/test_server_rotation_p1.sh
-		- (TODO) We may update scripts/exps/run_makeup_rotation_exp.sh to support the first iteration in the future
+	- Note: `scripts/exps/run_makeup_rotation_exp.sh` **now does NOT support the failure of the first iteration** (i.e., ONLY the bottleneck partition is deployed in {first server})
+		- You may refer to [Section 4.2](#42-static-workload-server-rotation) (especially for Step 4) to use `scripts/remote/test_server_rotation_p1.sh`
+		- Make sure `scripts/global.sh`, `scripts/common.sh`, and `${method}/config.ini` are correctly configured before running `scripts/remote/test_server_rotation_p1.sh`
+		- (TODO) We may update `scripts/exps/run_makeup_rotation_exp.sh` to support the first iteration in the future
 
 # 4 Running Workloads (Manual Evaluation)
 
 ## 4.1 Dynamic Workload (No Server Rotation)
 
 - Decide {workload} (e.g., workloada), {method} (e.g., farreach), and {dynamic pattern} (e.g., hotin) to use
-	- Options for dynamic pattern: hotin, hotout, and random
-	- Note: scripts/exps/run_exp_dynamic.sh or scripts/exps/run_exp_snapshot.sh include all the following steps (except step 2, as the two scripts assume that you have already disabled server rotation in advance)
+	- Options of {dynamic pattern}: hotin, hotout, and random
+	- Note: `scripts/exps/run_exp_dynamic.sh` or `scripts/exps/run_exp_snapshot.sh` include all the following steps (except step 2, as the two scripts assume that you have already disabled server rotation in advance)
 
 </br>
 
 - Step 1: prepare ini config files (under {main client})
-	- Update settings in the config file {method}/config.ini (e.g., farreach/config.ini):
-		- Set global::workload_mode=1
-		- Set global::workload_name={workload} 
-		- Set global::dynamic_ruleprefix={dynamic pattern}
-		- Set global::server_physical_num=2
-		- Set global::server_total_logical_num=2
-		- Set server0::server_logical_idxes=0
-		- Set server1::server_logical_idxes=1
-	- Set DIRNAME as {method} in scripts/common.sh
+	- Update settings in the config file `{method}/config.ini` (e.g., farreach/config.ini):
+		- Set `global::workload_mode`=1
+		- Set `global::workload_name`={workload} 
+		- Set `global::dynamic_ruleprefix`={dynamic pattern}
+		- Set `global::server_physical_num`=2
+		- Set `global::server_total_logical_num`=2
+		- Set `server0::server_logical_idxes`=0
+		- Set `server1::server_logical_idxes`=1
+	- Set DIRNAME as {method} in `scripts/common.sh`
     - Double-check the global testbed settings in scripts/global.sh based on your testbed
 
 </br>
 
 - Step 2: if server rotation is enabled (default setting), re-compile code to disable server rotation
 	- Under {main client}, disable server rotation
-		- Comment line 82 (#define SERVER_ROTATION) in common/helper.h to diable server rotation
+		- Comment line 82 (#define SERVER_ROTATION) in `common/helper.h` to diable server rotation
 		- Run `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
 	- Under {main client}, for the current {method}, re-compile software code (NO need for P4 code)
-		- Set DIRNAME as {method} in scripts/common.sh
+		- Set DIRNAME as {method} in `scripts/common.sh`
 		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
 		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
@@ -452,24 +460,24 @@
 		- `cd {method}`
 		- `su`
 		- `bash localscripts/launchswitchostestbed.sh`
-	- NOTE: if you encounter any problem, you can check the log files of {method}/tmp_\*.out and {method}/tofino/tmp_\*.out in {switch}
+	- Note: if you encounter any problem, you can check the log files of `{method}/tmp_\*.out` and `{method}/tofino/tmp_\*.out` in {switch}
 
 </br>
 
 - Step 4: launch servers and clients without server rotation
 	- Under {main client}: `bash scripts/remote/test_dynamic.sh`
-	- NOTE: if you encouter any problem
+	- Note: if you encouter any problem
 		- You can check the output of {main client}
-		- You can check the log files of benchmark/ycsb/tmp_\*.out in {secondary client}
-		- You can check the log files of {method}/tmp_\*.out in {first server} and {second server}
+		- You can check the log files of `benchmark/ycsb/tmp_\*.out` in {secondary client}
+		- You can check the log files of `{method}/tmp_\*.out` in {first server} and {second server}
 
 </br>
 
 - Step 5: cleanup testbed
 	- Under {switch}
 		- Stop switch data plane in the CLI of the first terminal
-			- Type exit and press enter
-			- If CLI is not closed, type Ctrl+C
+			- `Type exit and press enter`
+			- If CLI is not closed, `type Ctrl+C`
 		- Stop switch OS and other daemon processes in the second terminal
 			- `cd {method}`
 			- `su`
@@ -487,10 +495,10 @@
 
 - Step 7: if you do NOT run dynamic workload patterns, you should re-compile code to enable server rotation
 	- Under {main client}, enable server rotation
-		- Uncomment line 82 (#define SERVER_ROTATION) in common/helper.h to enable server rotation
+		- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation
 		- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
 	- Under {main client}, for the current {method}, re-compile software code (NO need for P4 code)
-		- Set DIRNAME as {method} in scripts/common.sh
+		- Set DIRNAME as {method} in `scripts/common.sh`
 		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
 		- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 		- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
@@ -504,28 +512,28 @@
 		- As bottleneck server index is stable for a given <{workload}, {server rotation scale}>, you can also directly refer to the appendix table in [Section 6.1](#61-bottleneck-index-for-server-rotation)
 	- Note: we assume that you have already compiled code with server rotation enabled
 		- If not, please refer to step 7 in [Section 4.1](#41-dynamic-workload-no-server-rotation) to re-compile code for enabling server rotation
-	- Note: the scripts in scripts/exps/ (except run_exp_dynamic.sh and run_exp_snapshot.sh) include all the following steps
+	- Note: the scripts in `scripts/exps/` (except run_exp_dynamic.sh and run_exp_snapshot.sh) include all the following steps
 
 </br>
 
 - Step 1: prepare ini config files (under {main client})
-	- Update settings in the config file {method}/config.ini (e.g., farreach/config.ini):
-		- Set workload_name={workload}
-		- Set workload_mode=0
-		- Set bottleneck_serveridx_for_rotation={bottleneck serveridx}
-		- Set server_total_logical_num_for_rotation={server rotation scale}
-		- NOTE: {method}/config.ini must have the correct {bottleneck serveridx} and {server rotation scale}
+	- Update settings in the config file `{method}/config.ini` (e.g., farreach/config.ini):
+		- Set `workload_name`={workload}
+		- Set `workload_mode`=0
+		- Set `bottleneck_serveridx_for_rotation`={bottleneck serveridx}
+		- Set `server_total_logical_num_for_rotation`={server rotation scale}
+		- Note: `{method}/config.ini` must have the correct {bottleneck serveridx} and {server rotation scale}
 			- Otherwise, client-side PregeneratedWorkload will issue the requests of incorrect partitions (corresponding to non-running servers) and hence timeout
-	- Set DIRNAME as {method} in scripts/common.sh
-    - Double-check the global testbed settings in scripts/global.sh based on your testbed
+	- Set DIRNAME as {method} in `scripts/common.sh`
+    - Double-check the global testbed settings in `scripts/global.sh` based on your testbed
 
 </br>
 
 - Step 2: prepare for launching switch data plane and switch OS
 	- Under {main client}, run `bash scripts/remote/prepare_server_rotation.sh`
-		- This script can generate and sync a new {method}/config.ini based on the existing {method}/config.ini with the configurations you set in step 1
-			- The main changes in the new {method}/config.ini is that it sets server0::server_logical_idxes as ${bottleneck serveridx} (e.g., 14), and sets server1::server_logical_idxes as all other serveridxes except ${bottleneck serveridx} (e.g., 0:1:2:3:4:5:6:7:8:9:10:11:12:13:15)
-		- The goal is that {switch} can use the new ${method}/config.ini to configure packet forwarding rules, such that we do NOT need to re-launch switch during server rotation
+		- This script can generate and sync a new {method}/config.ini based on the existing `{method}/config.ini` with the configurations you set in step 1
+			- The main changes in the new `{method}/config.ini` is that it sets `server0::server_logical_idxes` as ${bottleneck serveridx} (e.g., 14), and sets `server1::server_logical_idxes` as all other serveridxes except ${bottleneck serveridx} (e.g., 0:1:2:3:4:5:6:7:8:9:10:11:12:13:15)
+		- The goal is that {switch} can use the new `${method}/config.ini` to configure packet forwarding rules, such that we do NOT need to re-launch switch during server rotation
 
 </br>
 
@@ -539,14 +547,14 @@
 		- `cd {method}`
 		- `su`
 		- `bash localscripts/launchswitchostestbed.sh`
-	- NOTE: if you encounter any problem, you can check the log files of {method}/tmp_\*.out and {method}/tofino/tmp_\*.out in {switch}
+	- Note: if you encounter any problem, you can check the log files of `{method}/tmp_\*.out` and {method}/tofino/tmp_\*.out in {switch}
 
 </br>
 
 - Step 4: launch servers and clients with server rotation
 	- Under {main client}, run `bash scripts/remote/test_server_rotation.sh`
-		- Phase 1: test_server_rotation.sh invokes scripts/remote/test_server_rotation_p1.sh to run the first iteration (the bottleneck partition is deployed into {first server})
-		- Phase 2: test_server_rotation.sh invokes scripts/remote/test_server_rotation_p2.sh to run the ith iteration (the bottleneck partition is deployed into {first server}, and the ith non-bottleneck partition is deployed into {second server}), where 1 <= i <= {server rotation scale}-1
+		- Phase 1: test_server_rotation.sh invokes `scripts/remote/test_server_rotation_p1.sh` to run the first iteration (the bottleneck partition is deployed into {first server})
+		- Phase 2: test_server_rotation.sh invokes `scripts/remote/test_server_rotation_p2.sh` to run the ith iteration (the bottleneck partition is deployed into {first server}, and the ith non-bottleneck partition is deployed into {second server}), where 1 <= i <= {server rotation scale}-1
 	- Under {main client}, perform a single iteration for each failed iteration if any
 		- If strid=server-x is missed, run `bash scripts/remote/test_server_rotation_p1.sh 1`
 		- If strid=server-x-y is missed, run: `bash scripts/remote/test_server_rotation_p2.sh 1 y`
@@ -557,8 +565,8 @@
 - Step 5: cleanup testbed
 	- Under {switch}
 		- Stop switch data plane in the CLI of the first terminal
-			- Type exit and press enter
-			- If CLI is not closed, type Ctrl+C
+			- `Type exit and press enter`
+			- If CLI is not closed, `type Ctrl+C`
 		- Stop switch OS and other daemon processes in the second terminal
 			- `cd {method}`
 			- `su`
@@ -580,13 +588,13 @@
 	- [calculate_statistics.sh](scripts/remote/calculate_statistics.sh): calculate throughput and latency with or without server rotation
 	- [calculate_bwcost.sh](scripts/remote/calculate_bwcost.sh): calculate control-plane bandwidth cost
 	- [calculate_recovery_time.sh](scripts/remote/calculate_recovery_time.sh): calculate crash recovery time
-- NOTEs
+- Notes
 	- If you use [automatic way in Section 3](#3-running-experiments-automatic-evaluation) for evaluation
-		- As the run_exp_\* scripts have aggregated the statistics automatically, you can redirect stdout of the script into a file and find aggregated results in the file
+		- As `scripts/exps/run_exp_\*` scripts have aggregated the statistics automatically, you can redirect stdout of the script into a file and find aggregated results in the file
 		- For example, after `nohup bash scripts/exps/run_exp_ycsb.sh >tmp.out 2>&1 &`, you can find aggregated results in tmp.out
 	- If you use [manual way in Section 4](#4-running-workloads-manual-evaluation) for evaluation
 		- You can follow [Section 5.2](#52-usage-and-example) to run a script (e.g., calculate_statistics.sh) and get the corresponding gggregated statistics
-		- The scripts will aggregate the statistics based on the settings in scripts/global.sh, scripts/common.sh, and {method}/config.ini
+		- The scripts will aggregate the statistics based on the settings in `scripts/global.sh`, `scripts/common.sh`, and `{method}/config.ini`
 
 ## 5.2 Usage and Example
 
@@ -686,9 +694,9 @@
 |   workloada   |  64   |          59          |
 |   workloada   |  128  |         118          |
 
-## 6.2 Other NOTEs
+## 6.2 Other Notes
 
-- We haved changed parameters of some workload profiles in benchmark/ycsb/workloads/ for sysnthetic workloads
+- We haved changed parameters of some workload profiles in `benchmark/ycsb/workloads/` for sysnthetic workloads
 	+ For write ratio (e.g., 25%), change readproportion and updateproportion in workloads/synthetic as workloads/synthetic-XXX (e.g., workloads/synthetic-25)
 	+ For value size (e.g., 32), change fieldlength in workloads/synthetic as workloads/valuesize-XXX (e.g., workloads/valuesize-32)
 	+ For skewness (e.g., 0.9), change requestdistribution and zipfianconstant in workloads/synthetic as workloads/skewness-XXX (e.g., workloads/skewness-0.9) and workloads/uniform
@@ -697,26 +705,29 @@
 
 - Paths for raw statistics and aggregated results
 	- Under static pattern with server rotation
-		- {main client} and {secondary client} should dump raw statistics into benchmark/output/{workloadname}-statistics/{method}-static{server rotation scale}-client{physicalidx}.out (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out)
+		- {main client} and {secondary client} should dump raw statistics into `benchmark/output/{workloadname}-statistics/{method}-static{server rotation scale}-client{physicalidx}.out` (e.g., benchmark/output/workloada-statistics/farreach-static16-client0.out)
 	- Under dynamic pattern without server rotation
-		- {main client} and {secondary client} should dump raw statistics into benchmark/output/{workloadname}-statistics/{method}-{dynamic pattern}-client{physicalidx}.out (e.g., benchmark/output/synthetic-statistics/farreach-hotin-client0.out)
+		- {main client} and {secondary client} should dump raw statistics into `benchmark/output/{workloadname}-statistics/{method}-{dynamic pattern}-client{physicalidx}.out` (e.g., benchmark/output/synthetic-statistics/farreach-hotin-client0.out)
 	- If you use manual way as in [Section 4](#4-running-workloads-manual-evaluation) for evaluation
 		- As the paths of raw statistics do NOT have other parameter information (e.g., write ratio or skewness), **you need to aggregate the raw statistics before running the next experiment, which may overwrite them**
 			- You can refer to [Section 5](#5-aggregate-statistics) to get aggregated results for the current experiment
 			- You can also backup the raw statistics files for the current experiment if necessary, which will be overwritten next time
 		- Note: the scripts of automatic way for evaluation in [Section 3](#3-running-experiments-automatic-evaluation) will automatically aggregate and backup raw statistics, so you do NOT need to do it manually
 
-+ **Slight larger numbers of evaluation results** (take hotin pattern in exp_dynamic as an example)
-	- In the evaluation version, FarReach can achieve around 0.23MOPS (nocache/netcache achieve 0.13MOPS) in Exp#7 and Exp#8
-	- In the latest AE version, FarReach can achieve around 0.28MOPS (nocache/netcache achieve 0.16MOPS) in Exp#7 and Exp#8
++ **Larger numbers of evaluation results in AE version**
+	- Take hotin pattern in exp_dynamic as an example
+		- In the evaluation version, FarReach can achieve around 0.23MOPS (nocache/netcache achieve 0.13MOPS) in Exp#7 and Exp#8
+		- In the latest AE version, FarReach can achieve around 0.28MOPS (nocache/netcache achieve 0.16MOPS) in Exp#7 and Exp#8
 	- Main reason
 		- In the evaluation version, each server in our testbed only has 24 CPU cores
-		- However, in the latest AE version, due to the unavailability of our evaluation testbed, we use a new testbed where each server has 48 CPU cores, which can process loading phase more quickly and hence incur fewer write stalls
+		- However, in the latest AE version, due to the unavailability of our evaluation testbed, we use a new testbed where each server has 48 CPU cores
+		- More computation resources in servers can improve the performance of key-value storage
 	- Secondary reason
 		- In the evaluation version, we kill servers immediately after storing 100M records into server-side KVS for loading phase
-			- When we evaluate dynamic workload patterns, server-side KVS still have background compression operations (caused by writes of loading phase) and hence incur some write stalls to undermine performance
+			- During evaluation, server-side KVS still have background compression operations (caused by writes of loading phase) and hence incur some write stalls to reduce performance
 		- However, in the latest AE version, we kill servers 10 minutes after storing 100M records into server-side KVS for loading phase, such that all background compression operations caused by writes of loading phase will be completed
-			- When we evaluate dynamic workload patterns, server-side KVS will NOT perform compression operations for writes of loading phase and hence NOT incur write stalls
-	- Summary
-		- First, **the performance is also strongly related with the power of specific testbed**, so it is **reasonable** to have slightly larger numbers under a more powerful testbed
-		- Second, we emphasize that the performance changes are minor and both versions can achieve a fair comparison between FarReach and baselines, thus **the throughput of nocache/netcache is always around 57% of that of farreach in each version**, which does **NOT affect our conclusions**
+			- During evaluation, server-side KVS will NOT perform compression operations for writes of loading phase and hence NOT incur write stalls
+	- Summary: **we emphasize that the results are still reasonable**
+		- First, **the performance is also strongly related with the power of specific testbed**, so it is **reasonable** to have larger numbers under a more powerful testbed
+		- Second, both versions can achieve a fair comparison between FarReach and baselines, which does **NOT affect our conclusions**
+			- Example of hotin pattern in exp_dynamic: the throughput of nocache/netcache is always around 57% of that of farreach in each version
