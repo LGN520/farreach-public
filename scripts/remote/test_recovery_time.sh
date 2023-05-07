@@ -41,10 +41,10 @@ function getTiming(){
 #echo "[Statistics] collect time server: ${avg_collect_time_2} s"
 
 # Collect recovery information for servers
-echo "Collect recovery information for servers"
+echo "Collect recovery information for servers in parallel"
 begin_time_2=`date +%s.%N`
 # Let server0 and server1 collect client-side backup files simultaneously
-ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh &"
+ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh" &
 ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; bash localscripts/fetchbackup_client2server.sh"
 end_time_2=`date +%s.%N`
 collect_time_2=$(getTiming ${begin_time_2} ${end_time_2})
