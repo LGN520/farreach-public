@@ -4,7 +4,7 @@
 
 source scripts/global.sh
 if [ $# -ne 2 ]; then
-	echo "Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode> <recoveryonly>"
+	echo "Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode = 0> <recoveryonly>"
 	exit
 fi
 exp9_workloadmode=$1
