@@ -1,6 +1,8 @@
 # AE Instructions
 
-Here are the getting started instructions ([Section 4](#4-getting-started-instructions)) and detailed instructions starting from [Section 5](#5-ae-on-ycsb-core-worklaods) to reproduce experiments in our paper.
+- Here are the getting started instructions ([Section 4](#4-getting-started-instructions)) and detailed instructions starting from [Section 5](#5-ae-on-ycsb-core-workloads) to reproduce experiments in our paper.
+
+- If you have any question, please contact us if available (sysheng21@cse.cuhk.edu.hk).
 
 # Table of Contents
 
