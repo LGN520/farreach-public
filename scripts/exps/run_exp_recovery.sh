@@ -3,12 +3,12 @@
 # exp_recovery
 
 source scripts/global.sh
-if [ $# -ne 2 ]; then
-	echo "Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode = 0> <recoveryonly>"
+if [ $# -ne 0 ]; then
+	echo "Usage: bash scripts/exps/run_exp_recovery.sh"
 	exit
 fi
-exp9_workloadmode=$1
-exp9_recoveryonly=$2
+exp9_workloadmode=0
+exp9_recoveryonly=0
 
 if [ ${exp9_workloadmode} -eq 1 ]
 then
