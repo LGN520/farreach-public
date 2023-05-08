@@ -133,7 +133,7 @@ Here are the detailed instructions to reproduce experiments in our paper.
 	- You can keep a part of workloads in `exp1_core_workload_list` to save time (default value is `"workloada" "workloadb" "workloadc" "workloadd" " workladf" "workload-load"`).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
-> ```shell
+```shell
 # Usage: bash scripts/exps/run_exp_throughput.sh <roundnumber>, where roundnumber is the index of current round
 # You can run this script multiple times with different roundnumbers to get results of multiple rounds
 $ nohup bash scripts/exps/run_exp_throughput.sh 0 >tmp_exp_throughput.out 2>&1 &
@@ -142,7 +142,7 @@ $ nohup bash scripts/exps/run_exp_throughput.sh 0 >tmp_exp_throughput.out 2>&1 &
 </br>
 
 - After this experiment finishes, under main client (dl11):
-> ```shell
+```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
@@ -165,7 +165,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp1\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- You can keep a part of target throughput values `exp2_target_thpt_list` to save time (default value is `"0.2" "0.4" "0.6" "0.8"`).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
-> ```shell
+```shell
 # Usage: bash scripts/exps/run_exp_latency.sh <roundnumber>, where roundnumber is the index of current round
 # You can run this script multiple times with different roundnumbers to get results of multiple rounds
 $ nohup bash scripts/exps/run_exp_latency.sh 0 >tmp_exp_latency.out 2>&1 &
@@ -174,7 +174,7 @@ $ nohup bash scripts/exps/run_exp_latency.sh 0 >tmp_exp_latency.out 2>&1 &
 </br>
 
 - After this experiment finishes, under main client (dl11):
-> ```shell
+```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
@@ -201,7 +201,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp2\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 			- Bottleneck index 118 corresponding to scalability value 128.
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
-> ```shell
+```shell
 # Usage: bash scripts/exps/run_exp_scalability.sh <roundnumber>, where roundnumber is the index of current round
 # You can run this script multiple times with different roundnumbers to get results of multiple rounds
 $ nohup bash scripts/exps/run_exp_scalability.sh 0 >tmp_exp_scalability.out 2>&1 &
@@ -210,7 +210,7 @@ $ nohup bash scripts/exps/run_exp_scalability.sh 0 >tmp_exp_scalability.out 2>&1
 </br>
 
 - After this experiment finishes, under main client (dl11):
-> ```shell
+```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
@@ -235,7 +235,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp3\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- You can keep a part of workloads in `exp4_workload_list` to save time (default value is `"synthetic-25" "synthetic-75" "synthetic"`).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
-> ```shell
+```shell
 # Usage: bash scripts/exps/run_exp_write_ratio.sh <roundnumber>, where roundnumber is the index of current round
 # You can run this script multiple times with different roundnumbers to get results of multiple rounds
 $ nohup bash scripts/exps/run_exp_write_ratio.sh 0 >tmp_exp_write_ratio.out 2>&1 &
@@ -244,7 +244,7 @@ $ nohup bash scripts/exps/run_exp_write_ratio.sh 0 >tmp_exp_write_ratio.out 2>&1
 </br>
 
 - After this experiment finishes, under main client (dl11):
-> ```shell
+```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
@@ -267,7 +267,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp4\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- You can keep a part of workloads in `exp5_workload_list` to save time (default value is `"skewness-90" "skewness-95" "uniform"`).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
-> ```shell
+```shell
 # Usage: bash scripts/exps/run_exp_key_distribution.sh <roundnumber>, where roundnumber is the index of current round
 # You can run this script multiple times with different roundnumbers to get results of multiple rounds
 $ nohup bash scripts/exps/run_exp_key_distribution.sh 0 >tmp_exp_key_distribution.out 2>&1 &
@@ -276,7 +276,7 @@ $ nohup bash scripts/exps/run_exp_key_distribution.sh 0 >tmp_exp_key_distributio
 </br>
 
 - After this experiment finishes, under main client (dl11):
-> ```shell
+```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
@@ -299,7 +299,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp5\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- You can keep a part of workloads in `exp6_workload_list` to save time (default value is `"valuesize-16" "valuesize-32" "valuesize-64"`).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
-> ```shell
+```shell
 # Usage: bash scripts/exps/run_exp_value_size.sh <roundnumber>, where roundnumber is the index of current round
 # You can run this script multiple times with different roundnumbers to get results of multiple rounds
 $ nohup bash scripts/exps/run_exp_value_size.sh 0 >tmp_exp_value_size.out 2>&1 &
@@ -308,7 +308,7 @@ $ nohup bash scripts/exps/run_exp_value_size.sh 0 >tmp_exp_value_size.out 2>&1 &
 </br>
 
 - After this experiment finishes, under main client (dl11):
-> ```shell
+```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
@@ -331,7 +331,7 @@ $ TODO
 	- You can keep a part of workloads in `exp7_dynamic_rule_list` to save time (default value is `"hotin" "hotout" "random" "stable"`).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
-> ```shell
+```shell
 # Usage: bash scripts/exps/run_exp_dynamic.sh <roundnumber>, where roundnumber is the index of current round
 # You can run this script multiple times with different roundnumbers to get results of multiple rounds
 $ nohup bash scripts/exps/run_exp_dynamic.sh 0 >tmp_exp_dynamic.out 2>&1 &
@@ -340,7 +340,7 @@ $ nohup bash scripts/exps/run_exp_dynamic.sh 0 >tmp_exp_dynamic.out 2>&1 &
 </br>
 
 - After this experiment finishes, under main client (dl11):
-> ```shell
+```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
@@ -365,7 +365,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- You can keep a part of snapshot periods in `exp8_snapshot_list` to save time (default value is `"0" "2500" "5000" "7500" "10000"`).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
-> ```shell
+```shell
 # Usage: bash scripts/exps/run_exp_snapshot.sh <roundnumber>, where roundnumber is the index of current round
 # You can run this script multiple times with different roundnumbers to get results of multiple rounds
 $ nohup bash scripts/exps/run_exp_snapshot.sh 0 >tmp_exp_snapshot.out 2>&1 &
@@ -375,7 +375,7 @@ $ nohup bash scripts/exps/run_exp_snapshot.sh 0 >tmp_exp_snapshot.out 2>&1 &
 
 - After this experiment finishes, under main client (dl11):
 	- If awk cannot find the results of average bandwidth cost, you may consider to use `bash scripts/local/calculate_bwcost_helper.h <statistics filepath>` to get results manually, where `<statistics filepath>` is a raw statistics file named `{EVALUATION_OUTPUT_PREFIX}/exp8/{roundnumber}/{snapshot period}_{dynamic patter}_tmp_controller_bwcost.out` if existing (e.g., `~/aeresults/exp8/0/2500_hotin_tmp_controller_bwcost.out`).
-> ```shell
+```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
@@ -407,7 +407,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 		- If you really want to use recoveryonly mode (ONLY if you have alread run this experiment before), see the notes for exp_recovery in [README.md](./README.md#31-normal-script-usage).
 -->
 
-> ```shell
+```shell
 # Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode = 0> <recoveryonly = 0>, where workloadmode = 0 means static pattern and recoveryonly = 0 means running a server rotation first to get raw statistics before crash recovery
 $ nohup bash scripts/exps/run_exp_recovery.sh 0 0 >tmp_exp_recovery.out 2>&1 &
 ```
@@ -415,7 +415,7 @@ $ nohup bash scripts/exps/run_exp_recovery.sh 0 0 >tmp_exp_recovery.out 2>&1 &
 </br>
 
 - After this experiment finishes, under main client (dl11):
-> ```shell
+```shell
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
@@ -434,7 +434,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp9\]\[0\]\[.*\] Get recovery time/ {flag = 1;
 - This experiment does NOT need to run the benchmark, as hardware resource usage is statically allocated after P4 code compilation, which is orthogonal with runtime environments.
 	- **Note: we have already compiled P4 code of all methods (each takes around 3 hours), so you do NOT need to re-compile them again.**
 - Under switch (bf3):
-> ```shell
+```shell
 # Type su password to enter root mode
 $ su
 
