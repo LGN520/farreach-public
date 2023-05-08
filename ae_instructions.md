@@ -401,9 +401,11 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 	- You can keep a part of cache sizes in `exp9_cachesize_list` to save time (default value is `"100" "1000" "10000"`).
 	- Note: this script does NOT support dynamic pattern now.
 		- If you really want to test crash recovery time of dynamic patterns (NOT in our paper), you can refer to the manual way for evaluation in [README.md](./README.md#4-running-workloads-manual-evaluation).
-	- Note: we use recoveryonly = 0 by default.
-		- If you really want to use recoveryonly mode, see the notes for exp_recovery in [README.md](./README.md#31-normal-script-usage).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
+<!-- 
+	- Note: we use recoveryonly = 0 by default.
+		- If you really want to use recoveryonly mode (ONLY if you have alread run this experiment before), see the notes for exp_recovery in [README.md](./README.md#31-normal-script-usage).
+-->
 
 ```shell
 # Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode = 0> <recoveryonly = 0>, where workloadmode = 0 means static pattern and recoveryonly = 0 means running a server rotation first to get raw statistics before crash recovery
