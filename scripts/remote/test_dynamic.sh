@@ -19,7 +19,8 @@ ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worke
 
 echo "launch storage servers of ${DIRNAME}"
 source scripts/remote/launchservertestbed.sh
-sleep 90s
+#sleep 90s
+sleep 240s
 
 if [ ${with_controller} -eq 1 ]
 then

@@ -30,6 +30,10 @@
 
 ## 0 Overview
 
+- **Note: please refer to [ae_instructions.md](./ae_instructions.md) for getting started instructions and detailed instructions.**
+
+- If you have any question, please contact us if available (sysheng21@cse.cuhk.edu.hk).
+
 ### 0.1 Methods
 
 - farreach: our in-switch write-back caching
