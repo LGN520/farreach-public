@@ -313,13 +313,13 @@ $ nohup bash scripts/exps/run_exp_value_size.sh 0 >tmp_exp_value_size.out 2>&1 &
 $ bash scripts/remote/stopall.sh
 
 # Get throughput results of FarReach if any.
-$ TODO
+$ awk -v flag=0 'flag == 0 && /\[exp6\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_value_size.out
 
 # Get throughput results of NoCache if any.
-$ TODO
+$ awk -v flag=0 'flag == 0 && /\[exp6\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_value_size.out
 
 # Get throughput results of NetCache if any.
-$ TODO
+$ awk -v flag=0 'flag == 0 && /\[exp6\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_value_size.out
 ```
 
 ### 5.4 Impact of Key Popularity Changes
