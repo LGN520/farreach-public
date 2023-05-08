@@ -134,8 +134,8 @@ Here are the detailed instructions to reproduce experiments in our paper.
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
 ```shell
-# Usage: bash scripts/exps/run_exp_throughput.sh <roundnumber>, where roundnumber is the index of current round
-# You can run this script multiple times with different roundnumbers to get results of multiple rounds
+# Usage: bash scripts/exps/run_exp_throughput.sh <roundnumber>, where roundnumber is the index of current round.
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds.
 $ nohup bash scripts/exps/run_exp_throughput.sh 0 >tmp_exp_throughput.out 2>&1 &
 ```
 
@@ -143,16 +143,16 @@ $ nohup bash scripts/exps/run_exp_throughput.sh 0 >tmp_exp_throughput.out 2>&1 &
 
 - After this experiment finishes, under main client (dl11):
 ```shell
-# Kill all involved processes
+# Kill all involved processes.
 $ bash scripts/remote/stopall.sh
 
-# Get throughput results of FarReach if any
+# Get throughput results of FarReach if any.
 $ awk -v flag=0 'flag == 0 && /\[exp1\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_throughput.out
 
-# Get throughput results of NoCache if any
+# Get throughput results of NoCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp1\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_throughput.out
 
-# Get throughput results of NetCache if any
+# Get throughput results of NetCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp1\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_throughput.out
 ```
 
@@ -166,8 +166,8 @@ $ awk -v flag=0 'flag == 0 && /\[exp1\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
 ```shell
-# Usage: bash scripts/exps/run_exp_latency.sh <roundnumber>, where roundnumber is the index of current round
-# You can run this script multiple times with different roundnumbers to get results of multiple rounds
+# Usage: bash scripts/exps/run_exp_latency.sh <roundnumber>, where roundnumber is the index of current round.
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds.
 $ nohup bash scripts/exps/run_exp_latency.sh 0 >tmp_exp_latency.out 2>&1 &
 ```
 
@@ -175,16 +175,16 @@ $ nohup bash scripts/exps/run_exp_latency.sh 0 >tmp_exp_latency.out 2>&1 &
 
 - After this experiment finishes, under main client (dl11):
 ```shell
-# Kill all involved processes
+# Kill all involved processes.
 $ bash scripts/remote/stopall.sh
 
-# Get latency results of FarReach if any
+# Get latency results of FarReach if any.
 $ awk -v flag=0 'flag == 0 && /\[exp2\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average latency/ {flag = 0; print $0; next}' tmp_exp_latency.out
 
-# Get latency results of NetCache if any
+# Get latency results of NetCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp2\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average latency/ {flag = 0; print $0; next}' tmp_exp_latency.out
 
-# Get latency results of NoCache if any
+# Get latency results of NoCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp2\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average latency/ {flag = 0; print $0; next}' tmp_exp_latency.out
 ```
 
@@ -202,8 +202,8 @@ $ awk -v flag=0 'flag == 0 && /\[exp2\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
 ```shell
-# Usage: bash scripts/exps/run_exp_scalability.sh <roundnumber>, where roundnumber is the index of current round
-# You can run this script multiple times with different roundnumbers to get results of multiple rounds
+# Usage: bash scripts/exps/run_exp_scalability.sh <roundnumber>, where roundnumber is the index of current round.
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds.
 $ nohup bash scripts/exps/run_exp_scalability.sh 0 >tmp_exp_scalability.out 2>&1 &
 ```
 
@@ -211,16 +211,16 @@ $ nohup bash scripts/exps/run_exp_scalability.sh 0 >tmp_exp_scalability.out 2>&1
 
 - After this experiment finishes, under main client (dl11):
 ```shell
-# Kill all involved processes
+# Kill all involved processes.
 $ bash scripts/remote/stopall.sh
 
-# Get throughput results of FarReach if any
+# Get throughput results of FarReach if any.
 $ awk -v flag=0 'flag == 0 && /\[exp3\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_scalability.out
 
-# Get throughput results of NoCache if any
+# Get throughput results of NoCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp3\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_scalability.out
 
-# Get throughput results of NetCache if any
+# Get throughput results of NetCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp3\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_scalability.out
 ```
 
@@ -236,8 +236,8 @@ $ awk -v flag=0 'flag == 0 && /\[exp3\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
 ```shell
-# Usage: bash scripts/exps/run_exp_write_ratio.sh <roundnumber>, where roundnumber is the index of current round
-# You can run this script multiple times with different roundnumbers to get results of multiple rounds
+# Usage: bash scripts/exps/run_exp_write_ratio.sh <roundnumber>, where roundnumber is the index of current round.
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds.
 $ nohup bash scripts/exps/run_exp_write_ratio.sh 0 >tmp_exp_write_ratio.out 2>&1 &
 ```
 
@@ -245,16 +245,16 @@ $ nohup bash scripts/exps/run_exp_write_ratio.sh 0 >tmp_exp_write_ratio.out 2>&1
 
 - After this experiment finishes, under main client (dl11):
 ```shell
-# Kill all involved processes
+# Kill all involved processes.
 $ bash scripts/remote/stopall.sh
 
-# Get throughput results of FarReach if any
+# Get throughput results of FarReach if any.
 $ awk -v flag=0 'flag == 0 && /\[exp4\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_write_ratio.out
 
-# Get throughput results of NoCache if any
+# Get throughput results of NoCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp4\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_write_ratio.out
 
-# Get throughput results of NetCache if any
+# Get throughput results of NetCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp4\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_write_ratio.out
 ```
 
@@ -268,8 +268,8 @@ $ awk -v flag=0 'flag == 0 && /\[exp4\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
 ```shell
-# Usage: bash scripts/exps/run_exp_key_distribution.sh <roundnumber>, where roundnumber is the index of current round
-# You can run this script multiple times with different roundnumbers to get results of multiple rounds
+# Usage: bash scripts/exps/run_exp_key_distribution.sh <roundnumber>, where roundnumber is the index of current round.
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds.
 $ nohup bash scripts/exps/run_exp_key_distribution.sh 0 >tmp_exp_key_distribution.out 2>&1 &
 ```
 
@@ -277,16 +277,16 @@ $ nohup bash scripts/exps/run_exp_key_distribution.sh 0 >tmp_exp_key_distributio
 
 - After this experiment finishes, under main client (dl11):
 ```shell
-# Kill all involved processes
+# Kill all involved processes.
 $ bash scripts/remote/stopall.sh
 
-# Get throughput results of FarReach if any
+# Get throughput results of FarReach if any.
 $ awk -v flag=0 'flag == 0 && /\[exp5\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_key_distribution.out
 
-# Get throughput results of NoCache if any
+# Get throughput results of NoCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp5\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_key_distribution.out
 
-# Get throughput results of NetCache if any
+# Get throughput results of NetCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp5\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_key_distribution.out
 ```
 
@@ -300,8 +300,8 @@ $ awk -v flag=0 'flag == 0 && /\[exp5\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
 ```shell
-# Usage: bash scripts/exps/run_exp_value_size.sh <roundnumber>, where roundnumber is the index of current round
-# You can run this script multiple times with different roundnumbers to get results of multiple rounds
+# Usage: bash scripts/exps/run_exp_value_size.sh <roundnumber>, where roundnumber is the index of current round.
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds.
 $ nohup bash scripts/exps/run_exp_value_size.sh 0 >tmp_exp_value_size.out 2>&1 &
 ```
 
@@ -309,16 +309,16 @@ $ nohup bash scripts/exps/run_exp_value_size.sh 0 >tmp_exp_value_size.out 2>&1 &
 
 - After this experiment finishes, under main client (dl11):
 ```shell
-# Kill all involved processes
+# Kill all involved processes.
 $ bash scripts/remote/stopall.sh
 
-# Get throughput results of FarReach if any
+# Get throughput results of FarReach if any.
 $ TODO
 
-# Get throughput results of NoCache if any
+# Get throughput results of NoCache if any.
 $ TODO
 
-# Get throughput results of NetCache if any
+# Get throughput results of NetCache if any.
 $ TODO
 ```
 
@@ -332,8 +332,8 @@ $ TODO
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
 ```shell
-# Usage: bash scripts/exps/run_exp_dynamic.sh <roundnumber>, where roundnumber is the index of current round
-# You can run this script multiple times with different roundnumbers to get results of multiple rounds
+# Usage: bash scripts/exps/run_exp_dynamic.sh <roundnumber>, where roundnumber is the index of current round.
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds.
 $ nohup bash scripts/exps/run_exp_dynamic.sh 0 >tmp_exp_dynamic.out 2>&1 &
 ```
 
@@ -341,16 +341,16 @@ $ nohup bash scripts/exps/run_exp_dynamic.sh 0 >tmp_exp_dynamic.out 2>&1 &
 
 - After this experiment finishes, under main client (dl11):
 ```shell
-# Kill all involved processes
+# Kill all involved processes.
 $ bash scripts/remote/stopall.sh
 
-# Get throughput results of FarReach if any
+# Get throughput results of FarReach if any.
 $ awk -v flag=0 'flag == 0 && /\[exp7\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
 
-# Get throughput results of NoCache if any
+# Get throughput results of NoCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp7\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
 
-# Get throughput results of NetCache if any
+# Get throughput results of NetCache if any.
 $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
 ```
 
@@ -366,8 +366,8 @@ $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
 
 ```shell
-# Usage: bash scripts/exps/run_exp_snapshot.sh <roundnumber>, where roundnumber is the index of current round
-# You can run this script multiple times with different roundnumbers to get results of multiple rounds
+# Usage: bash scripts/exps/run_exp_snapshot.sh <roundnumber>, where roundnumber is the index of current round.
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds.
 $ nohup bash scripts/exps/run_exp_snapshot.sh 0 >tmp_exp_snapshot.out 2>&1 &
 ```
 
@@ -376,18 +376,18 @@ $ nohup bash scripts/exps/run_exp_snapshot.sh 0 >tmp_exp_snapshot.out 2>&1 &
 - After this experiment finishes, under main client (dl11):
 	- If awk cannot find the results of average bandwidth cost, you may consider to use `bash scripts/local/calculate_bwcost_helper.h <statistics filepath>` to get results manually, where `<statistics filepath>` is a raw statistics file named `{EVALUATION_OUTPUT_PREFIX}/exp8/{roundnumber}/{snapshot period}_{dynamic patter}_tmp_controller_bwcost.out` if existing (e.g., `~/aeresults/exp8/0/2500_hotin_tmp_controller_bwcost.out`).
 ```shell
-# Kill all involved processes
+# Kill all involved processes.
 $ bash scripts/remote/stopall.sh
 
-# Get throughput and bandwidth results of hotin if any
+# Get throughput and bandwidth results of hotin if any.
 $ awk -v flag=0 'flag == 0 && /\[exp8\]\[hotin\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
 $ awk -v flag=0 'flag == 0 && /\[exp8\]\[hotin\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average bwcost/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
 
-# Get throughput results of hotout if any
+# Get throughput results of hotout if any.
 $ awk -v flag=0 'flag == 0 && /\[exp8\]\[hotout\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
 $ awk -v flag=0 'flag == 0 && /\[exp8\]\[hotout\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average bwcost/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
 
-# Get throughput results of random if any
+# Get throughput results of random if any.
 $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
 $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average bwcost/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
 ```
@@ -408,7 +408,9 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 -->
 
 ```shell
-# Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode = 0> <recoveryonly = 0>, where workloadmode = 0 means static pattern and recoveryonly = 0 means running a server rotation first to get raw statistics before crash recovery
+# Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode = 0> <recoveryonly = 0>.
+# workloadmode = 0 means static pattern.
+# recoveryonly = 0 means running a server rotation first to get raw statistics before crash recovery.
 $ nohup bash scripts/exps/run_exp_recovery.sh 0 0 >tmp_exp_recovery.out 2>&1 &
 ```
 
@@ -419,11 +421,12 @@ $ nohup bash scripts/exps/run_exp_recovery.sh 0 0 >tmp_exp_recovery.out 2>&1 &
 # Kill all involved processes
 $ bash scripts/remote/stopall.sh
 
-# Get server-side and switch-side crash recovery time results of round index 0 if any
+# Get server-side and switch-side crash recovery time results of round index 0 if any.
 $ awk -v flag=0 'flag == 0 && /\[exp9\]\[0\]\[.*\] Get recovery time/ {flag = 1; print $0; next} flag == 1 && /Server total/ {flag = 0; print $0; next}' tmp_exp_recovery.out
 $ awk -v flag=0 'flag == 0 && /\[exp9\]\[0\]\[.*\] Get recovery time/ {flag = 1; print $0; next} flag == 1 && /Switch total/ {flag = 0; print $0; next}' tmp_exp_recovery.out
 
-# Note: getting server-side and switch-side crash recovery time results of any other round index is similar as above, but make sure that your `exp9_round_list` contains the rounde index when you execute the cript before
+# Note: getting server-side and switch-side crash recovery time results of any other round index is similar as above.
+# But make sure that your `exp9_round_list` contains the rounde index when you execute the cript before.
 # Take round index i as an example (you can replace {i} as a specific rounde index, e.g., 1):
 # awk -v flag=0 'flag == 0 && /\[exp9\]\[{i}\]\[.*\] Get recovery time/ {flag = 1; print $0; next} flag == 1 && /Server total/ {flag = 0; print $0; next}' tmp_exp_recovery.out
 # awk -v flag=0 'flag == 0 && /\[exp9\]\[{i}\]\[.*\] Get recovery time/ {flag = 1; print $0; next} flag == 1 && /Switch total/ {flag = 0; print $0; next}' tmp_exp_recovery.out
@@ -435,18 +438,18 @@ $ awk -v flag=0 'flag == 0 && /\[exp9\]\[0\]\[.*\] Get recovery time/ {flag = 1;
 	- **Note: we have already compiled P4 code of all methods (each takes around 3 hours), so you do NOT need to re-compile them again.**
 - Under switch (bf3):
 ```shell
-# Type su password to enter root mode
+# Type su password to enter root mode.
 $ su
 
-# Enter the specific switch directory that stores compiled files of P4 code
+# Enter the specific switch directory that stores compiled files of P4 code.
 $ cd $SDE/pkgsrc/p4-build/tofino/
 
-# Copy visualization files of FarReach, NoCache, and NetCache
+# Copy visualization files of FarReach, NoCache, and NetCache.
 $ cp -r netbufferv4/visualization /home/atc2023ae/farreach_visualization
 $ cp -r nocache/visualization /home/atc2023ae/nocache_visualization
 $ cp -r netcache/visualization /home/atc2023ae/netcache_visualization
 
-# Change ownership of copied files
+# Change ownership of copied files.
 $ cd /home/atc2023ae
 $ chown -R atc2023ae:atc2023ae /home/atc2023ae/farreach_visualization
 $ chown -R atc2023ae:atc2023ae /home/atc2023ae/nocache_visualization
@@ -454,7 +457,7 @@ $ chown -R atc2023ae:atc2023ae /home/atc2023ae/netcache_visualization
 ```
 - Under the springboard (dl1):
 ```
-# Copy visualization files from switch to the springboard
+# Copy visualization files from switch to the springboard.
 scp -r bf3:/home/atc2023ae/farreach_visualization /home/atc2023ae
 scp -r bf3:/home/atc2023ae/nocache_visualization /home/atc2023ae
 scp -r bf3:/home/atc2023ae/netcache_visualization /home/atc2023ae
