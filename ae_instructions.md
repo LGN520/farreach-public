@@ -19,6 +19,7 @@ Here are the detailed instructions to reproduce experiments in our paper.
 6. [AE on Snapshot Generation and Crash Recovery](#6-ae-on-snapshot-generation-and-crash-recovery)
 	1. [Performance of Snapshot Generation](#61-performance-of-snapshot-generation)
 	2. [Crash Recovery Time](#62-crash-recovery-time)
+7. [AE on Hardware Resource Usage](#7-ae-on-hardware-resource-usage)
 
 ## 1. Artifact Claims
 
@@ -39,6 +40,9 @@ Here are the detailed instructions to reproduce experiments in our paper.
 		* Two servers (hostnames: dl21 and dl30).
 			- Note: controller is co-located in the first server (dl21).
 	+ One 2-pipeline Tofino switch with SDE 8.9.1 (hostname: bf3).
+- **Note that our AE testbed is managed by a springboard machine (dl1), to connect with any of the above machines:**
+	+ Under your own machine (e.g., laptop): use the ssh command and private key provided in Artifact Description (submitted by hotcrp) to connect with the spingboard machine (dl1)
+	+ Under the springboard machine (dl1): connect with any of the above machine by ssh (e.g., `ssh dl11`)
 
 </br>
 
@@ -75,7 +79,7 @@ Here are the detailed instructions to reproduce experiments in our paper.
 
 </br>
 
-- **Please ensure that our code is correctly compiled before running each experiment.**
+- **Note: please ensure that our code is correctly compiled before running each experiment.**
 	- For most experiments, we need to compile code in all machines to enable server rotation if not. Here is the **detailed compilation to enable server rotation under main client (dl11)**:
 		- Enable server rotation:
 			- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation.
@@ -93,6 +97,16 @@ Here are the detailed instructions to reproduce experiments in our paper.
 			- Comment line 82 (//#define SERVER_ROTATION) in `common/helper.h` to enable server rotation.
 			- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines.
 		- Re-compile code of FarReach, NoCache, and NetCache with the same steps as mentioned above.
+
+</br>
+
+- **Note: if you get stuck at `[warmup_client] cache size: 10000` (from stdout of the current experiment script `scripts/exps/run_exp_*.sh`) with over ten minutes, there might exist leftover processes of previous experiments NOT being killed successfully:**
+	- Under main client (dl11): run `bash scripts/remote/stopall.sh` to kill all involved processes
+	- Under each machine of clients and servers (dl11, dl20, dl21, and dl30)
+		- Run `ps -aux | grep atc2023` to double if there exist any leftover process
+	- Under switch (bf3)
+		- Run `ps -aux | grep atc2023` and `ps -aux | grep switch` to double if there exist any leftover process
+- **Note: if you miss limited iterations of a server rotation, you can either re-run the entire experiment after killing involved processes by `scripts/remote/stopall.sh`, or you can only run each missed iteration for the experiment by `scripts/exps/run_makeup_rotation_exp.sh` (see how to perform a single iteration in [README.md](./README.md#32-perform-single-iteration)),**
 
 ## 4. AE on YCSB Core Workloads
 
@@ -184,13 +198,13 @@ $ nohup bash scripts/exps/run_exp_scalability.sh 0 >tmp_exp_scalability.out 2>&1
 $ bash scripts/remote/stopall.sh
 
 # Get throughput results of FarReach if any
-$ TODO
+$ awk -v flag=0 'flag == 0 && /\[exp3\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_scalability.out
 
 # Get throughput results of NoCache if any
-$ TODO
+$ awk -v flag=0 'flag == 0 && /\[exp3\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_scalability.out
 
 # Get throughput results of NetCache if any
-$ TODO
+$ awk -v flag=0 'flag == 0 && /\[exp3\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_scalability.out
 ```
 
 ## 5. AE on Synthetic Workloads
@@ -366,8 +380,8 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 
 ```shell
 # Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode = 0> <recoveryonly = 0>, where workloadmode = 0 means static pattern and recoveryonly = 0 means running a server rotation first to get raw statistics before crash recovery
-# Note: this script does NOT support dynamic pattern now; if you really want to test crash recovery time of dynamic patterns (NOT in our paper), you can refer to the manual way for evaluation in our [README](./README.md)
-# Note: we use recoveryonly = 0 by default; if you really want to use recoveryonly mode, see defails in [README](./README.md)
+# Note: this script does NOT support dynamic pattern now; if you really want to test crash recovery time of dynamic patterns (NOT in our paper), you can refer to the manual way for evaluation in our [README](./README.md#4-running-workloads-manual-evaluation)
+# Note: we use recoveryonly = 0 by default; if you really want to use recoveryonly mode, see the notes for exp_recovery in [README](./README.md#31-normal-script-usage)
 $ nohup bash scripts/exps/run_exp_recovery.sh 0 0 >tmp_exp_recovery.out 2>&1 &
 ```
 
@@ -384,3 +398,37 @@ $ awk -v flag=0 'flag == 0 && /\[exp9\]\[0\]\[.*\] Get recovery time/ {flag = 1;
 
 # Note: getting server-side and switch-side crash recovery time results of any other round index if any is similar as above
 ```
+
+## 7. AE on Hardware Resource Usage
+
+- This experiment does NOT need benchmark, as hardware resource usage is fixed after P4 code compilation, which is orthogonal with runtime issues.
+	- **Note: we have already compiled P4 code of all methods (each takes around 3 hours), so you do NOT need to re-compile them again.**
+- Under switch (bf3):
+```shell
+# Type su password to enter root mode
+$ su
+
+# Enter the specific switch directory that stores compiled files of P4 code
+$ cd $SDE/pkgsrc/p4-build/tofino/
+
+# Copy visualization files of FarReach, NoCache, and NetCache
+$ cp -r netbufferv4/visualization /home/atc2023ae/
+$ cp -r nocache/visualization /home/atc2023ae/
+$ cp -r netcache/visualization /home/atc2023ae/
+
+# Change ownership of copied files
+$ cd /home/atc2023ae
+$ chown -R atc2023ae:atc2023ae /home/atc2023ae/netbufferv4
+$ chown -R atc2023ae:atc2023ae /home/atc2023ae/nocache
+$ chown -R atc2023ae:atc2023ae /home/atc2023ae/netcache
+```
+- Under the springboard (dl1):
+```
+# Copy visualization files from switch to the springboard
+scp -r bf3@:/home/atc2023ae/netbufferv4 /home/atc2023ae/
+scp -r bf3@:/home/atc2023ae/nocache /home/atc2023ae/
+scp -r bf3@:/home/atc2023ae/netcache /home/atc2023ae/
+```
+- Under your own laptop (with any browser installed):
+	- Use the scp command and private key provided in Artifact Description (submitted by hotcrp) to copy visualization files from springboard to your own laptop.
+	- Check the visualization files (in html format) by any browser and count the hardware resource usage manually.

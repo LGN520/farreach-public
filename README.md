@@ -312,6 +312,8 @@
 
 - **Note: you can refer to [AE instructions](./ae_instructions.md) to get extra details of each experiment.**
 
+- **Note: if you want to add any new experiment script by youself in `scripts/exps/`, the script file name should NOT include the reserved strings (ycsb, server, controller, reflector, and server_rotation); otherwise, the new experiment script may be killed by itself during evaluation.**
+
 ## 3.1 Normal Script Usage
 
 - To reproduce experiments in our evaluation, we provide the following scripts under `scripts/exps/`
