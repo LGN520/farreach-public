@@ -41,8 +41,8 @@ Here are the detailed instructions to reproduce experiments in our paper.
 			- Note: controller is co-located in the first server (dl21).
 	+ One 2-pipeline Tofino switch with SDE 8.9.1 (hostname: bf3).
 - **Note that our AE testbed is managed by a springboard machine (dl1), to connect with any of the above machines:**
-	+ Under your own machine (e.g., laptop): use the ssh command and private key provided in Artifact Description (submitted by hotcrp) to connect with the spingboard machine (dl1)
-	+ Under the springboard machine (dl1): connect with any of the above machine by ssh (e.g., `ssh dl11`)
+	+ Under your own machine (e.g., laptop): use the ssh command and private key provided in Artifact Description (submitted by hotcrp) to connect with the spingboard machine (dl1).
+	+ Under the springboard machine (dl1): connect with any of the above machine by ssh (e.g., `ssh dl11`).
 
 </br>
 
@@ -106,7 +106,14 @@ Here are the detailed instructions to reproduce experiments in our paper.
 		- Run `ps -aux | grep atc2023` to double if there exist any leftover process
 	- Under switch (bf3)
 		- Run `ps -aux | grep atc2023` and `ps -aux | grep switch` to double if there exist any leftover process
-- **Note: if you miss limited iterations of a server rotation, you can either re-run the entire experiment after killing involved processes by `scripts/remote/stopall.sh`, or you can only run each missed iteration for the experiment by `scripts/exps/run_makeup_rotation_exp.sh` (see how to perform a single iteration in [README.md](./README.md#32-perform-single-iteration)),**
+
+</br>
+
+- **Note: if you miss a limited number of iterations of a server rotation:**
+	- Missing iterations can be caused by different reasons (e.g., resource confliction and Tofino hardware bugs).
+		- Experiment scripts will pose warning messages about which iterations are missed in which client.
+	- You can simply re-run the entire experiment after killing all involved processes by `scripts/remote/stopall.sh`
+	- Or you can only run each missed iteration for the experiment by `scripts/exps/run_makeup_rotation_exp.sh` (see how to perform a single iteration in [README.md](./README.md#32-perform-single-iteration)).
 
 ## 4. AE on YCSB Core Workloads
 
@@ -401,7 +408,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp9\]\[0\]\[.*\] Get recovery time/ {flag = 1;
 
 ## 7. AE on Hardware Resource Usage
 
-- This experiment does NOT need benchmark, as hardware resource usage is fixed after P4 code compilation, which is orthogonal with runtime issues.
+- This experiment does NOT need to run the benchmark, as hardware resource usage is statically allocated after P4 code compilation, which is orthogonal with runtime environments.
 	- **Note: we have already compiled P4 code of all methods (each takes around 3 hours), so you do NOT need to re-compile them again.**
 - Under switch (bf3):
 ```shell
