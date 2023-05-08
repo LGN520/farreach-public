@@ -478,18 +478,23 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 	- You can keep a part of round indexes in `exp9_round_list` to save time (default value is `"0" "1" "2" "3" "4" "5"`, i.e., 6 rounds).
 	- You can keep a part of cache sizes in `exp9_cachesize_list` to save time (default value is `"100" "1000" "10000"`).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
-	- Note: this script does NOT support dynamic pattern now **(NOT the experiments in our paper)**.
 <!-- 
+	- Note: this script does NOT support dynamic pattern now **(NOT the experiments in our paper)**.
 		- If you really want to test crash recovery time of dynamic patterns, you can refer to the manual way for evaluation in [README.md](./README.md#41-dynamic-worklaod-no-server-rotation), and get recovery time resutls by `scripts/remote/test_recovery_time.sh` and `scripts.local/calculate_recovery_time_helper.py`.
 	- Note: we use recoveryonly = 0 by default.
 		- If you really want to use recoveryonly mode (ONLY if you have alread run this experiment before), see the notes for exp_recovery in [README.md](./README.md#31-normal-script-usage).
--->
 
 ```shell
 # Usage: bash scripts/exps/run_exp_recovery.sh <workloadmode = 0> <recoveryonly = 0>.
 # workloadmode = 0 means static pattern.
 # recoveryonly = 0 means running a server rotation first to get raw statistics before crash recovery.
 $ nohup bash scripts/exps/run_exp_recovery.sh 0 0 >tmp_exp_recovery.out 2>&1 &
+```
+-->
+
+```shell
+# Usage: bash scripts/exps/run_exp_recovery.sh
+$ nohup bash scripts/exps/run_exp_recovery.sh >tmp_exp_recovery.out 2>&1 &
 ```
 
 </br>
