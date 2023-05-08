@@ -516,7 +516,10 @@ public final class InswitchCacheClient {
     MyUtils.myAssert(GlobalConfig.getCurmethodId() == GlobalConfig.FARREACH_ID);
     System.out.println("[INFO][InSwitchCacheClient] run client upstream backup releaser");
 
-    short clientUpstreamBackupReleaserPort = GlobalConfig.getClientUpstreamBackupReleaserPort();
+    // [TODO] Bug: clientUpstreamBackupReleaserPort is incorrectly set as 0 in GlobalConfig.
+	//   We leave the test of the following code block after fixing the bug in GlobalConfig in the future.
+    //   But note that not releasing upstream backups does NOT affect our main design (sysheng)
+    /*short clientUpstreamBackupReleaserPort = GlobalConfig.getClientUpstreamBackupReleaserPort();
     int clientUpstreamBackupReleaserUdpSock = SocketHelper.prepareUdpserver(true,
         clientUpstreamBackupReleaserPort, "client.upstreamBackupReleaser", GlobalConfig.DEFAULT_SOCKET_TIMEOUT_SECS, 0,
         GlobalConfig.UDP_DEFAULT_RCVBUFSIZE);
@@ -556,7 +559,7 @@ public final class InswitchCacheClient {
           } // each outdated upstream backup
         } // each logical client
       } // not timeout
-    }
+    }*/
   }
 
   public static void dumpUpstreamBackups() {

@@ -172,10 +172,11 @@ public final class GlobalConfig {
     GlobalConfig.clientSendPktServerPortStart = Short.parseShort(ini.get("client", "client_sendpktserver_port_start"));
     GlobalConfig.clientRulemapServerPortStart = Short.parseShort(ini.get("client", "client_rulemapserver_port_start"));
     GlobalConfig.clientWorkerPortStart = Short.parseShort(ini.get("client", "client_worker_port_start"));
-    if (GlobalConfig.workloadName == "farreach") {
+    // [TODO] Bug: here we should check whether curmethodId == FARREACH_ID to read client_upstreambackupreleaser_port. (sysheng)
+    /*if (GlobalConfig.workloadName == "farreach") {
       GlobalConfig.clientUpstreamBackupReleaserPort = Short
           .parseShort(ini.get("client", "client_upstreambackupreleaser_port"));
-    }
+    }*/
 
     // for each physical client
     for (int i = 0; i < GlobalConfig.clientPhysicalNum; i++) {
