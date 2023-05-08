@@ -7,22 +7,26 @@ Here are the detailed instructions to reproduce experiments in our paper.
 1. [Artifact Claims](#1-artifact-claims)
 2. [AE Testbed Overview](#2-ae-testbed-overview)
 3. [Notes for Artifact Evaluation](#3-notes-for-artifact-evaluation)
-	1. [Code Compilation](#31-code-compilation)
+	1. [Preperation Already Done for AE](#31-preperation-already-done-for-ae)
 	2. [Script Running Time](#32-script-running-time)
 	3. [Possible Errors](#33-possible-errors)
-4. [AE on YCSB Core Workloads](#4-ae-on-ycsb-core-workloads)
-	1. [Throughput Analysis](#41-throughput-analysis)
-	2. [Latency Analysis](#42-latency-analysis)
-	3. [Scalability Analysis](#43-scalability-analysis)
-5. [AE on Synthetic Workloads](#5-ae-on-synthetic-workloads)
-	1. [Impact of Write Ratio](#51-impact-of-write-ratio)
-	2. [Impact of Key Distribution](#52-impact-of-key-distribution)
-	3. [Impact of Value Size](#53-impact-of-value-size)
-	4. [Impact of Key Popularity Changes](#54-impact-of-key-popularity-changes)
-6. [AE on Snapshot Generation and Crash Recovery](#6-ae-on-snapshot-generation-and-crash-recovery)
-	1. [Performance of Snapshot Generation](#61-performance-of-snapshot-generation)
-	2. [Crash Recovery Time](#62-crash-recovery-time)
-7. [AE on Hardware Resource Usage](#7-ae-on-hardware-resource-usage)
+4. [Getting Started Instructions](#4-getting-started-instructions)
+	1. [Code Compilation to Enable Server Rotation](#41-code-compilation-to-enable-server-rotation)
+	2. [Script Usage](#42-script-usage)
+	3. [Code Compilation to Disable Server Rotation](#41-code-compilation-to-disable-server-rotation)
+5. [AE on YCSB Core Workloads](#5-ae-on-ycsb-core-workloads)
+	1. [Throughput Analysis](#51-throughput-analysis)
+	2. [Latency Analysis](#52-latency-analysis)
+	3. [Scalability Analysis](#53-scalability-analysis)
+6. [AE on Synthetic Workloads](#6-ae-on-synthetic-workloads)
+	1. [Impact of Write Ratio](#61-impact-of-write-ratio)
+	2. [Impact of Key Distribution](#62-impact-of-key-distribution)
+	3. [Impact of Value Size](#63-impact-of-value-size)
+	4. [Impact of Key Popularity Changes](#64-impact-of-key-popularity-changes)
+7. [AE on Snapshot Generation and Crash Recovery](#7-ae-on-snapshot-generation-and-crash-recovery)
+	1. [Performance of Snapshot Generation](#71-performance-of-snapshot-generation)
+	2. [Crash Recovery Time](#72-crash-recovery-time)
+8. [AE on Hardware Resource Usage](#8-ae-on-hardware-resource-usage)
 
 ## 1. Artifact Claims
 
@@ -66,33 +70,19 @@ Here are the detailed instructions to reproduce experiments in our paper.
 
 ## 3. Notes for Artifact Evaluation
 
-### 3.1 Code Compilation
+### 3.1 Preperation Already Done for AE
 
-- **Note: we have finished system preparation and data preparation, such that you can directly execute scripts to reproduce experiments.**
-	- System preparation includes software dependency installation, testbed configuration settings (e.g., Linux username, involved machines, and SSH settings), and code compilation **(server rotation is enabled by default for most experiments)**.
+- **Note: we have finished system preparation and data preparation, such that you can directly execute getting started instructions and detailed instructions to reproduce experiments.**
+	- System preparation includes software dependency installation, testbed configuration settings (e.g., Linux username, involved machines, and SSH settings), and code compilation.
 	- Data preparation includes loading phase (pre-loading 100M records into server-side key-value storage) and workload analysis (calculate bottleneck partition by consistent hashing and generate workload files for server rotation).
 	- Although we have configured `scripts/global.sh` based on AE testbed and the AE account (username: atc2023ae), **please also make a double-check on `scripts/global.sh` by yourself.**
 
 </br>
 
 - **Note: please ensure that our code is correctly compiled before running each experiment.**
-	- For most experiments, we need to compile code in all machines to enable server rotation if not. Here is the **detailed compilation to enable server rotation under main client (dl11)**:
-		- Enable server rotation:
-			- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation.
-			- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines.
-		- Re-compile code of FarReach:
-			- Set `DIRNAME` as `farreach` in `scripts/common.sh`
-			- Run `bash scripts/remote/sync_file.sh scripts common.sh`
-			- Under main client (dl11) and secondary client (dl20), run `bash scripts/local/makeclient.sh`
-			- Under first server (dl21) and second server (dl30), run `bash scripts/local/makeserver.sh`
-			- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
-		- Re-compile code of NoCache and NetCache similar as FarReach:
-			- The only difference is to set `DIRNAME` as `nocache` and `netcache`, respectively.
-	- For the two experiments on impact of key popularity changes and performance of snapshot generation, we need to compile code in all machines to disable server rotation if not. Here is the **detailed compilation to disable server rotation under main client (dl11)**:
-		- Disable server rotation:
-			- Comment line 82 (//#define SERVER_ROTATION) in `common/helper.h` to enable server rotation.
-			- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines.
-		- Re-compile code of FarReach, NoCache, and NetCache with the same steps as mentioned above.
+	- **We have already compiled code to enable server rotation** for you, as most experiments need to enable server rotation.
+	- If the experiment needs to disable server rotation but you have not disabled, please refer to [Section 4.3](#43-code-compilation-to-disable-server-rotation) for details.
+	- If the experiment needs to enable server rotation but you have not enabled, please refer to [Section 4.1](#41-code-compilation-to-enable-server-rotation) for details.
 
 ### 3.2 Script Running Time
 
@@ -122,12 +112,96 @@ Here are the detailed instructions to reproduce experiments in our paper.
 	- You can simply re-run the entire experiment after killing all involved processes by `scripts/remote/stopall.sh`
 	- Or you can only run each missed iteration for the experiment by `scripts/exps/run_makeup_rotation_exp.sh` (see how to perform a single iteration in [README.md](./README.md#32-perform-single-iteration)).
 
-## 4. AE on YCSB Core Workloads
+## 4. Getting Started Instructions
 
-### 4.1 Throughput Analysis
+- **As our system does NOT have things like "Hello World", we take the detailed steps for the experiment of impact of key popularity changes, which has relatively short running time, as the getting started instructions.**
+
+### 4.1 Code Compilation to Enable Server Rotation
+
+- Under main client (dl11)
+	- Enable server rotation:
+		- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation.
+		- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines.
+	- Re-compile code of FarReach:
+		- Set `DIRNAME` as `farreach` in `scripts/common.sh`
+		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
+		- Under main client (dl11) and secondary client (dl20), run `bash scripts/local/makeclient.sh`
+		- Under first server (dl21) and second server (dl30), run `bash scripts/local/makeserver.sh`
+		- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
+	- Re-compile code of NoCache:
+		- Set `DIRNAME` as `nocache` in `scripts/common.sh`
+		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
+		- Under main client (dl11) and secondary client (dl20), run `bash scripts/local/makeclient.sh`
+		- Under first server (dl21) and second server (dl30), run `bash scripts/local/makeserver.sh`
+		- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
+	- Re-compile code of NetCache:
+		- Set `DIRNAME` as `netcache` in `scripts/common.sh`
+		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
+		- Under main client (dl11) and secondary client (dl20), run `bash scripts/local/makeclient.sh`
+		- Under first server (dl21) and second server (dl30), run `bash scripts/local/makeserver.sh`
+		- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
+
+### 4.2 Script Usage
+
+- Under main client (dl11), for `scripts/exps/run_exp_dynamic.sh`:
+	- You can keep a part of methods in `exp7_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
+	- You can keep a part of workloads in `exp7_dynamic_rule_list` to save time (default value is `"hotin" "hotout" "random" "stable"`).
+	- **Note: do NOT launch any other experiment before this experiment finishes.**
+
+```shell
+# Usage: bash scripts/exps/run_exp_dynamic.sh <roundnumber>, where roundnumber is the index of current round.
+# You can run this script multiple times with different roundnumbers to get results of multiple rounds.
+$ nohup bash scripts/exps/run_exp_dynamic.sh 0 >tmp_exp_dynamic.out 2>&1 &
+```
+
+</br>
+
+- After this experiment finishes, under main client (dl11):
+```shell
+# Kill all involved processes.
+$ bash scripts/remote/stopall.sh
+
+# Get throughput results of FarReach if any.
+$ awk -v flag=0 'flag == 0 && /\[exp7\]\[farreach\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
+
+# Get throughput results of NoCache if any.
+$ awk -v flag=0 'flag == 0 && /\[exp7\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
+
+# Get throughput results of NetCache if any.
+$ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
+```
+
+### 4.3 Code Compilation to Disable Server Rotation
+
+- Under main client (dl11)
+	- Enable server rotation:
+		- Comment line 82 (//#define SERVER_ROTATION) in `common/helper.h` to enable server rotation.
+		- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines.
+	- Re-compile code of FarReach:
+		- Set `DIRNAME` as `farreach` in `scripts/common.sh`
+		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
+		- Under main client (dl11) and secondary client (dl20), run `bash scripts/local/makeclient.sh`
+		- Under first server (dl21) and second server (dl30), run `bash scripts/local/makeserver.sh`
+		- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
+	- Re-compile code of NoCache:
+		- Set `DIRNAME` as `nocache` in `scripts/common.sh`
+		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
+		- Under main client (dl11) and secondary client (dl20), run `bash scripts/local/makeclient.sh`
+		- Under first server (dl21) and second server (dl30), run `bash scripts/local/makeserver.sh`
+		- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
+	- Re-compile code of NetCache:
+		- Set `DIRNAME` as `netcache` in `scripts/common.sh`
+		- Run `bash scripts/remote/sync_file.sh scripts common.sh`
+		- Under main client (dl11) and secondary client (dl20), run `bash scripts/local/makeclient.sh`
+		- Under first server (dl21) and second server (dl30), run `bash scripts/local/makeserver.sh`
+		- Under Tofino switch (bf3), run `bash scripts/local/makeswitchos.sh`
+
+## 5. AE on YCSB Core Workloads
+
+### 5.1 Throughput Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
-	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
+	- If not, see [Section 4.1](#41-code-compilation-to-enable-server-rotation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_throughput.sh`:
 	- You can keep a part of methods in `exp1_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp1_core_workload_list` to save time (default value is `"workloada" "workloadb" "workloadc" "workloadd" " workladf" "workload-load"`).
@@ -156,10 +230,10 @@ $ awk -v flag=0 'flag == 0 && /\[exp1\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 $ awk -v flag=0 'flag == 0 && /\[exp1\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_throughput.out
 ```
 
-### 4.2 Latency Analysis
+### 5.2 Latency Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
-	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
+	- If not, see [Section 4.1](#41-code-compilation-to-enable-server-rotation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_latency.sh`:
 	- You can keep a part of methods in `exp2_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of target throughput values `exp2_target_thpt_list` to save time (default value is `"0.2" "0.4" "0.6" "0.8"`).
@@ -188,10 +262,10 @@ $ awk -v flag=0 'flag == 0 && /\[exp2\]\[netcache\]\[.*\] sync/ {flag = 1; print
 $ awk -v flag=0 'flag == 0 && /\[exp2\]\[nocache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average latency/ {flag = 0; print $0; next}' tmp_exp_latency.out
 ```
 
-### 4.3 Scalability Analysis
+### 5.3 Scalability Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
-	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
+	- If not, see [Section 4.1](#41-code-compilation-to-enable-server-rotation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_scalability.sh`:
 	- You can keep a part of methods in `exp3_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of scalability values in `exp3_scalability_list` to save time (default value is `"32" "64" "128"`).
@@ -224,12 +298,12 @@ $ awk -v flag=0 'flag == 0 && /\[exp3\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 $ awk -v flag=0 'flag == 0 && /\[exp3\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_scalability.out
 ```
 
-## 5. AE on Synthetic Workloads
+## 6. AE on Synthetic Workloads
 
-### 5.1 Impact of Write Ratio
+### 6.1 Impact of Write Ratio
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
-	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
+	- If not, see [Section 4.1](#41-code-compilation-to-enable-server-rotation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_write_ratio.sh`:
 	- You can keep a part of methods in `exp4_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp4_workload_list` to save time (default value is `"synthetic-25" "synthetic-75" "synthetic"`).
@@ -258,10 +332,10 @@ $ awk -v flag=0 'flag == 0 && /\[exp4\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 $ awk -v flag=0 'flag == 0 && /\[exp4\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_write_ratio.out
 ```
 
-### 5.2 Impact of Key Distribution
+### 6.2 Impact of Key Distribution
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
-	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
+	- If not, see [Section 4.1](#41-code-compilation-to-enable-server-rotation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_key_distribution.sh`:
 	- You can keep a part of methods in `exp5_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp5_workload_list` to save time (default value is `"skewness-90" "skewness-95" "uniform"`).
@@ -290,10 +364,10 @@ $ awk -v flag=0 'flag == 0 && /\[exp5\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 $ awk -v flag=0 'flag == 0 && /\[exp5\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_key_distribution.out
 ```
 
-### 5.3 Impact of Value Size
+### 6.3 Impact of Value Size
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
-	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
+	- If not, see [Section 4.1](#41-code-compilation-to-enable-server-rotation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_value_size.sh`:
 	- You can keep a part of methods in `exp6_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp6_workload_list` to save time (default value is `"valuesize-16" "valuesize-32" "valuesize-64"`).
@@ -322,10 +396,10 @@ $ awk -v flag=0 'flag == 0 && /\[exp6\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 $ awk -v flag=0 'flag == 0 && /\[exp6\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /aggregate throughput/ {flag = 0; print $0; next}' tmp_exp_value_size.out
 ```
 
-### 5.4 Impact of Key Popularity Changes
+### 6.4 Impact of Key Popularity Changes
 
 - **Pre-requisite: code is compiled with disabling server rotation.**
-	- If not, see [Section 3.1](#31-code-compilation) to disable server rotation and re-compile code in all machines.
+	- If not, see [Section 4.3](#43-code-compilation-to-disable-server-rotation) to disable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_dynamic.sh`:
 	- You can keep a part of methods in `exp7_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp7_dynamic_rule_list` to save time (default value is `"hotin" "hotout" "random" "stable"`).
@@ -354,12 +428,12 @@ $ awk -v flag=0 'flag == 0 && /\[exp7\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /avgthpt/ {flag = 0; print $0; next}' tmp_exp_dynamic.out
 ```
 
-## 6. AE on Snapshot Generation and Crash Recovery
+## 7. AE on Snapshot Generation and Crash Recovery
 
-### 6.1 Performance of Snapshot Generation
+### 7.1 Performance of Snapshot Generation
 
 - **Pre-requisite: code is compiled with disabling server rotation.**
-	- If not, see [Section 3.1](#31-code-compilation) to disable server rotation and re-compile code in all machines.
+	- If not, see [Section 4.3](#43-code-compilation-to-disable-server-rotation) to disable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_snapshot.sh`:
 	- You can keep a part of dynamic patterns in `exp8_dynamic_rule_list` to save time (default value is `"hotin" "hotout" "random"`).
 	- You can keep a part of snapshot periods in `exp8_snapshot_list` to save time (default value is `"0" "2500" "5000" "7500" "10000"`).
@@ -392,10 +466,10 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $0; next} flag == 1 && /average bwcost/ {flag = 0; print $0; next}' tmp_exp_snapshot.out
 ```
 
-### 6.2 Crash Recovery Time
+### 7.2 Crash Recovery Time
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
-	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
+	- If not, see [Section 4.1](#41-code-compilation-to-enable-server-rotation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_recovery.sh`:
 	- You can keep a part of round indexes in `exp9_round_list` to save time (default value is `"0" "1" "2" "3" "4" "5"`, i.e., 6 rounds).
 	- You can keep a part of cache sizes in `exp9_cachesize_list` to save time (default value is `"100" "1000" "10000"`).
@@ -432,7 +506,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp9\]\[0\]\[.*\] Get recovery time/ {flag = 1;
 # awk -v flag=0 'flag == 0 && /\[exp9\]\[{i}\]\[.*\] Get recovery time/ {flag = 1; print $0; next} flag == 1 && /Switch total/ {flag = 0; print $0; next}' tmp_exp_recovery.out
 ```
 
-## 7. AE on Hardware Resource Usage
+## 8. AE on Hardware Resource Usage
 
 - This experiment does NOT need to run the benchmark, as hardware resource usage is statically allocated after P4 code compilation, which is orthogonal with runtime environments.
 	- **Note: we have already compiled P4 code of all methods (each takes around 3 hours), so you do NOT need to re-compile them again.**
