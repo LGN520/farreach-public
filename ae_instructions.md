@@ -1,6 +1,6 @@
 # AE Instructions
 
-Here are the detailed instructions to reproduce experiments in our paper.
+Here are the getting started instructions ([Section 4](#4-getting-started-instructions)) and detailed instructions starting from [Section 5](#5-ae-on-ycsb-core-worklaods) to reproduce experiments in our paper.
 
 # Table of Contents
 
@@ -475,10 +475,10 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 - Under main client (dl11), for `scripts/exps/run_exp_recovery.sh`:
 	- You can keep a part of round indexes in `exp9_round_list` to save time (default value is `"0" "1" "2" "3" "4" "5"`, i.e., 6 rounds).
 	- You can keep a part of cache sizes in `exp9_cachesize_list` to save time (default value is `"100" "1000" "10000"`).
-	- Note: this script does NOT support dynamic pattern now.
-		- If you really want to test crash recovery time of dynamic patterns **(NOT in our paper)**, you can refer to the manual way for evaluation in [README.md](./README.md#4-running-workloads-manual-evaluation).
 	- **Note: do NOT launch any other experiment before this experiment finishes.**
+	- Note: this script does NOT support dynamic pattern now **(NOT the experiments in our paper)**.
 <!-- 
+		- If you really want to test crash recovery time of dynamic patterns, you can refer to the manual way for evaluation in [README.md](./README.md#41-dynamic-worklaod-no-server-rotation), and get recovery time resutls by `scripts/remote/test_recovery_time.sh` and `scripts.local/calculate_recovery_time_helper.py`.
 	- Note: we use recoveryonly = 0 by default.
 		- If you really want to use recoveryonly mode (ONLY if you have alread run this experiment before), see the notes for exp_recovery in [README.md](./README.md#31-normal-script-usage).
 -->
