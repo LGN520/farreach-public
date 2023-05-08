@@ -7,6 +7,9 @@ Here are the detailed instructions to reproduce experiments in our paper.
 1. [Artifact Claims](#1-artifact-claims)
 2. [AE Testbed Overview](#2-ae-testbed-overview)
 3. [Notes for Artifact Evaluation](#3-notes-for-artifact-evaluation)
+	1. [Code Compilation](#31-code-compilation)
+	2. [Script Running Time](#32-script-running-time)
+	3. [Possible Errors](#33-possible-errors)
 4. [AE on YCSB Core Workloads](#4-ae-on-ycsb-core-workloads)
 	1. [Throughput Analysis](#41-throughput-analysis)
 	2. [Latency Analysis](#42-latency-analysis)
@@ -62,20 +65,12 @@ Here are the detailed instructions to reproduce experiments in our paper.
 
 ## 3. Notes for Artifact Evaluation
 
+### 3.1 Code Compilation
+
 - **Note: we have finished system preparation and data preparation, such that you can directly execute scripts to reproduce experiments.**
 	- System preparation includes software dependency installation, testbed configuration settings (e.g., Linux username, involved machines, and SSH settings), and code compilation **(server rotation is enabled by default for most experiments)**.
 	- Data preparation includes loading phase (pre-loading 100M records into server-side key-value storage) and workload analysis (calculate bottleneck partition by consistent hashing and generate workload files for server rotation).
 	- Although we have configured `scripts/global.sh` based on AE testbed and the AE account (username: atc2023ae), **please also make a double-check on `scripts/global.sh` by yourself.**
-
-</br>
-
-- **Note: most experiments use server rotation to simulate a large scale of servers, which is time-consuming:**
-	- Each iteration fixes the bottleneck partition (and deploys a non-bottleneck partition) (**TIME: around 5 minutes**).
-	- Each server rotation comprises tens of iterations (16-128) to simulate multiple machines (**TIME: around 1.5-12 hours**).
-	- Each experiment needs multiple server rotations for different methods and parameter settings (**TIME: around 1-3 day(s)**).
-	- Each round includes multiple experiments to evaluate from different perspectives (**TIME: around 1-2 week(s)**).
-	- We need multiple rounds to reduce runtime variation (**TIME: around 1-2 month(s)**).
-- **To save time, you can follow the guides of each experiment later to select a part of methods and parameter settings that you want before executing the corresponding script.**
 
 </br>
 
@@ -98,14 +93,25 @@ Here are the detailed instructions to reproduce experiments in our paper.
 			- Run `bash scripts/remote/sync_file.sh common helper.h` to sync the code change to all machines.
 		- Re-compile code of FarReach, NoCache, and NetCache with the same steps as mentioned above.
 
-</br>
+### 3.2 Script Running Time
 
-- **Note: if you get stuck at `[warmup_client] cache size: 10000` (from stdout of the current experiment script `scripts/exps/run_exp_*.sh`) with over ten minutes, there might exist leftover processes of previous experiments NOT being killed successfully:**
-	- Under main client (dl11): run `bash scripts/remote/stopall.sh` to kill all involved processes
-	- Under each machine of clients and servers (dl11, dl20, dl21, and dl30)
-		- Run `ps -aux | grep atc2023` to double if there exist any leftover process
-	- Under switch (bf3)
-		- Run `ps -aux | grep atc2023` and `ps -aux | grep switch` to double if there exist any leftover process
+- **Note: most experiments use server rotation to simulate a large scale of servers, which is time-consuming:**
+	- Each iteration fixes the bottleneck partition (and deploys a non-bottleneck partition) (**TIME: around 5 minutes**).
+	- Each server rotation comprises tens of iterations (16-128) to simulate multiple machines (**TIME: around 1.5-12 hours**).
+	- Each experiment needs multiple server rotations for different methods and parameter settings (**TIME: around 1-3 day(s)**).
+	- Each round includes multiple experiments to evaluate from different perspectives (**TIME: around 1-2 week(s)**).
+	- We need multiple rounds to reduce runtime variation (**TIME: around 1-2 month(s)**).
+- **To save time, you can follow the guides of each experiment later to select a part of methods and parameter settings that you want before executing the corresponding script.**
+
+### 3.3 Possible Errors
+
+- **Note: if you get stuck at `[warmup_client] cache size: 10000` (from stdout of the current experiment script `scripts/exps/run_exp_*.sh`) with over ten minutes:**
+	- Getting stuch can be caused by leftover processes of previous experiments, which are NOT killed successfully.
+	- Under main client (dl11): run `bash scripts/remote/stopall.sh` to kill all involved processes.
+	- Under each machine of clients and servers (dl11, dl20, dl21, and dl30):
+		- Run `ps -aux | grep atc2023` to double-check if there exist any leftover process.
+	- Under switch (bf3):
+		- Run `ps -aux | grep atc2023` and `ps -aux | grep switch` to double-check if there exist any leftover process.
 
 </br>
 
@@ -120,6 +126,7 @@ Here are the detailed instructions to reproduce experiments in our paper.
 ### 4.1 Throughput Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
+	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_throughput.sh`:
 	- You can keep a part of methods in `exp1_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp1_core_workload_list` to save time (default value is `"workloada" "workloadb" "workloadc" "workloadd" " workladf" "workload-load"`).
@@ -151,6 +158,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp1\]\[netcache\]\[.*\] sync/ {flag = 1; print
 ### 4.2 Latency Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
+	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_latency.sh`:
 	- You can keep a part of methods in `exp2_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of target throughput values `exp2_target_thpt_list` to save time (default value is `"0.2" "0.4" "0.6" "0.8"`).
@@ -182,6 +190,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp2\]\[nocache\]\[.*\] sync/ {flag = 1; print 
 ### 4.3 Scalability Analysis
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
+	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_scalability.sh`:
 	- You can keep a part of methods in `exp3_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of scalability values in `exp3_scalability_list` to save time (default value is `"32" "64" "128"`).
@@ -219,6 +228,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp3\]\[netcache\]\[.*\] sync/ {flag = 1; print
 ### 5.1 Impact of Write Ratio
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
+	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_write_ratio.sh`:
 	- You can keep a part of methods in `exp4_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp4_workload_list` to save time (default value is `"synthetic-25" "synthetic-75" "synthetic"`).
@@ -250,6 +260,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp4\]\[netcache\]\[.*\] sync/ {flag = 1; print
 ### 5.2 Impact of Key Distribution
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
+	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_key_distribution.sh`:
 	- You can keep a part of methods in `exp5_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp5_workload_list` to save time (default value is `"skewness-90" "skewness-95" "uniform"`).
@@ -281,6 +292,7 @@ $ TODO
 ### 5.3 Impact of Value Size
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
+	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_value_size.sh`:
 	- You can keep a part of methods in `exp6_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp6_workload_list` to save time (default value is `"valuesize-16" "valuesize-32" "valuesize-64"`).
@@ -312,6 +324,7 @@ $ TODO
 ### 5.4 Impact of Key Popularity Changes
 
 - **Pre-requisite: code is compiled with disabling server rotation.**
+	- If not, see [Section 3.1](#31-code-compilation) to disable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_dynamic.sh`:
 	- You can keep a part of methods in `exp7_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 	- You can keep a part of workloads in `exp7_dynamic_rule_list` to save time (default value is `"hotin" "hotout" "random" "stable"`).
@@ -345,6 +358,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print
 ### 6.1 Performance of Snapshot Generation
 
 - **Pre-requisite: code is compiled with disabling server rotation.**
+	- If not, see [Section 3.1](#31-code-compilation) to disable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_snapshot.sh`:
 	- You can keep a part of dynamic patterns in `exp8_dynamic_rule_list` to save time (default value is `"hotin" "hotout" "random"`).
 	- You can keep a part of snapshot periods in `exp8_snapshot_list` to save time (default value is `"0" "2500" "5000" "7500" "10000"`).
@@ -380,6 +394,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 ### 6.2 Crash Recovery Time
 
 - **Pre-requisite: code is compiled with enabling server rotation.**
+	- If not, see [Section 3.1](#31-code-compilation) to enable server rotation and re-compile code in all machines.
 - Under main client (dl11), for `scripts/exps/run_exp_recovery.sh`:
 	- You can keep a part of round indexes in `exp9_round_list` to save time (default value is `"0" "1" "2" "3" "4" "5"`, i.e., 6 rounds).
 	- You can keep a part of cache sizes in `exp9_cachesize_list` to save time (default value is `"100" "1000" "10000"`).
