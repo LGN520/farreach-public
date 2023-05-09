@@ -73,6 +73,8 @@
 
 # 1 System Preparation
 
+- **Note: system preparation has already been done in our AE testbed, so AEC members do NOT need to re-execute the following steps.**
+
 ## 1.1 Dependency Installation
 
 - Install python libraries for python 2.7.12 in {main client} if not
@@ -207,6 +209,15 @@
 
 </br>
 
+- Compile source code for all methods
+	- Under {main client}: `bash scripts/remote/firstcompile.sh` to compile software code for all methods in clients, servers, and switch(**TIME: around 1 hour**).
+	- For each {method}, under {switch}
+		- Run `su` to enter root mode
+		- Run `cd {method}/tofino; bash compile.sh` to make P4 code (**TIME: around 3 hours**)
+			+ If you have compiled P4 code of {method} before, you do **NOT need to re-compile it again**
+			+ If you really want to re-compile it (maybe due to P4 code modification), you should delete the corresponding directory (netbufferv4, nocache, or netcache) under $SDE/pkgsrc/p4-build/tofino/ before re-compilation
+
+<!--
 - For each {method}
 	+ Options of {method}: farreach, nocache, or netcache
 	+ Under {main client}
@@ -223,6 +234,7 @@
 		* Under {first server} and {second server}
 			- Run `bash scripts/local/makeserver.sh` (TIME: around 5 minutes)
 		* Note: if with "make: warning:  Clock skew detected.  Your build may be incomplete" during make, run `cd {method}; find . -type f | xargs touch` and then re-make files
+-->
 
 <!--
 * Automatic way (NOT used now due to very slow sequential compialtion) vs. makeclient/server/switchos.sh
@@ -246,12 +258,18 @@
 
 # 2 Data Preparation
 
+- **Note: data preparation has already been done in our AE testbed, so AEC members do NOT need to re-execute the following steps.**
+
 ## 2.1 Loading Phase
+
+<!--
+		* Set DIRNAME as nocache in `scripts/common.sh`
+		* Run `bash scripts/remote/sync_file.sh scripts common.sh` to sync scripts/common.sh to all clients, servers, and switch
+-->
 
 - Perform the loading phase and backup for evaluation time reduction (**TIME: around 40 minutes**; **ONLY need to perform once**)
 	+ Under {main client}
-		* Set DIRNAME as nocache in `scripts/common.sh`
-		* Run `bash scripts/remote/sync_file.sh scripts common.sh` to sync scripts/common.sh to all clients, servers, and switch
+		* Run `bash scripts/remote/setmethod.sh nocache` to set DIRNAME as nocache and sync to other machines.
 		* Run `bash scripts/remote/prepare_load.sh` to copy recordload/config.ini to overwrite nocache/config.ini in all clients, servers, and switch
 	+ Under {switch}, create two terminals
 		* In the first terminal
@@ -362,21 +380,38 @@
 </br>
 
 - Other useful scripts
-	+ scripts/remote/stopall.sh: forcely to stop and kill ycsb clients, server rotation scripts, servers (including controller and simulated reflector), and switch (including data plane and switch OS).
+	+ scripts/remote/stopall.sh: forcely to stop and kill ycsb clients, server rotation scripts, dynamic scripts, servers (including controller and simulated reflector), and switch (including data plane and switch OS).
 		- Note: you can run this script to kill all involved processes, if the previous experiment fails (e.g., due to testbed mis-configuration)
+	+ scripts/remote/enable_server_rotation.sh: update common/helper.h to enable server rotation and re-compile software code of all methods
+	+ scripts/remote/disable_server_rotation.sh: update common/helper.h to disable server rotation and re-compile software code of all methods
+	+ scripts/results/\*.sh: parse raw output file of run_exp\_\*.sh to get results
 
 </br>
 
 - With server rotation: run each {experiment} except exp_dynamic and exp_snapshot
 	- Options of {experiment}: exp_throughput, exp_latency, exp_scalability, exp_write_ratio, exp_key_distribution, exp_value_size, and exp_recovery
 	- Under {main client}
-		- Run `bash scripts/exps/run_{experiment}.sh <roundnumber>`
-		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round
+		- Re-compile all methods to enable server rotation if NOT: `bash scripts/remote/enable_server_rotation.sh`
+		- Run `nohup bash scripts/exps/run_{experiment}.sh <roundnumber> >tmp_{experiment}.out 2>&1 &`
+		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round for running an experiment
+	- After experiment, under {main client}
+		- `bash scripts/remote/stopall.sh` to kill all involved processes
+		- `bash scripts/results/parse_{experiment}.sh tmp_{experiment}.out` to get results
 
 </br>
 
 - Without server rotation: run {experiment} of exp_dynamic or exp_snapshot
-	- Under {main client}, re-compile code to disable server rotation if not
+	- Under {main client}
+		- Re-compile code to disable server rotation if NOT: `bash scripts/remote/disable_server_rotation.sh`
+		- Run `bash scripts/exps/run_{experiment} <roundnumber>`
+		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round
+	- After experiment, under {main client}
+		- `bash scripts/remote/stopall.sh` to kill all involved processes
+		- `bash scripts/results/parse_{experiment}.sh tmp_{experiment}.out` to get results
+	- As most experiments use server rotation for static pattern instead of dynamic patterns, you may want to re-compile your code to enable server rotation again
+		- Under {main client}, enable server rotation: `bash scripts/remote/enable_server_rotation.sh`
+
+<!--
 		- Disable server rotation
 			- Comment line 82 (#define SERVER_ROTATION) in `common/helper.h` to disable server rotation
 			- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
@@ -386,11 +421,9 @@
 			- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 			- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
 			- Under {switch}, run `bash scripts/local/makeswitchos.sh`
-	- Under {main client}
-		- Run `bash scripts/exps/run_{experiment} <roundnumber>`
-		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round
-	- After running all rounds of current {experiment}, as most experiments use server rotation for static pattern instead of dynamic patterns, you may want to re-compile your code to enable server rotation again
-		- Under {main client}, enable server rotation
+
+
+
 			- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation
 			- `bash scripts/remote/sync_file.sh common helper.h` to sync code changes to all machines
 		- Under {main client}, for each {method}, re-compile software code (NO need for P4 code of switch data plane)
@@ -399,6 +432,7 @@
 			- Under {main client} and {secondary client}, run `bash scripts/local/makeclient.sh`
 			- Under {first server} and {second server}, run `bash scripts/local/makeserver.sh`
 			- Under {switch}, run `bash scripts/local/makeswitchos.sh`
+-->
 
 </br>
 
@@ -422,19 +456,19 @@
 
 </br>
 
-- If scripts (e.g., `scripts/local/calculate_statistics.sh`) say that you need to perform a single iteration for each missing number
+- If scripts (e.g., `scripts/local/calculate_statistics.sh`) say that you need to perform a single iteration for each missing iteration number of an incomplete server rotation of the experiment
 	- Under {main client}, run `bash scripts/exps/run_makeup_rotation_exp.sh <expname> <roundnumber> <methodname> <workloadname> <serverscale> <bottleneckidx> <targetrotation> [targetthpt]` to launch a single iteration
-		- `expname`: experiment name (eg.: exp1)
+		- `expname`: experiment name (eg.: "exp1" for throughput analysis)
 			- Note: `expname` only indicates the path to store rawstatistics, yet NOT affect experiment results
-		- `roundnumber`: experiment round number (eg.: 1)
+		- `roundnumber`: the index of the current round for running the experiment (eg.: 0)
 		- `methodname`: experiment method (eg.: farreach)
 		- `workloadname`: workload name (eg.: workloada)
-		- `serverscale`: number of servers for rotation (eg.: 16)
-		- `bottleneckidx`: bottleneck server index for rotation with this workload (eg.: 14)
-		- `targetrotation`: the non-bottleneck server index in the iteration (eg.: 10)
-		- `targetthpt`: throughput target of this rotation, only applicable for exp2
+		- `serverscale`: number of simulated servers (eg.: 16)
+		- `bottleneckidx`: bottleneck server index of server rotation related with the workload and scale (eg.: 14)
+		- `targetrotation`: the non-bottleneck server index in the missing iteration (eg.: 10)
+		- `targetthpt`: the target throughput of the server rotation for the missing iteration, only applicable for exp2 (latency analysis)
 		- The above arguments of `scripts/exps/run_makeup_rotation_exp.sh` are determined by the missing iteration of the server rotation for the specific experiment
-			- For example, for exp_throughput, you may pass arguments with `expname=exp1, roundnumber=0, methodname=farreach, workloadname=workloada, serverscale=16, bottleneckidx=14, targetrotation=10`
+			- For example, for exp_throughput, you may pass arguments with `expname=exp1, roundnumber=0, methodname=farreach, workloadname=workloada, serverscale=16, bottleneckidx=14, targetrotation=10` to execute the 11th iteration
 				- The script will deploy the bottleneck serveridx 14 in {first server} and the non-bottleneck serveridx 10 in {second server} for the single iteration, and update the raw statistics in place
 	- Note: `scripts/exps/run_makeup_rotation_exp.sh` **should NOT support exp_dynamic or exp_snapshot**, as the experiments of dynamic workload patterns do NOT use server rotation
 		- Therefore, this script ONLY works for experiments with server rotation: exp_key_distribution, exp_latency, exp_scalability, exp_value_size, exp_write_ratio, and exp_throughput
