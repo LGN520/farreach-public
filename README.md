@@ -9,12 +9,12 @@
 0. [Overview](#0-overview)
 	1. [Methods](#01-methods)
 	2. [Our Testbed](#02-our-testbed)
-1. [System Preperation](#1-system-preperation)
+1. [System Preparation](#1-system-preparation)
 	1. [Dependency Installation](#11-dependency-installation)
 	2. [Configuration settings](#12-configuration-settings)
 	3. [Code Compilation](#13-code-compilation)
 	4. [Testbed Building](#14-testbed-building)
-2. [Data Preperation](#2-data-preperation)
+2. [Data Preparation](#2-data-preparation)
 	1. [Loading Phase](#21-loading-phase)
 	2. [Workload Analysis & Dump Keys](#22-workload-analysis--dump-keys)
 3. [Running Experiments (Automatic Evaluation)](#3-running-experiments-automatic-evaluation)
@@ -71,7 +71,7 @@
 		* Second server (NIC: ens3f1; MAC: 9c:69:b4:60:ef:c1) <-> Tofino switch (front panel port: 3/0)
 		* Tofino switch (front panel port: 7/0) <-> Tofino switch (front panel port: 12/0) (for in-switch cross-pipeline recirculation)
 
-# 1 System Preperation
+# 1 System Preparation
 
 ## 1.1 Dependency Installation
 
@@ -244,7 +244,7 @@
 	+ In {second server}, run `bash scripts/local/configure_server.sh 1`
 	+ In {switch} OS, run `su` to enter root mode and run `bash scripts/local/configure_switchos.sh`
 
-# 2 Data Preperation
+# 2 Data Preparation
 
 ## 2.1 Loading Phase
 
