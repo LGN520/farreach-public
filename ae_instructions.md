@@ -9,7 +9,7 @@
 1. [Artifact Claims](#1-artifact-claims)
 2. [AE Testbed Overview](#2-ae-testbed-overview)
 3. [Notes for Artifact Evaluation](#3-notes-for-artifact-evaluation)
-	1. [Preperation Already Done for AE](#31-preperation-already-done-for-ae)
+	1. [Preparation Already Done for AE](#31-preparation-already-done-for-ae)
 	2. [Script Running Time](#32-script-running-time)
 	3. [Possible Errors](#33-possible-errors)
 4. [Getting Started Instructions](#4-getting-started-instructions)
@@ -72,7 +72,7 @@
 
 ## 3. Notes for Artifact Evaluation
 
-### 3.1 Preperation Already Done for AE
+### 3.1 Preparation Already Done for AE
 
 - **Note: we have finished system preparation and data preparation, such that you can directly execute getting started instructions and detailed instructions to reproduce experiments.**
 	- System preparation includes software dependency installation, testbed configuration settings (e.g., Linux username, involved machines, and SSH settings), and code compilation.
