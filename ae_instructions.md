@@ -18,9 +18,6 @@
 	2. [Script Running Time](#32-script-running-time)
 	3. [Possible Errors](#33-possible-errors)
 4. [Getting Started Instructions](#4-getting-started-instructions)
-	1. [Code Compilation to Disable Server Rotation](#41-code-compilation-to-disable-server-rotation)
-	2. [Script Usage](#42-script-usage)
-	3. [Code Compilation to Enable Server Rotation](#41-code-compilation-to-enable-server-rotation)
 5. [AE on YCSB Core Workloads](#5-ae-on-ycsb-core-workloads)
 	1. [Throughput Analysis](#51-throughput-analysis)
 	2. [Latency Analysis](#52-latency-analysis)
@@ -34,6 +31,12 @@
 	1. [Performance of Snapshot Generation](#71-performance-of-snapshot-generation)
 	2. [Crash Recovery Time](#72-crash-recovery-time)
 8. [AE on Hardware Resource Usage](#8-ae-on-hardware-resource-usage)
+
+<!--
+	1. [Code Compilation to Disable Server Rotation](#41-code-compilation-to-disable-server-rotation)
+	2. [Script Usage](#42-script-usage)
+	3. [Code Compilation to Enable Server Rotation](#41-code-compilation-to-enable-server-rotation)
+-->
 
 ## 1. Artifact Claims
 
@@ -121,7 +124,7 @@
 
 - **As our system does NOT have things like "Hello World", we take the experiment on impact of key popularity changes, which has relatively short running time, as the getting started instructions.**
 	- There are 12 numbers in total, each of which requires around 5-10 minutes.
-	- You can refer the guides in [Script Usage](#42-script-usage) to reduce some methods and workloads to save time.
+	- You can reduce some methods and workloads to save time as guided later.
 
 <!--
 ### 4.1 Code Compilation to Disable Server Rotation
@@ -224,7 +227,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp7\]\[netcache\]\[.*\] sync/ {flag = 1; print
 -->
 - Under main client (dl11):
 	- Enable server rotation if NOT: `bash scripts/remote/enable_server_rotation.sh`
-		- Note: getting started instructions has disabled server rotation, so we need to enable server rotation here.
+		- Note: getting started instructions has disabled server rotation, so you need to enable server rotation here.
 	- For `scripts/exps/run_exp_throughput.sh`:
 		- You can keep a part of methods in `exp1_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 		- You can keep a part of workloads in `exp1_core_workload_list` to save time (default value is `"workloada" "workloadb" "workloadc" "workloadd" " workladf" "workload-load"`).
@@ -471,7 +474,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp6\]\[netcache\]\[.*\] sync/ {flag = 1; print
 -->
 - Under main client (dl11):
 	- Disable server rotation if NOT: `bash scripts/remote/disable_server_rotation.sh`
-		- Note: the previous experiments haave enabled server rotation, so we need to disable server rotation here.
+		- Note: the previous experiments have enabled server rotation, so you need to disable server rotation here.
 	- For `scripts/exps/run_exp_dynamic.sh`:
 		- You can keep a part of methods in `exp7_method_list` to save time (default value is `"farreach" "nocache" "netcache"`).
 		- You can keep a part of workloads in `exp7_dynamic_rule_list` to save time (default value is `"hotin" "hotout" "random" "stable"`).
@@ -558,7 +561,7 @@ $ awk -v flag=0 'flag == 0 && /\[exp8\]\[random\]\[.*\] sync/ {flag = 1; print $
 -->
 - Under main client (dl11):
 	- Enable server rotation if NOT: `bash scripts/remote/enable_server_rotation`
-		- Note; as the previous experiments have disabled server rotation, so you need to disable server rotation here.
+		- Note: as the previous experiments have disabled server rotation, so you need to enable server rotation here.
 	- For `scripts/exps/run_exp_recovery.sh`:
 		- You can keep a part of round indexes in `exp9_round_list` to save time (default value is `"0" "1" "2" "3" "4" "5"`, i.e., 6 rounds).
 		- You can keep a part of cache sizes in `exp9_cachesize_list` to save time (default value is `"100" "1000" "10000"`).
