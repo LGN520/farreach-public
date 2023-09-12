@@ -32,33 +32,36 @@ git add -f benchmark/output/.placeholder
 # Add link for publich repo, and remove link for remote repo
 git remote add publicrepo ${publicrepo}
 
-# Remove unnecessary files from private repo
-rm -r ./common/reserved_files
+# Remove unnecessary files from private repo (commented files are moved to ./deprecated or ./*/deprecated)
+#rm -r ./common/reserved_files
 rm -r ./deprecated
-rm -r ./distcache
-rm -r ./distfarreach
-rm -r ./distnocache
+#rm -r ./distcache
+#rm -r ./distfarreach
+#rm -r ./distnocache
+#rm -r ./failedtrials
+#rm -r ./futuretrials
+#rm -r ./ovs
+#rm -r ./tommyds-2.2
+#rm ./scripts/local/calculate_statistics_helper.py.bak.*
+#rm -r ./scripts/remote/deprecated
 rm -r ./docs
-rm -r ./failedtrials
-rm -r ./farreach/deprecated-src
-rm -r ./farreach/deprecated-synthetic
-rm -r ./farreach/deprecated-tofino
-rm -r ./farreach/deprecatedscripts
-rm -r ./farreach/tofino/deprecate
-rm -r ./farreach/workloadparser
-rm -r ./futuretrials
-rm -r ./netcache/deprecated-src
-rm -r ./netcache/deprecated-synthetic
-rm -r ./netcache/deprecated-tofino
-rm -r ./netcache/deprecatedscripts
-rm -r ./nocache/deprecated-src
-rm -r ./nocache/deprecated-synthetic
-rm -r ./nocache/deprecated-tofino
-rm -r ./nocache/deprecatedscripts
-rm -r ./ovs
-rm ./scripts/local/calculate_statistics_helper.py.bak.*
-rm -r ./scripts/remote/deprecated
-rm -r ./tommyds-2.2
+rm -r ./farreach/deprecated
+#rm -r ./farreach/deprecated-src
+#rm -r ./farreach/deprecated-synthetic
+#rm -r ./farreach/deprecated-tofino
+#rm -r ./farreach/deprecatedscripts
+#rm -r ./farreach/tofino/deprecate
+#rm -r ./farreach/workloadparser
+rm -r ./netcache/deprecated
+#rm -r ./netcache/deprecated-src
+#rm -r ./netcache/deprecated-synthetic
+#rm -r ./netcache/deprecated-tofino
+#rm -r ./netcache/deprecatedscripts
+rm -r ./nocache/deprecated
+#rm -r ./nocache/deprecated-src
+#rm -r ./nocache/deprecated-synthetic
+#rm -r ./nocache/deprecated-tofino
+#rm -r ./nocache/deprecatedscripts
 rm evaluation-progress.md
 rm rmhistory.sh
 rm update_public_repo.sh
