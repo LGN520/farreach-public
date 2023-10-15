@@ -1,3 +1,4 @@
+set -x
 DIRNAME="farreach"
 
 #set -e
@@ -41,8 +42,8 @@ if [ "x${recovermode}" == "xrecover" ]
 then
 	sleep 10s # wait for data plane interfaces UP; wait for ptf_popserver
 	echo "launch switchos w/ recovery mode"
-	nohup ./switchos ${recovermode} >tmp_switchos.out 2>&1 &
+	mx switchos nohup ./switchos ${recovermode} >tmp_switchos.out 2>&1 &
 else
 	echo "launch switchos"
-	nohup ./switchos >tmp_switchos.out 2>&1 &
+	mx switchos nohup ./switchos >tmp_switchos.out 2>&1 &
 fi

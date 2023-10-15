@@ -71,13 +71,12 @@ void run_warmuper() {
 
 	printf("[warmup_client] cache size: %d\n", switch_kv_bucket_num);
 	fflush(stdout);
-
 	int tmp_warmupcnt = 0;
 	while (true) {
 		if (!iter->next()) {
 			break;
 		}
-
+ 		printf("tmp_warmupcnt %d\n",tmp_warmupcnt);fflush(stdout);
 		tmpkey = iter->key();
 		if (iter->type() == uint8_t(packet_type_t::WARMUPREQ)) { // update or insert
 			//tmpval = iter->val();
@@ -93,15 +92,16 @@ void run_warmuper() {
 
 			//printf("key: %x, hashres: %d\n", req.key().keyhihi, req.key().get_hashpartition_idx(32768, 16));
 			//exit(-1);
-
+			// printf("debug\n");
 			udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
-
+			// printf("debug\n");
 			udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+			// printf("debug\n");
 			INVARIANT(recv_size > 0);
 #ifdef DUMP_BUF
 			dump_buf(buf, recv_size);
 #endif
-
+			// printf("debug\n");
 			warmup_ack_t rsp(CURMETHOD_ID, buf, recv_size);
 			UNUSED(rsp);
 		}

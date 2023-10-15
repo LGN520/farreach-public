@@ -1,3 +1,4 @@
+set -x
 if [ $1 == "setup" ]
 then
 	python3 controller/periodic_update.py >/dev/null 2>&1 &

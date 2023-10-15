@@ -1,3 +1,4 @@
+set -x
 #!/use/bin/env bash
 
 pids=$(ps -aux | grep "./client" | grep -v "grep" | awk '{print $2}')

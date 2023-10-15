@@ -1,3 +1,4 @@
+set -x
 #!/usr/bin/env bash
 cd ../../
 source scripts/common.sh

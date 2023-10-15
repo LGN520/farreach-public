@@ -1,20 +1,21 @@
+set -x
 if [ "x${is_common_included}" != "x1" ]
 then
 	cd ..
-	source scripts/common.sh
+	source scriptsbmv2/common.sh
 	if [ "x${DIRNAME}" != "xfarreach" ]
 	then
-		echo "[ERROR] you should change DIRNAME as farreach in scripts/common.sh before running fetchsnapshotandmaxseq_controllerandserver2switch.sh"
+		echo "[ERROR] you should change DIRNAME as farreach in scriptsbmv2/common.sh before running fetchsnapshotandmaxseq_controllerandserver2switch.sh"
 		exit
 	fi
 	cd ${DIRNAME}
 fi
 
-# set -x
+# 
 
 if [ "x${DIRNAME}" != "xfarreach" ]
 then
-	echo "[ERROR] DIRNAME should be farreach in scripts/common.sh for fetchall_all2switch.sh"
+	echo "[ERROR] DIRNAME should be farreach in scriptsbmv2/common.sh for fetchall_all2switch.sh"
 	exit
 fi
 
@@ -41,11 +42,11 @@ rm -r /tmp/${DIRNAME}/*
 #	exit
 #fi
 
-# Copy in-switch snapshot id/data from controller to switch
-echo "Copy in-switch snapshot from controller to switch"
-scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SERVER0}:/tmp/${DIRNAME}/controller.snapshot* /tmp/${DIRNAME}
+# # Copy in-switch snapshot id/data from controller to switch
+# echo "Copy in-switch snapshot from controller to switch"
+# scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SERVER0}:/tmp/${DIRNAME}/controller.snapshot* /tmp/${DIRNAME}
 
-# Copy latest/snapshot maxseq from server to switch
-echo "Copy maxseq files from server to switch"
-scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SERVER0}:/tmp/${DIRNAME}/*maxseq* /tmp/${DIRNAME}
-scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SERVER1}:/tmp/${DIRNAME}/*maxseq* /tmp/${DIRNAME}
+# # Copy latest/snapshot maxseq from server to switch
+# echo "Copy maxseq files from server to switch"
+# scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SERVER0}:/tmp/${DIRNAME}/*maxseq* /tmp/${DIRNAME}
+# scp -i /home/${USER}/${CONNECTION_PRIVATEKEY} ${USER}@${SERVER1}:/tmp/${DIRNAME}/*maxseq* /tmp/${DIRNAME}
