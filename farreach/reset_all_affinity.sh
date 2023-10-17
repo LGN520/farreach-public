@@ -1,4 +1,3 @@
-set -x
 #!/usr/bin/env bash
 
 if [ $# -lt 3 ]

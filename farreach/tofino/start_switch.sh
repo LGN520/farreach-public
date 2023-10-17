@@ -1,4 +1,3 @@
-set -x
 #!/usr/bin/env bash
 
 source /root/.zshrc

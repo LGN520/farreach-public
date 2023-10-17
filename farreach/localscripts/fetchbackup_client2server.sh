@@ -1,11 +1,10 @@
-set -x
 if [ "x${is_common_included}" != "x1" ]
 then
 	cd ..
-	source scriptsbmv2/common.sh
+	source scripts/common.sh
 	if [ "x${DIRNAME}" != "xfarreach" ]
 	then
-		echo "[ERROR] you should change DIRNAME as farreach in scriptsbmv2/common.sh before running fetchbackup_client2server.sh"
+		echo "[ERROR] you should change DIRNAME as farreach in scripts/common.sh before running fetchbackup_client2server.sh"
 		exit
 	fi
 	cd ${DIRNAME}
@@ -28,7 +27,7 @@ function getTiming(){
 	echo $(echo "scale=4; ${time_micro} / 1000.0 / 1000.0" | bc)
 }
 
-#
+#set -x
 
 tmpdir="benchmark/output/upstreambackups"
 

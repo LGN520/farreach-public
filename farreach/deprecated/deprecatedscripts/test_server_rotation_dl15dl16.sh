@@ -1,4 +1,3 @@
-set -x
 DIRNAME="netreach-v4-lsm"
 
 # NOTE: you need to finish loading phase [+ warmup phase (if w/ inswitch cache)] before running this script

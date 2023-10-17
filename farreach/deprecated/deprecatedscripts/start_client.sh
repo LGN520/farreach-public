@@ -1,4 +1,3 @@
-set -x
 bash localkill.sh client
 rm -rf tmp_client.out
 rm -rf tmp_client*.out
