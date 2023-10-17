@@ -1,0 +1,1033 @@
+{
+  "header_types" : [
+    {
+      "name" : "scalars_0",
+      "id" : 0,
+      "fields" : [
+        ["userMetadata._meta_hashval_for_partition0", 16, false]
+      ]
+    },
+    {
+      "name" : "standard_metadata",
+      "id" : 1,
+      "fields" : [
+        ["ingress_port", 9, false],
+        ["egress_spec", 9, false],
+        ["egress_port", 9, false],
+        ["instance_type", 32, false],
+        ["packet_length", 32, false],
+        ["enq_timestamp", 32, false],
+        ["enq_qdepth", 19, false],
+        ["deq_timedelta", 32, false],
+        ["deq_qdepth", 19, false],
+        ["ingress_global_timestamp", 48, false],
+        ["egress_global_timestamp", 48, false],
+        ["mcast_grp", 16, false],
+        ["egress_rid", 16, false],
+        ["checksum_error", 1, false],
+        ["parser_error", 32, false],
+        ["priority", 3, false],
+        ["_padding", 3, false]
+      ]
+    },
+    {
+      "name" : "ethernet_t",
+      "id" : 2,
+      "fields" : [
+        ["dstAddr", 48, false],
+        ["srcAddr", 48, false],
+        ["etherType", 16, false]
+      ]
+    },
+    {
+      "name" : "ipv4_t",
+      "id" : 3,
+      "fields" : [
+        ["version", 4, false],
+        ["ihl", 4, false],
+        ["diffserv", 8, false],
+        ["totalLen", 16, false],
+        ["identification", 16, false],
+        ["flags", 3, false],
+        ["fragOffset", 13, false],
+        ["ttl", 8, false],
+        ["protocol", 8, false],
+        ["hdrChecksum", 16, false],
+        ["srcAddr", 32, false],
+        ["dstAddr", 32, false]
+      ]
+    },
+    {
+      "name" : "udp_t",
+      "id" : 4,
+      "fields" : [
+        ["srcPort", 16, false],
+        ["dstPort", 16, false],
+        ["hdrlen", 16, false],
+        ["checksum", 16, false]
+      ]
+    },
+    {
+      "name" : "op_t",
+      "id" : 5,
+      "fields" : [
+        ["optype", 16, false],
+        ["keylolo", 32, false],
+        ["keylohi", 32, false],
+        ["keyhilo", 32, false],
+        ["keyhihilo", 16, false],
+        ["keyhihihi", 16, false]
+      ]
+    }
+  ],
+  "headers" : [
+    {
+      "name" : "scalars",
+      "id" : 0,
+      "header_type" : "scalars_0",
+      "metadata" : true,
+      "pi_omit" : true
+    },
+    {
+      "name" : "standard_metadata",
+      "id" : 1,
+      "header_type" : "standard_metadata",
+      "metadata" : true,
+      "pi_omit" : true
+    },
+    {
+      "name" : "ethernet_hdr",
+      "id" : 2,
+      "header_type" : "ethernet_t",
+      "metadata" : false,
+      "pi_omit" : true
+    },
+    {
+      "name" : "ipv4_hdr",
+      "id" : 3,
+      "header_type" : "ipv4_t",
+      "metadata" : false,
+      "pi_omit" : true
+    },
+    {
+      "name" : "udp_hdr",
+      "id" : 4,
+      "header_type" : "udp_t",
+      "metadata" : false,
+      "pi_omit" : true
+    },
+    {
+      "name" : "op_hdr",
+      "id" : 5,
+      "header_type" : "op_t",
+      "metadata" : false,
+      "pi_omit" : true
+    }
+  ],
+  "header_stacks" : [],
+  "header_union_types" : [],
+  "header_unions" : [],
+  "header_union_stacks" : [],
+  "field_lists" : [],
+  "errors" : [
+    ["NoError", 0],
+    ["PacketTooShort", 1],
+    ["NoMatch", 2],
+    ["StackOutOfBounds", 3],
+    ["HeaderTooShort", 4],
+    ["ParserTimeout", 5],
+    ["ParserInvalidArgument", 6]
+  ],
+  "enums" : [],
+  "parsers" : [
+    {
+      "name" : "parser",
+      "id" : 0,
+      "init_state" : "start",
+      "parse_states" : [
+        {
+          "name" : "start",
+          "id" : 0,
+          "parser_ops" : [
+            {
+              "parameters" : [
+                {
+                  "type" : "regular",
+                  "value" : "ethernet_hdr"
+                }
+              ],
+              "op" : "extract"
+            }
+          ],
+          "transitions" : [
+            {
+              "type" : "hexstr",
+              "value" : "0x0800",
+              "mask" : null,
+              "next_state" : "parse_ipv4"
+            },
+            {
+              "type" : "default",
+              "value" : null,
+              "mask" : null,
+              "next_state" : null
+            }
+          ],
+          "transition_key" : [
+            {
+              "type" : "field",
+              "value" : ["ethernet_hdr", "etherType"]
+            }
+          ]
+        },
+        {
+          "name" : "parse_ipv4",
+          "id" : 1,
+          "parser_ops" : [
+            {
+              "parameters" : [
+                {
+                  "type" : "regular",
+                  "value" : "ipv4_hdr"
+                }
+              ],
+              "op" : "extract"
+            }
+          ],
+          "transitions" : [
+            {
+              "type" : "hexstr",
+              "value" : "0x11",
+              "mask" : null,
+              "next_state" : "parse_udp_dstport"
+            },
+            {
+              "type" : "default",
+              "value" : null,
+              "mask" : null,
+              "next_state" : null
+            }
+          ],
+          "transition_key" : [
+            {
+              "type" : "field",
+              "value" : ["ipv4_hdr", "protocol"]
+            }
+          ]
+        },
+        {
+          "name" : "parse_udp_dstport",
+          "id" : 2,
+          "parser_ops" : [
+            {
+              "parameters" : [
+                {
+                  "type" : "regular",
+                  "value" : "udp_hdr"
+                }
+              ],
+              "op" : "extract"
+            }
+          ],
+          "transitions" : [
+            {
+              "type" : "hexstr",
+              "value" : "0x0480",
+              "mask" : "0xff80",
+              "next_state" : "parse_op"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x1390",
+              "mask" : null,
+              "next_state" : "parse_op"
+            },
+            {
+              "type" : "default",
+              "value" : null,
+              "mask" : null,
+              "next_state" : "parse_udp_srcport"
+            }
+          ],
+          "transition_key" : [
+            {
+              "type" : "field",
+              "value" : ["udp_hdr", "dstPort"]
+            }
+          ]
+        },
+        {
+          "name" : "parse_udp_srcport",
+          "id" : 3,
+          "parser_ops" : [],
+          "transitions" : [
+            {
+              "type" : "hexstr",
+              "value" : "0x0480",
+              "mask" : "0xff80",
+              "next_state" : "parse_op"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x1391",
+              "mask" : null,
+              "next_state" : "parse_op"
+            },
+            {
+              "type" : "default",
+              "value" : null,
+              "mask" : null,
+              "next_state" : null
+            }
+          ],
+          "transition_key" : [
+            {
+              "type" : "field",
+              "value" : ["udp_hdr", "srcPort"]
+            }
+          ]
+        },
+        {
+          "name" : "parse_op",
+          "id" : 4,
+          "parser_ops" : [
+            {
+              "parameters" : [
+                {
+                  "type" : "regular",
+                  "value" : "op_hdr"
+                }
+              ],
+              "op" : "extract"
+            }
+          ],
+          "transitions" : [
+            {
+              "type" : "default",
+              "value" : null,
+              "mask" : null,
+              "next_state" : null
+            }
+          ],
+          "transition_key" : [
+            {
+              "type" : "field",
+              "value" : ["op_hdr", "optype"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "parse_vsets" : [],
+  "deparsers" : [
+    {
+      "name" : "deparser",
+      "id" : 0,
+      "source_info" : {
+        "filename" : "p4src/parser.p4",
+        "line" : 132,
+        "column" : 8,
+        "source_fragment" : "nocahceDeparser"
+      },
+      "order" : ["ethernet_hdr", "ipv4_hdr", "udp_hdr", "op_hdr"],
+      "primitives" : []
+    }
+  ],
+  "meter_arrays" : [],
+  "counter_arrays" : [],
+  "register_arrays" : [],
+  "calculations" : [],
+  "learn_lists" : [],
+  "actions" : [
+    {
+      "name" : "NoAction",
+      "id" : 0,
+      "runtime_data" : [],
+      "primitives" : []
+    },
+    {
+      "name" : "NoAction",
+      "id" : 1,
+      "runtime_data" : [],
+      "primitives" : []
+    },
+    {
+      "name" : "NoAction",
+      "id" : 2,
+      "runtime_data" : [],
+      "primitives" : []
+    },
+    {
+      "name" : "nocahceIngress.l2l3_forward",
+      "id" : 3,
+      "runtime_data" : [
+        {
+          "name" : "eport",
+          "bitwidth" : 9
+        }
+      ],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["standard_metadata", "egress_spec"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 0
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/ingress_mat.p4",
+            "line" : 12,
+            "column" : 2,
+            "source_fragment" : "standard_metadata.egress_spec = eport"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "nocahceIngress.hash_partition",
+      "id" : 4,
+      "runtime_data" : [
+        {
+          "name" : "udpport",
+          "bitwidth" : 16
+        },
+        {
+          "name" : "eport",
+          "bitwidth" : 9
+        }
+      ],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["udp_hdr", "dstPort"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 0
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/ingress_mat.p4",
+            "line" : 32,
+            "column" : 2,
+            "source_fragment" : "hdr.udp_hdr.dstPort = udpport"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["standard_metadata", "egress_spec"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 1
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/ingress_mat.p4",
+            "line" : 33,
+            "column" : 2,
+            "source_fragment" : "standard_metadata.egress_spec = eport"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "nocahceIngress.forward_normal_response",
+      "id" : 5,
+      "runtime_data" : [
+        {
+          "name" : "eport",
+          "bitwidth" : 9
+        }
+      ],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["standard_metadata", "egress_spec"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 0
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/ingress_mat.p4",
+            "line" : 52,
+            "column" : 2,
+            "source_fragment" : "standard_metadata.egress_spec = eport"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "NoAction",
+      "id" : 6,
+      "runtime_data" : [],
+      "primitives" : []
+    },
+    {
+      "name" : "NoAction",
+      "id" : 7,
+      "runtime_data" : [],
+      "primitives" : []
+    },
+    {
+      "name" : "nocahceEgress.update_ipmac_srcport_server2client",
+      "id" : 8,
+      "runtime_data" : [
+        {
+          "name" : "client_mac",
+          "bitwidth" : 48
+        },
+        {
+          "name" : "server_mac",
+          "bitwidth" : 48
+        },
+        {
+          "name" : "client_ip",
+          "bitwidth" : 32
+        },
+        {
+          "name" : "server_ip",
+          "bitwidth" : 32
+        },
+        {
+          "name" : "server_port",
+          "bitwidth" : 16
+        }
+      ],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ethernet_hdr", "srcAddr"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 1
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 30,
+            "column" : 2,
+            "source_fragment" : "hdr.ethernet_hdr.srcAddr = server_mac"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ethernet_hdr", "dstAddr"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 0
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 31,
+            "column" : 2,
+            "source_fragment" : "hdr.ethernet_hdr.dstAddr = client_mac"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ipv4_hdr", "srcAddr"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 3
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 32,
+            "column" : 2,
+            "source_fragment" : "hdr.ipv4_hdr.srcAddr = server_ip"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ipv4_hdr", "dstAddr"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 2
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 33,
+            "column" : 2,
+            "source_fragment" : "hdr.ipv4_hdr.dstAddr = client_ip"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["udp_hdr", "srcPort"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 4
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 34,
+            "column" : 2,
+            "source_fragment" : "hdr.udp_hdr.srcPort = server_port"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "nocahceEgress.update_dstipmac_client2server",
+      "id" : 9,
+      "runtime_data" : [
+        {
+          "name" : "server_mac",
+          "bitwidth" : 48
+        },
+        {
+          "name" : "server_ip",
+          "bitwidth" : 32
+        }
+      ],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ethernet_hdr", "dstAddr"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 0
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 38,
+            "column" : 2,
+            "source_fragment" : "hdr.ethernet_hdr.dstAddr = server_mac"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ipv4_hdr", "dstAddr"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 1
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 39,
+            "column" : 2,
+            "source_fragment" : "hdr.ipv4_hdr.dstAddr = server_ip"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "nocahceEgress.update_pktlen",
+      "id" : 10,
+      "runtime_data" : [
+        {
+          "name" : "udplen",
+          "bitwidth" : 16
+        },
+        {
+          "name" : "iplen",
+          "bitwidth" : 16
+        }
+      ],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["udp_hdr", "hdrlen"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 0
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 60,
+            "column" : 2,
+            "source_fragment" : "hdr.udp_hdr.hdrlen = udplen"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["ipv4_hdr", "totalLen"]
+            },
+            {
+              "type" : "runtime_data",
+              "value" : 1
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 61,
+            "column" : 2,
+            "source_fragment" : "hdr.ipv4_hdr.totalLen = iplen"
+          }
+        }
+      ]
+    }
+  ],
+  "pipelines" : [
+    {
+      "name" : "ingress",
+      "id" : 0,
+      "source_info" : {
+        "filename" : "p4src/ingress_mat.p4",
+        "line" : 7,
+        "column" : 8,
+        "source_fragment" : "nocahceIngress"
+      },
+      "init_table" : "node_2",
+      "tables" : [
+        {
+          "name" : "nocahceIngress.l2l3_forward_tbl",
+          "id" : 0,
+          "source_info" : {
+            "filename" : "p4src/ingress_mat.p4",
+            "line" : 16,
+            "column" : 7,
+            "source_fragment" : "l2l3_forward_tbl"
+          },
+          "key" : [
+            {
+              "match_type" : "exact",
+              "name" : "hdr.ethernet_hdr.dstAddr",
+              "target" : ["ethernet_hdr", "dstAddr"],
+              "mask" : null
+            },
+            {
+              "match_type" : "lpm",
+              "name" : "hdr.ipv4_hdr.dstAddr",
+              "target" : ["ipv4_hdr", "dstAddr"],
+              "mask" : null
+            }
+          ],
+          "match_type" : "lpm",
+          "type" : "simple",
+          "max_size" : 16,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [3, 0],
+          "actions" : ["nocahceIngress.l2l3_forward", "NoAction"],
+          "base_default_next" : "nocahceIngress.hash_partition_tbl",
+          "next_tables" : {
+            "nocahceIngress.l2l3_forward" : "nocahceIngress.hash_partition_tbl",
+            "NoAction" : "nocahceIngress.hash_partition_tbl"
+          },
+          "default_entry" : {
+            "action_id" : 0,
+            "action_const" : false,
+            "action_data" : [],
+            "action_entry_const" : false
+          }
+        },
+        {
+          "name" : "nocahceIngress.hash_partition_tbl",
+          "id" : 1,
+          "source_info" : {
+            "filename" : "p4src/ingress_mat.p4",
+            "line" : 36,
+            "column" : 7,
+            "source_fragment" : "hash_partition_tbl"
+          },
+          "key" : [
+            {
+              "match_type" : "exact",
+              "name" : "hdr.op_hdr.optype",
+              "target" : ["op_hdr", "optype"],
+              "mask" : null
+            },
+            {
+              "match_type" : "range",
+              "name" : "meta.meta.hashval_for_partition",
+              "target" : ["scalars", "userMetadata._meta_hashval_for_partition0"],
+              "mask" : null
+            }
+          ],
+          "match_type" : "range",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [4, 1],
+          "actions" : ["nocahceIngress.hash_partition", "NoAction"],
+          "base_default_next" : "nocahceIngress.ipv4_forward_tbl",
+          "next_tables" : {
+            "nocahceIngress.hash_partition" : "nocahceIngress.ipv4_forward_tbl",
+            "NoAction" : "nocahceIngress.ipv4_forward_tbl"
+          },
+          "default_entry" : {
+            "action_id" : 1,
+            "action_const" : false,
+            "action_data" : [],
+            "action_entry_const" : false
+          }
+        },
+        {
+          "name" : "nocahceIngress.ipv4_forward_tbl",
+          "id" : 2,
+          "source_info" : {
+            "filename" : "p4src/ingress_mat.p4",
+            "line" : 56,
+            "column" : 7,
+            "source_fragment" : "ipv4_forward_tbl"
+          },
+          "key" : [
+            {
+              "match_type" : "exact",
+              "name" : "hdr.op_hdr.optype",
+              "target" : ["op_hdr", "optype"],
+              "mask" : null
+            },
+            {
+              "match_type" : "lpm",
+              "name" : "hdr.ipv4_hdr.dstAddr",
+              "target" : ["ipv4_hdr", "dstAddr"],
+              "mask" : null
+            }
+          ],
+          "match_type" : "lpm",
+          "type" : "simple",
+          "max_size" : 64,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [5, 2],
+          "actions" : ["nocahceIngress.forward_normal_response", "NoAction"],
+          "base_default_next" : null,
+          "next_tables" : {
+            "nocahceIngress.forward_normal_response" : null,
+            "NoAction" : null
+          },
+          "default_entry" : {
+            "action_id" : 2,
+            "action_const" : false,
+            "action_data" : [],
+            "action_entry_const" : false
+          }
+        }
+      ],
+      "action_profiles" : [],
+      "conditionals" : [
+        {
+          "name" : "node_2",
+          "id" : 0,
+          "source_info" : {
+            "filename" : "p4src/ingress_mat.p4",
+            "line" : 71,
+            "column" : 7,
+            "source_fragment" : "hdr.op_hdr.isValid()"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "d2b",
+              "left" : null,
+              "right" : {
+                "type" : "field",
+                "value" : ["op_hdr", "$valid$"]
+              }
+            }
+          },
+          "false_next" : "nocahceIngress.l2l3_forward_tbl",
+          "true_next" : "nocahceIngress.hash_partition_tbl"
+        }
+      ]
+    },
+    {
+      "name" : "egress",
+      "id" : 1,
+      "source_info" : {
+        "filename" : "p4src/egress_mat.p4",
+        "line" : 1,
+        "column" : 8,
+        "source_fragment" : "nocahceEgress"
+      },
+      "init_table" : "nocahceEgress.update_ipmac_srcport_tbl",
+      "tables" : [
+        {
+          "name" : "nocahceEgress.update_ipmac_srcport_tbl",
+          "id" : 3,
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 44,
+            "column" : 7,
+            "source_fragment" : "update_ipmac_srcport_tbl"
+          },
+          "key" : [
+            {
+              "match_type" : "exact",
+              "name" : "hdr.op_hdr.optype",
+              "target" : ["op_hdr", "optype"],
+              "mask" : null
+            },
+            {
+              "match_type" : "exact",
+              "name" : "standard_metadata.egress_spec",
+              "target" : ["standard_metadata", "egress_spec"],
+              "mask" : null
+            }
+          ],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 128,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [8, 9, 6],
+          "actions" : ["nocahceEgress.update_ipmac_srcport_server2client", "nocahceEgress.update_dstipmac_client2server", "NoAction"],
+          "base_default_next" : "nocahceEgress.update_pktlen_tbl",
+          "next_tables" : {
+            "nocahceEgress.update_ipmac_srcport_server2client" : "nocahceEgress.update_pktlen_tbl",
+            "nocahceEgress.update_dstipmac_client2server" : "nocahceEgress.update_pktlen_tbl",
+            "NoAction" : "nocahceEgress.update_pktlen_tbl"
+          },
+          "default_entry" : {
+            "action_id" : 6,
+            "action_const" : false,
+            "action_data" : [],
+            "action_entry_const" : false
+          }
+        },
+        {
+          "name" : "nocahceEgress.update_pktlen_tbl",
+          "id" : 4,
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 65,
+            "column" : 7,
+            "source_fragment" : "update_pktlen_tbl"
+          },
+          "key" : [
+            {
+              "match_type" : "exact",
+              "name" : "hdr.op_hdr.optype",
+              "target" : ["op_hdr", "optype"],
+              "mask" : null
+            }
+          ],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 4,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [10, 7],
+          "actions" : ["nocahceEgress.update_pktlen", "NoAction"],
+          "base_default_next" : null,
+          "next_tables" : {
+            "nocahceEgress.update_pktlen" : null,
+            "NoAction" : null
+          },
+          "default_entry" : {
+            "action_id" : 7,
+            "action_const" : false,
+            "action_data" : [],
+            "action_entry_const" : false
+          }
+        }
+      ],
+      "action_profiles" : [],
+      "conditionals" : []
+    }
+  ],
+  "checksums" : [],
+  "force_arith" : [],
+  "extern_instances" : [],
+  "field_aliases" : [
+    [
+      "queueing_metadata.enq_timestamp",
+      ["standard_metadata", "enq_timestamp"]
+    ],
+    [
+      "queueing_metadata.enq_qdepth",
+      ["standard_metadata", "enq_qdepth"]
+    ],
+    [
+      "queueing_metadata.deq_timedelta",
+      ["standard_metadata", "deq_timedelta"]
+    ],
+    [
+      "queueing_metadata.deq_qdepth",
+      ["standard_metadata", "deq_qdepth"]
+    ],
+    [
+      "intrinsic_metadata.ingress_global_timestamp",
+      ["standard_metadata", "ingress_global_timestamp"]
+    ],
+    [
+      "intrinsic_metadata.egress_global_timestamp",
+      ["standard_metadata", "egress_global_timestamp"]
+    ],
+    [
+      "intrinsic_metadata.mcast_grp",
+      ["standard_metadata", "mcast_grp"]
+    ],
+    [
+      "intrinsic_metadata.egress_rid",
+      ["standard_metadata", "egress_rid"]
+    ],
+    [
+      "intrinsic_metadata.priority",
+      ["standard_metadata", "priority"]
+    ]
+  ],
+  "program" : "nocache.p4",
+  "__meta__" : {
+    "version" : [2, 23],
+    "compiler" : "https://github.com/p4lang/p4c"
+  }
+}
