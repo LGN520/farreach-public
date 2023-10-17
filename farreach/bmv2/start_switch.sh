@@ -1,0 +1,1 @@
+nohup python network.py &
