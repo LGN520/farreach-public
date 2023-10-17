@@ -266,8 +266,8 @@ void transaction_main() {
 	// IMPORTANT: avoid CPU contention between server.workers and rocksdb's background threads
 	printf("Reset CPU affinity of rocksdb's background threads\n");
 	char command[256];
-	sprintf(command, "./reset_rocksdb_affinity.sh %d %d %d ", server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx], current_server_logical_num);
-	//sprintf(command, "./reset_all_affinity.sh %d %d %d ", server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx], current_server_logical_num);
+	sprintf(command, "bash ./reset_rocksdb_affinity.sh %d %d %d ", server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx], current_server_logical_num);
+	//sprintf(command, "bash ./reset_all_affinity.sh %d %d %d ", server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx], current_server_logical_num);
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		if (i != current_server_logical_num - 1) {
 			sprintf(command + strlen(command), "%d ", server_worker_lwpid_list[i]);
