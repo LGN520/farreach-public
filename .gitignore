@@ -5,7 +5,8 @@ ycsb.iml
 *.o
 *.a
 *.s
-
+*.json
+*.p4i
 *.ini.exp*
 *.sh.exp*
 *.pyc
