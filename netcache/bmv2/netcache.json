@@ -17137,6 +17137,21 @@
           }
         },
         {
+          "op" : "remove_header",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "clone_hdr"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/egress_mat.p4",
+            "line" : 252,
+            "column" : 2,
+            "source_fragment" : "hdr.clone_hdr.setInvalid()"
+          }
+        },
+        {
           "op" : "mark_to_drop",
           "parameters" : [
             {

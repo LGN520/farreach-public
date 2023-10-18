@@ -58,6 +58,7 @@ class RegisterUpdate():
                 hex(keyhihilo),
                 hex(keyhihihi)]
         actnspec0 = [hex(freeidx)]
+        print(matchspec0,actnspec0)
         controller.table_add('cache_lookup_tbl','cached_action',matchspec0, actnspec0)
 
     #def get_evictdata_setvalid3(self, pipeidx):
@@ -81,6 +82,7 @@ class RegisterUpdate():
                 hex(keyhilo),
                 hex(keyhihilo),
                 hex(keyhihihi)]
+
         controller.table_delete_match('cache_lookup_tbl',matchspec0)
         # self.client.cache_lookup_tbl_table_delete_by_match_spec(\
         #         self.sess_hdl, self.dev_tgt, matchspec0)
@@ -92,7 +94,7 @@ class RegisterUpdate():
             # receive control packet
             recvbuf, switchos_addr = switchos_ptf_popserver_udpsock.recvfrom(1024)
             control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
-
+            # print(control_type)
             if control_type == SWITCHOS_ADD_CACHE_LOOKUP:
                 # parse key and freeidx
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, recvbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)

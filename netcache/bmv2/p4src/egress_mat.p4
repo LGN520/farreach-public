@@ -249,7 +249,7 @@ control netcacheEgress (inout headers hdr,
 
 		hdr.inswitch_hdr.setInvalid();
 		hdr.stat_hdr.setValid();
-
+		hdr.clone_hdr.setInvalid();
 		mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 		// clone_egress_pkt_to_egress(client_sid); // clone to client (hdr.inswitch_hdr.client_sid)
 		clone(CloneType.E2E, (bit<32>)client_sid);
