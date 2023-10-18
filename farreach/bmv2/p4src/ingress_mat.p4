@@ -21,8 +21,10 @@ table l2l3_forward_tbl {
 }
 
 action set_need_recirculate(bit<16> eport) {
-	meta.meta.need_recirculate = 1;
-	meta.meta.recirport = eport;
+	// meta.meta.need_recirculate = 1;
+	// meta.meta.recirport = eport;
+	// ???
+	meta.meta.need_recirculate = 0;
 }
 
 action reset_need_recirculate() {

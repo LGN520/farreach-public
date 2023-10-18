@@ -1,1 +1,1 @@
-nohup python network.py &
+python network.py &

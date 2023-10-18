@@ -144,8 +144,6 @@ class TableConfigure:
         ### Prepare ports ###
         #####################
 
-        self.create_mirror_session()
-
         ################################
         ### Normal MAT Configuration ###
         ################################
@@ -3829,4 +3827,5 @@ class TableConfigure:
 
 tableconfig = TableConfigure()
 tableconfig.setUp()
+tableconfig.create_mirror_session()
 tableconfig.runTest()

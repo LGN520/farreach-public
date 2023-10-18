@@ -1,3 +1,3 @@
-python ptf_snapshotserver/table_configure.py
+mx switchos python ptf_snapshotserver/table_configure.py
 
 

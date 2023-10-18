@@ -118,7 +118,7 @@ action update_getreq_inswitch_to_getreq() {
 
 	hdr.shadowtype_hdr.setInvalid();
 	hdr.inswitch_hdr.setInvalid();
-
+	hdr.validvalue_hdr.setInvalid();
 	//standard_metadata.engress_port = eport;
 }
 
@@ -132,6 +132,7 @@ action update_getreq_inswitch_to_getreq_beingevicted_record(bit<8> stat) {
 	hdr.seq_hdr.setValid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.stat_hdr.setValid();
+	hdr.validvalue_hdr.setInvalid();
 }
 
 //#ifdef ENABLE_LARGEVALUEBLOCK
@@ -144,6 +145,7 @@ action update_getreq_inswitch_to_getreq_largevalueblock_record(bit<8> stat) {
 	hdr.seq_hdr.setValid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.stat_hdr.setValid();
+	hdr.validvalue_hdr.setInvalid();
 }
 //#endif
 
@@ -152,7 +154,7 @@ action update_getreq_inswitch_to_getreq_pop() {
 
 	hdr.shadowtype_hdr.setInvalid();
 	hdr.inswitch_hdr.setInvalid();
-
+	hdr.validvalue_hdr.setInvalid(); //add
 	//standard_metadata.engress_port = eport;
 }
 
@@ -161,7 +163,7 @@ action update_getreq_inswitch_to_getreq_nlatest() {
 
 	hdr.shadowtype_hdr.setInvalid();
 	hdr.inswitch_hdr.setInvalid();
-
+	hdr.validvalue_hdr.setInvalid(); //add
 	//standard_metadata.engress_port = eport;
 }
 
@@ -174,28 +176,11 @@ action update_getreq_inswitch_to_getres_seq_by_mirroring(bit<10> client_sid,bit<
 	hdr.udp_hdr.srcPort = server_port;
 	hdr.udp_hdr.dstPort = hdr.clone_hdr.client_udpport;
 
-	/*vallen_hdr.setValid();
-	hdr.val1_hdr.setValid();
-	hdr.val2_hdr.setValid();
-	hdr.val3_hdr.setValid();
-	hdr.val4_hdr.setValid();
-	hdr.val5_hdr.setValid();
-	hdr.val6_hdr.setValid();
-	hdr.val7_hdr.setValid();
-	hdr.val8_hdr.setValid();
-	hdr.val9_hdr.setValid();
-	hdr.val10_hdr.setValid();
-	hdr.val11_hdr.setValid();
-	hdr.val12_hdr.setValid();
-	hdr.val13_hdr.setValid();
-	hdr.val14_hdr.setValid();
-	hdr.val15_hdr.setValid();
-	hdr.val16_hdr.setValid();*/
 
 	hdr.seq_hdr.setValid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.stat_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); //add
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)client_sid); // clone to client (inswitch_hdr.client_sid)
 }
@@ -208,6 +193,7 @@ action update_getres_latest_seq_to_getres_seq() {
 	//seq_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 	hdr.stat_hdr.setValid();
+	hdr.validvalue_hdr.setInvalid(); //add
 }
 
 
@@ -223,7 +209,7 @@ action update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clo
 	//inswitch_hdr.setInvalid();
 	hdr.stat_hdr.setValid();
 	hdr.clone_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//standard_metadata.engress_port = port; // set eport to switchos
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	//clone(CloneType.E2E, (bit<32>)switchos_sid, clone_field_list_for_pktloss); // clone to switchos
@@ -232,7 +218,7 @@ action update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clo
 
 action forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(bit<10> switchos_sid) {
 	hdr.clone_hdr.clonenum_for_pktloss = hdr.clone_hdr.clonenum_for_pktloss - 1;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//clone(CloneType.E2E, (bit<32>)switchos_sid, clone_field_list_for_pktloss); // clone to switchos
 	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
 }
@@ -244,7 +230,7 @@ action update_getres_deleted_seq_to_getres_seq() {
 	hdr.op_hdr.optype = GETRES_SEQ;
 	hdr.shadowtype_hdr.shadowtype = GETRES_SEQ;
 	hdr.stat_hdr.stat = 0;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//seq_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 	hdr.stat_hdr.setValid();
@@ -258,7 +244,7 @@ action update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_c
 	hdr.udp_hdr.dstPort = reflector_port;
 	//meta.clonenum_for_pktloss = 1; // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone w/ case1)
 	hdr.clone_hdr.clonenum_for_pktloss = 2; // 3 ACKs (drop w/ 2 -> clone w/ 1 -> clone w/ 0 -> no clone w/ case1)
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//inswitch_hdr.setInvalid();
 	hdr.stat_hdr.setValid();
 	hdr.clone_hdr.setValid();
@@ -271,7 +257,7 @@ action update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_c
 
 action forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(bit<10> switchos_sid) {
 	hdr.clone_hdr.clonenum_for_pktloss = hdr.clone_hdr.clonenum_for_pktloss - 1;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//clone(CloneType.E2E, (bit<32>)switchos_sid, clone_field_list_for_pktloss); // clone to switchos
 	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
 }
@@ -283,7 +269,7 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq() {
 	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
 	hdr.op_hdr.optype = PUTREQ_LARGEVALUE_SEQ;
 	hdr.shadowtype_hdr.shadowtype = PUTREQ_LARGEVALUE_SEQ;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 }
@@ -293,7 +279,7 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3() {
 	hdr.op_hdr.optype = PUTREQ_LARGEVALUE_SEQ_CASE3;
 	hdr.shadowtype_hdr.shadowtype = PUTREQ_LARGEVALUE_SEQ_CASE3;
 	hdr.seq_hdr.snapshot_token = hdr.inswitch_hdr.snapshot_token;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 }
@@ -302,7 +288,7 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_beingevicted()
 	// NOTE: PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED w/ op_hdr + shadowtype_hdr + seq_hdr + fraginfo_hdr
 	hdr.op_hdr.optype = PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED;
 	hdr.shadowtype_hdr.shadowtype = PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 }
@@ -312,7 +298,7 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3_beingevi
 	hdr.op_hdr.optype = PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED;
 	hdr.shadowtype_hdr.shadowtype = PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED;
 	hdr.seq_hdr.snapshot_token = hdr.inswitch_hdr.snapshot_token;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 }
@@ -381,46 +367,6 @@ table another_eg_port_forward_tbl {
 
 // Stage 9
 
-/*action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(bit<10> switchos_sid,bit<16>  reflector_port) {
-	hdr.op_hdr.optype = CACHE_POP_INSWITCH_ACK;
-	hdr.udp_hdr.dstPort = reflector_port;
-	//meta.clonenum_for_pktloss = 1; // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone w/ ack)
-	hdr.clone_hdr.clonenum_for_pktloss = 2; // 3 ACKs (drop w/ 2 -> clone w/ 1 -> clone w/ 0 -> no clone w/ ack)
-
-	//vallen_hdr.setInvalid();
-	//val1_hdr.setInvalid();
-	//val2_hdr.setInvalid();
-	//val3_hdr.setInvalid();
-	//val4_hdr.setInvalid();
-	//val5_hdr.setInvalid();
-	//val6_hdr.setInvalid();
-	//val7_hdr.setInvalid();
-	//val8_hdr.setInvalid();
-	//val9_hdr.setInvalid();
-	//val10_hdr.setInvalid();
-	//val11_hdr.setInvalid();
-	//val12_hdr.setInvalid();
-	//val13_hdr.setInvalid();
-	//val14_hdr.setInvalid();
-	//val15_hdr.setInvalid();
-	//val16_hdr.setInvalid();
-	hdr.shadowtype_hdr.setInvalid();
-	hdr.seq_hdr.setInvalid();
-	hdr.inswitch_hdr.setInvalid();
-	hdr.clone_hdr.setValid();
-
-	//standard_metadata.engress_port = port; // set eport to switchos
-	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
-	//clone(CloneType.E2E, (bit<32>)switchos_sid, clone_field_list_for_pktloss); // clone to switchos
-	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
-}
-
-action forward_cache_pop_inswitch_ack_clone_for_pktloss(switchos_sid) {
-	hdr.clone_hdr.clonenum_for_pktloss = hdr.clone_hdr.clonenum_for_pktloss - 1;
-
-	//clone(CloneType.E2E, (bit<32>)switchos_sid, clone_field_list_for_pktloss); // clone to switchos
-	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
-}*/
 
 action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(bit<10> switchos_sid,bit<16> reflector_port) {
 	hdr.op_hdr.optype = CACHE_POP_INSWITCH_ACK;
@@ -431,7 +377,7 @@ action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(bit<10
 	hdr.seq_hdr.setInvalid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.stat_hdr.setInvalid();
-
+	hdr.validvalue_hdr.setInvalid();
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
 }
@@ -445,14 +391,14 @@ action update_putreq_inswitch_to_putreq_seq() {
 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//standard_metadata.engress_port = eport;
 }
 
 action update_putreq_inswitch_to_putreq_seq_beingevicted() {
 	hdr.op_hdr.optype = PUTREQ_SEQ_BEINGEVICTED;
 	hdr.shadowtype_hdr.shadowtype = PUTREQ_SEQ_BEINGEVICTED;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 }
@@ -463,7 +409,7 @@ action update_putreq_inswitch_to_putreq_pop_seq() {
 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//standard_metadata.engress_port = eport;
 }
 
@@ -477,40 +423,16 @@ action update_putreq_inswitch_to_putres_seq_by_mirroring(bit<10> client_sid,bit<
 	hdr.udp_hdr.srcPort = server_port;
 	hdr.udp_hdr.dstPort = hdr.clone_hdr.client_udpport;
 
-	/*vallen_hdr.setInvalid();
-	hdr.val1_hdr.setInvalid();
-	hdr.val2_hdr.setInvalid();
-	hdr.val3_hdr.setInvalid();
-	hdr.val4_hdr.setInvalid();
-	hdr.val5_hdr.setInvalid();
-	hdr.val6_hdr.setInvalid();
-	hdr.val7_hdr.setInvalid();
-	hdr.val8_hdr.setInvalid();
-	hdr.val9_hdr.setInvalid();
-	hdr.val10_hdr.setInvalid();
-	hdr.val11_hdr.setInvalid();
-	hdr.val12_hdr.setInvalid();
-	hdr.val13_hdr.setInvalid();
-	hdr.val14_hdr.setInvalid();
-	hdr.val15_hdr.setInvalid();
-	hdr.val16_hdr.setInvalid();*/
 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 	hdr.stat_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)client_sid); // clone to client (inswitch_hdr.client_sid)
 }
 
-/*field_list clone_field_list_for_pktloss_and_res {
-	meta.meta.clonenum_for_pktloss;
-	meta.meta.client_udpport;
-	// NOTE: extracted fields cannot be used as clone fields
-	//inswitch_hdr.is_wrong_pipeline;
-	//inswitch_hdr.eport_for_res;
-	//inswitch_hdr.client_sid;
-}*/
+
 
 //action update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(switchos_sid, port, stat) {
 action update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(bit<10> switchos_sid,bit<8> stat,bit<16> reflector_port) {
@@ -525,7 +447,7 @@ action update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and
 	hdr.seq_hdr.setValid();
 	hdr.stat_hdr.setValid();
 	hdr.clone_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//standard_metadata.engress_port = port; // set eport to switchos
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	//clone(CloneType.E2E, (bit<32>)switchos_sid, clone_field_list_for_pktloss_and_res); // clone to switchos
@@ -534,7 +456,7 @@ action update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and
 
 action forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(bit<10> switchos_sid) {
 	hdr.clone_hdr.clonenum_for_pktloss = hdr.clone_hdr.clonenum_for_pktloss - 1;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//clone(CloneType.E2E, (bit<32>)switchos_sid, clone_field_list_for_pktloss_and_res); // clone to switchos
 	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
 }
@@ -549,30 +471,11 @@ action update_putreq_seq_inswitch_case1_to_putres_seq_by_mirroring(bit<10> clien
 	hdr.udp_hdr.srcPort = server_port;
 	hdr.udp_hdr.dstPort = hdr.clone_hdr.client_udpport;
 
-	/*vallen_hdr.setInvalid();
-	hdr.val1_hdr.setInvalid();
-	hdr.val2_hdr.setInvalid();
-	hdr.val3_hdr.setInvalid();
-	hdr.val4_hdr.setInvalid();
-	hdr.val5_hdr.setInvalid();
-	hdr.val6_hdr.setInvalid();
-	hdr.val7_hdr.setInvalid();
-	hdr.val8_hdr.setInvalid();
-	hdr.val9_hdr.setInvalid();
-	hdr.val10_hdr.setInvalid();
-	hdr.val11_hdr.setInvalid();
-	hdr.val12_hdr.setInvalid();
-	hdr.val13_hdr.setInvalid();
-	hdr.val14_hdr.setInvalid();
-	hdr.val15_hdr.setInvalid();
-	hdr.val16_hdr.setInvalid();*/
-
-	//seq_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.clone_hdr.setInvalid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)client_sid); // clone to client (inswitch_hdr.client_sid)
 }
@@ -584,7 +487,7 @@ action update_putreq_inswitch_to_putreq_seq_case3() {
 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//standard_metadata.engress_port = eport;
 }
 
@@ -592,7 +495,7 @@ action update_putreq_inswitch_to_putreq_seq_case3_beingevicted() {
 	hdr.op_hdr.optype = PUTREQ_SEQ_CASE3_BEINGEVICTED;
 	hdr.shadowtype_hdr.shadowtype = PUTREQ_SEQ_CASE3_BEINGEVICTED;
 	hdr.seq_hdr.snapshot_token = hdr.inswitch_hdr.snapshot_token;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 }
@@ -604,7 +507,7 @@ action update_putreq_inswitch_to_putreq_pop_seq_case3() {
 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//standard_metadata.engress_port = eport;
 }
 
@@ -614,14 +517,14 @@ action update_delreq_inswitch_to_delreq_seq() {
 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//standard_metadata.engress_port = eport;
 }
 
 action update_delreq_inswitch_to_delreq_seq_beingevicted() {
 	hdr.op_hdr.optype = DELREQ_SEQ_BEINGEVICTED;
 	hdr.shadowtype_hdr.shadowtype = DELREQ_SEQ_BEINGEVICTED;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 }
@@ -639,7 +542,7 @@ action update_delreq_inswitch_to_delres_seq_by_mirroring(bit<10> client_sid,bit<
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 	hdr.stat_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)client_sid); // clone to client (inswitch_hdr.client_sid)
 }
@@ -653,28 +556,11 @@ action update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and
 	//meta.clonenum_for_pktloss = 2; // 3 ACKs (clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> DELRES)
 	hdr.clone_hdr.clonenum_for_pktloss = 3; // 3 ACKs (drop w/ 3 -> clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> DELRES)
 
-	//inswitch_hdr.setInvalid();
-	/*vallen_hdr.setValid();
-	hdr.val1_hdr.setValid();
-	hdr.val2_hdr.setValid();
-	hdr.val3_hdr.setValid();
-	hdr.val4_hdr.setValid();
-	hdr.val5_hdr.setValid();
-	hdr.val6_hdr.setValid();
-	hdr.val7_hdr.setValid();
-	hdr.val8_hdr.setValid();
-	hdr.val9_hdr.setValid();
-	hdr.val10_hdr.setValid();
-	hdr.val11_hdr.setValid();
-	hdr.val12_hdr.setValid();
-	hdr.val13_hdr.setValid();
-	hdr.val14_hdr.setValid();
-	hdr.val15_hdr.setValid();
-	hdr.val16_hdr.setValid();*/
+
 	hdr.seq_hdr.setValid();
 	hdr.stat_hdr.setValid();
 	hdr.clone_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//standard_metadata.engress_port = port; // set eport to switchos
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	//clone(CloneType.E2E, (bit<32>)switchos_sid, clone_field_list_for_pktloss_and_res); // clone to switchps
@@ -683,7 +569,7 @@ action update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and
 
 action forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(bit<10> switchos_sid) {
 	hdr.clone_hdr.clonenum_for_pktloss = hdr.clone_hdr.clonenum_for_pktloss - 1;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//clone(CloneType.E2E, (bit<32>)switchos_sid, clone_field_list_for_pktloss_and_res); // clone to switchos
 	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
 }
@@ -698,30 +584,11 @@ action update_delreq_seq_inswitch_case1_to_delres_seq_by_mirroring(bit<10> clien
 	hdr.udp_hdr.srcPort = server_port;
 	hdr.udp_hdr.dstPort = hdr.clone_hdr.client_udpport;
 
-	/*vallen_hdr.setInvalid();
-	hdr.val1_hdr.setInvalid();
-	hdr.val2_hdr.setInvalid();
-	hdr.val3_hdr.setInvalid();
-	hdr.val4_hdr.setInvalid();
-	hdr.val5_hdr.setInvalid();
-	hdr.val6_hdr.setInvalid();
-	hdr.val7_hdr.setInvalid();
-	hdr.val8_hdr.setInvalid();
-	hdr.val9_hdr.setInvalid();
-	hdr.val10_hdr.setInvalid();
-	hdr.val11_hdr.setInvalid();
-	hdr.val12_hdr.setInvalid();
-	hdr.val13_hdr.setInvalid();
-	hdr.val14_hdr.setInvalid();
-	hdr.val15_hdr.setInvalid();
-	hdr.val16_hdr.setInvalid();*/
-
-	//seq_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.clone_hdr.setInvalid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)client_sid); // clone to client (inswitch_hdr.client_sid)
 }
@@ -733,7 +600,7 @@ action update_delreq_inswitch_to_delreq_seq_case3() {
 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	//standard_metadata.engress_port = eport;
 }
 
@@ -741,7 +608,7 @@ action update_delreq_inswitch_to_delreq_seq_case3_beingevicted() {
 	hdr.op_hdr.optype = DELREQ_SEQ_CASE3_BEINGEVICTED;
 	hdr.shadowtype_hdr.shadowtype = DELREQ_SEQ_CASE3_BEINGEVICTED;
 	hdr.seq_hdr.snapshot_token = hdr.inswitch_hdr.snapshot_token;
-
+	hdr.validvalue_hdr.setInvalid(); 
 	hdr.inswitch_hdr.setInvalid();
 	hdr.seq_hdr.setValid();
 }
@@ -754,7 +621,7 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 	hdr.shadowtype_hdr.setInvalid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.frequency_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
 }
@@ -772,7 +639,7 @@ action update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack
 	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
 	hdr.seq_hdr.setValid();
 	hdr.stat_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
 }
@@ -789,7 +656,7 @@ action update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_an
 	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
 	hdr.seq_hdr.setValid();
 	hdr.stat_hdr.setValid();
-
+	hdr.validvalue_hdr.setInvalid(); 
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
 }
@@ -803,8 +670,8 @@ action update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(bit<10> 
 
 	hdr.shadowtype_hdr.setInvalid();
 	hdr.inswitch_hdr.setInvalid();
-	hdr.validvalue_hdr.setInvalid();
-
+	hdr.validvalue_hdr.setInvalid(); //origin
+	
 	mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 	clone(CloneType.E2E, (bit<32>)switchos_sid); // clone to switchos
 }
@@ -949,12 +816,6 @@ table update_pktlen_tbl {
 		hdr.vallen_hdr.vallen: range;
 	}
 	actions = {
-		/*update_onlyop_pktlen;
-		update_val_stat_pktlen;
-		update_val_seq_inswitch_stat_pktlen;
-		update_val_seq_pktlen;
-		update_stat_pktlen;
-		update_seq_pktlen;*/
 		update_pktlen;
 		add_pktlen;
 		NoAction;

@@ -1,11 +1,14 @@
 register<bit<8>>(KV_BUCKET_COUNT) validvalue_reg;
-bit<32> validvalue_res;
+bit<8> validvalue_res;
 
 action get_validvalue() {
-	validvalue_reg.read(hdr.validvalue_hdr.validvalue,(bit<32>)hdr.inswitch_hdr.idx);
+	hdr.validvalue_hdr.setValid();
+	validvalue_reg.read(validvalue_res,(bit<32>)hdr.inswitch_hdr.idx);
+	hdr.validvalue_hdr.validvalue =validvalue_res;
 }
 
 action set_validvalue() {
+	hdr.validvalue_hdr.setValid();
 	validvalue_reg.write((bit<32>)hdr.inswitch_hdr.idx,hdr.validvalue_hdr.validvalue);
 }
 action reset_meta_validvalue() {
