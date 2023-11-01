@@ -45,7 +45,7 @@ control nocahceEgress(inout headers hdr,
 		key = {
 			hdr.op_hdr.optype: exact;
 			// eg_intr_md.egress_port: exact;
-			standard_metadata.egress_spec: exact;
+			standard_metadata.egress_port: exact;
 		}
 		actions =  {
 			update_ipmac_srcport_server2client; // focus on dstip and dstmac to corresponding client; use server[0] as srcip and srcmac; use server_worker_port_start as srcport

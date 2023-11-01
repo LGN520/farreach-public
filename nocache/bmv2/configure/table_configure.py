@@ -94,7 +94,11 @@ class TableConfigure():
             controller.table_add('l2l3_forward_tbl', 'l2l3_forward', [client_macs[i],client_ips[i]+'/32'], [self.client_devports[i]])
         for i in range(server_physical_num):
             controller.table_add('l2l3_forward_tbl', 'l2l3_forward', [server_macs[i],server_ips[i]+'/32'], [self.server_devports[i]])
-            
+        
+        print("Configuring hash_for_partition_tbl")
+        for tmpoptype in [GETREQ, PUTREQ, DELREQ, LOADREQ, PUTREQ_LARGEVALUE]:
+            matchspec0 = [hex(tmpoptype)]
+            controller.table_add('hash_for_partition_tbl', 'hash_for_partition', matchspec0)
         # Stage 1
 
         if RANGE_SUPPORT == False:

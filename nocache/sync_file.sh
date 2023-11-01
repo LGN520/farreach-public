@@ -1,3 +1,4 @@
+set -x
 source ../scripts/common.sh
 filename=$1
 

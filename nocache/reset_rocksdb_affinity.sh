@@ -1,3 +1,4 @@
+set -x
 #!/usr/bin/env bash
 
 if [ $# -lt 3 ]
@@ -28,7 +29,7 @@ do
 	worker_lwpids=(${worker_lwpids[@]} ${params[${i}]})
 done
 
-server_thread_infos=$(ps -eLF | grep "./server" | grep -v "grep")
+server_thread_infos=$(ps -eLF | grep "./server " | grep -v "grep")
 
 # Print affinity info of all server threads (you can check lwpid here)
 echo "${server_thread_infos}"

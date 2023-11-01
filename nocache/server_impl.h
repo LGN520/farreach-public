@@ -218,6 +218,7 @@ void *run_server_worker(void * param) {
 
 	//packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	packet_type_t pkt_type = get_packet_type(dynamicbuf.array(), recv_size);
+	// printf("[debug]pkt_type %d is_timeout %d\n",pkt_type,is_timeout);
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{
@@ -250,6 +251,7 @@ void *run_server_worker(void * param) {
 				break;
 			}
 		case packet_type_t::PUTREQ:
+		// case packet_type_t::PUTREQ_SEQ:
 			{
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.arrau(), recv_size);
