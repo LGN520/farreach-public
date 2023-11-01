@@ -89,11 +89,7 @@ fi
 
 if [ $((${justloaded} % 8)) -eq 0 ]; then
 	echo "sleep 120s after retrieving database files"
-	# if [ "x${DIRNAME}" == "xfarreach" ]
-	# then
-	# 	# sleep 120s
-	# fi
-	sleep 120s # wait longer time for rotations performing database file retrieving
+
 else
 	echo "sleep 5s"
 	sleep 5s

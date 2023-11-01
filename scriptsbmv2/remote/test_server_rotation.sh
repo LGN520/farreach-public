@@ -14,7 +14,6 @@ fi
 echo "[part 0] clean up server storages"
 rm -r /tmp/${DIRNAME}/*
 
-
 if [[ ${with_controller} -eq 1 ]]; then
 	# NOTE: if w/ in-switch cache, finish warmup phase by launching servers of correpsonding method + warmup_client + stopping servers
 	echo "[part 0] pre-admit hot keys into switch before server rotation"
@@ -38,9 +37,6 @@ fi
 echo "[part 1] run single bottleneck server thread"
 
 echo "clear tmp files in remote clients/servers and controller"
-# ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out"
-# ssh ${USER}@${SERVER0} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part1*.out; rm tmp_serverrotation_part2*.out; rm tmp_controller_bwcost.out"
-# ssh ${USER}@${SERVER1} "cd ${SERVER_ROOTPATH}/${DIRNAME}; rm tmp_serverrotation_part2*.out"
 
 if [ "x${DIRNAME}" == "xfarreach" ]; then
 	# clear snapshot token every iteration to maintain snapshot id sequence
@@ -49,6 +45,15 @@ if [ "x${DIRNAME}" == "xfarreach" ]; then
 	mx switchos bash cleanup_obselete_snapshottoken.sh >tmp_cleanup.out 2>&1
 fi
 cd ${SWITCH_ROOTPATH}
+
+# Retrieve both dl16.bottleneckserver and dl13.rotatedservers to the state just after loading phase
+echo "retrieve both bottleneck partition and rotated partition back to the state after loading phase"
+# ssh ${USER}@${SERVER0} "
+rm -r /tmp/${DIRNAME}/*; 
+cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
+cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker0.db                       # retrieve rocksdb and reset rotatedservers.snapshotid = 0
+# run twice for some sync bug
+source scriptsbmv2/remote/test_server_rotation_p1.sh 0
 source scriptsbmv2/remote/test_server_rotation_p1.sh 0
 
 ##### Part 2 #####
@@ -61,23 +66,9 @@ for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); 
 	fi
 
 	# initiliaze and refresh database status every 8 iterations
-	if [ $((${rotatecnt}%8)) -eq 0 ]; then
-		echo "refresh bottleneck parition and rotated partition back to the state after loading phase"
-		# ??
-		# ssh ${USER}@${SERVER0} "
-		rm -r /tmp/${DIRNAME}/*; 
-		cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
-		cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${rotateidx}.db # retrieve rocksdb and reset rotatedservers.snapshotid = 0
-	# else
-		# NOTE: worker*.db = worker${rotateidx}.db does NOT affect correctness
-		# Although it will report an error of "mv: cannot move '/tmp/${DIRNAME}/worker${rotateidx}.db' to a subdirectory of itself", the database of /tmp/${DIRNAME}/worker${rotateidx}.db still exists for server rotation
-		# ???
-		# ssh ${USER}@${SERVER1} "mv /tmp/${DIRNAME}/worker*.db /tmp/${DIRNAME}/worker${rotateidx}.db"
-	fi
+	# no need for bmv2
 
 	if [ "x${DIRNAME}" == "xfarreach" ]; then
-		# clear snapshot token every iteration to maintain snapshot id sequence
-		# ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "
 		cd ${SWITCH_ROOTPATH}/${DIRNAME}/bmv2; bash cleanup_obselete_snapshottoken.sh >>tmp_cleanup.out 2>&1
 	fi
 	cd ${SWITCH_ROOTPATH}

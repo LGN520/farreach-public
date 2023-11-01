@@ -32,12 +32,6 @@ source scriptsbmv2/local/localkill.sh ycsb >/dev/null 2>&1
 # stop and kill server/controller/reflector
 source scriptsbmv2/remote/stopservertestbed.sh
 
-# Retrieve both dl16.bottleneckserver and dl13.rotatedservers to the state just after loading phase
-echo "retrieve both bottleneck partition and rotated partition back to the state after loading phase"
-# ssh ${USER}@${SERVER0} "
-rm -r /tmp/${DIRNAME}/*; 
-cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
-cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker0.db                       # retrieve rocksdb and reset rotatedservers.snapshotid = 0
 
 echo "prepare and sync config.ini"
 cp ${DIRNAME}/configs/config.ini.static.1p.bmv2 ${DIRNAME}/config.ini
@@ -77,14 +71,9 @@ if [ ${with_reflector} -eq 1 ]; then
 	cd ..
 fi
 # sleep 5s
-# if [ "x${DIRNAME}" == "xfarreach" ]
-# then
-# 	# sleep 180s
-# 	# sleep 120s
-# fi
+
 sleep 120s # wait longer time for the first rotation, as rocksdb needs to load the files overwritten by the backups
-# exit for debug
-# exit
+
 # NOTE: we trigger snapshot in the physical client 0 during transaction phase for farreach/distfarreach
 echo "start clients"
 if [ $# -eq 2 ]; then
