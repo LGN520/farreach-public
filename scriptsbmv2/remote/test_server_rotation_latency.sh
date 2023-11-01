@@ -64,7 +64,7 @@ if [[ ${with_controller} -eq 1 ]]; then
 	cd ${DIRNAME}
 	mx h1 ./warmup_client
 	cd ..
-	sleep 10s
+	sleep 120s
 
 	echo "stop storage servers of ${DIRNAME}"
 	source scriptsbmv2/remote/stopservertestbed.sh

@@ -35,12 +35,12 @@ source scriptsbmv2/remote/stopservertestbed.sh
 # Retrieve both dl16.bottleneckserver and dl13.rotatedservers to the state just after loading phase
 echo "retrieve both bottleneck partition and rotated partition back to the state after loading phase"
 # ssh ${USER}@${SERVER0} "
-rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
-# ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; 
+rm -r /tmp/${DIRNAME}/*; 
+cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
 cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker0.db                       # retrieve rocksdb and reset rotatedservers.snapshotid = 0
 
 echo "prepare and sync config.ini"
-cp ${DIRNAME}/configs/config.ini.static.1p ${DIRNAME}/config.ini
+cp ${DIRNAME}/configs/config.ini.static.1p.bmv2 ${DIRNAME}/config.ini
 sed -i '1,$s/workload_name=TODO/workload_name='${workloadname}/'' ${DIRNAME}/config.ini
 sed -i '1,$s/server_total_logical_num_for_rotation=TODO/server_total_logical_num_for_rotation='${server_total_logical_num_for_rotation}/'' ${DIRNAME}/config.ini
 sed -i '1,$s/bottleneck_serveridx_for_rotation=TODO/bottleneck_serveridx_for_rotation='${bottleneck_serveridx}/'' ${DIRNAME}/config.ini
@@ -50,49 +50,61 @@ then
 	sed -i '1,$s/controller_snapshot_period=TODO/controller_snapshot_period='${snapshot_period}/'' ${DIRNAME}/config.ini
 	sed -i '1,$s/switch_kv_bucket_num=TODO/switch_kv_bucket_num='${cache_size}/'' ${DIRNAME}/config.ini
 fi
-source scriptsbmv2/remote/sync_file.sh ${DIRNAME} config.ini
+# source scriptsbmv2/remote/sync_file.sh ${DIRNAME} config.ini
 
 echo "start servers"
 # ssh ${USER}@${SERVER0} "
 cd ${SERVER_ROOTPATH}/${DIRNAME}; 
-mx h3 nohup ./server 0 >tmp_serverrotation_part1_server.out 2>&1 &
+mx h3  ./server 0 >tmp_serverrotation_part1_server0.out 2>&1 &
+
+sleep 30s
+
 if [ ${with_controller} -eq 1 ]; then
 	echo "start controller"
 	# ssh ${USER}@${SERVER0} "
 	cd ${SERVER_ROOTPATH}/${DIRNAME}; 
-	mx h3 nohup ./controller >tmp_serverrotation_part1_controller.out 2>&1 &
+	mx h3  ./controller >tmp_serverrotation_part1_controller.out 2>&1 &
+	sleep 10s
 fi
 if [ ${with_reflector} -eq 1 ]; then
 	echo "start reflectors"
 	# ssh ${USER}@${SERVER0} "
 	cd ${SERVER_ROOTPATH}/${DIRNAME}; 
-	mx h3 nohup ./reflector leaf >tmp_serverrotation_part1_reflector.out.leaf 2>&1 &
+	mx h3  ./reflector leaf >tmp_serverrotation_part1_reflector.out.leaf 2>&1 &
 	cd ${DIRNAME}
-	sudo mx h1 nohup ./reflector spine >tmp_serverrotation_part1_reflector.out.spine 2>&1 &
+	sudo mx h1  ./reflector spine >tmp_serverrotation_part1_reflector.out.spine 2>&1 &
+	sleep 10s
 	cd ..
 fi
+# sleep 5s
+# if [ "x${DIRNAME}" == "xfarreach" ]
+# then
+# 	# sleep 180s
+# 	# sleep 120s
+# fi
 sleep 120s # wait longer time for the first rotation, as rocksdb needs to load the files overwritten by the backups
-
+# exit for debug
+# exit
 # NOTE: we trigger snapshot in the physical client 0 during transaction phase for farreach/distfarreach
 echo "start clients"
 if [ $# -eq 2 ]; then
 	# ssh ${USER}@${SECONDARY_CLIENT} "
 	cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; 
-	mx h2 nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} -target ${tmptargetthpt} >tmp_serverrotation_part1_client.out 2>&1 &
+	mx h2  python2 ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} -target ${tmptargetthpt} >tmp_serverrotation_part1_client1.out 2>&1 &
 else
 	# ssh ${USER}@${SECONDARY_CLIENT} "
 	cd ${CLIENT_ROOTPATH}/benchmark/ycsb/; 
-	mx h2 nohup ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >tmp_serverrotation_part1_client.out 2>&1 &
+	mx h2  python2 ./bin/ycsb run ${DIRNAME} -pi 1 -sr ${tmpsinglerotation} >tmp_serverrotation_part1_client1.out 2>&1 &
 fi
-sleep 1s
+sleep 20s
 
 cd ${CLIENT_ROOTPATH}/benchmark/ycsb/
 if [ $# -eq 2 ]; then
-	./bin/ycsb run ${DIRNAME} -pi 0 -sr ${tmpsinglerotation} -target ${tmptargetthpt}
+	mx h1 python2 ./bin/ycsb run ${DIRNAME} -pi 0 -sr ${tmpsinglerotation} -target ${tmptargetthpt}
 else
-	./bin/ycsb run ${DIRNAME} -pi 0 -sr ${tmpsinglerotation}
+	mx h1 python2 ./bin/ycsb run ${DIRNAME} -pi 0 -sr ${tmpsinglerotation}
 fi
 cd ../../
-
+sleep 5s
 # stop and kill server/controller/reflector
 source scriptsbmv2/remote/stopservertestbed.sh

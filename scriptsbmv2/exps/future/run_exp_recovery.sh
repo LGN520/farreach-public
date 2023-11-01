@@ -30,7 +30,7 @@ then
 	exit
 fi
 
-exp9_server_scale="16"
+exp9_server_scale=16
 if [ ${exp9_workloadmode} -eq 1 ]
 then
 	exp9_server_scale="2"
@@ -38,7 +38,7 @@ fi
 
 # NOTE: we ONLY support synthetic workload here!!!
 exp9_server_scale_for_rotation="16"
-exp9_server_scale_bottleneck="14"
+exp9_server_scale_bottleneck=4
 exp9_round_list=("0" "1" "2" "3" "4" "5") # do one extra round 0 to wait for database to finish flush and compaction
 exp9_cachesize_list=("100" "1000" "10000")
 

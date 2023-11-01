@@ -22,13 +22,13 @@ if [[ ${with_controller} -eq 1 ]]; then
 	echo "launch storage servers of ${DIRNAME}"
 	source scriptsbmv2/remote/launchservertestbed.sh
 	#sleep 10s
-	sleep 60s
+	sleep 10s
 
 	echo "pre-admit hot keys"
 	cd ${DIRNAME}
 	mx h1 ./warmup_client
 	cd ..
-	sleep 10s
+	sleep 120s
 
 	echo "stop storage servers of ${DIRNAME}"
 	source scriptsbmv2/remote/stopservertestbed.sh
@@ -46,9 +46,9 @@ if [ "x${DIRNAME}" == "xfarreach" ]; then
 	# clear snapshot token every iteration to maintain snapshot id sequence
 	# ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "
 	cd ${SWITCH_ROOTPATH}/${DIRNAME}/bmv2; 
-	mx h5 bash cleanup_obselete_snapshottoken.sh >tmp_cleanup.out 2>&1
+	mx switchos bash cleanup_obselete_snapshottoken.sh >tmp_cleanup.out 2>&1
 fi
-
+cd ${SWITCH_ROOTPATH}
 source scriptsbmv2/remote/test_server_rotation_p1.sh 0
 
 ##### Part 2 #####
@@ -65,10 +65,10 @@ for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); 
 		echo "refresh bottleneck parition and rotated partition back to the state after loading phase"
 		# ??
 		# ssh ${USER}@${SERVER0} "
-		rm -r /tmp/${DIRNAME}/*; cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
-		# ssh ${USER}@${SERVER1} "rm -r /tmp/${DIRNAME}/*; 
+		rm -r /tmp/${DIRNAME}/*; 
+		cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
 		cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${rotateidx}.db # retrieve rocksdb and reset rotatedservers.snapshotid = 0
-	else
+	# else
 		# NOTE: worker*.db = worker${rotateidx}.db does NOT affect correctness
 		# Although it will report an error of "mv: cannot move '/tmp/${DIRNAME}/worker${rotateidx}.db' to a subdirectory of itself", the database of /tmp/${DIRNAME}/worker${rotateidx}.db still exists for server rotation
 		# ???
@@ -80,7 +80,7 @@ for rotateidx in $(seq 0 $(expr ${server_total_logical_num_for_rotation} - 1)); 
 		# ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "
 		cd ${SWITCH_ROOTPATH}/${DIRNAME}/bmv2; bash cleanup_obselete_snapshottoken.sh >>tmp_cleanup.out 2>&1
 	fi
-
+	cd ${SWITCH_ROOTPATH}
 	source scriptsbmv2/remote/test_server_rotation_p2.sh 0 ${rotateidx}
 	rotatecnt=$((++rotatecnt))
 done

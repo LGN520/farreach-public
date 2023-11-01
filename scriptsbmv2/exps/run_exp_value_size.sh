@@ -10,8 +10,8 @@ if [ $# -ne 1 ]; then
 fi
 roundnumber=$1
 
-exp6_server_scale="16"
-exp6_server_scale_bottleneck="14"
+exp6_server_scale=16
+exp6_server_scale_bottleneck=4
 exp6_method_list=("farreach" "netcache" "nocache")
 exp6_workload_list=("valuesize-16" "valuesize-32" "valuesize-64")
 exp6_existed_workload_list=("synthetic")
@@ -29,7 +29,8 @@ for exp6_method in ${exp6_method_list[@]}; do
   for exp6_workload in ${exp6_workload_list[@]}; do
     ### Preparation
     echo "[exp6][${exp6_method}][${exp6_workload}] run workload with $exp6_workload" servers
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscriptsbmv2/stopswitchtestbed.sh"
+   cd ${SWITCH_ROOTPATH}/${exp6_method}; 
+   bash localscriptsbmv2/stopswitchtestbed.sh
     
     echo "[exp6][${exp6_method}][${exp6_workload}] update ${exp6_method} config with ${exp6_workload}"
     cp ${CLIENT_ROOTPATH}/${exp6_method}/configs/config.ini.bmv2 ${CLIENT_ROOTPATH}/${exp6_method}/config.ini
@@ -45,11 +46,14 @@ for exp6_method in ${exp6_method_list[@]}; do
     bash scriptsbmv2/remote/prepare_server_rotation.sh
 
     echo "[exp6][${exp6_method}][${exp6_workload}] start switchos" 
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp6_method}/bmv2; nohup python network.py &"
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscriptsbmv2/launchswitchostestbed.sh"
+    cd ${SWITCH_ROOTPATH}/${exp6_method}/bmv2; 
+    nohup python network.py &
+    sleep 10s
+    cd ${SWITCH_ROOTPATH}/${exp6_method}; 
+    bash localscriptsbmv2/launchswitchostestbed.sh
 
     sleep 20s
-
+    cd ${SWITCH_ROOTPATH}
     ### Evaluation
     echo "[exp6][${exp6_method}][${exp6_workload}] test server rotation" 
     bash scriptsbmv2/remote/test_server_rotation.sh
@@ -65,7 +69,8 @@ for exp6_method in ${exp6_method_list[@]}; do
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client0.out  ${exp6_output_path}/${exp6_workload}-${exp6_method}-static${exp6_server_scale}-client0.out 
     cp ${CLIENT_ROOTPATH}/benchmark/output/${exp6_workload}-statistics/${exp6_method}-static${exp6_server_scale}-client1.out  ${exp6_output_path}/${exp6_workload}-${exp6_method}-static${exp6_server_scale}-client1.out 
     echo "[exp6][${exp6_method}][${exp6_workload}] stop switchos" 
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp6_method}; bash localscriptsbmv2/stopswitchtestbed.sh"
+    cd ${SWITCH_ROOTPATH}/${exp6_method}; 
+    bash localscriptsbmv2/stopswitchtestbed.sh
   done
   
   ### Backup for generated workloads

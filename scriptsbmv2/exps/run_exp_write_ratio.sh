@@ -10,8 +10,8 @@ if [ $# -ne 1 ]; then
 fi
 roundnumber=$1
 
-exp4_server_scale="16"
-exp4_server_scale_bottleneck="14"
+exp4_server_scale=16
+exp4_server_scale_bottleneck=4
 exp4_method_list=("farreach" "netcache" "nocache")
 exp4_workload_list=("synthetic-25" "synthetic-75" "synthetic")
 exp4_existed_workload_list=("workloadc" "workloada")

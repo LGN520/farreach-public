@@ -24,8 +24,8 @@ fi
 sleep 15s # wait for database to finish flush and compaction
 
 echo "kill servers"
-bash scriptsbmv2/local/localkill.sh ./server >/dev/null 2>&1
-
+bash scriptsbmv2/local/localkill.sh "./server 0" >/dev/null 2>&1
+bash scriptsbmv2/local/localkill.sh "./server 1" >/dev/null 2>&1
 if [ ${with_controller} -eq 1 ]
 then
 	echo "kill controller"

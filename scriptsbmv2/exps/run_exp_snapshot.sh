@@ -12,7 +12,7 @@ roundnumber=$1
 
 exp8_server_scale=2
 exp8_server_scale_for_rotation=16
-exp8_server_scale_bottleneck=14
+exp8_server_scale_bottleneck=4
 # NOTE: do NOT change exp8_method, which MUST be farreach!!!
 exp8_method="farreach"
 exp8_workload="synthetic"
@@ -38,7 +38,8 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
   for exp8_snapshot in ${exp8_snapshot_list[@]}; do
     ### Preparation
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] run rulemap with ${exp8_rule}"
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp8_method}; bash localscriptsbmv2/stopswitchtestbed.sh"
+    cd ${SWITCH_ROOTPATH}/${exp8_method}; 
+    bash localscriptsbmv2/stopswitchtestbed.sh
     
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] update ${exp8_method} config with snapshot"
     cp ${CLIENT_ROOTPATH}/${exp8_method}/configs/config.ini.bmv2 ${CLIENT_ROOTPATH}/${exp8_method}/config.ini
@@ -58,17 +59,22 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
     bash scriptsbmv2/remote/sync_file.sh ${exp8_method} config.ini
 
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] start switchos" 
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp8_method}/bmv2; nohup python network.py &"
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp8_method}; bash localscriptsbmv2/launchswitchostestbed.sh"
+    cd ${SWITCH_ROOTPATH}/${exp8_method}/bmv2; 
+    nohup python network.py &
+    sleep 10s
+    cd ${SWITCH_ROOTPATH}/${exp8_method}; 
+    bash localscriptsbmv2/launchswitchostestbed.sh
 
     sleep 20s
 
 
     ### Evaluation
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] test dynamic workload pattern without server rotation" 
+    cd ${SWITCH_ROOTPATH}
     bash scriptsbmv2/remote/test_dynamic.sh
 
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] sync json file and calculate"
+    cd ${SWITCH_ROOTPATH}
     bash scriptsbmv2/remote/calculate_statistics.sh 0
 
 
@@ -76,9 +82,10 @@ for exp8_rule in ${exp8_dynamic_rule_list[@]}; do
     cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp8_method}-${exp8_rule}-client0.out  ${exp8_output_path}/${exp8_snapshot}-${exp8_method}-${exp8_rule}-client0.out
     cp ${CLIENT_ROOTPATH}/benchmark/output/synthetic-statistics/${exp8_method}-${exp8_rule}-client1.out  ${exp8_output_path}/${exp8_snapshot}-${exp8_method}-${exp8_rule}-client1.out
     echo "[exp8][${exp8_rule}][${exp8_snapshot}] stop switchos" 
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp8_method}; bash localscriptsbmv2/stopswitchtestbed.sh"
+    cd ${SWITCH_ROOTPATH}/${exp8_method}; 
+    bash localscriptsbmv2/stopswitchtestbed.sh
 
-    scp ${USER}@${SERVER0}:${SERVER_ROOTPATH}/${exp8_method}/tmp_controller_bwcost.out ${exp8_output_path}/${exp8_snapshot}_${exp8_rule}_tmp_controller_bwcost.out
+    cp ${SERVER_ROOTPATH}/${exp8_method}/tmp_controller_bwcost.out ${exp8_output_path}/${exp8_snapshot}_${exp8_rule}_tmp_controller_bwcost.out
 
 	cd scriptsbmv2/local/
 	python calculate_bwcost_helper.py ${exp8_output_path}/${exp8_snapshot}_${exp8_rule}_tmp_controller_bwcost.out

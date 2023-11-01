@@ -34,14 +34,15 @@ then
 	cd ${DIRNAME}
 	mx h1 ./warmup_client
 	cd ..
-	sleep 10s
+	sleep 120s
 fi
 
 echo "launch clients of ${DIRNAME}"
 cd ./benchmark/ycsb
 mx h2 python2 ./bin/ycsb run ${DIRNAME} -pi 1 >tmp_client1.out 2>&1 &
+sleep 20s
 mx h1 python2 ./bin/ycsb run ${DIRNAME} -pi 0 >tmp_client0.out 2>&1
 cd ../../
 
 echo "stop storage servers of ${DIRNAME}"
-# bash scriptsbmv2/remote/stopservertestbed.sh
+bash scriptsbmv2/remote/stopservertestbed.sh

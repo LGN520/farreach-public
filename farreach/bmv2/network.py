@@ -29,7 +29,7 @@ def create_network():
         cls=P4Switch,
         json_path=json_path,
         thrift_port=9090,
-        pcap_dump=True,
+        pcap_dump=False,
         pcap_dir="./pcap",
         log_enabled=False,
         log_dir="./log",

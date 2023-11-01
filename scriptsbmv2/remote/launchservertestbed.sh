@@ -33,12 +33,13 @@ then
 	cd ${SERVER_ROOTPATH}/${DIRNAME}
 	mx h3 ./controller >tmp_controller.out 2>&1 &
 fi
-
+sleep 10s
 echo "launch servers"
 cd ${SERVER_ROOTPATH}/${DIRNAME}
 mx h3 ./server 0 >tmp_server0.out ${recovermode} 2>&1 &
+sleep 10s
 mx h4 ./server 1 >tmp_server1.out ${recovermode} 2>&1 &
-
+sleep 10s
 if [ ${with_reflector} -eq 1 ]
 then
 	echo "launch reflectors"
@@ -46,5 +47,5 @@ then
 	mx h1 ./reflector spine >tmp_reflector.out 2>&1 &
 	cd ..
 fi
-
+sleep 10s
 cd ..

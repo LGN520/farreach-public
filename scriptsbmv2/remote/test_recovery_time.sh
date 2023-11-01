@@ -92,12 +92,13 @@ sleep 5s
 
 # Close server
 echo "Stop server and reflector"
+cd ${SWITCH_ROOTPATH}
 source scriptsbmv2/remote/stopservertestbed.sh
 
 # Close switchos
 echo "Stop switch and switchos"
 # ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "
 cd ${SWITCH_ROOTPATH}/${DIRNAME}; bash localscriptsbmv2/stopswitchtestbed.sh >/dev/null 2>&1
-
+cd ${SWITCH_ROOTPATH}
 echo "Resume ${DIRNAME}/config.ini with ${DIRNAME}/config.ini.bak if any"
 mv ${DIRNAME}/config.ini.bak ${DIRNAME}/config.ini

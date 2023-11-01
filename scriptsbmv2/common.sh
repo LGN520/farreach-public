@@ -5,12 +5,16 @@ then
 fi
 
 function readini() {
-	tmpfile=$1
-	result=$(awk -F '=' -v tmpsection=[$2] -v tmpkey=$3 '$0==tmpsection {flag = 1; next} /^\[/ {flag = 0; next} flag && $1==tmpkey {print $2}' ${tmpfile})
+	# tmpfile=$1
+	# result=$(awk -F '=' -v tmpsection=[$2] -v tmpkey=$3 '$0==tmpsection {flag = 1; next} /^\[/ {flag = 0; next} flag && $1==tmpkey {print $2}' ${tmpfile})
+	file=$1
+    section=$2
+    key=$3
+    result=$(awk -F '=' '/^\['$section'\]/{a=1}a==1&&$1=="'$key'"{print $2;exit}' $file)
 	echo ${result}
 }
 
-DIRNAME="netcache"
+DIRNAME="farreach"
 
 ##### method-related variables #####
 
@@ -52,7 +56,7 @@ dynamicpattern=$(readini ${configfile} "global" "dynamic_ruleprefix")
 bottleneck_serveridx=$(readini ${configfile} "global" "bottleneck_serveridx_for_rotation")
 server_total_logical_num=$(readini ${configfile} "global" "server_total_logical_num")
 server_total_logical_num_for_rotation=$(readini ${configfile} "global" "server_total_logical_num_for_rotation")
-
+# echo "debug ${server_total_logical_num_for_rotation}"
 if [ "x${DIRNAME}" == "xfarreach" ]
 then
 	snapshot_period=$(readini ${configfile} "controller" "controller_snapshot_period") # in units of ms

@@ -6,8 +6,8 @@ then
 	source scriptsbmv2/common.sh
 fi
 
-echo "[INFO] make software code in main client"
-source scriptsbmv2/local/makeclient.sh
+# echo "[INFO] make software code in main client"
+# source scriptsbmv2/local/makeclient.sh
 
 echo "[INFO] make software code in secondary client"
 # ssh ${USER}@${SECONDARY_CLIENT} "cd ${CLIENT_ROOTPATH}; bash scriptsbmv2/local/makeclient.sh"

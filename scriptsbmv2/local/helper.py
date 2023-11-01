@@ -26,7 +26,7 @@ DEBUG_MODE=False
 # Utils
 
 def getmops(opsperms):
-    return opsperms * 1000 / 1000.0 / 1000.0
+    return opsperms * 1000 #use ops for bmv2
 
 def getstrid(tmpjsonobj):
     if STRID in tmpjsonobj.keys():

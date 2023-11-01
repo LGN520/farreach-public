@@ -1,2 +1,2 @@
-python cleanup_obselete_snapshottoken/table_configure.py
+mx switchos python cleanup_obselete_snapshottoken/table_configure.py
 

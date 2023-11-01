@@ -88,7 +88,7 @@ class RegisterUpdate():
                 for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
                     matchspec0 = [
                             hex(tmpoptype),
-                            hex(iport)]
+                            iport]
                     controller.table_delete_match('need_recirculate_tbl', matchspec0)
         print("Reset snapshot_flag=0 for all ingress pipelines")
         entrynum = controller.table_num_entries('snapshot_flag_tbl')
@@ -111,7 +111,7 @@ class RegisterUpdate():
             for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
                 matchspec0 = [
                         hex(tmpoptype),
-                        hex(iport)]
+                        iport]
                 actnspec0 = [recirport]
                 controller.table_add('need_recirculate_tbl','set_need_recirculate',matchspec0, actnspec0)
 
@@ -138,7 +138,7 @@ class RegisterUpdate():
                 for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
                     matchspec0 = [
                             hex(tmpoptype),
-                            hex(iport)]
+                            iport]
                     controller.table_delete_match('need_recirculate_tbl', matchspec0)
 
     def load_snapshot_data(self, cached_empty_index_backup, pipeidx):

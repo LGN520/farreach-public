@@ -237,8 +237,8 @@ CLIENT_TARGETS += skewness_check
 ##############################################################################
 # Top level targets
 
-#all: $(TARGETS)
-#	rm -rf $(CLEAN) $(DEPS)
+all: $(CLIENT_TARGETS) $(SWITCH_TARGETS)  $(SERVER_TARGETS)
+	rm -rf $(CLEAN) $(DEPS)
 
 allclient: $(CLIENT_TARGETS)
 	rm -rf $(CLEAN) $(DEPS)

@@ -30,15 +30,15 @@ then
 	exit
 fi
 
-exp9_server_scale="16"
+exp9_server_scale=16
 if [ ${exp9_workloadmode} -eq 1 ]
 then
 	exp9_server_scale="2"
 fi
 
 # NOTE: we ONLY support synthetic workload here!!!
-exp9_server_scale_for_rotation="16"
-exp9_server_scale_bottleneck="14"
+exp9_server_scale_for_rotation=16
+exp9_server_scale_bottleneck=4
 exp9_round_list=("0" "1" "2" "3" "4" "5") # do one extra round 0 to wait for database to finish flush and compaction
 exp9_cachesize_list=("100" "1000" "10000")
 
@@ -50,7 +50,8 @@ sed -i "/^DIRNAME=/s/=.*/=\"${exp9_method}\"/" ${CLIENT_ROOTPATH}/scriptsbmv2/co
 cd ${CLIENT_ROOTPATH}
 bash scriptsbmv2/remote/sync_file.sh scripts common.sh
 
-ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp9_method}; bash localscriptsbmv2/stopswitchtestbed.sh"
+cd ${SWITCH_ROOTPATH}/${exp9_method}; 
+bash localscriptsbmv2/stopswitchtestbed.sh
 
 ### Recovery
 for exp9_cachesize in ${exp9_cachesize_list[@]}; do
@@ -69,7 +70,7 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
     sed -i "s/^server_logical_idxes=TODO1/server_logical_idxes=1/g" ${CLIENT_ROOTPATH}/${exp9_method}/config.ini
   fi
 
-  bash scriptsbmv2/remote/sync_file.sh ${exp9_method} config.ini
+  # bash scriptsbmv2/remote/sync_file.sh ${exp9_method} config.ini
 
   if [ ${exp9_workloadmode} -ne 1 ]
   then
@@ -80,25 +81,32 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
 
   if [ ${exp9_recoveryonly} -eq 0 ]; then
     echo "[exp9][${exp9_cachesize}] start switchos" 
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp9_method}/bmv2; nohup python network.py &"
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp9_method}; bash localscriptsbmv2/launchswitchostestbed.sh"
+    cd ${SWITCH_ROOTPATH}/${exp9_method}/bmv2; 
+    nohup python network.py &
+    sleep 10s
+    cd ${SWITCH_ROOTPATH}/${exp9_method}; 
+    bash localscriptsbmv2/launchswitchostestbed.sh
 
     sleep 20s
 
     if [ ${exp9_workloadmode} -eq 1 ]
 	then
       echo "[exp9][${exp9_rule}][10000ms] test dynamic workload pattern without server rotation" 
+      cd ${SWITCH_ROOTPATH}
       bash scriptsbmv2/remote/test_dynamic.sh
     else
       echo "[exp9][${exp9_cachesize}] test server rotation" 
+      cd ${SWITCH_ROOTPATH}
       bash scriptsbmv2/remote/test_server_rotation.sh
 
       echo "[exp9][${exp9_cachesize}] stop server rotation"
+      cd ${SWITCH_ROOTPATH}
       bash scriptsbmv2/remote/stop_server_rotation.sh
 	fi
 
     echo "[exp9][${exp9_cachesize}] stop switchos" 
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp9_method}; bash localscriptsbmv2/stopswitchtestbed.sh"
+    cd ${SWITCH_ROOTPATH}/${exp9_method}; 
+    bash localscriptsbmv2/stopswitchtestbed.sh
   fi
 
   for exp9_roundnumber in ${exp9_round_list[@]}; do
@@ -108,45 +116,46 @@ for exp9_cachesize in ${exp9_cachesize_list[@]}; do
     if [ ${exp9_recoveryonly} -eq 0 ]; then
       if [ ${exp9_workloadmode} -eq 0 ]; then
         cp benchmark/output/upstreambackups/static${exp9_server_scale}*client0.out ${exp9_output_path}/${exp9_cachesize}
-        scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/static${exp9_server_scale}*client1.out ${exp9_output_path}/${exp9_cachesize}
+        cp ${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/static${exp9_server_scale}*client1.out ${exp9_output_path}/${exp9_cachesize}
       elif [ ${exp9_workloadmode} -eq 1 ]; then
         cp benchmark/output/upstreambackups/dynamic-client0.out ${exp9_output_path}/${exp9_cachesize}
-        scp ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/dynamic-client1.out ${exp9_output_path}/${exp9_cachesize}
+        cp ${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/dynamic-client1.out ${exp9_output_path}/${exp9_cachesize}
       else
         echo "[ERROR] invalid workload mode: ${exp9_workloadmode}"
         exit
       fi
 
-      scp ${USER}@${SERVER0}:/tmp/${exp9_method}/controller.snapshot* ${exp9_output_path}/${exp9_cachesize}
-      scp ${USER}@${SERVER0}:/tmp/${exp9_method}/*maxseq* ${exp9_output_path}/${exp9_cachesize}
-      scp ${USER}@${SERVER1}:/tmp/${exp9_method}/*maxseq* ${exp9_output_path}/${exp9_cachesize}
+      cp /tmp/${exp9_method}/controller.snapshot* ${exp9_output_path}/${exp9_cachesize}
+      cp /tmp/${exp9_method}/*maxseq* ${exp9_output_path}/${exp9_cachesize}
+      cp /tmp/${exp9_method}/*maxseq* ${exp9_output_path}/${exp9_cachesize}
     else
       if [ ${exp9_workloadmode} -eq 0 ]; then
         cp ${exp9_output_path}/${exp9_cachesize}/static${exp9_server_scale}*client0.out benchmark/output/upstreambackups/
-        scp ${exp9_output_path}/${exp9_cachesize}/static${exp9_server_scale}*client1.out  ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/
+        cp ${exp9_output_path}/${exp9_cachesize}/static${exp9_server_scale}*client1.out  ${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/
       elif [ ${exp9_workloadmode} -eq 1 ]; then
         cp ${exp9_output_path}/${exp9_cachesize}/dynamic-client0.out benchmark/output/upstreambackups/
-        scp ${exp9_output_path}/${exp9_cachesize}/dynamic-client1.out ${USER}@${SECONDARY_CLIENT}:${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/
+        cp ${exp9_output_path}/${exp9_cachesize}/dynamic-client1.out ${CLIENT_ROOTPATH}/benchmark/output/upstreambackups/
       else
         echo "[ERROR] invalid workload mode: ${exp9_workloadmode}"
         exit
       fi
 
-      scp ${exp9_output_path}/${exp9_cachesize}/controller.snapshot* ${USER}@${SERVER0}:/tmp/${exp9_method}/
-      scp ${exp9_output_path}/${exp9_cachesize}/*maxseq* ${USER}@${SERVER0}:/tmp/${exp9_method}/
-      scp ${exp9_output_path}/${exp9_cachesize}/*maxseq* ${USER}@${SERVER1}:/tmp/${exp9_method}/
+      cp ${exp9_output_path}/${exp9_cachesize}/controller.snapshot* /tmp/${exp9_method}/
+      cp ${exp9_output_path}/${exp9_cachesize}/*maxseq* /tmp/${exp9_method}/
+      cp ${exp9_output_path}/${exp9_cachesize}/*maxseq* /tmp/${exp9_method}/
     fi
 
     echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Get recovery time"
+    cd ${CLIENT_ROOTPATH}
     bash scriptsbmv2/remote/test_recovery_time.sh > tmp_test_recovery_time.out 2>&1
 
     echo "[exp9][${exp9_roundnumber}][${exp9_cachesize}] Backup statistics files to ${exp9_output_path}/${exp9_cachesize}"
     sleep 10s
     cp tmp_test_recovery_time.out ${exp9_output_path}/${exp9_cachesize}
-    scp -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH}:${SWITCH_ROOTPATH}/${exp9_method}/tmp_launchswitchostestbed.out ${exp9_output_path}/${exp9_cachesize}
-    scp -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH}:${SWITCH_ROOTPATH}/${exp9_method}/tmp_switchos.out ${exp9_output_path}/${exp9_cachesize}
-    scp ${USER}@${SERVER0}:${CLIENT_ROOTPATH}/${exp9_method}/tmp_server0.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_0.out
-    scp ${USER}@${SERVER1}:${CLIENT_ROOTPATH}/${exp9_method}/tmp_server1.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_1.out
+    cp  ${SWITCH_ROOTPATH}/${exp9_method}/tmp_launchswitchostestbed.out ${exp9_output_path}/${exp9_cachesize}
+    cp  ${SWITCH_ROOTPATH}/${exp9_method}/tmp_switchos.out ${exp9_output_path}/${exp9_cachesize}
+    cp ${CLIENT_ROOTPATH}/${exp9_method}/tmp_server0.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_0.out
+    cp ${CLIENT_ROOTPATH}/${exp9_method}/tmp_server1.out ${exp9_output_path}/${exp9_cachesize}/tmp_server_1.out
 
     python scriptsbmv2/local/calculate_recovery_time_helper.py ${exp9_output_path}/${exp9_cachesize} ${exp9_server_scale}
   done

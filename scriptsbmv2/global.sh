@@ -17,9 +17,9 @@ LEAFSWITCH="bf3"
 # NOTE:SPINESWITCH is not used at this stage
 # SPINESWITCH="bf3" 
 
-CLIENT_ROOTPATH="/root/P4/farreach-private"
-SWITCH_ROOTPATH="/root/P4/farreach-private"
-SERVER_ROOTPATH="/root/P4/farreach-private"
+CLIENT_ROOTPATH="/root/farreach-private"
+SWITCH_ROOTPATH="/root/farreach-private"
+SERVER_ROOTPATH="/root/farreach-private"
 
 # backup rocksdb after loading phase
 BACKUPS_ROOTPATH="/tmp/rocksdbbackups"

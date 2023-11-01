@@ -8,16 +8,12 @@ fi
 
 echo "[COMPILE] enable server rotation"
 sed -i "s/^#define SERVER_ROTATION/\/\/#define SERVER_ROTATION/g" common/helper.h
-source scriptsbmv2/remote/sync_file.sh common helper.h
+# source scriptsbmv2/remote/sync_file.sh common helper.h
+source scriptsbmv2/local/makeclient.sh
 
-echo "[COMPILE] recompile code for FarReach"
-source scriptsbmv2/remote/setmethod.sh farreach
-source scriptsbmv2/remote/makeallsoft.sh
-
-echo "[COMPILE] recompile code for NoCache"
-source scriptsbmv2/remote/setmethod.sh nocache
-source scriptsbmv2/remote/makeallsoft.sh
-
-echo "[COMPILE] recompile code for NetCache"
-source scriptsbmv2/remote/setmethod.sh netcache
-source scriptsbmv2/remote/makeallsoft.sh
+cd ${SWITCH_ROOTPATH}/farreach;
+make all
+cd ${SWITCH_ROOTPATH}/netcache;
+make all
+cd ${SWITCH_ROOTPATH}/nocache;
+make all

@@ -82,7 +82,7 @@ class RegisterUpdate():
             for i in range(len(self.unmatched_devports)):
                 iport = self.unmatched_devports[i]
                 for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
-                    matchspec0 = [hex(tmpoptype),hex(iport)]
+                    matchspec0 = [hex(tmpoptype),iport]
                     controller.table_delete_match('need_recirculate_tbl', matchspec0)
         print("Reset snapshot_flag=0 for all ingress pipelines")
         entrynum =

@@ -34,7 +34,7 @@ then
 	exit
 fi
 
-exp10_server_scale="16"
+exp10_server_scale=16
 if [ ${exp10_workloadmode} -eq 1 ]
 then
 	exp10_server_scale="2"
@@ -42,7 +42,7 @@ fi
 
 # NOTE: we ONLY support synthetic workload here!!!
 exp10_server_scale_for_rotation="16"
-exp10_server_scale_bottleneck="14"
+exp10_server_scale_bottleneck=4
 exp10_round_list=("0" "1" "2" "3" "4" "5") # do one extra round 0 to wait for database to finish flush and compaction
 exp10_snapshot_list=("0" "2500" "5000" "7500" "10000")
 
@@ -54,8 +54,9 @@ sed -i "/^DIRNAME=/s/=.*/=\"${exp10_method}\"/" ${CLIENT_ROOTPATH}/scriptsbmv2/c
 cd ${CLIENT_ROOTPATH}
 bash scriptsbmv2/remote/sync_file.sh scripts common.sh
 
-ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp10_method}; bash localscriptsbmv2/stopswitchtestbed.sh"
-
+cd ${SWITCH_ROOTPATH}/${exp10_method}; 
+bash localscriptsbmv2/stopswitchtestbed.sh
+cd ${SWITCH_ROOTPATH}
 ### Recovery
 for exp10_snapshot in ${exp10_snapshot_list[@]}; do
   echo "[exp10][${exp10_snapshot}] Recovery with snapshot interval of ${exp10_snapshot} ms"
@@ -73,7 +74,7 @@ for exp10_snapshot in ${exp10_snapshot_list[@]}; do
     sed -i "s/^server_logical_idxes=TODO1/server_logical_idxes=1/g" ${CLIENT_ROOTPATH}/${exp10_method}/config.ini
   fi
 
-  bash scriptsbmv2/remote/sync_file.sh ${exp10_method} config.ini
+  # bash scriptsbmv2/remote/sync_file.sh ${exp10_method} config.ini
 
   if [ ${exp10_workloadmode} -ne 1 ]
   then
@@ -84,9 +85,11 @@ for exp10_snapshot in ${exp10_snapshot_list[@]}; do
 
   if [ ${exp10_recoveryonly} -eq 0 ]; then
     echo "[exp10][${exp10_snapshot}] start switchos" 
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp10_method}/bmv2; python network.py > tmp_start_switch.out 2>&1 &"
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp10_method}; bash localscriptsbmv2/launchswitchostestbed.sh"
-
+    
+    cd ${SWITCH_ROOTPATH}/${exp10_method}/bmv2; python network.py > tmp_start_switch.out 2>&1 &
+    sleep 10s
+    cd ${SWITCH_ROOTPATH}/${exp10_method}; bash localscriptsbmv2/launchswitchostestbed.sh
+    cd ${SWITCH_ROOTPATH}
     sleep 20s
 
     if [ ${exp10_workloadmode} -eq 1 ]
@@ -102,7 +105,8 @@ for exp10_snapshot in ${exp10_snapshot_list[@]}; do
     fi
 
     echo "[exp10][${exp10_snapshot}] stop switchos" 
-    ssh -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH} "cd ${SWITCH_ROOTPATH}/${exp10_method}; bash localscriptsbmv2/stopswitchtestbed.sh"
+    cd ${SWITCH_ROOTPATH}/${exp10_method}; 
+    bash localscriptsbmv2/stopswitchtestbed.sh
   fi
 
   for exp10_roundnumber in ${exp10_round_list[@]}; do
@@ -121,9 +125,9 @@ for exp10_snapshot in ${exp10_snapshot_list[@]}; do
         exit
       fi
 
-      scp ${USER}@${SERVER0}:/tmp/${exp10_method}/controller.snapshot* ${exp10_output_path}/${exp10_snapshot}
-      scp ${USER}@${SERVER0}:/tmp/${exp10_method}/*maxseq* ${exp10_output_path}/${exp10_snapshot}
-      scp ${USER}@${SERVER1}:/tmp/${exp10_method}/*maxseq* ${exp10_output_path}/${exp10_snapshot}
+      cp /tmp/${exp10_method}/controller.snapshot* ${exp10_output_path}/${exp10_snapshot}
+      cp /tmp/${exp10_method}/*maxseq* ${exp10_output_path}/${exp10_snapshot}
+      # cp /tmp/${exp10_method}/*maxseq* ${exp10_output_path}/${exp10_snapshot}
     else
       if [ ${exp10_workloadmode} -eq 0 ]; then
         cp ${exp10_output_path}/${exp10_snapshot}/static${exp10_server_scale}*client0.out benchmark/output/upstreambackups/
@@ -136,9 +140,9 @@ for exp10_snapshot in ${exp10_snapshot_list[@]}; do
         exit
       fi
 
-      scp ${exp10_output_path}/${exp10_snapshot}/controller.snapshot* ${USER}@${SERVER0}:/tmp/${exp10_method}/
-      scp ${exp10_output_path}/${exp10_snapshot}/*maxseq* ${USER}@${SERVER0}:/tmp/${exp10_method}/
-      scp ${exp10_output_path}/${exp10_snapshot}/*maxseq* ${USER}@${SERVER1}:/tmp/${exp10_method}/
+      cp ${exp10_output_path}/${exp10_snapshot}/controller.snapshot* /tmp/${exp10_method}/
+      cp ${exp10_output_path}/${exp10_snapshot}/*maxseq* /tmp/${exp10_method}/
+      # cp ${exp10_output_path}/${exp10_snapshot}/*maxseq* ${USER}@${SERVER1}:/tmp/${exp10_method}/
     fi
 
     echo "[exp10][${exp10_roundnumber}][${exp10_snapshot}] Get recovery time"
@@ -147,10 +151,10 @@ for exp10_snapshot in ${exp10_snapshot_list[@]}; do
     echo "[exp10][${exp10_roundnumber}][${exp10_snapshot}] Backup statistics files to ${exp10_output_path}/${exp10_snapshot}"
     sleep 10s
     cp tmp_test_recovery_time.out ${exp10_output_path}/${exp10_snapshot}
-    scp -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH}:${SWITCH_ROOTPATH}/${exp10_method}/tmp_launchswitchostestbed.out ${exp10_output_path}/${exp10_snapshot}
-    scp -i /root/${SWITCH_PRIVATEKEY} root@${LEAFSWITCH}:${SWITCH_ROOTPATH}/${exp10_method}/tmp_switchos.out ${exp10_output_path}/${exp10_snapshot}
-    scp ${USER}@${SERVER0}:${CLIENT_ROOTPATH}/${exp10_method}/tmp_server0.out ${exp10_output_path}/${exp10_snapshot}/tmp_server_0.out
-    scp ${USER}@${SERVER1}:${CLIENT_ROOTPATH}/${exp10_method}/tmp_server1.out ${exp10_output_path}/${exp10_snapshot}/tmp_server_1.out
+    cp ${SWITCH_ROOTPATH}/${exp10_method}/tmp_launchswitchostestbed.out ${exp10_output_path}/${exp10_snapshot}
+    cp ${SWITCH_ROOTPATH}/${exp10_method}/tmp_switchos.out ${exp10_output_path}/${exp10_snapshot}
+    cp ${CLIENT_ROOTPATH}/${exp10_method}/tmp_server0.out ${exp10_output_path}/${exp10_snapshot}/tmp_server_0.out
+    cp ${CLIENT_ROOTPATH}/${exp10_method}/tmp_server1.out ${exp10_output_path}/${exp10_snapshot}/tmp_server_1.out
 
     python scriptsbmv2/local/calculate_recovery_time_helper.py ${exp10_output_path}/${exp10_snapshot} ${exp10_server_scale}
   done
