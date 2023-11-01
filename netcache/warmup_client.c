@@ -68,12 +68,14 @@ void run_warmuper() {
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ips[0]), server_worker_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
-
+	printf("[warmup_client] cache size: %d\n", switch_kv_bucket_num);
+	fflush(stdout);
+	int tmp_warmupcnt = 0;
 	while (true) {
 		if (!iter->next()) {
 			break;
 		}
-
+		// printf("tmp_warmupcnt %d\n",tmp_warmupcnt++);fflush(stdout);
 		tmpkey = iter->key();
 		if (iter->type() == uint8_t(packet_type_t::WARMUPREQ)) { // update or insert
 			//tmpval = iter->val();

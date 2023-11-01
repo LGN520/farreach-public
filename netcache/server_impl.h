@@ -218,21 +218,20 @@ void *run_server_popserver(void *param) {
   fflush(stdout);
 
   transaction_ready_threads++;
-
   while (!transaction_running) {}
-
   char buf[MAX_BUFSIZE];
   char recvbuf[MAX_BUFSIZE];
   int recvsize = 0;
   while (transaction_running) {
 	bool is_timeout = udprecvfrom(server_popserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, &controller_popserver_popclient_addr, &controller_popserver_popclient_addrlen, recvsize, "server.popserver");
+	//printf("[debug]running\n");
 	if (is_timeout) {
 		controller_popserver_popclient_addrlen = sizeof(struct sockaddr_in);
 		continue;
 	}
 
 	packet_type_t tmp_optype = get_packet_type(recvbuf, recvsize);
-
+	//printf("[debug]tmp_optype %d is_timeout %d\n",tmp_optype,is_timeout);
 	if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP) {
 		// receive NETCACHE_CACHE_POP from controller
 		netcache_cache_pop_t tmp_netcache_cache_pop(CURMETHOD_ID, recvbuf, recvsize);
@@ -405,6 +404,7 @@ void *run_server_worker(void * param) {
 	//bool is_timeout = udprecvfrom(server_worker_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
 	dynamicbuf.clear();
 	is_timeout = udprecvlarge_ipfrag(CURMETHOD_ID, server_worker_udpsock_list[local_server_logical_idx], dynamicbuf, 0, &client_addr, &client_addrlen, "server.worker", &cur_worker_pkt_ring_buffer);
+	// printf("[debug]running%d\n",is_timeout);
 	recv_size = dynamicbuf.size();
 	if (is_timeout) {
 		/*if (!is_first_pkt) {
@@ -425,9 +425,11 @@ void *run_server_worker(void * param) {
 	}
 	CUR_TIME(process_t1);
 #endif
-
+	
+	
 	//packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	packet_type_t pkt_type = get_packet_type(dynamicbuf.array(), recv_size);
+	// printf("[debug]pkt_type %d is_timeout %d\n",pkt_type,is_timeout);
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{
@@ -505,7 +507,7 @@ void *run_server_worker(void * param) {
 					printf("[server.worker] invalid pkttype: %x which should be PUTREQ_SEQ/DELREQ_SEQ\n", optype_t(pkt_type));
 					exit(-1);
 				}
-
+				//printf("[debug] kv %s %s\n",tmp_key.to_string_for_print(),tmp_val.to_string_for_print());
 				//COUT_THIS("[server] key = " << tmp_key.to_string())
 				
 #ifdef DEBUG_SERVER
@@ -617,6 +619,7 @@ void *run_server_worker(void * param) {
 					del_response_t rsp(CURMETHOD_ID, tmp_key, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
+				//printf("[debug] rsp_size %d dest %d\n",rsp_size,client_addr.sin_addr.s_addr);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -943,25 +946,6 @@ void *run_server_valueupdateserver(void *param) {
 			udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &client_addr, client_addrlen, "server.valueupdateserver");
 
 			// NOTE: valueupdate overhead is too large under write-intensive workload, which is caused by NetCache/DistCache design (write-through policy + server-issued value update) -> we skip timeout-and-retry mechanism here
-			/*while (true) {
-				bool is_timeout = udprecvfrom(server_valueupdateserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.valueupdateserver");
-				if (is_timeout) {
-					udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &client_addr, client_addrlen, "server.valueupdateserver");
-					printf("Re-send NETCACHE_VALUEUPDATE\n");
-					fflush(stdout);
-					continue;
-				}
-				else {
-					netcache_valueupdate_ack_t tmp_netcache_valueupdate_ack(CURMETHOD_ID, recvbuf, recvsize);
-					if (tmp_netcache_valueupdate_ack.key() != tmp_netcache_valueupdate_ptr->key()) {
-						continue;
-					}
-					else {
-						break;
-					}
-				}
-			}*/
-
 			// remove key from beingupdated keyset atomically
 			server_mutex_for_keyset_list[local_server_logical_idx].lock();
 			bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_valueupdate_ptr->key()) != server_beingupdated_keyset_list[local_server_logical_idx].end());
