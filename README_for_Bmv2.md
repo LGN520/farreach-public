@@ -46,8 +46,6 @@
 
 - Machine requirements
 	+ One physical machines with Ubuntu 20.04
-- Software requirements
-	+ Python 3.8.10
 
 </br>
 
@@ -76,7 +74,7 @@
 - **Note: system preparation has already been done in our AE testbed, so AEC members do NOT need to re-execute the following steps.**
 
 ## 1.1 Dependency Installation
-
++ Python 3.8.10
 - Install python libraries for python 2.7.12 if not
 	+ `pip install -r requirements.txt`
 	+ Make sure your 'python' alias to 'python3', if you want to use python2, please enter 'python2'
@@ -175,50 +173,12 @@
 </br>
 
 - Compile source code for all methods
-	- Under {main client}: `bash scriptsbmv2/remote/firstcompile.sh` to compile software code for all methods in clients, servers, and switch(**TIME: around 1 hour**).
+	- Under host machine: `bash scriptsbmv2/remote/firstcompile.sh` to compile software code for all methods in clients, servers, and switch(**TIME: around 1 hour**).
 	- For each {method}, under {switch}
 		- Run `su` to enter root mode
 		- Run `cd {method}/bmv2; bash compile.sh` to make P4 code 
 			+ If you have compiled P4 code of {method} before, you do **NOT need to re-compile it again**
 
-<!--
-- For each {method}
-	+ Options of {method}: farreach, nocache, or netcache
-	+ Under {main client}
-		* Set DIRNAME as {method} in `scriptsbmv2/common.sh`
-		* `bash scriptsbmv2/remote/sync.sh` to sync code of {method} to all machines
-	+ Compile software code
-		* Under {main client} and {secondary client}
-			- Run `bash scriptsbmv2/local/makeclient.sh` (TIME: around 10 minutes; especially for the first time with Maven downloading libs)
-		* Under {switch}
-			- Run `bash scriptsbmv2/local/makeswitchos.sh` to make switch OS (TIME: around 1 minute)
-			- Run `su` to enter root mode, and run `cd {method}/Bmv2; bash compile.sh` to make P4 code (**TIME: around 3 hours**)
-				+ If you have compiled P4 code of {method} before, you do **NOT need to re-compile it again**
-				+ If you really want to re-compile it (maybe due to P4 code modification), you should delete the corresponding directory (netbufferv4, nocache, or netcache) under $SDE/pkgsrc/p4-build/Bmv2/ before re-compilation
-		* Under {first server} and {second server}
-			- Run `bash scriptsbmv2/local/makeserver.sh` (TIME: around 5 minutes)
-		* Note: if with "make: warning:  Clock skew detected.  Your build may be incomplete" during make, run `cd {method}; find . -type f | xargs touch` and then re-make files
--->
-
-<!--
-* Automatic way (NOT used now due to very slow sequential compialtion) vs. makeclient/server/switchos.sh
-	- Under the main client, `bash scriptsbmv2/remote/makeremotefiles.sh` to make C/C++ and java code including client, switchos, controller, and server
--->
-
-## 1.4 Testbed Building
-
-- Building your testbed based on network settings provided by `scriptsbmv2/global.sh`
-	+ Before running the following scripts, in each of clients and servers (NO need for Bmv2 switch)
-		* Append the following content into `/etc/security/limits.conf` by `sudo vim`:
-		```
-		{USER} hard nofile 1024000
-		{USER} soft nofile 1024000
-		```
-	+ In {main client}, run `bash scriptsbmv2/local/configure_client.sh 0`
-	+ In {secondary client}, run `bash scriptsbmv2/local/configure_client.sh 1`
-	+ In {first server}, run `bash scriptsbmv2/local/configure_server.sh 0`
-	+ In {second server}, run `bash scriptsbmv2/local/configure_server.sh 1`
-	+ In {switch} OS, run `su` to enter root mode and run `bash scriptsbmv2/local/configure_switchos.sh`
 
 # 2 Data Preparation
 
@@ -226,37 +186,21 @@
 
 ## 2.1 Loading Phase
 
-<!--
-		* Set DIRNAME as nocache in `scriptsbmv2/common.sh`
-		* Run `bash scriptsbmv2/remote/sync_file.sh scripts common.sh` to sync scriptsbmv2/common.sh to all clients, servers, and switch
--->
-
 - Perform the loading phase and backup for evaluation time reduction (**TIME: around 40 minutes**; **ONLY need to perform once**)
-	+ Under {main client}
-		* Run `bash scriptsbmv2/remote/setmethod.sh nocache` to set DIRNAME as nocache and sync to other machines.
-		* Run `bash scriptsbmv2/remote/prepare_load.sh` to copy recordload/config.ini to overwrite nocache/config.ini in all clients, servers, and switch
-	+ Under {switch}, create two terminals
-		* In the first terminal
-			- `cd nocache/Bmv2`
-			- Run `su` to enter root mode
-			- Run `bash start_switch.sh` to launch nocache switch data plane, which will open a CLI
-		* In the second terminal
-			- `cd nocache`
-			- Run `su` to enter root mode
-			- Run `bash localscriptsbmv2/launchswitchostestbed.sh` to launch nocache switch OS and other daemon processes
-	+ Under {main client}
-		* Run `bash scriptsbmv2/remote/load_and_backup.sh` to launch servers and clients automatically for loading and backup
-			- Note: scriptsbmv2/remote/load_and_backup.sh will kill servers and clients at the end automatically
-			- Note: scriptsbmv2/remote/load_and_backup.sh will also resume the original nocache/config.ini in all clients, server, and switch after all steps
-	+ Under {switch}
-		- In the first terminal
-			- `Type exit and press enter` to stop switch data plane
-			- If CLI is still NOT closed, `type Ctrl+C` in the CLI to stop switch data plane
-		- In the second terminal
-			- `cd nocache`
-			- Run `su` to enter root mode
-			- Run `bash localscriptsbmv2/stopswitchtestbed.sh` to stop switch OS and other daemon processes
-	+ Under {main client}, run `bash scriptsbmv2/remote/stopall.sh` to forcely kill all processses
+	+ Dataset(100M records) is approximately 16GB
+	+ Modify these options in `recordload/config.ini`
+		- \[server0\]: server_ip:127.0.0.1
+		- \[client0\]: client_ip:127.0.0.1
+	+ load data
+		- `mkdir /tmp/nocache`
+		- `cd nocache`
+		- `./server 0 &`
+		- `cd ../benchmark/ycsb`
+		- `python2 ./bin/ycsb run recordload`
+		- `mkdir /tmp/rocksdbbackups`
+		- `cp -r /tmp/nocache/* /tmp/rocksdbbackups`
+	+ Stop everything
+		- `killall python server controller switchos simple_switch ovs-testcontroller`
 
 ## 2.2 Workload Analysis & Dump Keys
 
@@ -278,21 +222,12 @@
 			- **Each of other workloads needs 20 minutes to 40 minutes** (including skewness-90 of 20m, skewness-95 of 40m, and uniform of 30m)
 				- The reason is that YCSB uses Zipfian key generator with small skewness and uniform key generator for these workloads, which incurs large computation overhead
 				- Although workload-load is also uniform distribution, YCSB uses counter generator which has small computation overhead
-		- Under {main client}
+		- Under host machine
+			- To complete this step quickly, you do not need to perform it on the mininet virtual node. You can perform it directly on the host machine.
 			- Update workload\_name as {workload} in `keydump/config.ini`
 				- Note: you do NOT need to change configurations related with server rotation scales (i.e., server\_total\_logical\_num and server\_total\_logical\_num\_for_rotation) in `keydump/config.ini`, which is NOT used here
-			- Run `bash scriptsbmv2/remote/keydump_and_sync.sh` to dump workload-related information (e.g., hot keys and bottleneck serveridx), and sync them to all clients, servers, and switch
+			- Run `bash scriptsbmv2/remote/keydump_and_sync.sh` to dump workload-related information (e.g., hot keys and bottleneck serveridx)
   
-<!--
-- (DEPRECATED) Manual way vs. keydump_and_sync.sh
-    - `cd benchmark/ycsb; ./bin/ycsb run keydump; cd ../../`
-  		+ Dump hottest/nearhot/coldest keys into `benchmark/output/<workloadname>-\*.out` for warmup phase later
-  		+ Dump bottleneckt serveridx for different server rotation scales for server rotation later
-  		+ Pre-generate workload files in `benchmark/output/<workloadname>-pregeneration/` for server rotation later
-  	- `cd benchmark/ycsb; python generate_dynamicrules.py <workloadname>; cd ../../`
-  		+ Generates key popularity changing rules in `benchmark/output/<workloadname>-\*rules/` for dynamic pattern later
-  	- `bash scriptsbmv2/remote/deprecated/synckeydump.sh <workloadname>` to sync the above files of the workload to another client
--->
 
 # 3 Running Experiments (Automatic Evaluation)
 
@@ -311,7 +246,7 @@
 		- We need multiple rounds to reduce runtime variation (**TIME: around 1-2 month(s)**)
 		- Note: as the time for evaluation is relatively long, you may want to run scripts in the background
 			- **Make sure that you use `screen` or `nohup` to run each script in the background, otherwise the script will be killed by OS after you log out from the ssh connection**
-		+ Note: **before and after each experiment, run `scriptsbmv2/remote/stopall.sh` to forcely kill all processes to avoid confliction**
+		+ Note: **before and after each experiment, run `killall python server controller switchos simple_switch ovs-testcontroller` to forcely kill all processes to avoid confliction**
 
 </br>
 
@@ -321,7 +256,7 @@
 </br>
 
 - Note: if you encouter any other problem, you can **keep the critical information and contact us if available (sysheng21@cse.cuhk.edu.hk) for help**
-	- The causes of problem may be testbed mis-configuration, script mis-usage, resource confliction (e.g., Bmv2 switch data plane cannot support multiple P4 programs simultaneously), Bmv2 hardware bugs, and our code bugs
+	- The causes of problem may be testbed mis-configuration, script mis-usage, resource confliction, bmv2 hardware bugs, and our code bugs
 	- The critical information should include: command history of terminal, dumped information of scripts, log files generated by scripts(e.g., `{method}/tmp\_\*.out` in servers and switch, `benchmark/ycsb/tmp\_\*.out` in clients, and `{method}/Bmv2/tmp\_\*.out` in switch), and raw statistics generated by YCSB clients (e.g., `benchmark/ycsb/{method}-statistics/`)
 
 </br>
@@ -339,7 +274,7 @@
    |   7   |          [run_exp_dynamic.sh](scriptsbmv2/exps/run_exp_dynamic.sh)          | Synthetic workloads with different dynamic workload patterns (NO server rotation) |
    |   8   |         [run_exp_snapshot.sh](scriptsbmv2/exps/run_exp_snapshot.sh)         | Performance and control-plane bandwidth overhead of snapshot generation under different dynamic workload patterns (NO server rotation) |
    |   9   |         [run_exp_recovery.sh](scriptsbmv2/exps/run_exp_recovery.sh)         | Crash recovery time under static workload pattern (with server rotation) |
-   |  10   | N/A | See hardware reousrce usage of {method} in corresponding directory in {switch} (e.g., `$SDE/pkgsrc/p4-build/Bmv2/nocache/visualization`, `$SDE/pkgsrc/p4-build/Bmv2/netcache/visualization`, and `$SDE/pkgsrc/p4-build/Bmv2/netbufferv4/visualization`, where netbufferv4 corresponds to farreach) |
+
 
 </br>
 
@@ -354,61 +289,36 @@
 
 - With server rotation: run each {experiment} except exp_dynamic and exp_snapshot
 	- Options of {experiment}: exp_throughput, exp_latency, exp_scalability, exp_write_ratio, exp_key_distribution, exp_value_size, and exp_recovery
-	- Under {main client}
+	- Under host machine
 		- Re-compile all methods to enable server rotation if NOT: `bash scriptsbmv2/remote/enable_server_rotation.sh`
 		- Run `nohup bash scriptsbmv2/exps/run_{experiment}.sh <roundnumber> >tmp_{experiment}.out 2>&1 &`
 		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round for running an experiment
-	- After experiment, under {main client}
-		- `bash scriptsbmv2/remote/stopall.sh` to kill all involved processes
+	- After experiment, Under host machine
+		- `killall python server controller switchos simple_switch ovs-testcontroller` to kill all involved processes
 		- `bash scriptsbmv2/results/parse_{experiment}.sh tmp_{experiment}.out` to get results
 
 </br>
 
 - Without server rotation: run {experiment} of exp_dynamic or exp_snapshot
-	- Under {main client}
+	- Under host machine
 		- Re-compile code to disable server rotation if NOT: `bash scriptsbmv2/remote/disable_server_rotation.sh`
 		- Run `bash scriptsbmv2/exps/run_{experiment} <roundnumber>`
 		- Note: we run each experiment for multiple rounds to eliminate the effect of runtime variation (e.g., RocksDB fluctuation), so we need to specify <roundnumber> to indicate the index of the current round
-	- After experiment, under {main client}
-		- `bash scriptsbmv2/remote/stopall.sh` to kill all involved processes
+	- After experiment, Under host machine
+		- `killall python server controller switchos simple_switch ovs-testcontroller` to kill all involved processes
 		- `bash scriptsbmv2/results/parse_{experiment}.sh tmp_{experiment}.out` to get results
 	- As most experiments use server rotation for static pattern instead of dynamic patterns, you may want to re-compile your code to enable server rotation again
-		- Under {main client}, enable server rotation: `bash scriptsbmv2/remote/enable_server_rotation.sh`
+		- Under host machine, enable server rotation: `bash scriptsbmv2/remote/enable_server_rotation.sh`
 
-<!--
-		- Disable server rotation
-			- Comment line 82 (#define SERVER_ROTATION) in `common/helper.h` to disable server rotation
-			- `bash scriptsbmv2/remote/sync_file.sh common helper.h` to sync code changes to all machines
-		- For each {method} (farreach or netcache or nocache), re-compile software code (NO need for P4 code of switch data plane)
-			- Set DIRNAME as {method} in `scriptsbmv2/common.sh`
-			- Run `bash scriptsbmv2/remote/sync_file.sh scripts common.sh`
-			- Under {main client} and {secondary client}, run `bash scriptsbmv2/local/makeclient.sh`
-			- Under {first server} and {second server}, run `bash scriptsbmv2/local/makeserver.sh`
-			- Under {switch}, run `bash scriptsbmv2/local/makeswitchos.sh`
-
-
-
-			- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation
-			- `bash scriptsbmv2/remote/sync_file.sh common helper.h` to sync code changes to all machines
-		- Under {main client}, for each {method}, re-compile software code (NO need for P4 code of switch data plane)
-			- Set DIRNAME as {method} in `scriptsbmv2/common.sh`
-			- Run `bash scriptsbmv2/remote/sync_file.sh scripts common.sh`
-			- Under {main client} and {secondary client}, run `bash scriptsbmv2/local/makeclient.sh`
-			- Under {first server} and {second server}, run `bash scriptsbmv2/local/makeserver.sh`
-			- Under {switch}, run `bash scriptsbmv2/local/makeswitchos.sh`
--->
 
 </br>
 
 - Notes for exp_recovery
 	- Possible errors for scp in `farreach/localscriptsbmv2/fetch\*.sh` (maybe due to testbed mis-configurations)
-		- If you have an error of `hot key verification failed`, check whether {switch} can connect with two servers, two servers can connect with two clients, and {second server} can connect with {first server}, by CONNECTION_PRIVATEKEY
-		- If you have an error of `permission denied` when transfering files, check the correctness of ownership for /tmp/farreach in {switch} and two servers
-		- If you have an error of `permission denied (public key)`, check whether you spefcify the correct CONNECTION_PRIVATEKEY in {switch} and two servers
 	- If you want to test recovery time based on previous raw statistics of exp_recovery instead of running server-rotation-based experiment for exp_recovery again
-    	- Step 1: check `scriptsbmv2/global.sh` under {main client}
+    	- Step 1: check `scriptsbmv2/global.sh` Under host machine
 			- Make sure `EVALUATION_OUTPUT_PREFIX` points to the path of previous raw statistics of exp-recovery (including in-switch snapshot, client-side backups, and maxseq) generated by previous server-rotation-based experiments
-		- Step 2: under {main client}
+		- Step 2: Under host machine
 			- Set `exp9_recoveryonly` as 1 in `scriptsexps/run_exp_recovery.sh`
 			- Run `scriptsbmv2/exps/run_exp_recovery.sh`, which will skip the step of running a new server-rotation-based experiment for exp_recovery
 	- Note: **crash recovery time is strongly related with network settings in each specific testbed**. which may have differences in units of 0.1 seconds
@@ -421,7 +331,7 @@
 </br>
 
 - If scripts (e.g., `scriptsbmv2/local/calculate_statistics.sh`) say that you need to perform a single iteration for each missing iteration number of an incomplete server rotation of the experiment
-	- Under {main client}, run `bash scriptsbmv2/exps/run_makeup_rotation_exp.sh <expname> <roundnumber> <methodname> <workloadname> <serverscale> <bottleneckidx> <targetrotation> [targetthpt]` to launch a single iteration
+	- Under host machine, run `bash scriptsbmv2/exps/run_makeup_rotation_exp.sh <expname> <roundnumber> <methodname> <workloadname> <serverscale> <bottleneckidx> <targetrotation> [targetthpt]` to launch a single iteration
 		- `expname`: experiment name (eg.: "exp1" for throughput analysis)
 			- Note: `expname` only indicates the path to store rawstatistics, yet NOT affect experiment results
 		- `roundnumber`: the index of the current round for running the experiment (eg.: 0)
@@ -451,7 +361,7 @@
 
 </br>
 
-- Step 1: prepare ini config files (under {main client})
+- Step 1: prepare ini config files
 	- Update settings in the config file `{method}/config.ini` (e.g., farreach/config.ini):
 		- Set `global::workload_mode`=1
 		- Set `global::workload_name`={workload} 
@@ -466,24 +376,20 @@
 </br>
 
 - Step 2: if server rotation is enabled (default setting), re-compile code to disable server rotation
-	- Under {main client}, disable server rotation
+	- Disable server rotation
 		- Comment line 82 (#define SERVER_ROTATION) in `common/helper.h` to diable server rotation
-		- Run `bash scriptsbmv2/remote/sync_file.sh common helper.h` to sync code changes to all machines
-	- Under {main client}, for the current {method}, re-compile software code (NO need for P4 code)
+	- For the current {method}, re-compile software code (NO need for P4 code)
 		- Set DIRNAME as {method} in `scriptsbmv2/common.sh`
-		- Run `bash scriptsbmv2/remote/sync_file.sh scripts common.sh`
-		- Under {main client} and {secondary client}, run `bash scriptsbmv2/local/makeclient.sh`
-		- Under {first server} and {second server}, run `bash scriptsbmv2/local/makeserver.sh`
-		- Under {switch}, run `bash scriptsbmv2/local/makeswitchos.sh`
+		- `make all`
 
 </br>
 
 - Step 3: launch switch data plane and switch OS
 	- Create two terminals in {switch}
 	- Launch switch data plane in the first terminal
-		- `cd {method}/Bmv2` 
+		- `cd {method}/bmv2` 
 		- `su`
-		- Run `bash start_switch.sh`, which will open a CLI
+		- Run `bash start_switch.sh`
 	- Launch switch OS and other daemon processes (for cache management and snapshot generation) in the second terminal
 		- `cd {method}`
 		- `su`
@@ -493,44 +399,31 @@
 </br>
 
 - Step 4: launch servers and clients without server rotation
-	- Under {main client}: `bash scriptsbmv2/remote/test_dynamic.sh`
+	- `bash scriptsbmv2/remote/test_dynamic.sh`
 	- Note: if you encouter any problem
 		- You can check the output of {main client}
-		- You can check the log files of `benchmark/ycsb/tmp_\*.out` in {secondary client}
-		- You can check the log files of `{method}/tmp_\*.out` in {first server} and {second server}
+		- You can check the log files of `benchmark/ycsb/tmp_\*.out` 
+		- You can check the log files of `{method}/tmp_\*.out` 
 
 </br>
 
 - Step 5: cleanup testbed
-	- Under {switch}
-		- Stop switch data plane in the CLI of the first terminal
-			- `Type exit and press enter`
-			- If CLI is not closed, `type Ctrl+C`
-		- Stop switch OS and other daemon processes in the second terminal
-			- `cd {method}`
-			- `su`
-			- `bash localscriptsbmv2/stopswitchtestbed.sh`
-	- Under {main client}
-		- Run `bash scriptsbmv2/remote/stopservertestbed.sh` to stop servers
-		- Run `bash scriptsbmv2/remote/stopall.sh` to forcely kill all processses
+	- `killall python server controller switchos simple_switch ovs-testcontroller`
 
 </br>
 
 - Step 6: aggregate statistics
-   - Under {main client}, run `bash scriptsbmv2/remote/calculate_statistics.sh`
+   - Run `bash scriptsbmv2/remote/calculate_statistics.sh`
 
 </br>
 
 - Step 7: if you do NOT run dynamic workload patterns, you should re-compile code to enable server rotation
-	- Under {main client}, enable server rotation
+	- Enable server rotation
 		- Uncomment line 82 (#define SERVER_ROTATION) in `common/helper.h` to enable server rotation
-		- `bash scriptsbmv2/remote/sync_file.sh common helper.h` to sync code changes to all machines
-	- Under {main client}, for the current {method}, re-compile software code (NO need for P4 code)
+		
+	- For the current {method}, re-compile software code (NO need for P4 code)
 		- Set DIRNAME as {method} in `scriptsbmv2/common.sh`
-		- Run `bash scriptsbmv2/remote/sync_file.sh scripts common.sh`
-		- Under {main client} and {secondary client}, run `bash scriptsbmv2/local/makeclient.sh`
-		- Under {first server} and {second server}, run `bash scriptsbmv2/local/makeserver.sh`
-		- Under {switch}, run `bash scriptsbmv2/local/makeswitchos.sh`
+		- `make all`
 
 ## 4.2 Static Workload (Server Rotation)
 
@@ -544,7 +437,7 @@
 
 </br>
 
-- Step 1: prepare ini config files (under {main client})
+- Step 1: prepare ini config files 
 	- Update settings in the config file `{method}/config.ini` (e.g., farreach/config.ini):
 		- Set `workload_name`={workload}
 		- Set `workload_mode`=0
@@ -558,7 +451,7 @@
 </br>
 
 - Step 2: prepare for launching switch data plane and switch OS
-	- Under {main client}, run `bash scriptsbmv2/remote/prepare_server_rotation.sh`
+	- Under host machine, run `bash scriptsbmv2/remote/prepare_server_rotation.sh`
 		- This script can generate and sync a new {method}/config.ini based on the existing `{method}/config.ini` with the configurations you set in step 1
 			- The main changes in the new `{method}/config.ini` is that it sets `server0::server_logical_idxes` as ${bottleneck serveridx} (e.g., 14), and sets `server1::server_logical_idxes` as all other serveridxes except ${bottleneck serveridx} (e.g., 0:1:2:3:4:5:6:7:8:9:10:11:12:13:15)
 		- The goal is that {switch} can use the new `${method}/config.ini` to configure packet forwarding rules, such that we do NOT need to re-launch switch during server rotation
@@ -568,9 +461,8 @@
 - Step 3: launch switch data plane and switch OS
 	- Create two terminals in {switch}
 	- Launch switch data plane in the first terminal
-		- `cd {method}/Bmv2` 
-		- `su`
-		- Run `bash start_switch.sh`, which will open a CLI
+		- `cd {method}/bmv2` 
+		- Run `bash start_switch.sh`
 	- Launch switch OS and other daemon processes (for cache management and snapshot generation) in the second terminal
 		- `cd {method}`
 		- `su`
@@ -580,10 +472,10 @@
 </br>
 
 - Step 4: launch servers and clients with server rotation
-	- Under {main client}, run `bash scriptsbmv2/remote/test_server_rotation.sh`
+	- Under host machine run `bash scriptsbmv2/remote/test_server_rotation.sh`
 		- Phase 1: test_server_rotation.sh invokes `scriptsbmv2/remote/test_server_rotation_p1.sh` to run the first iteration (the bottleneck partition is deployed into {first server})
 		- Phase 2: test_server_rotation.sh invokes `scriptsbmv2/remote/test_server_rotation_p2.sh` to run the ith iteration (the bottleneck partition is deployed into {first server}, and the ith non-bottleneck partition is deployed into {second server}), where 1 <= i <= {server rotation scale}-1
-	- Under {main client}, perform a single iteration for each failed iteration if any
+	-Under host machine, perform a single iteration for each failed iteration if any
 		- If strid=server-x is missed, run `bash scriptsbmv2/remote/test_server_rotation_p1.sh 1`
 		- If strid=server-x-y is missed, run: `bash scriptsbmv2/remote/test_server_rotation_p2.sh 1 y`
 
@@ -591,85 +483,11 @@
 </br>
 
 - Step 5: cleanup testbed
-	- Under {switch}
-		- Stop switch data plane in the CLI of the first terminal
-			- `Type exit and press enter`
-			- If CLI is not closed, `type Ctrl+C`
-		- Stop switch OS and other daemon processes in the second terminal
-			- `cd {method}`
-			- `su`
-			- `bash localscriptsbmv2/stopswitchtestbed.sh`
-	- Under {main client}
-		- Run `bash scriptsbmv2/remote/stopservertestbed.sh` to stop servers
-		- Run `bash scriptsbmv2/remote/stopall.sh` to forcely kill all processses
+	- `killall python server controller switchos simple_switch ovs-testcontroller`
+
 
 </br>
 
 - Step 6: aggregate statistics
-   - Under {main client}, run `bash scriptsbmv2/remote/calculate_statistics.sh`
-
-# 5. Aggregate Statistics (Manual Evaluation)
-
-## 5.1 Scripts 
-
-- We provide the following scripts to help aggregate statistics
-	- [calculate_statistics.sh](scriptsbmv2/remote/calculate_statistics.sh): calculate throughput and latency with or without server rotation
-	- [calculate_bwcost.sh](scriptsbmv2/remote/calculate_bwcost.sh): calculate control-plane bandwidth cost
-	- [calculate_recovery_time.sh](scriptsbmv2/remote/calculate_recovery_time.sh): calculate crash recovery time
-- Notes
-	- If you use [automatic way in Section 3](#3-running-experiments-automatic-evaluation) for evaluation
-		- As `scriptsbmv2/exps/run_exp_\*` scripts have aggregated the statistics automatically, you can redirect stdout of the script into a file and find aggregated results in the file
-		- For example, after `nohup bash scriptsbmv2/exps/run_exp_throughput.sh >tmp.out 2>&1 &`, you can find aggregated results in tmp.out
-	- If you use [manual way in Section 4](#4-running-workloads-manual-evaluation) for evaluation
-		- You can follow [Section 5.2](#52-usage-and-example) to run a script (e.g., calculate_statistics.sh) and get the corresponding gggregated statistics
-		- The scripts will aggregate the statistics based on the settings in `scriptsbmv2/global.sh`, `scriptsbmv2/common.sh`, and `{method}/config.ini`
-
-## 5.2 Usage and Example
-
-- Calculate throughput and latency with server rotation yet without target throughput
-	- Under {main client}, run `bash scriptsbmv2/remote/calculate_statistics.sh 0`
-	- Supported experiments: exp1, exp3, exp4, exp5, and exp6
-	- Output example:
-	```bash
-		...
-		[STATIC] average bottleneck totalthpt: 0.092875 MOPS; switchthpt: 0.0245 MOPS; serverthpt: 0.0675625 MOPS
-		[STATIC] aggregate throughput: 1.31126577666 MOPS; normalized throughput: 19.4081891088, imbalanceratio: 1.01388888889
-		[STATIC] average latency 286.901026111 us, medium latency 85 us, 90P latency 584 us, 95P latency 1717 us, 99P latency 2597 us
-		...
-	```
-
-</br>
-
-- Calculate throughput and latency with server rotation and with target throughput
-	- Under {main client}, run `bash scriptsbmv2/remote/calculate_statistics.sh 1`
-	- Supported experiment: exp2
-	- Output example:
-	```bash
-		...
-		[STATIC] average bottleneck totalthpt: 0.0173125 MOPS; switchthpt: 0.00975 MOPS; serverthpt: 0.006875 MOPS
-		[STATIC] aggregate throughput: 0.190073026316 MOPS; normalized throughput: 27.6469856459, imbalanceratio: 1.0
-		[STATIC] average latency 94.8354988254 us, medium latency 57 us, 90P latency 90 us, 95P latency 123 us, 99P latency 1123 us
-		...
-	```
-
-</br>
-
-- Calculate throughput and latency of dynamic workload
-	- Under {main client}, run `bash scriptsbmv2/remote/calculate_statistics.sh 0`
-	- Supported experiments: exp7, exp8
-	- Output example:
-	```bash
-		...
-		[DYNAMIC] per-second statistics:
-		thpt (MOPS): [0.178, 0.245, ... , 0.215]
-		normalized thpt: [3.2962962962962963, 3.310810810810811, ... , 3.2575757575757573]
-		imbalanceratio: [1.0, 1.0, ... , 1.0153846153846153]
-		avg latency (us): [497.21625182852614, 517.8129587343011, ... , 501.72249302450666]
-		medium latency (us): [120, 95, ... , 132]
-		90P latency (us): [1487, 1571, ... , 1579]
-		95P latency (us): [1535, 1610, ... , 1642]
-		99P latency (us): [1614, 1687, ... , 1729]
-		[DYNAMIC][OVERALL] avgthpt 0.228106666667 MOPS, avelat 0 us, medlat 0 us, 90Plat 0 us, 95Plat 0 us, 99Plat 0 us
-		...
-	```
+   - Under host machine, run `bash scriptsbmv2/remote/calculate_statistics.sh`
 
