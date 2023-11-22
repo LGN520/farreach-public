@@ -20,9 +20,9 @@ cd benchmark/ycsb
 # Generate hottest/nearhot/coldest keys; calculate bottleneck serveridx; pre-generate workloads for server rotation under static pattern
 if [ "x${tmpworkloadname}" == "xworkload-load" ]
 then
-	mx h1 python2 ./bin/ycsb load keydump
+	python2 ./bin/ycsb load keydump
 else
-	mx h1 python2 ./bin/ycsb run keydump
+	python2 ./bin/ycsb run keydump
 fi
 # Generate key populairty change rules for dynamic pattern
 python generate_dynamicrules.py ${tmpworkloadname}
