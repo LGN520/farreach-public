@@ -1,0 +1,6 @@
+fieldlength=128
+fieldcount=1
+fieldlengthdistribution=constant
+threads=10
+recordcount=10
+operationcount=10
