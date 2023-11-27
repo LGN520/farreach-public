@@ -5,6 +5,7 @@ register<bit<16>>(KV_BUCKET_COUNT) vallen_reg;
 
 action get_vallen() {
 	// get_vallen_alu.execute_stateful_alu(hdr.inswitch_hdr.idx);
+	hdr.vallen_hdr.setValid();
 	vallen_reg.read(hdr.vallen_hdr.vallen,(bit<32>)hdr.inswitch_hdr.idx);
 	meta.meta.access_val_mode = 1; // get val_reg
 }

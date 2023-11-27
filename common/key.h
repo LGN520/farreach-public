@@ -71,6 +71,7 @@ class Key {
   uint32_t dynamic_serialize(dynamic_array_t &buf, int offset);
 
   uint32_t hash_bycrc32();
+  uint16_t hash_bycksum16();
 
   uint32_t get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum);
   uint32_t get_rangepartition_idx(uint32_t server_num);

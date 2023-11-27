@@ -77,7 +77,7 @@ class RegisterUpdate():
     def cleanup(self):
         print("Reset need_recirculate=0 for iports in different ingress pipelines")
         # get entry count
-        entrynum = self.client.need_recirculate_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
+        entrynum = controller.table_num_entries("need_recirculate_tbl")
         if entrynum > 0:
             for i in range(len(self.unmatched_devports)):
                 iport = self.unmatched_devports[i]
@@ -85,4 +85,16 @@ class RegisterUpdate():
                     matchspec0 = [hex(tmpoptype),iport]
                     controller.table_delete_match('need_recirculate_tbl', matchspec0)
         print("Reset snapshot_flag=0 for all ingress pipelines")
-        entrynum =
+        entrynum = controller.table_num_entries("snapshot_flag_tbl")
+        # entrynum = self.client.snapshot_flag_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
+        if entrynum > 0:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_LARGEVALUE]:
+                matchspec0 =[hex(tmpoptype),hex(0)]
+                controller.table_delete_match('snapshot_flag_tbl', matchspec0)
+        print("Reset case1_reg for all pipelines")
+        controller.register_reset("case1_reg")
+    def runTest(self):
+        self.cleanup()
+registerupdate = RegisterUpdate()
+registerupdate.setUp()
+registerupdate.runTest()
