@@ -79,7 +79,7 @@ static const char *get_methodname_byid(method_t methodid) {
 #define USE_HASH
 //#define USE_RANGE
 
-#define SERVER_ROTATION
+// #define SERVER_ROTATION
 
 // determine how to perform range query
 #define USE_SCANRECORDCNT

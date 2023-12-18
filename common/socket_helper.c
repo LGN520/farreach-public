@@ -386,21 +386,26 @@ void set_recvtimeout(int sockfd, int timeout_sec, int timeout_usec) {
 // udp
 
 void create_udpsock(int &sockfd, bool need_timeout, const char* role, int timeout_sec, int timeout_usec, int udp_rcvbufsize) {
+	// printf("debug\n");
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	// printf("debug\n");
 	if (sockfd == -1) {
 		printf("[%s] fail to create udp socket, errno: %d!\n", role, errno);
 		exit(-1);
 	}
+	// printf("debug\n");
 	// Disable udp/tcp check
 	int disable = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
 		printf("[%s] disable checksum failed, errno: %d!\n", role, errno);
 		exit(-1);
 	}
+	// printf("debug\n");
 	// Set timeout for recvfrom/accept of udp/tcp
 	if (need_timeout) {
 		set_recvtimeout(sockfd, timeout_sec, timeout_usec);
 	}
+	// printf("debug\n");
 	// set udp receive buffer size
 	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &udp_rcvbufsize, sizeof(int)) == -1) {
 		printf("[%s] fail to set udp receive bufsize as %d, errno: %d\n", role, udp_rcvbufsize, errno);
@@ -430,6 +435,10 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr_i
 
 	bool is_timeout = false;
 	recvsize = recvfrom(sockfd, buf, len, flags, (struct sockaddr *)src_addr, addrlen);
+	// if(recvsize != -1){
+		// printf("[debug]errno %d need_timeout %d tv.tv_sec %d recvsize %d addrlen %d len %d\n",errno,need_timeout,tv.tv_sec,recvsize,addrlen,len);
+		// fflush(stdout);
+	// }
 	if (recvsize < 0) {
 		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
 			recvsize = 0;
@@ -606,6 +615,8 @@ bool udprecvlarge(method_t methodid, int sockfd, dynamic_array_t &buf, int flags
 	while (true) {
 		if (is_first) {
 			is_timeout = udprecvfrom(sockfd, fragbuf, fragbuf_maxsize, flags, &tmp_src_addr, &tmp_addrlen, frag_recvsize, role);
+			// printf("[debug]udprecvlarg is_timeout %d udprecvlarg\n",is_timeout);
+	
 			if (is_timeout) {
 				// NOTE: we do NOT need to push packet back into PktRingBuffer as even the first packet is NOT received
 				break;

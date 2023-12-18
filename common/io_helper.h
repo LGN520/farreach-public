@@ -25,8 +25,8 @@ void get_server_inswitchsnapshot_path(method_t methodid, std::string &inswitchsn
 void get_server_snapshotmaxseq_path(method_t methodid, std::string &snapshotmaxseq_path, uint16_t workerid, uint32_t snapshotid);
 void get_server_latestmaxseq_path(method_t methodid, std::string &latestmaxseq_path, uint16_t workerid);
 
-void get_controller_snapshotid_path(method_t methodid, std::string &snapshotid_path);
-void get_controller_snapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid);
+void get_controller_snapshotid_path(method_t methodid, std::string &snapshotid_path,int controller_idx = -1);
+void get_controller_snapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid,int controller_idx = -1);
 void get_controller_spinesnapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid);
 void get_controller_leafsnapshotdata_path(method_t methodid, std::string &snapshotdata_path, int snapshotid);
 
@@ -44,8 +44,8 @@ void store_maxseq(uint32_t maxseq, std::string maxseq_path);
 void store_buf(const char * buf, uint32_t bufsize, std::string path);
 
 // for switchos
-void get_controller_snapshotid_path(method_t methodid, char *snapshotid_path, int len);
-void get_controller_snapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid);
+void get_controller_snapshotid_path(method_t methodid, char *snapshotid_path, int len,int controller_idx = -1);
+void get_controller_snapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid,int controller_idx = -1);
 void get_controller_spinesnapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid);
 void get_controller_leafsnapshotdata_path(method_t methodid, char *snapshotdata_path, int len, int snapshotid);
 bool isexist(const char *path);
