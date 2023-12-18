@@ -1,4 +1,3 @@
-set -x
 #!/use/bin/env bash
 
 controllerpids=( "$(ps -aux | grep "./controller" | grep -v "grep" | awk '{print $2}')" )

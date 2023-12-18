@@ -35,7 +35,7 @@ control partitionswitchIngress (inout headers hdr,
 			hdr.op_hdr.keyhihilo,
 			hdr.op_hdr.keyhihihi
 		}, (bit<32>) PARTITION_COUNT);
-		hash(meta.hashval_for_spine_partition, HashAlgorithm.identity, (bit<32>)0, {
+		hash(meta.hashval_for_spine_partition, HashAlgorithm.csum16, (bit<32>)0, {
 			hdr.op_hdr.keylolo,
 			hdr.op_hdr.keylohi,
 			hdr.op_hdr.keyhilo,

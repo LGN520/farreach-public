@@ -54,6 +54,13 @@ control netcacheIngress(inout headers hdr,
 			hdr.op_hdr.keyhihilo,
 			hdr.op_hdr.keyhihihi
 		}, (bit<32>) PARTITION_COUNT);
+		hash(meta.hashval_for_spine_partition, HashAlgorithm.csum16, (bit<32>)0, {
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		}, (bit<32>) PARTITION_COUNT);
 	}
 	@pragma stage 1
 	table hash_for_partition_tbl {
@@ -83,6 +90,26 @@ control netcacheIngress(inout headers hdr,
 		}
 		actions = {
 			hash_partition;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = HASH_PARTITION_ENTRY_NUM;
+	}
+
+	action hash_spine_partition(bit<10> spine_sid, egressSpec_t eport) {
+		meta.spine_sid = spine_sid;
+		standard_metadata.egress_spec = eport;
+		clone(CloneType.I2E,(bit<32>) spine_sid);
+	}
+	@pragma stage 1
+	table hash_spine_partition_tbl {
+		key = {
+			hdr.op_hdr.optype: exact;
+			// RANGE_SURPPORT
+			meta.hashval_for_spine_partition: range;
+		}
+		actions = {
+			hash_spine_partition;
 			NoAction;
 		}
 		default_action = NoAction();
@@ -335,7 +362,8 @@ control netcacheIngress(inout headers hdr,
 	action sample() {
 		//modify_field_with_hash_based_offset(hdr.inswitch_hdr.is_sampled, 0, hash_calc, 2); // WRONG: we should not sample key
 		// modify_field_rng_uniform(hdr.inswitch_hdr.is_sampled, 0, 1); // generate a random value in [0, 1] to sample packet
-		random(hdr.inswitch_hdr.is_sampled,(bit<1>)0,(bit<1>)1);
+		// random(hdr.inswitch_hdr.is_sampled,(bit<1>)0,(bit<1>)1);
+		hdr.inswitch_hdr.is_sampled = 1;
 	}
 
 	@pragma stage 8
@@ -432,6 +460,8 @@ control netcacheIngress(inout headers hdr,
 			#endif
 			// Stage 2 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 			hash_partition_tbl.apply();
+			hash_spine_partition_tbl.apply();
+			
 			hash_for_cm12_tbl.apply(); // for CM (access inswitch_hdr.hashval_for_cm1/2)
 			// IMPORTANT: to save TCAM, we do not match op_hdr.optype in cache_lookup_tbl 
 			// -> so as long as op_hdr.key matches an entry in cache_lookup_tbl, inswitch_hdr.is_cached must be 1 (e.g., CACHE_EVICT_LOADXXX)

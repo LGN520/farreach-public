@@ -139,6 +139,7 @@ struct metadata {
     /* empty */
 #ifndef RANGE_SUPPORT
 	bit<16>	hashval_for_partition; // at most 32K
+	bit<16> hashval_for_spine_partition;
 #endif
 	bit<4> cm1_predicate;
 	bit<4> cm2_predicate;
@@ -153,5 +154,7 @@ struct metadata {
 	bit<1> is_deleted; // if the entry is deleted
 	bit<1> is_lastclone_for_pktloss;
 	bit<4> access_val_mode; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
+	bit<10> spine_sid;
+	bit<1> bypass_egress;
 }
 //header debug_t debug_hdr;

@@ -13,6 +13,24 @@ control netcacheEgress (inout headers hdr,
 	#include "regs/seq.p4"
 	#include "regs/val.p4"
 
+	// Stage 0
+	action set_bypass_egress() {
+		meta.bypass_egress = 1;
+	}
+
+	@pragma stage 0
+	table bypass_egress_tbl {
+		key = {
+			hdr.op_hdr.optype: exact;
+			meta.spine_sid: exact;
+		}
+		actions = {
+			set_bypass_egress;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 4;
+	}
 	
 	// Stage 0
 	action save_client_udpport() {
@@ -261,8 +279,7 @@ control netcacheEgress (inout headers hdr,
 
 
 	action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(bit<10>switchos_sid,bit<16> reflector_port) {
-		hdr.op_hdr.optype = CACHE_POP_INSWITCH_ACK;
-		hdr.udp_hdr.dstPort = reflector_port;
+		
 
 		// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
 		hdr.shadowtype_hdr.setInvalid();
@@ -271,6 +288,9 @@ control netcacheEgress (inout headers hdr,
 		hdr.stat_hdr.setInvalid();
 		hdr.frequency_hdr.setInvalid();
 		hdr.clone_hdr.setInvalid();
+		
+		hdr.op_hdr.optype = CACHE_POP_INSWITCH_ACK;
+		hdr.udp_hdr.dstPort = reflector_port;
 		mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 		// clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 		clone(CloneType.E2E, (bit<32>)switchos_sid);
@@ -925,7 +945,10 @@ control netcacheEgress (inout headers hdr,
 		// For GETREQ_INSWITCH, clone_hdr.server_sid is NOT reset at process_scanreq_split_tbl, and is only set based on eport at prepare_for_cachepop_tbl -> OK
 		// For SCANREQ_SPLIT, after setting server_sid based on split_hdr.globalserveridx at process_scanreq_split_tbl, it needs to invoke NoAction() explicitly in prepare_for_cachepop_tbl to avoid reset server_sid
 		// For NETCACHE_GETREQ_POP, after inheriting clone_hdr.server_sid from GETREQ_INSWITCH, process_scanreq_split does NOT reset clone_hdr.server_sid by default, and it needs to invoke NoAction() explicitly in prepare_for_cachepop_tbl to avoid reset server_sid
-
+		bypass_egress_tbl.apply();
+		// if(meta.spine_sid == 0 && hdr.op_hdr.optype == CACHE_POP_INSWITCH){}
+		if(meta.bypass_egress == 1){}
+		else{
 		// Stage 0
 		access_latest_tbl.apply(); // NOTE: latest_reg corresponds to stats.validity in NetCache paper, which will be used to *invalidate* the value by PUT/DELREQ
 		access_seq_tbl.apply();
@@ -1014,5 +1037,7 @@ control netcacheEgress (inout headers hdr,
 		update_valhi15_tbl.apply();
 		update_vallo16_tbl.apply();
 		update_valhi16_tbl.apply();
+
+		}
 	}
 }

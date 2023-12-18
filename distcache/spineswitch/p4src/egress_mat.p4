@@ -4,6 +4,7 @@ control partitionswitchEgress(inout headers hdr,
 	/* Ingress Processing (Normal Operation) */
 	#include "regs/val.p4"
 	#include "regs/deleted.p4"
+	#include "regs/cache_frequency.p4"
 	action reverse_ip(){
 		bit<32> tmp_ip;
 		tmp_ip = hdr.ipv4_hdr.srcAddr;
@@ -25,7 +26,7 @@ control partitionswitchEgress(inout headers hdr,
 	action update_netcache_getreq_spine_to_getreq(){
 		hdr.op_hdr.optype = GETREQ;
 	}
-	action update_netcache_getreq_spine_to_getres_by_mirroring(bit<10> client_sid,bit<8> stat){
+	action update_netcache_getreq_spine_to_getres_by_mirroring(bit<8> stat){
 		hdr.op_hdr.optype = GETRES;
 		hdr.shadowtype_hdr.shadowtype = GETRES;
 		hdr.stat_hdr.stat = stat;
@@ -39,7 +40,7 @@ control partitionswitchEgress(inout headers hdr,
 		hdr.stat_hdr.setValid();
 		mark_to_drop(standard_metadata); // Disable unicast, but enable mirroring
 		// clone_egress_pkt_to_egress(client_sid); // clone to client (hdr.inswitch_hdr.client_sid)
-		clone(CloneType.E2E, (bit<32>)client_sid);
+		clone(CloneType.E2E, (bit<32>)meta.client_sid);
 	}
 	table eg_port_forward_tbl {
 		key = {
@@ -83,48 +84,51 @@ control partitionswitchEgress(inout headers hdr,
 		// stage 3
 		// NOTE: resource in stage 11 is not enough for update_ipmac_src_port_tbl, so we place it into stage 10
 		access_deleted_tbl.apply();
-		
-		update_vallen_tbl.apply();
-		
+		access_cache_frequency_tbl.apply();
+		if(meta.is_spine == 1){
+			update_vallen_tbl.apply();
+		}
 		eg_port_forward_tbl.apply();
 		// update_ipmac_srcport_tbl.apply(); // Update ip, mac, and srcport for RES to client and notification to switchos
-		update_pktlen_tbl.apply();
-		add_and_remove_value_header_tbl.apply(); // Add or remove vallen and val according to optype and vallen
+		if(meta.is_spine == 1){
+			update_pktlen_tbl.apply();
+			add_and_remove_value_header_tbl.apply(); // Add or remove vallen and val according to optype and vallen
 
-		// Stage 4
-		// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
-		update_vallo1_tbl.apply();
-		update_valhi1_tbl.apply();
-		update_vallo2_tbl.apply();
-		update_valhi2_tbl.apply();
-		update_vallo3_tbl.apply();
-		update_valhi3_tbl.apply();
-		update_vallo4_tbl.apply();
-		update_valhi4_tbl.apply();
-		update_vallo5_tbl.apply();
-		update_valhi5_tbl.apply();
-		update_vallo6_tbl.apply();
-		update_valhi6_tbl.apply();
-		update_vallo7_tbl.apply();
-		update_valhi7_tbl.apply();
-		update_vallo8_tbl.apply();
-		update_valhi8_tbl.apply();
-		update_vallo9_tbl.apply();
-		update_valhi9_tbl.apply();
-		update_vallo10_tbl.apply();
-		update_valhi10_tbl.apply();
-		update_vallo11_tbl.apply();
-		update_valhi11_tbl.apply();
-		update_vallo12_tbl.apply();
-		update_valhi12_tbl.apply();
-		update_vallo13_tbl.apply();
-		update_valhi13_tbl.apply();
-		update_vallo14_tbl.apply();
-		update_valhi14_tbl.apply();
-		update_vallo15_tbl.apply();
-		update_valhi15_tbl.apply();
-		update_vallo16_tbl.apply();
-		update_valhi16_tbl.apply();
+			// Stage 4
+			// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
+			update_vallo1_tbl.apply();
+			update_valhi1_tbl.apply();
+			update_vallo2_tbl.apply();
+			update_valhi2_tbl.apply();
+			update_vallo3_tbl.apply();
+			update_valhi3_tbl.apply();
+			update_vallo4_tbl.apply();
+			update_valhi4_tbl.apply();
+			update_vallo5_tbl.apply();
+			update_valhi5_tbl.apply();
+			update_vallo6_tbl.apply();
+			update_valhi6_tbl.apply();
+			update_vallo7_tbl.apply();
+			update_valhi7_tbl.apply();
+			update_vallo8_tbl.apply();
+			update_valhi8_tbl.apply();
+			update_vallo9_tbl.apply();
+			update_valhi9_tbl.apply();
+			update_vallo10_tbl.apply();
+			update_valhi10_tbl.apply();
+			update_vallo11_tbl.apply();
+			update_valhi11_tbl.apply();
+			update_vallo12_tbl.apply();
+			update_valhi12_tbl.apply();
+			update_vallo13_tbl.apply();
+			update_valhi13_tbl.apply();
+			update_vallo14_tbl.apply();
+			update_valhi14_tbl.apply();
+			update_vallo15_tbl.apply();
+			update_valhi15_tbl.apply();
+			update_vallo16_tbl.apply();
+			update_valhi16_tbl.apply();
+		}
 
 	}
 }

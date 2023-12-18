@@ -132,7 +132,9 @@ void* run_reflector_dp2cpserver(void* param) {
                 udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &reflector_switchos_popworker_popclient_for_reflector_addr, reflector_switchos_popworker_popclient_for_reflector_addr_len, "reflector.dp2cpserver.popclient");
                 break;
             }
-            case packet_type_t::NETCACHE_GETREQ_POP:
+            case packet_type_t::NETCACHE_GETREQ_POP:{
+                // printf("recieved NETCACHE_GETREQ_POP\n");
+            }
             case packet_type_t::NETCACHE_WARMUPREQ_INSWITCH_POP: {
                 udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &switchos_popserver_addr, switchos_popserver_addrlen, "reflector.dp2cpserver.popclient");
                 uint32_t tmp_spineswitchidx = get_packet_key(CURMETHOD_ID, buf, recvsize).get_spineswitch_idx(switch_partition_count,server_physical_num/2);

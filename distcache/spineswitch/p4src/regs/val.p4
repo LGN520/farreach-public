@@ -393,7 +393,7 @@ table add_and_remove_value_header_tbl {
 register<bit<16>>(KV_BUCKET_COUNT) vallen_reg;
 
 action get_vallen() {
-	
+	hdr.vallen_hdr.setValid();
 	vallen_reg.read(hdr.vallen_hdr.vallen,(bit<32>)meta.idx);
 	meta.access_val_mode = 1; // get val_reg
 }

@@ -11,11 +11,15 @@ config = configparser.ConfigParser()
 with open(os.path.join(os.path.dirname(this_dir), "config.ini"), "r") as f:
     config.readfp(f)
 
+workload_name = config.get("global", "workload_name")
+dynamic_ruleprefix = config.get("global", "dynamic_ruleprefix")
+
 client_physical_num = int(config.get("global", "client_physical_num"))
 server_physical_num = int(config.get("global", "server_physical_num"))
 server_total_logical_num = int(config.get("global", "server_total_logical_num"))
 
 server_worker_port_start = int(config.get("server", "server_worker_port_start"))
+switchos_popserver_port = int(config.get("switch", "switchos_popserver_port"))
 
 # kv_bucket_num
 switch_kv_bucket_num = int(config.get("switch", "switch_kv_bucket_num"))
@@ -23,6 +27,9 @@ switch_partition_count = int(config.get("switch", "switch_partition_count"))
 switch_max_vallen = int(config.get("switch", "switch_max_vallen"))
 switchos_sample_cnt = int(config.get("switch", "switchos_sample_cnt"))
 switchos_ptf_popserver_port = int(config.get("switch", "switchos_ptf_popserver_port"))
+switchos_ptf_cachefrequencyserver_port = int(
+    config.get("spineswitch0", "switchos_ptf_cachefrequencyserver_port")
+)
 switchos_ptf_snapshotserver_port = int(
     config.get("switch", "switchos_ptf_snapshotserver_port")
 )
@@ -30,7 +37,9 @@ switchos_ptf_snapshotserver_port = int(
 # reflector port
 reflector_dp2cpserver_port = int(config.get("reflector", "reflector_dp2cpserver_port"))
 reflector_ip_for_switchos = str(config.get("reflector", "reflector_ip_for_switchos"))
-
+reflector_ips = []
+for i in range(int(server_physical_num / 2)):
+    reflector_ips.append(str(config.get(f"reflector{i}", "reflector_ip_for_switchos")))
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
 #   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
@@ -122,7 +131,10 @@ SWITCHOS_PTF_SNAPSHOTSERVER_END = int(
     control_config.get("switchos", "SWITCHOS_PTF_SNAPSHOTSERVER_END")
 )
 SNAPSHOT_GETDATA_ACK = int(control_config.get("snapshot", "SNAPSHOT_GETDATA_ACK"))
-
+CACHE_FREQUENCYREQ = int(control_config.get("snapshot", "CACHE_FREQUENCYREQ"))
+CACHE_FREQUENCYACK = int(control_config.get("snapshot", "CACHE_FREQUENCYACK"))
+SETDELETEDREQ = int(control_config.get("snapshot", "SETDELETEDREQ"))
+SETDELETEDACK = int(control_config.get("snapshot", "SETDELETEDACK"))
 # Set it as True if support range, or False otherwise
 # NOTE: update RANGE_SUPPORT in main.p4 accordingly
 RANGE_SUPPORT = False
@@ -156,6 +168,7 @@ PUTREQ_SEQ_INSWITCH_CASE1 = 0x004F
 DELREQ_SEQ_INSWITCH_CASE1 = 0x005F
 LOADSNAPSHOTDATA_INSWITCH_ACK = 0x006F
 CACHE_POP_INSWITCH = 0x007F
+CACHE_POP_INSWITCH_SPINE = 0x017F
 NETCACHE_VALUEUPDATE_INSWITCH = 0x008F
 # For large value
 NETCACHE_CACHE_POP_INSWITCH_NLATEST = 0x015F
@@ -238,7 +251,7 @@ LOADREQ = 0x0310
 LOADREQ_SPINE = 0x0320
 NETCACHE_CACHE_POP_ACK_NLATEST = 0x0330
 GETREQ_BEINGEVICTED = 0x0340
-GETRES_SEQ=0x006b
+GETRES_SEQ = 0x006B
 GETRES_LARGEVALUE_SEQ = 0x0350
 
-GETREQ_SPINE=0x0200
+GETREQ_SPINE = 0x0200

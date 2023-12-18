@@ -137,10 +137,11 @@ struct headers {
 struct metadata {
     /* empty */
 	bit<16>	hashval_for_partition; // at most 32K
-    
+    bit<1> is_spine;
     bit<1> is_cached;
 	bit<1> is_deleted;
 	bit<16> idx;
+	bit<10> client_sid;
 	bit<4> access_val_mode; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
 }
 

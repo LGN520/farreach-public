@@ -251,7 +251,7 @@ void transaction_main() {
         }
     }
     printf("Execute %s\n", command);
-    system(command);
+    // system(command);
 
 #ifdef SERVER_ROTATION
     std::vector<int> valid_global_server_logical_idxes;

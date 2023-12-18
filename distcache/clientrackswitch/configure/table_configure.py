@@ -162,7 +162,7 @@ class TableConfigure:
                 matchspec0 = [
                     hex(tmpoptype),
                     "" + client_ips[tmp_client_physical_idx] + "/32",
-                    hex(0),
+                    # hex(0),
                 ]
                 actnspec0 = [hex(tmpsid)]
                 self.controller.table_add(

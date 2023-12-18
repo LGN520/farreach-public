@@ -100,6 +100,61 @@ class TableConfigure:
                     )
                 hash_start = hash_end + 1
 
+    def configure_hash_spine_partition_tbl(self):
+        hash_range_per_server = switch_partition_count / server_total_logical_num
+        for tmpoptype in [CACHE_POP_INSWITCH, NETCACHE_VALUEUPDATE]:
+            hash_start = 0  # [0, partition_count-1]
+            for global_server_logical_idx in range(server_total_logical_num):
+                if global_server_logical_idx == server_total_logical_num - 1:
+                    # if end is not included, then it is just processed by port 1111
+                    hash_end = switch_partition_count - 1
+                else:
+                    hash_end = hash_start + hash_range_per_server - 1
+                # NOTE: both start and end are included
+                op_hdr_optype = tmpoptype
+                meta_hashval_for_partition_start = int(hash_start)
+                meta_hashval_for_partition_end = int(hash_end)
+                matchspec0 = matchspec0 = [
+                    hex(tmpoptype),
+                    "" + hex(int(hash_start)) + "->" + hex(int(hash_end)),
+                ]
+                # Forward to the egress pipeline of server
+                server_physical_idx = -1
+                local_server_logical_idx = -1
+                for tmp_server_physical_idx in range(server_physical_num):
+                    for tmp_local_server_logical_idx in range(
+                        len(server_logical_idxes_list[tmp_server_physical_idx])
+                    ):
+                        if (
+                            global_server_logical_idx
+                            == server_logical_idxes_list[tmp_server_physical_idx][
+                                tmp_local_server_logical_idx
+                            ]
+                        ):
+                            server_physical_idx = tmp_server_physical_idx
+                            local_server_logical_idx = tmp_local_server_logical_idx
+                            break
+                if server_physical_idx == -1:
+                    print(
+                        "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in hash_partition_tbl".format(
+                            global_server_logical_idx
+                        )
+                    )
+                else:
+                    # udp_dstport = server_worker_port_start + global_server_logical_idx
+                    udp_dstport = server_worker_port_start + local_server_logical_idx
+                    eport = int(server_physical_idx / 2) + 3
+                    sid = self.spine_sids[int(server_physical_idx / 2)]
+
+                    self.controller.table_add(
+                        "hash_spine_partition_tbl",
+                        "hash_spine_partition",
+                        matchspec0,
+                        [hex(sid), hex(eport)],
+                        0,
+                    )
+                hash_start = hash_end + 1
+
     def create_mirror_session(self):
         # Mirror_add
         for i in range(client_physical_num):
@@ -118,6 +173,13 @@ class TableConfigure:
             self.controller.mirroring_add(
                 self.server_sids[i % 2], self.server_devports[i]
             )
+        for i in range(int(server_physical_num / 2)):
+            print(
+                "Binding sid {} with spine devport {} for both direction mirroring".format(
+                    self.spine_sids[i], i + 3
+                )
+            )  # clone to server
+            self.controller.mirroring_add(self.spine_sids[i], i + 3)
 
     def configure_access_latest_tbl(self):
         for is_cached in cached_list:
@@ -1075,7 +1137,7 @@ class TableConfigure:
         # self.server_sids = sids[len(self.client_devports) : sidnum]
         self.client_sids = list(range(10, 10 + client_physical_num))
         self.server_sids = list(range(20, 20 + client_physical_num))
-
+        self.spine_sids = list(range(30, 30 + int(server_physical_num / 2)))
         # NOTE: data plane communicate with switchos by software-based reflector, which is deployed in one server machine
         isvalid = False
         reflector_ip_for_switchos = str(
@@ -1139,6 +1201,7 @@ class TableConfigure:
             WARMUPREQ,
             LOADREQ,
             CACHE_EVICT_LOADFREQ_INSWITCH,
+            NETCACHE_VALUEUPDATE,
             SETVALID_INSWITCH,
             PUTREQ_LARGEVALUE,
             NETCACHE_CACHE_POP_INSWITCH_NLATEST,
@@ -1150,7 +1213,8 @@ class TableConfigure:
 
         print("Configuring hash_partition_tbl")
         self.configure_hash_partition_tbl()
-
+        print("Configuring hash_spine_partition_tbl")
+        self.configure_hash_spine_partition_tbl()
         # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
         print("Leave cache_lookup_tbl managed by controller in runtime")
 
@@ -1263,6 +1327,12 @@ class TableConfigure:
             matchspec0 = [hex(tmpoptype), hex(0)]
             self.controller.table_add("access_seq_tbl", "assign_seq", matchspec0, [])
         # Table: save_client_udpport_tbl (default: nop; size: 4)
+        print("Configuring bypass_egress_tbl")
+        for tmpoptype in [CACHE_POP_INSWITCH, NETCACHE_VALUEUPDATE]:
+            matchspec0 = [hex(tmpoptype),hex(0)]
+            self.controller.table_add(
+                "bypass_egress_tbl", "set_bypass_egress", matchspec0
+            )
         print("Configuring save_client_udpport_tbl")
         for tmpoptype in [GETREQ_INSWITCH, NETCACHE_WARMUPREQ_INSWITCH]:
             matchspec0 = [hex(tmpoptype)]
@@ -1329,11 +1399,12 @@ class TableConfigure:
 
         # Table: access_cache_frequency_tbl (default: nop; size: 25)
         print("Configuring access_cache_frequency_tbl")
-        for tmpoptype in [GETREQ_INSWITCH]:
-            matchspec0 = [hex(tmpoptype), hex(1), hex(1), hex(1)]
-            self.controller.table_add(
-                "access_cache_frequency_tbl", "update_cache_frequency", matchspec0, []
-            )
+        for is_sampled in sampled_list:
+            for tmpoptype in [GETREQ_INSWITCH]:
+                matchspec0 = [hex(tmpoptype), hex(is_sampled), hex(1), hex(1)]
+                self.controller.table_add(
+                    "access_cache_frequency_tbl", "update_cache_frequency", matchspec0, []
+                )
 
         for is_sampled in sampled_list:
             for is_cached in cached_list:

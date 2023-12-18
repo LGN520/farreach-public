@@ -29,8 +29,6 @@ table access_deleted_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
 		meta.is_cached: exact;
-		// meta.is_latest: exact;
-		hdr.stat_hdr.stat: exact;
 	}
 	actions = {
 		get_deleted;

@@ -1,4 +1,3 @@
-set -x
 ptf_popserverpids=( "$(ps -aux | grep "ptf_popserver" | grep -v "grep" | awk '{print $2}')" )
 
 if [ ${#ptf_popserverpids[@]} -gt 0 ]

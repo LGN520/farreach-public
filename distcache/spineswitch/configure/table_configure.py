@@ -44,6 +44,7 @@ rack_physical_num = int(server_physical_num / 2)
 cached_list = [0, 1]
 hot_list = [0, 1]
 validvalue_list = [0, 1, 3]
+stat_list = [0, 1]
 # validvalue_list = [0, 1, 2, 3] # If with PUTREQ_LARGE
 latest_list = [0, 1]
 deleted_list = [0, 1]
@@ -159,19 +160,23 @@ class TableConfigure:
                     "ipv4_forward_tbl", "forward_normal_response", matchspec0, actnspec0
                 )
             # 2 client
-            for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-                matchspec0 = [
-                    hex(tmpoptype),
-                    "" + client_ips[tmp_client_physical_idx] + "/32",
-                    hex(0),
-                ]
-                actnspec0 = [hex(tmpsid)]
-                self.controller.table_add(
-                    "ipv4_forward_tbl",
-                    "forward_special_get_response",
-                    matchspec0,
-                    actnspec0,
-                )
+            # for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            #     matchspec0 = [
+            #         hex(tmpoptype),
+            #         "" + client_ips[tmp_client_physical_idx] + "/32",
+            #         hex(0),
+            #     ]
+            #     actnspec0 = [hex(tmpsid)]
+            #     self.controller.table_add(
+            #         "ipv4_forward_tbl",
+            #         "forward_special_get_response",
+            #         matchspec0,
+            #         actnspec0,
+            #     )
+
+    def configure_set_spine_tbl(self):
+        for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, NETCACHE_VALUEUPDATE]:
+            self.controller.table_add("set_spine_tbl", "set_spine", [hex(tmpoptype)])
 
     def configure_hash_leaf_partition_tbl(self):
         # partition for rack 3 4 5 6
@@ -183,7 +188,7 @@ class TableConfigure:
             DELREQ,
             LOADREQ,
             PUTREQ_LARGEVALUE,
-            CACHE_POP_INSWITCH,
+            # CACHE_POP_INSWITCH,
             WARMUPREQ,
             CACHE_EVICT_LOADFREQ_INSWITCH,
             CACHE_EVICT_LOADDATA_INSWITCH,
@@ -220,15 +225,75 @@ class TableConfigure:
                 hash_start = hash_end + 1
 
     def configure_eg_port_forward_tbl(self):
-        for tmpoptype in [GETREQ_SPINE,]:
-            matchspec0 = [hex(tmpoptype)]
-            self.controller.table_add("eg_port_forward_tbl","update_netcache_getreq_spine_to_getreq",matchspec0)
+        for tmpoptype in [
+            GETREQ_SPINE,
+        ]:
+            matchspec0 = [hex(tmpoptype), hex(0)]
+            self.controller.table_add(
+                "eg_port_forward_tbl",
+                "update_netcache_getreq_spine_to_getreq",
+                matchspec0,
+            )
+            matchspec0 = [hex(tmpoptype), hex(1)]
+            actnspec0 = [hex(1)]
+            self.controller.table_add(
+                "eg_port_forward_tbl",
+                "update_netcache_getreq_spine_to_getres_by_mirroring",
+                matchspec0,
+                actnspec0,
+            )
+
+    def configure_access_deleted_tbl(self):
+        matchspec0 = [hex(GETREQ_SPINE), hex(1)]
+        self.controller.table_add("access_deleted_tbl", "get_deleted", matchspec0)
+        for tmpoptype in [PUTREQ, DELREQ]:
+            matchspec0 = [hex(tmpoptype), hex(1)]
+            self.controller.table_add(
+                "access_deleted_tbl", "set_and_get_deleted", matchspec0
+            )
+        matchspec0 = [hex(NETCACHE_VALUEUPDATE), hex(1)]
+        self.controller.table_add(
+            "access_deleted_tbl", "reset_and_get_deleted", matchspec0
+        )
+        matchspec0 = [hex(CACHE_POP_INSWITCH), hex(1)]
+        self.controller.table_add(
+            "access_deleted_tbl", "reset_and_get_deleted", matchspec0
+        )
+    def configure_access_cache_frequency_tbl(self):
+        for tmpoptype in [GETREQ_SPINE]:
+            matchspec0 = [hex(tmpoptype), hex(1)]
+            self.controller.table_add(
+                "access_cache_frequency_tbl", "update_cache_frequency", matchspec0
+            )
+
+        for is_cached in cached_list:
+            for tmpoptype in [
+                CACHE_POP_INSWITCH,
+                NETCACHE_CACHE_POP_INSWITCH_NLATEST,
+            ]:
+                matchspec0 = [
+                    hex(tmpoptype),
+                    hex(is_cached),
+                ]
+                self.controller.table_add(
+                    "access_cache_frequency_tbl",
+                    "reset_cache_frequency",
+                    matchspec0,
+                    [],
+                )
+            
     def configure_update_vallen_tbl(self):
         for is_cached in cached_list:
             # for is_latest in latest_list:
             matchspec0 = [hex(GETREQ_SPINE), hex(is_cached)]
             if is_cached == 1:
                 self.controller.table_add("update_vallen_tbl", "get_vallen", matchspec0)
+            for tmpoptype in [CACHE_POP_INSWITCH, NETCACHE_VALUEUPDATE]:
+                matchspec0 = [hex(tmpoptype), hex(is_cached)]
+                self.controller.table_add(
+                    "update_vallen_tbl", "set_and_get_vallen", matchspec0, []
+                )
+
     def configure_add_and_remove_value_header_tbl(self):
         # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_INSWITCH
         # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
@@ -261,7 +326,7 @@ class TableConfigure:
                         [],
                         0,
                     )
-    
+
     def configure_update_pktlen_tbl(self):
         for i in range(int(switch_max_vallen / 8 + 1)):  # i from 0 to 16
             if i == 0:
@@ -335,11 +400,14 @@ class TableConfigure:
         # Table: ipv4_forward_tbl (default: nop; size: 6*client_physical_num=12 < 6*8=48)
         print("Configuring ipv4_forward_tbl")
         self.configure_ipv4_forward_tbl()
-        
+
+        print("Configuring set_spine_tbl")
+        self.configure_set_spine_tbl()
+
         print("Configuring prepare_for_cachehit_tbl")
         for client_physical_idx in range(client_physical_num):
             tmp_clientsid = self.client_sids[client_physical_idx]
-            for tmpoptype in [GETREQ]:
+            for tmpoptype in [GETREQ_SPINE]:
                 self.controller.table_add(
                     "prepare_for_cachehit_tbl",
                     "set_client_sid",
@@ -347,22 +415,31 @@ class TableConfigure:
                     [hex(tmp_clientsid)],
                 )
         print("Configuring access_deleted_tbl")
-        # self.configure_access_deleted_tbl()
-        
+        self.configure_access_deleted_tbl()
+        # Table: access_cache_frequency_tbl (default: nop; size: 25)
+        print("Configuring access_cache_frequency_tbl")
+        self.configure_access_cache_frequency_tbl()
+       
         # Table: update_ipmac_srcport_tbl (default: nop; 5*client_physical_num+5*server_physical_num=20 < 10*8=80 < 128)
         # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
         # NOTE: update_ipmac_srcport_tbl focues on src/dst ip/mac and udp.srcport
         print("Configuring eg_port_forward_tbl")
         self.configure_eg_port_forward_tbl()
-        
+
         print("Configuring update_vallen_tbl")
         self.configure_update_vallen_tbl()
 
+        print("Configuring add_and_remove_value_header_tbl")
+        self.configure_add_and_remove_value_header_tbl()
+
+        print("Configuring update_pktlen_tbl")
+        self.configure_update_pktlen_tbl()
         for i in range(1, 17):
             print("Configuring update_vallo{}_tbl".format(i))
             self.configure_update_val_tbl("lo{}".format(i))
             print("Configuring update_valhi{}_tbl".format(i))
             self.configure_update_val_tbl("hi{}".format(i))
+
 
 for i in range(int(server_physical_num / 2)):
     print("Configuring RACK {}".format(i))

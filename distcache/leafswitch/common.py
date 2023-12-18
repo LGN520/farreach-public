@@ -24,7 +24,7 @@ switch_max_vallen = int(config.get("switch", "switch_max_vallen"))
 switchos_sample_cnt = int(config.get("switch", "switchos_sample_cnt"))
 switchos_ptf_popserver_port = int(config.get("switch", "switchos_ptf_popserver_port"))
 switchos_ptf_snapshotserver_port = int(config.get("switch", "switchos_ptf_snapshotserver_port"))
-
+switchos_ptf_cachefrequencyserver_port=int(config.get("spineswitch0", "switchos_ptf_cachefrequencyserver_port"))
 # reflector port
 reflector_dp2cpserver_port = int(config.get("reflector", "reflector_dp2cpserver_port"))
 reflector_ip_for_switchos = str(config.get("reflector", "reflector_ip_for_switchos"))
@@ -133,6 +133,7 @@ PUTREQ_SEQ_INSWITCH_CASE1 = 0x004f
 DELREQ_SEQ_INSWITCH_CASE1 = 0x005f
 LOADSNAPSHOTDATA_INSWITCH_ACK = 0x006f
 CACHE_POP_INSWITCH = 0x007f
+CACHE_POP_INSWITCH_SPINE = 0x017f
 NETCACHE_VALUEUPDATE_INSWITCH = 0x008f
 # For large value
 NETCACHE_CACHE_POP_INSWITCH_NLATEST = 0x015f

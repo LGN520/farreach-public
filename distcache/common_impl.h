@@ -163,6 +163,7 @@ uint32_t switch_partition_count;
 uint32_t switch_kv_bucket_num;
 uint32_t switch_pipeline_num;
 const char* switchos_ip = nullptr;
+const char* spineswitchos_ip = nullptr;
 uint32_t switchos_sample_cnt = 0;
 short switchos_popserver_port = -1;
 short switchos_snapshotserver_port = -1;
@@ -199,6 +200,10 @@ int SWITCHOS_GET_CACHEDEMPTYINDEX = -1; // ptf get cached_empty_index*/
 // int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = -1;
 int SWITCHOS_ADD_CACHE_LOOKUP = -1;
 int SWITCHOS_ADD_CACHE_LOOKUP_ACK = -1;
+int CACHE_FREQUENCYREQ = -1;
+int CACHE_FREQUENCYACK = -1;
+int SETDELETEDREQ = -1;
+int SETDELETEDACK = -1;
 // int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
 // int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
 // int SWITCHOS_SETVALID3 = -1;
@@ -425,7 +430,7 @@ inline void parse_ini(const char* config_file, uint32_t rack_idx = 0) {
 
     // spineswitch
     spineswitchos_ips = ini.get_spineswitchos_ips(server_physical_num / 2);
-
+    spineswitchos_ip = spineswitchos_ips[rack_idx];
     // validate pipeidxes of clients and servers
     for (size_t i = 0; i < client_physical_num; i++) {
         INVARIANT(client_pipeidxes[i] >= 0 && client_pipeidxes[i] < switch_pipeline_num);
@@ -510,6 +515,11 @@ inline void parse_control_ini(const char* config_file) {
     // SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = ini.get_switchos_add_cache_lookup_setvalid1_ack();
     SWITCHOS_ADD_CACHE_LOOKUP = ini.get_switchos_add_cache_lookup();
     SWITCHOS_ADD_CACHE_LOOKUP_ACK = ini.get_switchos_add_cache_lookup_ack();
+    CACHE_FREQUENCYREQ = 10086;
+    CACHE_FREQUENCYACK = 10087;
+    SETDELETEDREQ = 10088;
+    SETDELETEDACK = 10089;
+
     // SWITCHOS_GET_EVICTDATA_SETVALID3 = ini.get_switchos_get_evictdata_setvalid3();
     // SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
     // SWITCHOS_SETVALID3 = ini.get_switchos_setvalid3();

@@ -62,6 +62,9 @@ int switchos_popworker_popclient_for_ptf_udpsock = -1;
 int switchos_popworker_popclient_for_reflector_udpsock = -1;
 // switchos.popworker <-> controller.evictserver for cache eviction
 int switchos_popworker_evictclient_for_controller_udpsock = -1;
+// get cachefrequency with a py server
+// only use in spineswitch os
+int switchos_cachefrequency_client_udpsock = -1;
 // cached metadata
 std::map<netreach_key_t, uint32_t> switchos_cached_keyidx_map;          // TODO: Comment it after checking server.cached_keyset_list
 netreach_key_t volatile** switchos_perpipeline_cached_keyarray = NULL;  // idx (of inswitch KV) -> key (TODO: different switches for distributed case)
@@ -82,6 +85,8 @@ inline uint32_t serialize_add_cache_lookup(char* buf, netreach_key_t key, uint16
 // inline uint32_t serialize_get_evictdata_setvalid3(char *buf, uint32_t pipeidx);
 // inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
 inline uint32_t serialize_remove_cache_lookup(char* buf, netreach_key_t key);
+inline uint32_t serialize_cache_frequency(char* buf, int sendidx);
+inline uint32_t serialize_set_deleted(char* buf, int sendidx);
 uint32_t switchos_idx = 0;
 uint32_t isspine = 0;
 int main(int argc, char** argv) {
@@ -118,7 +123,8 @@ int main(int argc, char** argv) {
     // connection from controller
     while (!switchos_popserver_finish) {
     }
-
+    printf("set switchos_running false\n");
+    fflush(stdout);
     switchos_running = false;
 
     void* status;
@@ -161,6 +167,10 @@ void prepare_switchos() {
     // popworker <-> reflector.cp2dpserver
     create_udpsock(switchos_popworker_popclient_for_reflector_udpsock, true, "switchos.popworker.popclient_for_reflector", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);
 
+    //
+    if (isspine) {
+        create_udpsock(switchos_cachefrequency_client_udpsock, true, "spineswitchos.cachefrequency_client", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);
+    }
     // cached metadata
     switchos_cached_keyidx_map.clear();
     switchos_perpipeline_cached_keyarray = (netreach_key_t volatile**)(new netreach_key_t*[switch_pipeline_num]);
@@ -233,6 +243,8 @@ void* run_switchos_popserver(void* param) {
     }
 
     switchos_popserver_finish = true;
+    printf("set switchos_popserver_finish true\n");
+    fflush(stdout);
     close(switchos_popserver_udpsock);
     pthread_exit(nullptr);
 }
@@ -258,6 +270,13 @@ void* run_switchos_popworker(void* param) {
     set_sockaddr(controller_evictserver_addr, inet_addr(controller_ip_for_switchos), controller_evictserver_port);
     socklen_t controller_evictserver_addrlen = sizeof(struct sockaddr_in);
 
+    sockaddr_in cachefrequnecy_server_addr;
+    socklen_t cachefrequnecy_server_addrlen = -1;
+    // used by spineswitchos cahce frequnecy getter
+    if (isspine) {
+        set_sockaddr(cachefrequnecy_server_addr, inet_addr(spineswitchos_ip), 10086);
+        cachefrequnecy_server_addrlen = sizeof(struct sockaddr_in);
+    }
     // get valid server logical idxes (TMPDEBUG)
     std::vector<uint16_t> valid_global_server_logical_idxes;
     for (int i = 0; i < server_physical_num; i++) {
@@ -291,6 +310,7 @@ void* run_switchos_popworker(void* param) {
     uint32_t switchos_evictseq = 0;
     bool switchos_evictstat = false;
 
+    bool debug_for_eviction = false;
     // TMPDEBUG
     // std::vector<double> evict_load_time_list, evict_sendrecv_time_list, evict_remove_time_list, evict_total_time_list;
     // struct timespec evict_load_t1, evict_load_t2, evict_load_t3, evict_sendrecv_t1, evict_sendrecv_t2, evict_sendrecv_t3, evict_remove_t1, evict_remove_t2, evict_remove_t3, evict_total_t1, evict_total_t2, evict_total_t3;
@@ -299,6 +319,7 @@ void* run_switchos_popworker(void* param) {
         netcache_getreq_pop_t* tmp_netcache_getreq_pop_ptr = switchos_netcache_getreq_pop_ptr_queue.read();
         if (tmp_netcache_getreq_pop_ptr != NULL) {
             // calculate global server logical index
+            // printf("populate key %s\n",tmp_netcache_getreq_pop_ptr->key().to_string_for_print());
 #ifdef USE_HASH
             uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
 #elif defined(USE_RANGE)
@@ -350,47 +371,74 @@ void* run_switchos_popworker(void* param) {
                 // load frequency counters from data plane
                 uint32_t frequency_counters[switchos_sample_cnt];
                 memset(frequency_counters, 0, sizeof(uint32_t) * switchos_sample_cnt);
-                while (true) {
-                    // printf("send %d CACHE_EVICT_LOADFREQ_INSWITCHs to reflector\n", switchos_sample_cnt);
+                if (isspine) {  // spine switch os register read directly, it only use in bmv2
+                    debug_for_eviction = true;
+                    printf("[debug]eviction for spine siwtch\n");
+                    fflush(stdout);
                     for (size_t i = 0; i < switchos_sample_cnt; i++) {
-                        cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(CURMETHOD_ID, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
-                        pktsize = tmp_cache_evict_loadfreq_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
-                        udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
-                    }
+                        // send
+                        ptf_sendsize = serialize_cache_frequency(ptfbuf, sampled_idxes[i]);
+                        udpsendto(switchos_cachefrequency_client_udpsock, ptfbuf, ptf_sendsize, 0, &cachefrequnecy_server_addr, cachefrequnecy_server_addrlen);
+                        // loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
+                        bool is_timeout = false;
+                        int tmp_acknum = 0;
 
-                    // loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
-                    bool is_timeout = false;
-                    int tmp_acknum = 0;
-                    while (true) {
-                        is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.popclient_for_reflector");
-                        if (unlikely(is_timeout)) {
+                        while (true) {
+                            is_timeout = udprecvfrom(switchos_cachefrequency_client_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "spineswitchos.cachefrequency_client");
+                            if (unlikely(is_timeout)) {
+                                continue;
+                            }
+                            INVARIANT(((int*)ackbuf)[0] == CACHE_FREQUENCYACK);
+                            INVARIANT(ack_recvsize == sizeof(int) * 3)
+                            printf("[debug]get frequency %d %d\n", ((int*)ackbuf)[1], ((int*)ackbuf)[2]);
+                            fflush(stdout);
+                            frequency_counters[((int*)ackbuf)[1]] = ((int*)ackbuf)[2];
                             break;
                         }
+                    }
 
-                        cache_evict_loadfreq_inswitch_ack_t tmp_cache_evict_loadfreq_inswitch_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
+                } else {
+                    while (true) {
+                        // printf("send %d CACHE_EVICT_LOADFREQ_INSWITCHs to reflector\n", switchos_sample_cnt);
                         for (size_t i = 0; i < switchos_sample_cnt; i++) {
-                            if (static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]) == tmp_cache_evict_loadfreq_inswitch_ack.key()) {
-                                frequency_counters[i] = tmp_cache_evict_loadfreq_inswitch_ack.frequency();
-                                tmp_acknum += 1;
+                            cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(CURMETHOD_ID, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
+                            pktsize = tmp_cache_evict_loadfreq_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
+                            udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
+                        }
+
+                        // loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
+                        bool is_timeout = false;
+                        int tmp_acknum = 0;
+                        while (true) {
+                            is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.popclient_for_reflector");
+                            if (unlikely(is_timeout)) {
                                 break;
-                            } else if (i == switchos_sample_cnt - 1) {
-                                printf("Receive CACHE_EVICT_LOADFREQ_ACK of key %x, not match any sampled key from %d CACHE_EVICT_LOADFREQ_INSWITCH_ACKs!\n", tmp_cache_evict_loadfreq_inswitch_ack.key().keyhihi, switchos_sample_cnt);
-                                exit(-1);
+                            }
+
+                            cache_evict_loadfreq_inswitch_ack_t tmp_cache_evict_loadfreq_inswitch_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
+                            for (size_t i = 0; i < switchos_sample_cnt; i++) {
+                                if (static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]) == tmp_cache_evict_loadfreq_inswitch_ack.key()) {
+                                    frequency_counters[i] = tmp_cache_evict_loadfreq_inswitch_ack.frequency();
+                                    tmp_acknum += 1;
+                                    break;
+                                } else if (i == switchos_sample_cnt - 1) {
+                                    printf("Receive CACHE_EVICT_LOADFREQ_ACK of key %x, not match any sampled key from %d CACHE_EVICT_LOADFREQ_INSWITCH_ACKs!\n", tmp_cache_evict_loadfreq_inswitch_ack.key().keyhihi, switchos_sample_cnt);
+                                    exit(-1);
+                                }
+                            }
+
+                            if (tmp_acknum >= switchos_sample_cnt) {
+                                break;
                             }
                         }
 
-                        if (tmp_acknum >= switchos_sample_cnt) {
+                        if (unlikely(is_timeout)) {
+                            continue;
+                        } else {
                             break;
                         }
                     }
-
-                    if (unlikely(is_timeout)) {
-                        continue;
-                    } else {
-                        break;
-                    }
                 }
-
                 // choose the idx with minimum frequency counter as victim
                 uint32_t min_frequency_counter = 0;
                 uint32_t switchos_evictidx = 0;
@@ -410,7 +458,7 @@ void* run_switchos_popworker(void* param) {
                 }
 
                 // TMPDEBUG
-                // printf("Evict key %ld for new hot key %ld\n", ((uint64_t)cur_evictkey.keyhihi)<<32 | ((uint64_t)cur_evictkey.keyhilo), ((uint64_t)tmp_cache_pop_ptr->key().keyhihi)<<32 | ((uint64_t)tmp_cache_pop_ptr->key().keyhilo));
+                // printf("Evict key %ld for new hot key %ld\n", ((uint64_t)cur_evictkey.keyhihi) << 32 | ((uint64_t)cur_evictkey.keyhilo), ((uint64_t)tmp_cache_pop_ptr->key().keyhihi) << 32 | ((uint64_t)tmp_cache_pop_ptr->key().keyhilo));
                 // fflush(stdout);
 
                 // CUR_TIME(evict_load_t2);
@@ -425,24 +473,39 @@ void* run_switchos_popworker(void* param) {
                 // CUR_TIME(evict_remove_t2);
 
                 // switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
-
+                bool is_timeout = false;
                 // CUR_TIME(evict_sendrecv_t1);
-                netcache_cache_evict_t tmp_netcache_cache_evict(CURMETHOD_ID, cur_evictkey, switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx]);
-                pktsize = tmp_netcache_cache_evict.serialize(pktbuf, MAX_BUFSIZE);
-                while (true) {
-                    // printf("send NETCACHE_CACHE_EVICT to controller.evictserver\n");
-                    // dump_buf(pktbuf, pktsize);
-                    udpsendto(switchos_popworker_evictclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_evictserver_addr, controller_evictserver_addrlen, "switchos.popworker.evictclient_for_controller");
-
-                    // wait for NETCACHE_CACHE_EVICT_ACK from controller.evictserver
-                    // NOTE: no concurrent CACHE_EVICTs -> use request-and-reply manner to wait for entire eviction workflow
-                    bool is_timeout = udprecvfrom(switchos_popworker_evictclient_for_controller_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient_for_controller");
-                    if (unlikely(is_timeout)) {
-                        continue;
-                    } else {
-                        netcache_cache_evict_ack_t tmp_cache_evict_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
-                        INVARIANT(tmp_cache_evict_ack.key() == cur_evictkey);
+                if (isspine) {  ////for spine switch it will only modify deleted register
+                    ptf_sendsize = serialize_set_deleted(ptfbuf, switchos_evictidx);
+                    udpsendto(switchos_cachefrequency_client_udpsock, ptfbuf, ptf_sendsize, 0, &cachefrequnecy_server_addr, cachefrequnecy_server_addrlen);
+                    while (true) {
+                        is_timeout = udprecvfrom(switchos_cachefrequency_client_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "spineswitchos.cachefrequency_client");
+                        if (unlikely(is_timeout)) {
+                            continue;
+                        }
+                        printf("[debug]set deleted for evict\n");
+                        fflush(stdout);
+                        INVARIANT(((int*)ackbuf)[0] == SETDELETEDACK);
                         break;
+                    }
+                } else {  // for leaf switch it reuse the function of netcache it will reset all register
+                    netcache_cache_evict_t tmp_netcache_cache_evict(CURMETHOD_ID, cur_evictkey, switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx]);
+                    pktsize = tmp_netcache_cache_evict.serialize(pktbuf, MAX_BUFSIZE);
+                    while (true) {
+                        // printf("send NETCACHE_CACHE_EVICT to controller.evictserver\n");
+                        // dump_buf(pktbuf, pktsize);
+                        udpsendto(switchos_popworker_evictclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_evictserver_addr, controller_evictserver_addrlen, "switchos.popworker.evictclient_for_controller");
+
+                        // wait for NETCACHE_CACHE_EVICT_ACK from controller.evictserver
+                        // NOTE: no concurrent CACHE_EVICTs -> use request-and-reply manner to wait for entire eviction workflow
+                        bool is_timeout = udprecvfrom(switchos_popworker_evictclient_for_controller_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient_for_controller");
+                        if (unlikely(is_timeout)) {
+                            continue;
+                        } else {
+                            netcache_cache_evict_ack_t tmp_cache_evict_ack(CURMETHOD_ID, ackbuf, ack_recvsize);
+                            INVARIANT(tmp_cache_evict_ack.key() == cur_evictkey);
+                            break;
+                        }
                     }
                 }
                 // CUR_TIME(evict_sendrecv_t2);
@@ -451,7 +514,10 @@ void* run_switchos_popworker(void* param) {
 
                 // set freeidx as evictidx for cache popluation later
                 switchos_freeidx = switchos_evictidx;
-
+                if (isspine) {
+                    printf("[debug]evict switchos_evictidx%d\n", switchos_evictidx);
+                    fflush(stdout);
+                }
                 // reset keyarray and serveridxarray at evictidx
                 switchos_cached_keyidx_map.erase(cur_evictkey);
                 switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx] = netreach_key_t();
@@ -479,7 +545,7 @@ void* run_switchos_popworker(void* param) {
             if (!isspine) {
                 while (true) {
                     udpsendto(switchos_popworker_popclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "switchos.popworker.popclient_for_controller");
-                    printf("switchos_popworker_popclient_for_controller_udpsock\n");
+                    // printf("switchos_popworker_popclient_for_controller_udpsock\n");
                     bool is_timeout = udprecvfrom(switchos_popworker_popclient_for_controller_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.popclient_for_controller");
                     if (unlikely(is_timeout)) {
                         continue;
@@ -528,7 +594,7 @@ void* run_switchos_popworker(void* param) {
 
                 while (true) {
                     udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient");
-                    printf("switchos_popworker_popclient_for_reflector_udpsock\n");
+                    // printf("switchos_popworker_popclient_for_reflector_udpsock\n");
 
                     // loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
                     bool is_timeout = false;
@@ -562,7 +628,9 @@ void* run_switchos_popworker(void* param) {
             udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
             // INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
             INVARIANT(*((int*)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK);  // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
-
+            if (debug_for_eviction)
+                printf("[debug]SWITCHOS_ADD_CACHE_LOOKUP_ACK\n");
+            fflush(stdout);
             // update inswitch cache metadata
             switchos_cached_keyidx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_netcache_getreq_pop_ptr->key(), switchos_freeidx));
             switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_freeidx] = tmp_netcache_getreq_pop_ptr->key();
@@ -603,8 +671,13 @@ void* run_switchos_popworker(void* param) {
             switchos_evictseq = 0;
             switchos_evictstat = false;
         }  // tmp_netcache_getreq_pop_ptr != NULL
+        else {
+            // printf("tmp_netcache_getreq_pop_ptr is null\n");fflush(stdout);
+        }
     }
 
+    printf("stop ptf.popserver\n");
+    fflush(stdout);
     // send SWITCHOS_PTF_POPSERVER_END to ptf.popserver
     memcpy(ptfbuf, &SWITCHOS_PTF_POPSERVER_END, sizeof(int));
     udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
@@ -696,4 +769,15 @@ inline uint32_t serialize_remove_cache_lookup(char* buf, netreach_key_t key) {
     memcpy(buf, &SWITCHOS_REMOVE_CACHE_LOOKUP, sizeof(int));
     uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
     return sizeof(int) + tmp_keysize;
+}
+
+inline uint32_t serialize_cache_frequency(char* buf, int sendidx) {
+    memcpy(buf, &CACHE_FREQUENCYREQ, sizeof(int));
+    memcpy(buf + sizeof(int), &sendidx, sizeof(int));
+    return sizeof(int) * 2;
+}
+inline uint32_t serialize_set_deleted(char* buf, int sendidx) {
+    memcpy(buf, &SETDELETEDREQ, sizeof(int));
+    memcpy(buf + sizeof(int), &sendidx, sizeof(int));
+    return sizeof(int) * 2;
 }

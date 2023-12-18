@@ -111,7 +111,7 @@ control partitionswitchIngress (inout headers hdr,
 	}
 
 	action set_client_sid(bit<10> client_sid) {
-		hdr.inswitch_hdr.client_sid = client_sid;
+		meta.client_sid = client_sid;
 	}
 
 	table prepare_for_cachehit_tbl {
@@ -124,6 +124,20 @@ control partitionswitchIngress (inout headers hdr,
 			NoAction;
 		}
 		default_action = set_client_sid(0); // deprecated: configured as set_client_sid(sids[0]) in ptf
+		size = 32;
+	}
+	action set_spine(){
+		meta.is_spine = 1;
+	}
+	table set_spine_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			set_spine;
+			NoAction;
+		}
+		default_action = NoAction; // deprecated: configured as set_client_sid(sids[0]) in ptf
 		size = 32;
 	}
 	apply{
@@ -140,11 +154,10 @@ control partitionswitchIngress (inout headers hdr,
 
 			// Stage 1
 			ipv4_forward_tbl.apply(); // update egress_spec for normal/speical response packets
-
-			if(hdr.op_hdr.optype == GETREQ_SPINE){
-				cache_lookup_tbl.apply();
+			set_spine_tbl.apply();
+			cache_lookup_tbl.apply();
+			if(meta.is_spine == 1){
 				prepare_for_cachehit_tbl.apply();
-				
 			}
 
 		}

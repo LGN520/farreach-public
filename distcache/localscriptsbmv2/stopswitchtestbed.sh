@@ -1,4 +1,3 @@
-set -x
 DIRNAME="netcache"
 
 echo "stop switchos"

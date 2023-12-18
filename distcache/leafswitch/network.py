@@ -7,13 +7,14 @@ import os
 from common import *
 
 rack_physical_num = int(server_physical_num / 2)
-
+current_dir = os.path.dirname(os.path.abspath(__file__))
 method = "netcache"
 sw_path = subprocess.getstatusoutput("whereis simple_switch")[1].split(" ")[1]
-p4_path = method + ".p4"
-json_path = method + ".json"
-partition_json_path = "../clientrackswitch/partitionswitch.json"
-spine_json_path = "../spineswitch/spineswitch.json"
+p4_path = current_dir+"/"+method + ".p4"
+json_path = current_dir+"/"+method + ".json"
+partition_json_path = current_dir+"/"+"../clientrackswitch/partitionswitch.json"
+spine_json_path = current_dir+"/"+"../spineswitch/spineswitch.json"
+
 
 def P4compile(p4_path, json_path):
     os.system("p4c-bm2-ss --p4v 16 " + p4_path + " -o  " + json_path)
@@ -24,7 +25,8 @@ rackswitchs = []
 spineswitchs = []
 switchoses = []
 spineswitchoses = []
-debug=False
+debug = False
+
 
 def create_network():
     net = Mininet(cleanup=True, autoStaticArp=True)
@@ -104,7 +106,6 @@ def create_network():
     for i in range(client_physical_num):
         net.addLink(host[i], client_s1)
     for i in range(rack_physical_num):
-        
         # rack
         net.addLink(rackswitchs[i], host[2 + i * 2])
         net.addLink(rackswitchs[i], host[2 + i * 2 + 1])
@@ -143,18 +144,18 @@ def create_network():
     for i in range(rack_physical_num):
         switchoses[i].cmdPrint("ip route add default via 192.168.1.200")
         spineswitchoses[i].cmdPrint("ip route add default via 192.168.1.200")
-    CLI(net)
-    # def handler(signum, frame):
-    #     print("Signal handler called with signal", signum)
-    #     time.sleep(1)
-    #     print("Continuing execution...")
-    #     net.stop()
-    #     exit(0)
+    # CLI(net)
+    def handler(signum, frame):
+        print("Signal handler called with signal", signum)
+        time.sleep(1)
+        print("Continuing execution...")
+        net.stop()
+        exit(0)
 
-    # signal.signal(signal.SIGTERM, handler)
-    # while True:
-    #     # print("Waiting for SIGTERM signal...")
-    #     time.sleep(3)
+    signal.signal(signal.SIGTERM, handler)
+    while True:
+        # print("Waiting for SIGTERM signal...")
+        time.sleep(3)
 
 
 if __name__ == "__main__":

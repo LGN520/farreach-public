@@ -58,7 +58,7 @@ class RegisterUpdate():
                     exit(-1)
                 port, chnl = recirport.split("/")
                 # recirdevport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-                self.recirports_for_unmatched_devports.append(recirdevport)
+                self.recirports_for_unmatched_devports.append(port)
         # GETRES_LATEST/DELETED_SEQ may also incur CASE1s (need to read snapshot flag)
         for server_physical_idx in range(server_physical_num):
             if server_pipeidxes[server_physical_idx] != single_ingress_pipeidx:
@@ -72,7 +72,7 @@ class RegisterUpdate():
                     exit(-1)
                 port, chnl = recirport.split("/")
                 # recirdevport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-                self.recirports_for_unmatched_devports.append(recirport)
+                self.recirports_for_unmatched_devports.append(port)
 
     def cleanup(self):
         print("Reset need_recirculate=0 for iports in different ingress pipelines")

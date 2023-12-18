@@ -1,4 +1,3 @@
-set -x
 switchospids=( "$(ps -aux | grep "./switchos" | grep -v "grep" | awk '{print $2}')" )
 
 if [ ${#switchospids[@]} -gt 0 ]
