@@ -10,3 +10,4 @@ ycsb.iml
 *.ini.exp*
 *.sh.exp*
 *.pyc
+*.out
