@@ -97,20 +97,20 @@ void prepare_server() {
 		short tmp_server_worker_port = server_worker_port_start + tmp_local_server_logical_idx;
 #else
 		short tmp_server_worker_port = 0;
-		if (tmp_global_server_logical_idx == bottleneck_serveridx_for_rotation) {
-			INVARIANT(tmp_local_server_logical_idx == 0);
-			tmp_server_worker_port = server_worker_port_start;
-		}
-		else {
-			tmp_server_worker_port = server_worker_port_start + tmp_global_server_logical_idx;
-			if (tmp_global_server_logical_idx > bottleneck_serveridx_for_rotation) {
-				tmp_server_worker_port -= 1;
-			}
-		}
+		// if (tmp_global_server_logical_idx == bottleneck_serveridx_for_rotation) {
+		// 	INVARIANT(tmp_local_server_logical_idx == 0);
+		// 	tmp_server_worker_port = server_worker_port_start;
+		// }
+		// else {
+		tmp_server_worker_port = server_worker_port_start + tmp_global_server_logical_idx % (current_server_logical_num);
+			// if (tmp_global_server_logical_idx > bottleneck_serveridx_for_rotation) {
+			// 	tmp_server_worker_port -= 1;
+			// // }
+		// }
 #endif
 		//prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, tmp_server_worker_port, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 		prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, tmp_server_worker_port, "server.worker", 0, SERVER_SOCKET_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE);
-		printf("prepare udp socket for server.worker %d-%d on port %d\n", tmp_local_server_logical_idx, tmp_global_server_logical_idx, server_worker_port_start + tmp_local_server_logical_idx);
+		printf("prepare udp socket for server.worker %d-%d on port %d\n", tmp_local_server_logical_idx, tmp_global_server_logical_idx, tmp_server_worker_port);
 	}
 	server_worker_lwpid_list = new int[current_server_logical_num];
 	memset(server_worker_lwpid_list, 0, current_server_logical_num);
@@ -265,50 +265,6 @@ void close_server() {
 		server_evictserver_tcpsock_list = NULL;
 	}*/
 }
-
-/*void *run_server_popclient(void *param) {
-  // Parse param
-  uint16_t serveridx = *((uint16_t *)param); // [0, server_num-1]
-
-  // NOTE: controller and switchos should have been launched before servers
-  struct sockaddr_in controller_popserver_addr;
-//  if (strcmp(controller_ip_for_server, server_ip_for_controller_list[server_physical_idx]) == 0) {
-//	  set_sockaddr(controller_popserver_addr, inet_addr("127.0.0.1"), controller_popserver_port_start + global_server_logical_idx);
-//  }
-//  else {
-//	  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + global_server_logical_idx);
-//  }
-  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + global_server_logical_idx);
-  socklen_t controller_popserver_addrlen = sizeof(struct sockaddr_in);
-  
-  printf("[server.popclient%d] ready\n", int(serveridx));
-
-  transaction_ready_threads++;
-
-  while (!transaction_running) {}
-
-  char buf[MAX_BUFSIZE];
-  char recvbuf[MAX_BUFSIZE];
-  int recvsize = 0;
-  while (transaction_running) {
-  	cache_pop_t *tmp_cache_pop_ptr = server_cache_pop_ptr_queue_list[serveridx].read();
-  	if (tmp_cache_pop_ptr != NULL) {
-		uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
-		while (true) {
-			send_cachepop(server_popclient_udpsock_list[serveridx], buf, popsize, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recvsize);
-			cache_pop_ack_t rsp(recvbuf, recvsize);
-			INVARIANT(rsp.key() == tmp_cache_pop_ptr->key());
-		}
-
-		delete tmp_cache_pop_ptr;
-		tmp_cache_pop_ptr = NULL;
-	}
-  }
-
-  close(server_popclient_udpsock_list[serveridx]);
-  pthread_exit(nullptr);
-  return 0;
-}*/
 
 //#define WAIT_CACHE_POP_ACK
 

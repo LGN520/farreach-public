@@ -1,4 +1,4 @@
-
+#!/bin/bash
 DIRNAME="farreach"
 
 #set -e
@@ -18,35 +18,42 @@ else
 fi
 
 echo "clear tmp files"
-rm tmp_switchos.out
+rm tmp_switchos*.out
 rm tmp_popserver.out
 rm tmp_snapshotserver.out
 rm tmp_cleaner.out
 
 echo "configure data plane"
-cd bmv2; bash configure.sh; cd ..
+cd leafswitch; bash configure.sh; cd ..
+sleep 1s
+cd spineswitch; bash configure.sh; cd ..
 sleep 1s
 
 echo "launch ptfserver"
-cd bmv2; 
-mx switchos bash ptf_popserver.sh >../tmp_popserver.out 2>&1 &
+cd leafswitch; 
+bash ptf_popserver.sh >../tmp_popserver.out 2>&1 &
 sleep 1s
 cd ..
-cd bmv2; 
-mx switchos bash ptf_snapshotserver.sh >../tmp_snapshotserver.out 2>&1 &
+cd leafswitch; 
+bash ptf_snapshotserver.sh >../tmp_snapshotserver.out 2>&1 &
 sleep 1s
 cd ..
-cd bmv2; 
-mx switchos bash ptf_cleaner.sh >../tmp_cleaner.out 2>&1 &
+cd leafswitch; 
+bash ptf_cleaner.sh >../tmp_cleaner.out 2>&1 &
 sleep 1s
 cd ..
 
-if [ "x${recovermode}" == "xrecover" ]
-then
-	sleep 10s # wait for data plane interfaces UP; wait for ptf_popserver
-	echo "launch switchos w/ recovery mode"
-	mx switchos ./switchos ${recovermode} >tmp_switchos.out 2>&1 &
-else
-	echo "launch switchos"
-	mx switchos ./switchos >tmp_switchos.out 2>&1 &
-fi
+echo "launch switchos"
+mx switchos1 ./switchos 0 > tmp_switchos0.out &
+mx switchos2 ./switchos 1 > tmp_switchos1.out &
+mx switchos3 ./switchos 2 > tmp_switchos2.out &
+mx switchos4 ./switchos 3 > tmp_switchos3.out &
+# if [ "x${recovermode}" == "xrecover" ]
+# then
+# 	sleep 10s # wait for data plane interfaces UP; wait for ptf_popserver
+# 	echo "launch switchos w/ recovery mode"
+# 	mx switchos ./switchos ${recovermode} >tmp_switchos.out 2>&1 &
+# else
+# 	echo "launch switchos"
+# 	mx switchos ./switchos >tmp_switchos.out 2>&1 &
+# fi

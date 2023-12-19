@@ -89,7 +89,7 @@ void* run_controller_snapshotclient_senddata_subthread(void* param);
 void close_controller();
 
 cpu_set_t nonserverworker_cpuset;  // [server_cores, total_cores-1] for all other threads
-uint32_t controller_idx = 0;
+int controller_idx = 0;
 int main(int argc, char** argv) {
     if (argc == 2) {
         // printf("Usage: ./controller controller_idx\n");
@@ -262,7 +262,7 @@ void controller_load_snapshotid() {
 void controller_update_snapshotid(char* buf, int bufsize) {
     // TODO: store inswitch snapshot data for switch failure
     std::string snapshotdata_path;
-    get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, controller_snapshotid);
+    get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, controller_snapshotid, controller_idx);
     store_buf(buf, bufsize, snapshotdata_path);
     // store latest snapshot id for controller failure
     std::string snapshotid_path;
@@ -272,7 +272,7 @@ void controller_update_snapshotid(char* buf, int bufsize) {
     int old_snapshotid = controller_snapshotid - 1;
     if (old_snapshotid > 0) {
         std::string old_snapshotdata_path;
-        get_controller_snapshotdata_path(CURMETHOD_ID, old_snapshotdata_path, old_snapshotid);
+        get_controller_snapshotdata_path(CURMETHOD_ID, old_snapshotdata_path, old_snapshotid, controller_idx);
         rmfiles(old_snapshotdata_path.c_str());
     }
 
@@ -545,6 +545,7 @@ void* run_controller_snapshotclient(void* param) {
     close(warmupfinishserver_udpsock);
 
     bool is_snapshot_enabled = false;
+
     if (controller_snapshot_period > 0) {
         is_snapshot_enabled = true;
         printf("[controller.snapshotclient] Start periodic snapshot with period of %d ms...\n", controller_snapshot_period);

@@ -7,14 +7,13 @@ import os
 from common import *
 
 rack_physical_num = int(server_physical_num / 2)
-
+current_dir = os.path.dirname(os.path.abspath(__file__))
 method = "netbufferv4"
 sw_path = subprocess.getstatusoutput("whereis simple_switch")[1].split(" ")[1]
-p4_path = method + ".p4"
-json_path = method + ".json"
-partition_json_path = "../../partitionswitch/bmv2/partitionswitch.json"
-
-
+p4_path = current_dir+"/"+method + ".p4"
+json_path = current_dir+"/"+method + ".json"
+partition_json_path = current_dir+"/"+"../spineswitch/partitionswitch.json"
+print(partition_json_path)
 def P4compile(p4_path, json_path):
     os.system("p4c-bm2-ss --p4v 16 " + p4_path + " -o  " + json_path)
 
@@ -83,10 +82,10 @@ def create_network():
     for i in range(client_physical_num):
         net.addLink(host[i], client_s1)
     for i in range(rack_physical_num):
-        net.addLink(client_s1, rackswitchs[i])
         # rack
         net.addLink(rackswitchs[i], host[2 + i * 2])
         net.addLink(rackswitchs[i], host[2 + i * 2 + 1])
+        net.addLink(client_s1, rackswitchs[i])
 
     for i in range(client_physical_num + server_physical_num):
         net.addLink(host[i], nat_s1)
@@ -113,18 +112,18 @@ def create_network():
     net.start()
     for i in range(rack_physical_num):
         switchoses[i].cmdPrint("ip route add default via 192.168.1.200")
-    CLI(net)
-    # def handler(signum, frame):
-    #     print("Signal handler called with signal", signum)
-    #     time.sleep(1)
-    #     print("Continuing execution...")
-    #     net.stop()
-    #     exit(0)
+    # CLI(net)
+    def handler(signum, frame):
+        print("Signal handler called with signal", signum)
+        time.sleep(1)
+        print("Continuing execution...")
+        net.stop()
+        exit(0)
 
-    # signal.signal(signal.SIGTERM, handler)
-    # while True:
-    #     # print("Waiting for SIGTERM signal...")
-    #     time.sleep(3)
+    signal.signal(signal.SIGTERM, handler)
+    while True:
+        # print("Waiting for SIGTERM signal...")
+        time.sleep(3)
 
 
 if __name__ == "__main__":

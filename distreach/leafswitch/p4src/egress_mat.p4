@@ -191,9 +191,7 @@ action update_getreq_inswitch_to_getres_seq_by_mirroring(bit<10> client_sid,bit<
 	hdr.stat_hdr.stat = stat;
 	hdr.stat_hdr.nodeidx_foreval = SWITCHIDX_FOREVAL;
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
-	hdr.udp_hdr.srcPort = server_port;
-	hdr.udp_hdr.dstPort = hdr.clone_hdr.client_udpport;
-
+	reverse_port();
 	reverse_ip();
 	reverse_mac();
 	hdr.seq_hdr.setValid();
@@ -431,9 +429,7 @@ action update_putreq_inswitch_to_putres_seq_by_mirroring(bit<10> client_sid,bit<
 	hdr.stat_hdr.stat = 1;
 	hdr.stat_hdr.nodeidx_foreval = SWITCHIDX_FOREVAL;
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
-	hdr.udp_hdr.srcPort = server_port;
-	hdr.udp_hdr.dstPort = hdr.clone_hdr.client_udpport;
-
+	reverse_port();
 	reverse_ip();
 	reverse_mac();
 	hdr.inswitch_hdr.setInvalid();
@@ -480,9 +476,8 @@ action update_putreq_seq_inswitch_case1_to_putres_seq_by_mirroring(bit<10> clien
 	hdr.stat_hdr.stat = 1;
 	hdr.stat_hdr.nodeidx_foreval = SWITCHIDX_FOREVAL;
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
-	hdr.udp_hdr.srcPort = server_port;
-	hdr.udp_hdr.dstPort = hdr.clone_hdr.client_udpport;
 
+	reverse_port();
 	reverse_ip();
 	reverse_mac();
 	hdr.seq_hdr.setValid();
@@ -550,9 +545,7 @@ action update_delreq_inswitch_to_delres_seq_by_mirroring(bit<10> client_sid,bit<
 	hdr.stat_hdr.stat = 1;
 	hdr.stat_hdr.nodeidx_foreval = SWITCHIDX_FOREVAL;
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
-	hdr.udp_hdr.srcPort = server_port;
-	hdr.udp_hdr.dstPort = hdr.clone_hdr.client_udpport;
-
+	reverse_port();
 	reverse_ip();
 	reverse_mac();
 	hdr.inswitch_hdr.setInvalid();
@@ -597,9 +590,7 @@ action update_delreq_seq_inswitch_case1_to_delres_seq_by_mirroring(bit<10> clien
 	hdr.stat_hdr.stat = 1;
 	hdr.stat_hdr.nodeidx_foreval = SWITCHIDX_FOREVAL;
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
-	hdr.udp_hdr.srcPort = server_port;
-	hdr.udp_hdr.dstPort = hdr.clone_hdr.client_udpport;
-
+	reverse_port();
 	reverse_ip();
 	reverse_mac();
 	hdr.seq_hdr.setValid();

@@ -67,15 +67,14 @@ header seq_t {
 
 // NOTE: inswicth_t affects INSWITCH_PREV_BYTES in packet_format.h
 header inswitch_t {
-
-		// 32-bit container
+	// 32-bit container
     bit<1> snapshot_flag;
     bit<1> is_cached;
     bit<1> is_sampled;
     bit<10> client_sid; // clone to client for cache hit; NOTE: clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
     bit<3> padding;
     bit<16> hot_threshold;
-		// 32-bit containers
+	// 32-bit containers
     bit<16> hashval_for_cm1; // at most 64K
     bit<16> hashval_for_cm2; // at most 64K
     bit<16> hashval_for_cm3; // at most 64K

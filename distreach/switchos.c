@@ -155,7 +155,7 @@ inline uint32_t serialize_remove_cache_lookup(char* buf, netreach_key_t key);
 // NOTE: now we load snapshot data directly from data plane instead of via ptf channel
 // inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx, uint32_t pipeidx);
 // void parse_snapshotdata_fromptf(char *buf, uint32_t buflen, val_t *values, uint32_t *seqs, bool *stats, uint32_t record_cnt);
-uint32_t switchos_idx = 0;
+int switchos_idx = 0;
 int main(int argc, char** argv) {
     if ((argc == 2) && (strcmp(argv[1], "recover") == 0)) {
         recover_mode = true;
@@ -337,7 +337,7 @@ void recover() {
     int controller_snapshotid = 0;
     load_snapshotid(controller_snapshotid, snapshotid_path);
     char snapshotdata_path[256];
-    get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, 256, controller_snapshotid);
+    get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, 256, controller_snapshotid,switchos_idx);
     if (!isexist(snapshotdata_path)) {
         // printf("You need to copy inswitch snapshot data from controller to switchos before running with recover mode\n");
         printf("No such file: %s", snapshotdata_path);

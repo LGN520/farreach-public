@@ -198,7 +198,7 @@ void recover() {
     int controller_snapshotid = 0;
     load_snapshotid(controller_snapshotid, snapshotid_path);
     char snapshotdata_path[256];
-    get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, 256, controller_snapshotid);
+    get_controller_snapshotdata_path(CURMETHOD_ID, snapshotdata_path, 256, controller_snapshotid,server_physical_idx/2);
     if (!isexist(snapshotdata_path)) {
         // printf("You need to copy latest snapshotid from controller (at main server) to server before running with recover mode\n");
         printf("No such file: %s", snapshotdata_path);
@@ -437,7 +437,7 @@ void transaction_main() {
         }
     }
     printf("Execute %s\n", command);
-    system(command);
+    // system(command);
 
     transaction_running = true;
     COUT_THIS("[transaction.main] all threads ready");

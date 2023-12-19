@@ -77,10 +77,10 @@ class TableConfigure:
         for i in range(client_physical_num):
             print(
                 "Binding sid {} with client devport {} for both direction mirroring".format(
-                    self.client_sids[i], 1
+                    self.client_sids[i], self.client_devports
                 )
             )  # clone to client
-            self.controller.mirroring_add(self.client_sids[i], 1)
+            self.controller.mirroring_add(self.client_sids[i], self.client_devports[i])
         for i in range((self.rack_idx) * 2, (self.rack_idx) * 2 + 2):
             print(
                 "Binding sid {} with server devport {} for both direction mirroring".format(
@@ -100,7 +100,7 @@ class TableConfigure:
         # get the device ports from front panel ports
         for client_fpport in client_fpports:
             port, chnl = client_fpport.split("/")
-            self.client_devports.append(port)
+            self.client_devports.append("3")
         for server_fpport in server_fpports:
             port, chnl = server_fpport.split("/")
             self.server_devports.append(port)
@@ -168,7 +168,7 @@ class TableConfigure:
                 "l2l3_forward_tbl",
                 "l2l3_forward",
                 [client_macs[i], client_ips[i] + "/32"],
-                [hex(1)],
+                [self.client_devports[i]],
             )
         for i in range(server_physical_num):
             self.controller.table_add(
@@ -352,7 +352,7 @@ class TableConfigure:
         print("Configuring ipv4_forward_tbl")
         for tmp_client_physical_idx in range(client_physical_num):
             ipv4addr0 = client_ips[tmp_client_physical_idx]
-            eport = hex(1)
+            eport = self.client_devports[tmp_client_physical_idx]
             tmpsid = self.client_sids[tmp_client_physical_idx]
             # GETRES, GETRES_LARGEVALUE, PUTRES, DELRES
             for tmpoptype in [
@@ -1130,7 +1130,7 @@ class TableConfigure:
         # (1) for response from server to client, egress port has been set based on ip.dstaddr (or by clone_i2e) in ingress pipeline
         # (2) for response from switch to client, egress port has been set by clone_e2e in egress pipeline
         for tmp_client_physical_idx in range(client_physical_num):
-            tmp_devport = hex(1)
+            tmp_devport = self.client_devports[tmp_client_physical_idx]
             tmp_client_mac = client_macs[tmp_client_physical_idx]
             tmp_client_ip = client_ips[tmp_client_physical_idx]
             tmp_server_mac = server_macs[0]
