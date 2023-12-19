@@ -739,15 +739,6 @@ table eg_port_forward_tbl {
 	size = 2048;
 }
 
-// stage 10
-
-#ifdef DEBUG
-// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
-counter update_ipmac_srcport_counter {
-	type : packets_and_bytes;
-	direct: update_ipmac_srcport_tbl;
-}
-#endif
 
 action update_ipmac_srcport_server2client(bit<48> client_mac, bit<48> server_mac,bit<32> client_ip,bit<32> server_ip,
 bit<16> server_port) {

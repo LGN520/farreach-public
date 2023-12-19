@@ -128,17 +128,7 @@ CLIENT_TARGETS :=
 SWITCH_TARGETS :=
 SERVER_TARGETS := 
 
-prepare: prepare.o $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += prepare.d
-CLEAN += prepare.o
-CLIENT_TARGETS += prepare
 
-split_workload: split_workload.o $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += split_workload.d
-CLEAN += split_workload.o
-CLIENT_TARGETS += split_workload
 
 warmup_client: warmup_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
@@ -146,42 +136,15 @@ DEPS += warmup_client.d
 CLEAN += warmup_client.o
 CLIENT_TARGETS += warmup_client
 
-#remote_client: remote_client.o $(UTILS_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) -o $@
-#DEPS += remote_client.d
-#CLEAN += remote_client.o
-#CLIENT_TARGETS += remote_client
-
-preparefinish_client: preparefinish_client.o $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += preparefinish_client.d
-CLEAN += preparefinish_client.o
-CLIENT_TARGETS += preparefinish_client
-
 switchos: switchos.o $(UTILS_OBJECTS)
 	$(CC) -pthread -g $(LDDIR) $^ -lpthread -lcommon -o $@
 DEPS += switchos.d
 CLEAN += switchos.o
 SWITCH_TARGETS += switchos
 
-#localtest: localtest.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
-#DEPS += localtest.d
-#CLEAN += localtest.o
-#SERVER_TARGETS += localtest
-
-#loader: loader.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
-#DEPS += loader.d
-#CLEAN += loader.o
-#SERVER_TARGETS += loader
-
-##server: server.o $(UTILS_OBJECTS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
-##	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) $(DPDK_LDLIBS) -o $@
 server: server.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
-#server: server.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) $(TOMMYDS_LDLIBS) -o $@
+
 DEPS += server.d
 CLEAN += server.o
 SERVER_TARGETS += server
@@ -192,47 +155,6 @@ DEPS += controller.d
 CLEAN += controller.o
 SERVER_TARGETS += controller
 
-#dpdktest_client: dpdktest_client.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-#DEPS += dpdktest_client.d
-#CLEAN += dpdktest_client.o
-#CLIENT_TARGETS += dpdktest_client
-
-#dpdktest_server: dpdktest_server.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-#DEPS += dpdktest_server.d
-#CLEAN += dpdktest_server.o
-#SERVER_TARGETS += dpdktest_server
-
-#socktest_client: socktest_client.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) -o $@
-#DEPS += socktest_client.d
-#CLEAN += socktest_client.o
-#CLIENT_TARGETS += socktest_client
-
-#socktest_server: socktest_server.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) -o $@
-#DEPS += socktest_server.d
-#CLEAN += socktest_server.o
-#SERVER_TARGETS += socktest_server
-
-skewness_check: skewness_check.o $(UTILS_OBJECTS) 
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += skewness_check.d
-CLEAN += skewness_check.o
-CLIENT_TARGETS += skewness_check
-
-# recover/controller_get_snapshotid: recover/controller_get_snapshotid.o $(UTILS_OBJECTS)
-# 	$(LINK) $^ $(LDLIBS) -o $@
-# DEPS += recover/controller_get_snapshotid.d
-# CLEAN += recover/controller_get_snapshotid.o
-# SERVER_TARGETS += recover/controller_get_snapshotid
-
-#recover/server_recover: recover/server_recover.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
-#DEPS += recover/server_recover.d
-#CLEAN += recover/server_recover.o
-#SERVER_TARGETS += recover/server_recover
 
 ##############################################################################
 # Top level targets

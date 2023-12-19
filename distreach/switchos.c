@@ -430,13 +430,6 @@ void recover() {
                 break;
             }
 
-            // Set valid = 0 (not necessary under recovery mode due to no background traffic)
-            // setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, tmp_key, tmp_freeidx, 0);
-            // pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
-            // udpsendto(tmpudpsock_for_reflector, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.recover.udpsock_for_reflector");
-            ////is_timeout = udprecvfrom(tmpudpsock_for_reflector, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.recover.udpsock_for_reflector");
-            ////setvalid_inswitch_ack_t tmp_setvalid_rsp(CURMETHOD_ID, ackbuf, ack_recvsize);
-            ////INVARIANT(tmp_setvalid_rsp.key() == tmp_key);
 
             // send CACHE_POP_INSWITCH to reflector (DEPRECATED: try internal pcie port)
             cache_pop_inswitch_t tmp_cache_pop_inswitch(CURMETHOD_ID, tmp_key, tmp_val, tmp_seq, tmp_freeidx, tmp_stat);
@@ -691,14 +684,6 @@ void* run_switchos_popworker(void* param) {
 
                     // CUR_TIME(evict_load_t1);
 
-                    // get evictdata from ptf framework
-                    ////system("bash tofino/get_evictdata_setvalid3.sh");
-                    /*ptf_sendsize = serialize_get_evictdata_setvalid3(ptfbuf, tmp_pipeidx);
-                    udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
-                    udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
-                    INVARIANT(*((int *)ptfbuf) == SWITCHOS_GET_EVICTDATA_SETVALID3_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
-                    parse_evictdata(ptfbuf, ptf_recvsize, switchos_evictidx, switchos_evictvalue, switchos_evictseq, switchos_evictstat);*/
-
                     // generate sampled indexes
                     uint32_t sampled_idxes[switchos_sample_cnt];
                     memset(sampled_idxes, 0, sizeof(uint32_t) * switchos_sample_cnt);
@@ -767,16 +752,6 @@ void* run_switchos_popworker(void* param) {
                         printf("Evicted key %x at kvidx %d is not cached\n", switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx].keyhihi, switchos_evictidx);
                         exit(-1);
                     }
-
-                    // TMPDEBUG
-                    // printf("Evict key %ld for new hot key %ld\n", ((uint64_t)cur_evictkey.keyhihi)<<32 | ((uint64_t)cur_evictkey.keyhilo), ((uint64_t)tmp_cache_pop_ptr->key().keyhihi)<<32 | ((uint64_t)tmp_cache_pop_ptr->key().keyhilo));
-                    // fflush(stdout);
-
-                    // set valid = 3 by ptf channel (cannot perform it in data plane due to stateful ALU API limitation)
-                    // ptf_sendsize = serialize_setvalid3(ptfbuf, switchos_evictidx, tmp_pipeidx);
-                    // udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
-                    // udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
-                    // INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID3_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 
                     // set valid = 3 through reflector
                     while (true) {
