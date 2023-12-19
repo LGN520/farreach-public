@@ -90,13 +90,15 @@ class RegisterUpdate:
 
     def trigger_admission(self):
         # send to 5008 reflector port
+        i = 0
         for hotkey in self.hotkeys:
+            i += 1
             truekey = self.mapping_tables[self.ruleidx][hotkey]
             hi = (truekey >> 32) & 0xFFFFFFFF
             hilo = hi & 0xFFFF
             hihi = (hi >> 16) & 0xFFFF
             lo = truekey & 0xFFFFFFFF
-            # first Q is to makesure key is 128bit 
+            # first Q is to makesure key is 128bit
             # second Q is for clonehdr
             packed_i = struct.pack(">HQI2HQ", NETCACHE_GETREQ_POP, 0, lo, hilo, hihi, 0)
             print(binascii.hexlify(packed_i))
@@ -109,6 +111,8 @@ class RegisterUpdate:
             fake_cachepop_client_udpsock.sendto(
                 packed_i, (reflector_ips[reflector_idx], reflector_dp2cpserver_port)
             )
+            if i == 10:
+                break
 
     def setUp(self):
         print("\nSetup")

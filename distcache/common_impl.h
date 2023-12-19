@@ -147,9 +147,11 @@ std::vector<const char*> server_fpports;
 std::vector<uint32_t> server_pipeidxes;
 std::vector<const char*> server_ip_for_controller_list;
 
+// leafswitchos
+std::vector<const char*> leafswitchos_ips;
 // spineswitchos
 std::vector<const char*> spineswitchos_ips;
-
+short lead_spine_switchos_sync_port = 10079;
 // controller
 const char* controller_ip_for_server = nullptr;
 const char* controller_ip_for_switchos = nullptr;
@@ -238,7 +240,7 @@ int SNAPSHOT_GETDATA = -1;
 int SNAPSHOT_GETDATA_ACK = -1;
 int SNAPSHOT_SENDDATA = -1;
 int SNAPSHOT_SENDDATA_ACK = -1;
-
+int LEAF_SPINE_SYNC_FLAG = 1;
 /*
  * Get configuration
  */
@@ -429,6 +431,7 @@ inline void parse_ini(const char* config_file, uint32_t rack_idx = 0) {
     switchos_ptf_snapshotserver_port = ini.get_switchos_ptf_snapshotserver_port(rack_idx);
 
     // spineswitch
+    leafswitchos_ips = ini.get_leafswitchos_ips(server_physical_num / 2);
     spineswitchos_ips = ini.get_spineswitchos_ips(server_physical_num / 2);
     spineswitchos_ip = spineswitchos_ips[rack_idx];
     // validate pipeidxes of clients and servers
