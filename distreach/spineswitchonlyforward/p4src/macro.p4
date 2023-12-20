@@ -1,11 +1,5 @@
-// Uncomment it for XMU testbed
-//#define USE_BFSDE920
-
-// DEPRECATED: read blocking for pktloss of PUTREQ_LARGEVALUE of cached keys
-////#define ENABLE_LARGEVALUEBLOCK
-
 // Uncomment it if support range query, or comment it otherwise
-// Change netbufferv4.p4, common.py, and helper.h accordingly
+// Change nocache.p4, common.py, and helper.h accordingly
 //#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
@@ -13,6 +7,7 @@
 //#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
+// NOTE: we keep all optypes for nocache, but only a few of them will be used
 // 0b0001
 #define PUTREQ 0x0001
 //#define WARMUPREQ 0x0011
@@ -49,11 +44,6 @@
 #define GETRES_DELETED_SEQ 0x001b
 #define CACHE_EVICT_LOADDATA_INSWITCH_ACK 0x002b
 #define NETCACHE_VALUEUPDATE 0x003b
-//#define GETRES_LATEST_SEQ_SERVER 0x0046
-//#define GETRES_DELETED_SEQ_SERVER 0x005b
-#define GETRES_SEQ 0x006b
-#define GETREQ_BEINGEVICTED_RECORD 0x007b
-#define GETREQ_LARGEVALUEBLOCK_RECORD 0x008b
 // 0b1001
 #define GETRES 0x09
 // 0b0101
@@ -86,14 +76,9 @@
 #define DELREQ_SEQ_CASE3_BEINGEVICTED_SPINE 0x00b3
 #define PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED_SPINE 0x00c2
 #define PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED_SPINE 0x00d2
-// For read blocking under largevalue rare case
-#define GETREQ_LARGEVALUEBLOCK_SEQ 0x00e2
 // 0b1000
 #define PUTRES 0x0008
 #define DELRES 0x0018
-// 0b1010
-#define PUTRES_SEQ 0x000a
-#define DELRES_SEQ 0x001a
 // 0b0000
 #define WARMUPREQ 0x0000
 #define SCANREQ 0x0010
@@ -131,88 +116,20 @@
 #define LOADREQ_SPINE 0x0320
 #define NETCACHE_CACHE_POP_ACK_NLATEST 0x0330
 #define GETREQ_BEINGEVICTED 0x0340
-#define GETRES_LARGEVALUE_SEQ 0x0350
-
-/*
-#define GETREQ 0x00
-#define PUTREQ 0x01
-#define DELREQ 0x02
-#define SCANREQ 0x03
-#define GETRES 0x04
-#define PUTRES 0x05
-#define DELRES 0x06
-#define SCANRES_SPLIT 0x07
-#define GETREQ_INSWITCH 0x08
-#define GETREQ_POP 0x09
-#define GETREQ_NLATEST 0x0a
-#define GETRES_LATEST_SEQ 0x0b
-#define GETRES_LATEST_SEQ_INSWITCH 0x0c
-#define GETRES_LATEST_SEQ_INSWITCH_CASE1 0x0d
-#define GETRES_DELETED_SEQ 0x0e
-#define GETRES_DELETED_SEQ_INSWITCH 0x0f
-#define GETRES_DELETED_SEQ_INSWITCH_CASE1 0x10
-#define PUTREQ_INSWITCH 0x11
-#define PUTREQ_SEQ 0x12
-#define PUTREQ_POP_SEQ 0x13
-#define PUTREQ_SEQ_INSWITCH_CASE1 0x14
-#define PUTREQ_SEQ_CASE3 0x15
-#define PUTREQ_POP_SEQ_CASE3 0x16
-#define DELREQ_INSWITCH 0x17
-#define DELREQ_SEQ 0x18
-#define DELREQ_SEQ_INSWITCH_CASE1 0x19
-#define DELREQ_SEQ_CASE3 0x1a
-#define SCANREQ_SPLIT 0x1b
-#define CACHE_POP 0x1c
-#define CACHE_POP_INSWITCH 0x1d
-#define CACHE_POP_INSWITCH_ACK 0x1e
-#define CACHE_EVICT 0x1f
-#define CACHE_EVICT_ACK 0x20
-#define CACHE_EVICT_CASE2 0x21
-*/
-
-#ifndef DEBUG
-
-// NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
-// 32K * (2B vallen + 128B value + 4B frequency + 1B status)
-#define KV_BUCKET_COUNT 32768
-//#define KV_BUCKET_COUNT 16384
-// 64K * 2B counter
-#define CM_BUCKET_COUNT 65536
-//#define HH_THRESHOLD 10
-// 32K * 4B counter
-#define SEQ_BUCKET_COUNT 32768
-
-#else
-
-#define KV_BUCKET_COUNT 1
-#define CM_BUCKET_COUNT 1
-//#define HH_THRESHOLD 1
-#define SEQ_BUCKET_COUNT 1
-
-#endif
-
-// hot_threshold=10 + sampling_ratio=0.5 -> hot_pktcnt=20 during each clean period (NOTE: cached key will not update CM)
-// NOTE: it can be reconfigured by MAT
-#define DEFAULT_HH_THRESHOLD 10
-
-// egress_pipeline_num * kv_bucket_count
-//#define LOOKUP_ENTRY_COUNT 65536
-#define LOOKUP_ENTRY_COUNT 32768
 
 // MAX_SERVER_NUM <= 128
 #define MAX_SERVER_NUM 128
-// RANGE_PARTITION_ENTRY_NUM = 14 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
-#define RANGE_PARTITION_ENTRY_NUM 2048
+// RANGE_PARTITION_ENTRY_NUM = 6 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
+#define RANGE_PARTITION_ENTRY_NUM 1024
 // RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM
 #define RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM 128
 // PROCESS_SCANREQ_SPLIT_ENTRY_NUM = 2 * MAX_SERVER_NUM
 #define PROCESS_SCANREQ_SPLIT_ENTRY_NUM 256
-// HASH_PARTITION_ENTRY_NUM = 13 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
-#define HASH_PARTITION_ENTRY_NUM 2048
+// HASH_PARTITION_ENTRY_NUM = 5 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
+#define HASH_PARTITION_ENTRY_NUM 1024
 
 // hash partition range
 #define PARTITION_COUNT 32768
 
 #define SWITCHIDX_FOREVAL 0xFFFF
 
-//#define CPU_PORT 192

@@ -293,55 +293,6 @@ void send_cachepop(const int &sockfd, const char *buf, const int &buflen, const 
 }
 
 // For read-blocking under rare case of cache eviction
-/*void clear_blocklist(const int &sockfd, blockinfo_t &tmp_blockinfo, const val_t &tmp_val, const uint32_t &tmp_seq, const bool &tmp_stat, const uint16_t &global_server_logical_idx) {
-	char buf[MAX_BUFSIZE];
-	dynamic_array_t dynamicbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
-
-	// prepare read response
-	bool is_largevalue = false;
-	int rsp_size = 0;
-	if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-		get_response_seq_t rsp(CURMETHOD_ID, tmp_blockinfo._blockedkey, tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-		rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-		is_largevalue = false;
-#ifdef DUMP_BUF
-		dump_buf(buf, rsp_size);
-#endif
-	}
-	else {
-		get_response_largevalue_seq_t rsp(CURMETHOD_ID, tmp_blockinfo._blockedkey, tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-		dynamicbuf.clear();
-		rsp_size = rsp.dynamic_serialize(dynamicbuf);
-		is_largevalue = true;
-#ifdef DUMP_BUF
-		dump_buf(dynamicbuf.array(), rsp_size);
-#endif
-	}
-
-	// NOTE: now we send back read responses in server.worker sequentially, as read blocking is very rare
-	// TODO: if read-blocking overhead is large, we can resort server.blockserver to send back read responses in the background
-	// -> NOTE: we should reserve UDP ports for all blockservers
-	// -> NOTE: we should deep copy the read response and client addrs to server.blockserver
-	uint32_t tmp_size = tmp_blockinfo._blockedreq_list.size();
-	printf("[WARNING] clear the blocklist of size %d for key %x\n", tmp_size, tmp_blockinfo._blockedkey.keyhihi);
-	fflush(stdout);
-	INVARIANT(tmp_size == tmp_blockinfo._blockedaddr_list.size());
-	INVARIANT(tmp_size == tmp_blockinfo._blockedaddrlen_list.size());
-	for (uint32_t i = 0; i < tmp_size; i++) {
-		INVARIANT(tmp_blockinfo._blockedreq_list[i].key() == tmp_blockinfo._blockedkey);
-		if (!is_largevalue) {
-			udpsendto(sockfd, buf, rsp_size, 0, &tmp_blockinfo._blockedaddr_list[i], tmp_blockinfo._blockedaddrlen_list[i], "server.worker");
-		}
-		else {
-			udpsendlarge_ipfrag(sockfd, dynamicbuf.array(), rsp_size, 0, &tmp_blockinfo._blockedaddr_list[i], tmp_blockinfo._blockedaddrlen_list[i], "server.worker", get_response_largevalue_server_t::get_frag_hdrsize(CURMETHOD_ID));
-		}
-	}
-
-	// resize blocklist as 0
-	tmp_blockinfo._blockedreq_list.resize(0);
-	tmp_blockinfo._blockedaddr_list.resize(0);
-	tmp_blockinfo._blockedaddrlen_list.resize(0);
-}*/
 
 /*
  * Worker for server-side processing 
@@ -535,112 +486,7 @@ void *run_server_worker(void * param) {
 				}
 				break;
 			}
-		/*case packet_type_t::GETREQ_LARGEVALUEBLOCK_SEQ: 
-			{
-#ifdef DUMP_BUF
-				dump_buf(dynamicbuf.array(), recv_size);
-#endif
-
-#ifdef DEBUG_SERVER
-				CUR_TIME(rocksdb_t1);
-#endif
-
-				get_request_largevalueblock_seq_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
-
-				// For read-blocking under rare case of PUTREQ_LARGEVALUE
-				server_mutex_for_largevalueblock_list[local_server_logical_idx].lock();
-				std::map<netreach_key_t, blockinfo_t> &tmp_blockinfomap = server_blockinfomap_for_largevalueblock_list[local_server_logical_idx];
-				std::map<netreach_key_t, blockinfo_t>::iterator tmpiter = tmp_blockinfomap.find(req.key());
-				//printf("GETREQ_LARGEVALUEBLOCK_SEQ: key %x; seq %d\n", req.key().keyhihi, req.seq()); // TMPDEBUG
-				//fflush(stdout);
-				if (tmpiter == tmp_blockinfomap.end()) {
-#ifndef SERVER_ROTATION
-					printf("[WARN][LARGEVALUEBLOCK] blockinfomap does not contain key %x -> block the GETREQ_LARGEVALUEBLOCK_SEQ\n", req.key().keyhihi);
-					fflush(stdout);
-
-					blockinfo_t tmp_blockinfo;
-					tmp_blockinfo._largevalueseq = req.seq();
-					tmp_blockinfo._blockedkey = req.key();
-					tmp_blockinfo._isblocked = true;
-					tmp_blockinfo._blockedreq_list.resize(0);
-					tmp_blockinfo._blockedreq_list.push_back(get_request_beingevicted_t(CURMETHOD_ID, req.key()));
-					tmp_blockinfo._blockedaddr_list.resize(0);
-					tmp_blockinfo._blockedaddr_list.push_back(client_addr);
-					tmp_blockinfo._blockedaddrlen_list.resize(0);
-					tmp_blockinfo._blockedaddrlen_list.push_back(client_addrlen);
-
-					tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(req.key(), tmp_blockinfo));
-#else
-					// NOTE: if w/ server rotation, as the storage server will be re-launched each rotation which loses the previous blockinfomap, we ignore the case of unexisting key in blockinfomap -> reasonable as in practice, blockinfomap will not be lost
-					val_t tmp_val;
-					uint32_t tmp_seq = 0;
-					bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, &tmp_seq);
-					if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-						// NOTE: GETREQ_LARGEVALUEBLOCK_SEQ.seq() is the seq of the latest PUTREQ_LARGEVALUE, which cannot be used for GETRES_SEQ
-						get_response_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-						udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-					}
-					else {
-						get_response_largevalue_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-						dynamicbuf.clear();
-						rsp_size = rsp.dynamic_serialize(dynamicbuf);
-						udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
-					}
-#endif
-				} else { // with existing blockinfo for rare case of PUTREQ_LARGEVALUE
-					blockinfo_t &tmp_blockinfo = tmpiter->second;
-					if (tmp_blockinfo._largevalueseq == req.seq() & tmp_blockinfo._isblocked == true) {
-						printf("[WARN][LARGEVALUEBLOCK] existing blockinfo of key %x: seq matches and is blocked -> block the GETREQ_LARGEVALUEBLOCK_SEQ\n", req.key().keyhihi);
-						fflush(stdout);
-
-						tmp_blockinfo._blockedreq_list.push_back(get_request_beingevicted_t(CURMETHOD_ID, req.key()));
-						tmp_blockinfo._blockedaddr_list.push_back(client_addr);
-						tmp_blockinfo._blockedaddrlen_list.push_back(client_addrlen);
-					} else if (tmp_blockinfo._largevalueseq < req.seq()) {
-						printf("[WARN][LARGEVALUEBLOCK] existing blockinfo of key %x: outdated largevalueseq -> block the GETREQ_LARGEVALUEBLOCK_SEQ\n", req.key().keyhihi);
-						fflush(stdout);
-
-						tmp_blockinfo._largevalueseq = req.seq();
-						tmp_blockinfo._isblocked = true;
-						tmp_blockinfo._blockedreq_list.push_back(get_request_beingevicted_t(CURMETHOD_ID, req.key()));
-						tmp_blockinfo._blockedaddr_list.push_back(client_addr);
-						tmp_blockinfo._blockedaddrlen_list.push_back(client_addrlen);
-					} else { // process as usual without blocking
-						//COUT_THIS("[server] key = " << req.key().to_string())
-						val_t tmp_val;
-						uint32_t tmp_seq = 0;
-						bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, &tmp_seq);
-						//COUT_THIS("[server] val = " << tmp_val.to_string())
-						
-#ifdef DEBUG_SERVER
-						CUR_TIME(rocksdb_t2);
-#endif
-
-						if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-							// NOTE: GETREQ_LARGEVALUEBLOCK_SEQ.seq() is the seq of the latest PUTREQ_LARGEVALUE, which cannot be used for GETRES_SEQ
-							get_response_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-							udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-							dump_buf(buf, rsp_size);
-#endif
-						}
-						else {
-							get_response_largevalue_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-							dynamicbuf.clear();
-							rsp_size = rsp.dynamic_serialize(dynamicbuf);
-							udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
-#ifdef DUMP_BUF
-							dump_buf(dynamicbuf.array(), rsp_size);
-#endif
-						}
-					}
-				}
-				server_mutex_for_largevalueblock_list[local_server_logical_idx].unlock();
-
-				break;
-			}*/
+		
 		case packet_type_t::GETREQ_NLATEST:
 			{
 #ifdef DUMP_BUF
@@ -741,39 +587,6 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
-
-				// For read-blocking under rare case of PUTREQ_LARGEVALUE
-				/*server_mutex_for_largevalueblock_list[local_server_logical_idx].lock();
-				std::map<netreach_key_t, blockinfo_t> &tmp_blockinfomap = server_blockinfomap_for_largevalueblock_list[local_server_logical_idx];
-				std::map<netreach_key_t, blockinfo_t>::iterator tmpiter = tmp_blockinfomap.find(req.key());
-				//printf("PUTREQ_LARGEVALUE_SEQ: key %x; seq %d\n", req.key().keyhihi, req.seq()); // TMPDEBUG
-				//fflush(stdout);
-				if (tmpiter == tmp_blockinfomap.end()) {
-					blockinfo_t tmp_blockinfo;
-					tmp_blockinfo._largevalueseq = req.seq();
-					tmp_blockinfo._blockedkey = req.key();
-					tmp_blockinfo._isblocked = false;
-					tmp_blockinfo._blockedreq_list.resize(0);
-					tmp_blockinfo._blockedaddr_list.resize(0);
-					tmp_blockinfo._blockedaddrlen_list.resize(0);
-					tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(req.key(), tmp_blockinfo));
-				} else {
-					blockinfo_t &tmp_blockinfo = tmpiter->second;
-					if (req.seq() > tmp_blockinfo._largevalueseq) {
-						tmp_blockinfo._largevalueseq = req.seq();
-					}
-					tmp_blockinfo._isblocked = false;
-
-					// clear blocklist if necessary
-					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-						printf("[WARN][LARGEVALUEBLOCK] PUTREQ_LARGEVALUE_SEQ: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
-						fflush(stdout);
-
-						// answer the blocklist and resize as 0
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, req.val(), req.seq(), true, global_server_logical_idx);
-					}
-				}
-				server_mutex_for_largevalueblock_list[local_server_logical_idx].unlock();*/
 
 				break;
 			}
@@ -1004,37 +817,6 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, rsp_size);
 #endif
 
-				// For read-blocking under rare case of PUTREQ_LARGEVALUE
-				/*server_mutex_for_largevalueblock_list[local_server_logical_idx].lock();
-				std::map<netreach_key_t, blockinfo_t> &tmp_blockinfomap = server_blockinfomap_for_largevalueblock_list[local_server_logical_idx];
-				std::map<netreach_key_t, blockinfo_t>::iterator tmpiter = tmp_blockinfomap.find(req.key());
-				if (tmpiter == tmp_blockinfomap.end()) {
-					blockinfo_t tmp_blockinfo;
-					tmp_blockinfo._largevalueseq = req.seq();
-					tmp_blockinfo._blockedkey = req.key();
-					tmp_blockinfo._isblocked = false;
-					tmp_blockinfo._blockedreq_list.resize(0);
-					tmp_blockinfo._blockedaddr_list.resize(0);
-					tmp_blockinfo._blockedaddrlen_list.resize(0);
-					tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(req.key(), tmp_blockinfo));
-				} else {
-					blockinfo_t &tmp_blockinfo = tmpiter->second;
-					if (req.seq() > tmp_blockinfo._largevalueseq) {
-						tmp_blockinfo._largevalueseq = req.seq();
-					}
-					tmp_blockinfo._isblocked = false;
-
-					// clear blocklist if necessary
-					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-						printf("[WARN][LARGEVALUEBLOCK] PUTREQ_LARGEVALUE_SEQ_CASE3: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
-						fflush(stdout);
-
-						// answer the blocklist and resize as 0
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, req.val(), req.seq(), true, global_server_logical_idx);
-					}
-				}
-				server_mutex_for_largevalueblock_list[local_server_logical_idx].unlock();*/
-
 				break;
 			}
 		case packet_type_t::PUTREQ_POP_SEQ_CASE3: 
@@ -1091,7 +873,6 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
-				//COUT_THIS("DELREQ_SEQ_CASE3")
 				del_request_seq_case3_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 				uint32_t tmp_snapshottoken = req.snapshot_token();
 
@@ -1145,13 +926,12 @@ void *run_server_worker(void * param) {
 				if (!is_cached_before) {
 					server_cached_keyset_list[local_server_logical_idx].insert(req.key());
 					// Send CACHE_POP to server.popclient
-					//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, tmp_stat, serveridx); // freed by server.popclient
-					//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
 							
 					if (tmp_val.val_length > val_t::SWITCH_MAX_VALLEN) { // large value
 						tmp_val = val_t(); // replace large value with default value for cache population (OK as distfarreach.CACHE_POP_INSWITCH resets latest_reg = 0)
 					}
 					cache_pop_t cache_pop_req(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
+					// printf("[debug]gen cache_pop_req\n");fflush(stdout);
 					rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 					send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
 #ifdef WAIT_CACHE_POP_ACK
@@ -1168,9 +948,7 @@ void *run_server_worker(void * param) {
 #endif
 				load_request_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 
-				//char val_buf[Val::SWITCH_MAX_VALLEN];
-				//memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);
-				//val_t tmp_val(val_buf, Val::SWITCH_MAX_VALLEN);
+
 				bool tmp_stat = db_wrappers[local_server_logical_idx].force_put(req.key(), req.val());
 				UNUSED(tmp_stat);
 				
@@ -1182,86 +960,6 @@ void *run_server_worker(void * param) {
 #endif
 				break;
 			}
-		// For read-blocking under rare case of cache eviction
-		/*case packet_type_t::GETREQ_BEINGEVICTED: 
-			{
-#ifdef DUMP_BUF
-				dump_buf(dynamicbuf.array(), recv_size);
-#endif
-				get_request_beingevicted_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				
-				//printf("Receive GETREQ_BEINGEVICTED\n");
-				//fflush(stdout);
-				
-				// For read-blocking under rare case of cache eviction
-				blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
-				tmp_blockinfo._mutex.lock();
-				if (likely(tmp_blockinfo._blockedkey == req.key())) {
-					if (unlikely(tmp_blockinfo._isblocked == true)) { // with blocking (subsequent GETREQ_BEINGEVICTED)
-						printf("[WARN][EVICTBLOCK] subsequent GETREQ_BEINGEVICTED blocked for key %x\n", req.key().keyhihi);
-						fflush(stdout);
-
-						// add req and client addr into blocklist
-						tmp_blockinfo._blockedreq_list.push_back(req);
-						tmp_blockinfo._blockedaddr_list.push_back(client_addr);
-						tmp_blockinfo._blockedaddrlen_list.push_back(client_addrlen);
-					}
-					else { // no blocking
-						// access server-side key-value store
-						val_t tmp_val;
-						uint32_t tmp_seq = 0;
-						bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, &tmp_seq);
-						//COUT_THIS("[server] val = " << tmp_val.to_string())
-
-						// send back read response
-						if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
-							get_response_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-							udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-							dump_buf(buf, rsp_size);
-#endif
-						}
-						else {
-							get_response_largevalue_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
-							dynamicbuf.clear();
-							rsp_size = rsp.dynamic_serialize(dynamicbuf);
-							udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], dynamicbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", get_response_largevalue_seq_t::get_frag_hdrsize(CURMETHOD_ID));
-#ifdef DUMP_BUF
-							dump_buf(dynamicbuf.array(), rsp_size);
-#endif
-						}
-					}
-				}
-				else { // with blocking (first GETREQ_BEINGEVICTED)
-					printf("[WARN][EVICTBLOCK] first GETREQ_BEINGEVICTED blocked for key %x, prevkey %x\n", req.key().keyhihi, tmp_blockinfo._blockedkey.keyhihi);
-					fflush(stdout);
-
-					// clear blocklist if necessary
-					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-						printf("[WARN][EVICTBLOCK] first GETREQ_BEINGEVICTED: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
-						fflush(stdout);
-
-						// answer the blocklist and resize as 0
-						val_t tmp_val_for_blockedkey;
-						uint32_t tmp_seq_for_blockedkey = 0;
-						bool tmp_stat_for_blockedkey = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val_for_blockedkey, &tmp_seq_for_blockedkey);
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_seq_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
-					}
-
-					// update blockinfo
-					tmp_blockinfo._blockedkey = req.key();
-					tmp_blockinfo._isblocked = true;
-					// add req and client addr into blocklist
-					tmp_blockinfo._blockedreq_list.push_back(req);
-					tmp_blockinfo._blockedaddr_list.push_back(client_addr);
-					tmp_blockinfo._blockedaddrlen_list.push_back(client_addrlen);
-				}
-				tmp_blockinfo._mutex.unlock();
-			
-				break;
-			}*/
 		case packet_type_t::PUTREQ_SEQ_BEINGEVICTED:
 		case packet_type_t::PUTREQ_SEQ_CASE3_BEINGEVICTED:
 		case packet_type_t::DELREQ_SEQ_BEINGEVICTED:
@@ -1273,12 +971,6 @@ void *run_server_worker(void * param) {
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
 				
-				//printf("Receive write_BEINGEVICTED of type %x\n", optype_t(pkt_type));
-				//fflush(stdout);
-
-#ifdef DEBUG_SERVER
-				CUR_TIME(rocksdb_t1);
-#endif
 
 				netreach_key_t tmp_key;
 				val_t tmp_val;
@@ -1373,73 +1065,6 @@ void *run_server_worker(void * param) {
 #endif
 				}
 
-				// For read-blocking under rare case of cache eviction
-				/*blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
-				tmp_blockinfo._mutex.lock();
-				if (tmp_blockinfo._blockedkey == tmp_key) { // subsequent write_BEINGEVICTED
-					tmp_blockinfo._isblocked = false;
-
-					// clear blocklist if necessary
-					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-						printf("[WARN][EVICTBLOCK] subsequent XXX_BEINGEVICTED: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
-						fflush(stdout);
-
-						// answer the blocklist and resize as 0
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val, tmp_seq, !tmp_isdelete, global_server_logical_idx);
-					}
-				}
-				else { // first write_BEINGEVICTED
-					// TODO: clear blocklist if necessary
-					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-						printf("[WARN][EVICTBLOCK] first XXX_BEINGEVICTED: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
-						fflush(stdout);
-
-						// answer the blocklist and resize as 0
-						val_t tmp_val_for_blockedkey;
-						uint32_t tmp_seq_for_blockedkey = 0;
-						bool tmp_stat_for_blockedkey = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val_for_blockedkey, &tmp_seq_for_blockedkey);
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_seq_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
-					}
-
-					// update blockinfo
-					tmp_blockinfo._blockedkey = tmp_key;
-					tmp_blockinfo._isblocked = false;
-					// keep blocklist size as 0
-				}
-				tmp_blockinfo._mutex.unlock();*/
-
-				// For read-blocking under rare case of PUTREQ_LARGEVALUE
-				/*server_mutex_for_largevalueblock_list[local_server_logical_idx].lock();
-				std::map<netreach_key_t, blockinfo_t> &tmp_blockinfomap = server_blockinfomap_for_largevalueblock_list[local_server_logical_idx];
-				std::map<netreach_key_t, blockinfo_t>::iterator tmpiter = tmp_blockinfomap.find(tmp_key);
-				if (tmpiter == tmp_blockinfomap.end()) {
-					blockinfo_t tmp_blockinfo;
-					tmp_blockinfo._largevalueseq = tmp_seq;
-					tmp_blockinfo._blockedkey = tmp_key;
-					tmp_blockinfo._isblocked = false;
-					tmp_blockinfo._blockedreq_list.resize(0);
-					tmp_blockinfo._blockedaddr_list.resize(0);
-					tmp_blockinfo._blockedaddrlen_list.resize(0);
-					tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(tmp_key, tmp_blockinfo));
-				} else {
-					blockinfo_t &tmp_blockinfo = tmpiter->second;
-					if (tmp_seq > tmp_blockinfo._largevalueseq) {
-						tmp_blockinfo._largevalueseq = tmp_seq;
-					}
-					tmp_blockinfo._isblocked = false;
-
-					// clear blocklist if necessary
-					if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-						printf("[WARN][LARGEVALUEBLOCK] XXX_BEINGEVICTED: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
-						fflush(stdout);
-
-						// answer the blocklist and resize as 0
-						clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val, tmp_seq, !tmp_isdelete, global_server_logical_idx);
-					}
-				}
-				server_mutex_for_largevalueblock_list[local_server_logical_idx].unlock();*/
-
-
 				break;
 			}
 		case packet_type_t::GETREQ_BEINGEVICTED_RECORD: 
@@ -1516,16 +1141,6 @@ void *run_server_worker(void * param) {
 	}
 
 	if (likely(pkt_type != packet_type_t::WARMUPREQ && pkt_type != packet_type_t::LOADREQ)) {
-#ifdef DEBUG_SERVER
-		CUR_TIME(process_t2);
-		DELTA_TIME(process_t2, process_t1, process_t3);
-		thread_param.process_latency_list.push_back(GET_MICROSECOND(process_t3));
-
-		DELTA_TIME(rocksdb_t2, rocksdb_t1, rocksdb_t3);
-		thread_param.rocksdb_latency_list.push_back(GET_MICROSECOND(rocksdb_t3));
-
-		CUR_TIME(wait_t1);
-#endif
 		is_first_pkt = false;
 	}
 
@@ -1614,80 +1229,6 @@ void *run_server_evictserver(void *param) {
 		//printf("send CACHE_EVICT_ACK to controller\n");
 		//dump_buf(sendbuf, sendsize);
 		udpsendto(server_evictserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &controller_evictclient_addr, controller_evictclient_addrlen, "server.evictserver");
-
-		// For read-blocking under rare case of cache evictions
-		//printf("Receive CACHE_EVICT for read-blocking\n");
-		//fflush(stdout);
-		/*blockinfo_t &tmp_blockinfo = server_blockinfo_for_readblocking_list[local_server_logical_idx];
-		tmp_blockinfo._mutex.lock();
-		if (tmp_blockinfo._blockedkey == tmp_cache_evict_ptr->key()) { // CACHE_EVICT w/ XXX_BEINGEVICTED before
-			tmp_blockinfo._isblocked = false;
-
-			// clear blocklist if necessary
-			if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-				printf("[WARN][EVICTBLOCK] CACHE_EVICT w/ XXX_BEINGEVICTED before: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
-				fflush(stdout);
-
-				// answer the blocklist and resize as 0
-				if (tmp_cache_evict_ptr->stat()) { // put
-					clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq(), true, global_server_logical_idx);
-				}
-				else { // delete
-					clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, val_t(), tmp_cache_evict_ptr->seq(), false, global_server_logical_idx);
-				}
-			}
-		}
-		else { // CACHE_EVICT w/o XXX_BEINGEVICTED before
-			// clear blocklist if necessary
-			if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-				printf("[WARN][EVICTBLOCK] CACHE_EVICT w/o XXX_BEINGEVICTED before: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
-				fflush(stdout);
-
-				// answer the blocklist and resize as 0
-				val_t tmp_val_for_blockedkey;
-				uint32_t tmp_seq_for_blockedkey = 0;
-				bool tmp_stat_for_blockedkey = db_wrappers[local_server_logical_idx].get(tmp_blockinfo._blockedkey, tmp_val_for_blockedkey, &tmp_seq_for_blockedkey);
-				clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_val_for_blockedkey, tmp_seq_for_blockedkey, tmp_stat_for_blockedkey, global_server_logical_idx);
-			}
-
-			// update blockinfo
-			tmp_blockinfo._blockedkey = tmp_cache_evict_ptr->key();
-			tmp_blockinfo._isblocked = false;
-			// keep blocklist size as 0
-		}
-		tmp_blockinfo._mutex.unlock();*/
-
-		// For read-blocking under rare case of PUTREQ_LARGEVALUE
-		/*server_mutex_for_largevalueblock_list[local_server_logical_idx].lock();
-		std::map<netreach_key_t, blockinfo_t> &tmp_blockinfomap = server_blockinfomap_for_largevalueblock_list[local_server_logical_idx];
-		std::map<netreach_key_t, blockinfo_t>::iterator tmpiter = tmp_blockinfomap.find(tmp_cache_evict_ptr->key());
-		if (tmpiter == tmp_blockinfomap.end()) {
-			blockinfo_t tmp_blockinfo;
-			tmp_blockinfo._largevalueseq = tmp_cache_evict_ptr->seq();
-			tmp_blockinfo._blockedkey = tmp_cache_evict_ptr->key();
-			tmp_blockinfo._isblocked = false;
-			tmp_blockinfo._blockedreq_list.resize(0);
-			tmp_blockinfo._blockedaddr_list.resize(0);
-			tmp_blockinfo._blockedaddrlen_list.resize(0);
-			tmp_blockinfomap.insert(std::pair<netreach_key_t, blockinfo_t>(tmp_cache_evict_ptr->key(), tmp_blockinfo));
-		} else {
-			blockinfo_t &tmp_blockinfo = tmpiter->second;
-			if (tmp_cache_evict_ptr->seq() > tmp_blockinfo._largevalueseq) {
-				tmp_blockinfo._largevalueseq = tmp_cache_evict_ptr->seq();
-			}
-			tmp_blockinfo._isblocked = false;
-
-			// clear blocklist if necessary
-			if (unlikely(tmp_blockinfo._blockedreq_list.size() > 0)) {
-				printf("[WARN][LARGEVALUEBLOCK] CACHE_EVICT: non-empty blocklist of size %d\n", tmp_blockinfo._blockedreq_list.size());
-				fflush(stdout);
-
-				// answer the blocklist and resize as 0
-				clear_blocklist(server_worker_udpsock_list[local_server_logical_idx], tmp_blockinfo, tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq(), tmp_cache_evict_ptr->stat(), global_server_logical_idx);
-			}
-		}
-		server_mutex_for_largevalueblock_list[local_server_logical_idx].unlock();*/
-
 
 		// free CACHE_EVIT
 		delete tmp_cache_evict_ptr;
@@ -1878,21 +1419,6 @@ void *run_server_snapshotdataserver(void *param) {
 
 				tmp_inswitch_snapshot.insert(std::pair<netreach_key_t, snapshot_record_t>(tmp_key, tmp_record));
 			}
-
-#ifdef DEBUG_SNAPSHOT
-			// TMPDEBUG
-			printf("[server.snapshotdataserver %d-%d] receive snapshot data of size %d from controller\n", local_server_logical_idx, global_server_logical_idx, tmp_inswitch_snapshot.size());
-			/*int debugi = 0;
-			for (std::map<netreach_key_t, snapshot_record_t>::iterator iter = tmp_inswitch_snapshot.begin();
-					iter != tmp_inswitch_snapshot.end(); iter++) {
-				char debugbuf[MAX_BUFSIZE];
-				uint32_t debugkeysize = iter->first.serialize(debugbuf, MAX_BUFSIZE);
-				uint32_t debugvalsize = iter->second.val.serialize(debugbuf + debugkeysize, MAX_BUFSIZE - debugkeysize);
-				printf("serialized key-value %d:\n", debugi);
-				dump_buf(debugbuf, debugkeysize+debugvalsize);
-				printf("seq: %d, stat %d\n", iter->second.seq, iter->second.stat?1:0);
-			}*/
-#endif
 
 			// update in-switch and server-side snapshot
 			db_wrappers[local_server_logical_idx].update_snapshot(tmp_inswitch_snapshot, snapshotid);

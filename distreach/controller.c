@@ -31,7 +31,7 @@
 #include "../common/io_helper.h"
 
 #include "common_impl.h"
-
+#ifdef SNAPSHOT_DIST
 struct SnapshotclientSubthreadParam {
     int udpsock;
     struct sockaddr_in dstaddr;
@@ -39,7 +39,7 @@ struct SnapshotclientSubthreadParam {
     uint16_t global_server_logical_idx;
 };
 typedef SnapshotclientSubthreadParam snapshotclient_subthread_param_t;
-
+#endif
 bool volatile controller_running = false;
 std::atomic<size_t> controller_ready_threads(0);
 size_t controller_expected_ready_threads = -1;
@@ -64,7 +64,7 @@ int controller_evictserver_udpsock = -1;
 int controller_evictserver_evictclient_udpsock = -1;
 
 // snapshot
-
+#ifdef SNAPSHOT_DIST
 int controller_snapshotid = 1;  // server uses snapshot id 0 after loading phase
 
 // controller.snapshotclient <-> switchos/per-server.snapshotserver
@@ -72,20 +72,22 @@ int controller_snapshotclient_for_switchos_udpsock = -1;
 int* controller_snapshotclient_for_server_udpsock_list = NULL;
 // written by controller.snapshotclient; read by controller.snapshotclient.senddata_subthread to server.snapshotdataserver
 dynamic_array_t* controller_snapshotclient_for_server_databuf_list = NULL;
-
+#endif
 // control plane bandwidth usage
 std::atomic<uint64_t> bandwidthcost(0);            // in unit of byte (cleared per snapshot period); including local control plane BW cost; accessed by snapshotclient/popserver/evictserver
 uint64_t* perserver_localcp_bandwidthcost = NULL;  // in unit of byte; only for local control plane BW cost (speical cases); accessed only by snapshotclient
 
 void prepare_controller();
-void* run_controller_popserver(void* param);                // Receive CACHE_POPs from each server
-void* run_controller_evictserver(void* param);              // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
+void* run_controller_popserver(void* param);    // Receive CACHE_POPs from each server
+void* run_controller_evictserver(void* param);  // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
+#ifdef SNAPSHOT_DIST
 void controller_load_snapshotid();                          // retrieve latest snapshot id
 void controller_update_snapshotid(char* buf, int bufsize);  // store latest snapshotid and inswitch snapshot data
 void* run_controller_snapshotclient(void* param);           // Periodically notify switch os to launch snapshot
 void* run_controller_snapshotclient_cleanup_subthread(void* param);
 void* run_controller_snapshotclient_start_subthread(void* param);
 void* run_controller_snapshotclient_senddata_subthread(void* param);
+#endif
 void close_controller();
 
 cpu_set_t nonserverworker_cpuset;  // [server_cores, total_cores-1] for all other threads
@@ -143,7 +145,7 @@ int main(int argc, char** argv) {
         printf("Error of setaffinity for controller.evictserver; errno: %d\n", errno);
         exit(-1);
     }
-
+#ifdef SNAPSHOT_DIST
     pthread_t snapshotclient_thread;
     ret = pthread_create(&snapshotclient_thread, nullptr, run_controller_snapshotclient, nullptr);
     if (ret) {
@@ -155,7 +157,7 @@ int main(int argc, char** argv) {
         printf("Error of setaffinity for controller.snapshotclient; errno: %d\n", errno);
         exit(-1);
     }
-
+#endif
     while (controller_ready_threads < controller_expected_ready_threads)
         sleep(1);
     printf("[controller] all threads ready\n");
@@ -181,10 +183,13 @@ int main(int argc, char** argv) {
     if (rc) {
         COUT_N_EXIT("Error:unable to join," << rc);
     }
+
+#ifdef SNAPSHOT_DIST
     rc = pthread_join(snapshotclient_thread, &status);
     if (rc) {
         COUT_N_EXIT("Error:unable to join," << rc);
     }
+#endif
 
     free_common();
     close_controller();
@@ -195,8 +200,11 @@ void prepare_controller() {
     printf("[controller] prepare start\n");
 
     controller_running = false;
-
+#ifdef SNAPSHOT_DIST
     controller_expected_ready_threads = max_server_total_logical_num + 2;
+#else
+    controller_expected_ready_threads = max_server_total_logical_num + 1;
+#endif
     controller_expected_popserver_finish_threads = max_server_total_logical_num;
 
     // prepare popserver sockets
@@ -206,14 +214,6 @@ void prepare_controller() {
         prepare_udpserver(controller_popserver_udpsock_list[tmp_global_server_logical_idx], false, controller_popserver_port_start + tmp_global_server_logical_idx, "controller.popserver");
         create_udpsock(controller_popserver_popclient_udpsock_list[tmp_global_server_logical_idx], true, "controller.popserver.popclient");
     }
-
-    // controller_cachedkey_serveridx_map.clear();
-    /*controller_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
-    for (size_t i = 0; i < MQ_SIZE; i++) {
-            controller_cache_pop_ptrs[i] = NULL;
-    }
-    controller_head_for_pop = 0;
-    controller_tail_for_pop = 0;*/
 
     // prepare evictserver
     prepare_udpserver(controller_evictserver_udpsock, false, controller_evictserver_port, "controller.evictserver");
@@ -226,7 +226,7 @@ void prepare_controller() {
 
     // prepare evictclient
     create_udpsock(controller_evictserver_evictclient_udpsock, true, "controller.evictserver.evictclient");
-
+#ifdef SNAPSHOT_DIST
     // load latest snapshotid
     controller_load_snapshotid();
 
@@ -238,7 +238,7 @@ void prepare_controller() {
         create_udpsock(controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx], true, "controller.snapshotclient_for_server", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
         controller_snapshotclient_for_server_databuf_list[tmp_global_server_logical_idx].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
     }
-
+#endif
     perserver_localcp_bandwidthcost = new uint64_t[max_server_total_logical_num];
     memset(perserver_localcp_bandwidthcost, 0, sizeof(uint64_t) * max_server_total_logical_num);
 
@@ -246,7 +246,7 @@ void prepare_controller() {
 
     printf("[controller] prepare end\n");
 }
-
+#ifdef SNAPSHOT_DIST
 void controller_load_snapshotid() {
     std::string snapshotid_path;
     get_controller_snapshotid_path(CURMETHOD_ID, snapshotid_path);
@@ -278,7 +278,7 @@ void controller_update_snapshotid(char* buf, int bufsize) {
 
     controller_snapshotid += 1;
 }
-
+#endif
 void* run_controller_popserver(void* param) {
     // controlelr.popserver i <-> server.popclient i
     uint16_t global_server_logical_idx = *((uint16_t*)param);
@@ -303,16 +303,9 @@ void* run_controller_popserver(void* param) {
     int recvsize = 0;
     bool is_timeout = false;
     while (controller_running) {
-        /*if (!with_server_popclient_addr) {
-                udprecvfrom(controller_popserver_udpsock_list[idx], buf, MAX_BUFSIZE, 0, &server_popclient_addr, &server_popclient_addrlen, recvsize, "controller.popserver");
-                with_server_popclient_addr = true;
-        }
-        else {
-                udprecvfrom(controller_popserver_udpsock_list[idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver");
-        }*/
         udprecvfrom(controller_popserver_udpsock_list[global_server_logical_idx], buf, MAX_BUFSIZE, 0, &server_popclient_addr, &server_popclient_addrlen, recvsize, "controller.popserver");
 
-        // printf("receive CACHE_POP from server and send it to switchos\n");
+        // printf("[debug]receive CACHE_POP from server and send it to switchos\n");        fflush(stdout);
         // dump_buf(buf, recvsize);
         cache_pop_t tmp_cache_pop(CURMETHOD_ID, buf, recvsize);
 
@@ -431,6 +424,7 @@ void* run_controller_evictserver(void* param) {
     pthread_exit(nullptr);
 }
 
+#ifdef SNAPSHOT_DIST
 void* run_controller_snapshotclient(void* param) {
     // get valid server logical idxes
     std::vector<uint16_t> valid_global_server_logical_idxes;
@@ -959,7 +953,7 @@ void* run_controller_snapshotclient_senddata_subthread(void* param) {
 
     pthread_exit(nullptr);
 }
-
+#endif
 void close_controller() {
     if (controller_popserver_udpsock_list != NULL) {
         delete[] controller_popserver_udpsock_list;
@@ -969,6 +963,7 @@ void close_controller() {
         delete[] controller_popserver_popclient_udpsock_list;
         controller_popserver_popclient_udpsock_list = NULL;
     }
+#ifdef SNAPSHOT_DIST
     if (controller_snapshotclient_for_server_udpsock_list != NULL) {
         delete[] controller_snapshotclient_for_server_udpsock_list;
         controller_snapshotclient_for_server_udpsock_list = NULL;
@@ -977,6 +972,7 @@ void close_controller() {
         delete[] controller_snapshotclient_for_server_databuf_list;
         controller_snapshotclient_for_server_databuf_list = NULL;
     }
+#endif
     if (perserver_localcp_bandwidthcost != NULL) {
         delete[] perserver_localcp_bandwidthcost;
         perserver_localcp_bandwidthcost = NULL;

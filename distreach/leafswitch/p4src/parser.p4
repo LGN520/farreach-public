@@ -76,9 +76,6 @@ parser farreachParser(packet_in packet,
 			CACHE_EVICT_LOADFREQ_INSWITCH_ACK: parse_frequency;
 			PUTREQ_LARGEVALUE: parse_fraginfo;
 			1 &&& 0x01: parse_vallen;
-			/*2 &&& 0x02: parse_seq;
-			4 &&& 0x04: parse_inswitch;
-			8 &&& 0x08: parse_stat;*/
 			2 &&& 0x02: parse_shadowtype;
 			4 &&& 0x04: parse_shadowtype;
 			8 &&& 0x08: parse_shadowtype;
@@ -129,34 +126,6 @@ parser farreachParser(packet_in packet,
 		}
 	}
 
-	/*parser parse_val_len0 {
-		transition select(hdr.op_hdr.optype) {
-			2 &&& 0x02: parse_seq;
-			4 &&& 0x04: parse_inswitch;
-			8 &&& 0x08: parse_stat;
-			default: accept;
-			//default: parse_debug;
-			
-			//GETRES: parse_stat;
-			//GETRES_LATEST_SEQ: parse_seq;
-			//GETRES_LATEST_SEQ_INSWITCH: parse_seq;
-			//GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_seq;
-			//GETRES_DELETED_SEQ: parse_seq;
-			//GETRES_DELETED_SEQ_INSWITCH: parse_seq;
-			//GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_seq;
-			//CACHE_POP_INSWITCH: parse_seq;
-			//PUTREQ_INSWITCH: parse_inswitch;
-			//PUTREQ_SEQ: parse_seq;
-			//PUTREQ_POP_SEQ: parse_seq;
-			//PUTREQ_SEQ_INSWITCH_CASE1: parse_seq;
-			//PUTREQ_SEQ_CASE3: parse_seq;
-			//PUTREQ_POP_SEQ_CASE3: parse_seq;
-			//DELREQ_INSWITCH: parse_inswitch;
-			//DELREQ_SEQ_INSWITCH_CASE1: parse_seq;
-			//default: accept; // PUTREQ
-			////default: parse_debug; // PUTREQ
-		}
-	}*/
 
 	state parse_val_len1 {
 		packet.extract(hdr.val1_hdr);
@@ -383,17 +352,6 @@ parser farreachParser(packet_in packet,
 			4 &&& 0x04: parse_inswitch;
 			8 &&& 0x08: parse_stat;
 			default: accept;
-			//default: parse_debug;
-			
-			/*GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
-			GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_inswitch;
-			GETRES_DELETED_SEQ_INSWITCH: parse_inswitch;
-			GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_inswitch;
-		hdr.	CACHE_POP_INSWITCH: parse_inswitch; // inswitch_hdr is set by switchos
-			PUTREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
-			DELREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
-			default: accept;
-			//default: parse_debug; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ, DELREQ_SEQ_CASE3 */
 		}
 	}
 

@@ -43,12 +43,6 @@ void prepare_reflector() {
 	prepare_udpserver(reflector_cp2dpserver_udpsock, true, reflector_cp2dpserver_port, "reflector.cp2dpserver", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 
 	// From receiver to reflector.dp2cpserver
-	/*reflector_pkts_for_popack_snapshot = new struct rte_mbuf*[MQ_SIZE];
-	for (size_t i = 0; i < MQ_SIZE; i++) {
-		reflector_pkts_for_popack_snapshot[i] = nullptr;
-	}
-	reflector_head_for_popack_snapshot = 0;
-	reflector_tail_for_popack_snapshot = 0;*/
 	create_udpsock(reflector_dp2cpserver_popclient_udpsock, false, "reflector.dp2cpserver.popclient");
 
 	create_udpsock(reflector_dp2cpserver_specialcaseclient_udpsock, false, "reflector.dp2cpserver.specialcaseclient");
@@ -87,17 +81,13 @@ void *run_reflector_cp2dpserver(void *param) {
 		INVARIANT(recvsize >= 0);
 
 		packet_type_t tmp_optype = packet_type_t(get_packet_type(buf, recvsize));
+		// printf("[debug] reflector_cp2dpserver recv %d\n",tmp_optype);fflush(stdout);
 		switch (tmp_optype) {
 			case packet_type_t::CACHE_POP_INSWITCH:
 			case packet_type_t::CACHE_EVICT_LOADFREQ_INSWITCH:
 			case packet_type_t::CACHE_EVICT_LOADDATA_INSWITCH:
 			case packet_type_t::SETVALID_INSWITCH:
 				{
-					/*if (!reflector_with_switchos_popworker_popclient_for_reflector_addr) {
-						memcpy(&reflector_switchos_popworker_popclient_for_reflector_addr, &tmp_addr, sizeof(struct sockaddr_in));
-						reflector_switchos_popworker_popclient_for_reflector_addr_len = tmp_addrlen;
-						reflector_with_switchos_popworker_popclient_for_reflector_addr = true;
-					}*/
 
 					// Update each time to cope with recovery mode
 					mutex_for_popclient_addr.lock();
@@ -106,6 +96,7 @@ void *run_reflector_cp2dpserver(void *param) {
 					mutex_for_popclient_addr.unlock();
 					break;
 				}
+#ifdef SNAPSHOT_DIST
 			case packet_type_t::LOADSNAPSHOTDATA_INSWITCH:
 				{
 					if (!reflector_with_switchos_snapshotserver_snapshotclient_for_reflector_addr) {
@@ -115,6 +106,7 @@ void *run_reflector_cp2dpserver(void *param) {
 					}
 					break;
 				}
+#endif
 			default:
 				{
 					printf("[reflector.cp2dpserver] invalid optype %d\n", int(tmp_optype));
@@ -165,12 +157,14 @@ void *run_reflector_dp2cpserver(void *param) {
 					mutex_for_popclient_addr.unlock();
 					break;
 				}
+#ifdef SNAPSHOT_DIST
 			case packet_type_t::LOADSNAPSHOTDATA_INSWITCH_ACK:
 				{
 					INVARIANT(reflector_with_switchos_snapshotserver_snapshotclient_for_reflector_addr == true);
 					udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr, reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr_len, "reflector.dp2cpserver.popclient");
 					break;
 				}
+#endif
 			case packet_type_t::GETRES_LATEST_SEQ_INSWITCH_CASE1:
 			case packet_type_t::GETRES_DELETED_SEQ_INSWITCH_CASE1:
 			case packet_type_t::PUTREQ_SEQ_INSWITCH_CASE1:
@@ -194,12 +188,7 @@ void *run_reflector_dp2cpserver(void *param) {
 }
 
 void close_reflector() {
-	/*for (size_t i = 0; i < MQ_SIZE; i++) {
-		if (reflector_pkts_for_popack_snapshot[i] != nullptr) {
-			rte_pktmbuf_free(reflector_pkts_for_popack_snapshot[i]);
-			reflector_pkts_for_popack_snapshot[i] = nullptr;
-		}
-	}*/
+
 }
 
 #endif

@@ -60,7 +60,6 @@ header shadowtype_t {
 }
 
 header seq_t {
-
     bit<32> seq;
     bit<32> snapshot_token;
 }

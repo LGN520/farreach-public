@@ -34,20 +34,17 @@ cd leafswitch;
 bash ptf_popserver.sh >../tmp_popserver.out 2>&1 &
 sleep 1s
 cd ..
-cd leafswitch; 
-bash ptf_snapshotserver.sh >../tmp_snapshotserver.out 2>&1 &
-sleep 1s
-cd ..
-cd leafswitch; 
-bash ptf_cleaner.sh >../tmp_cleaner.out 2>&1 &
-sleep 1s
-cd ..
+
+# cd leafswitch; 
+# bash ptf_cleaner.sh >../tmp_cleaner.out 2>&1 &
+# sleep 1s
+# cd ..
 
 echo "launch switchos"
 mx switchos1 ./switchos 0 > tmp_switchos0.out &
-mx switchos2 ./switchos 1 > tmp_switchos1.out &
-mx switchos3 ./switchos 2 > tmp_switchos2.out &
-mx switchos4 ./switchos 3 > tmp_switchos3.out &
+# mx switchos2 ./switchos 1 > tmp_switchos1.out &
+# mx switchos3 ./switchos 2 > tmp_switchos2.out &
+# mx switchos4 ./switchos 3 > tmp_switchos3.out &
 # if [ "x${recovermode}" == "xrecover" ]
 # then
 # 	sleep 10s # wait for data plane interfaces UP; wait for ptf_popserver
