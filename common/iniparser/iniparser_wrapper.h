@@ -112,6 +112,7 @@ class IniparserWrapper {
     // spineswitch
     std::vector<uint16_t> get_spineswitch_logical_idxes();
     std::vector<const char *> get_spineswitchos_ips(int num_switches);
+    std::vector<const char *> get_leafswitchos_ips(int num_switches);
     const char* get_spineswitchos_ip();
     const char* get_spineswitch_fpport_to_leaf();
 

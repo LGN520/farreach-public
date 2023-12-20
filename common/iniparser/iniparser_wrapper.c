@@ -890,7 +890,20 @@ std::vector<const char *> IniparserWrapper::get_spineswitchos_ips(int num_switch
     }
     return spineswitchos_ips;
 }
-
+std::vector<const char *> IniparserWrapper::get_leafswitchos_ips(int num_switches) {
+    std::vector<const char *> leafswitchos_ips;
+    for (int i = 0; i < num_switches; ++i) {
+        char key[50];
+        snprintf(key, sizeof(key), "switch%d:switchos_ip", i);
+        const char *leafswitchos_ip = iniparser_getstring(ini, key, nullptr);
+        if (leafswitchos_ip == nullptr) {
+            printf("Invalid entry of %s\n", key);
+            exit(-1);
+        }
+        leafswitchos_ips.push_back(leafswitchos_ip);
+    }
+    return leafswitchos_ips;
+}
 const char* IniparserWrapper::get_spineswitchos_ip() {
     const char* spineswitchos_ip = iniparser_getstring(ini, "spineswitch:switchos_ip", nullptr);
     if (spineswitchos_ip == nullptr) {
