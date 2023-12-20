@@ -14,22 +14,22 @@ table eg_copy_udplen_for_checksum_tbl {
 // Stage 1
 
 action set_is_hot() {
-	meta.meta.is_hot = 1;
+	meta.is_hot = 1;
 	//debug_hdr.is_hot = 1;
 }
 
 action reset_is_hot() {
-	meta.meta.is_hot = 0;
+	meta.is_hot = 0;
 	//debug_hdr.is_hot = 0;
 }
 
 @pragma stage 1
 table is_hot_tbl {
 	key = {
-		meta.meta.cm1_predicate: exact;
-		meta.meta.cm2_predicate: exact;
-		meta.meta.cm3_predicate: exact;
-		meta.meta.cm4_predicate: exact;
+		meta.cm1_predicate: exact;
+		meta.cm2_predicate: exact;
+		meta.cm3_predicate: exact;
+		meta.cm4_predicate: exact;
 	}
 	actions = {
 		set_is_hot;
@@ -62,7 +62,7 @@ table save_client_udpport_tbl {
 // Stage 3
 
 action set_is_largevalueblock() {
-	meta.meta.is_largevalueblock = 1;
+	meta.is_largevalueblock = 1;
 }
 
 @pragma stage 3
@@ -85,14 +85,14 @@ counter lastclone_lastscansplit_counter {
 #endif
 
 action set_is_lastclone() {
-	meta.meta.is_lastclone_for_pktloss = 1;
+	meta.is_lastclone_for_pktloss = 1;
 	//debug_hdr.is_lastclone_for_pktloss = 1;
 }
 
 
 
 action reset_is_lastclone_lastscansplit() {
-	meta.meta.is_lastclone_for_pktloss = 0;
+	meta.is_lastclone_for_pktloss = 0;
 	//debug_hdr.is_lastclone_for_pktloss = 0;
 
 }
@@ -326,17 +326,17 @@ table another_eg_port_forward_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
 		hdr.inswitch_hdr.is_cached: exact;
-		meta.meta.is_hot: exact;
+		meta.is_hot: exact;
 		hdr.validvalue_hdr.validvalue: exact;
-		meta.meta.is_latest: exact;
+		meta.is_latest: exact;
 //#ifdef ENABLE_LARGEVALUEBLOCK
-		meta.meta.is_largevalueblock: exact;
+		meta.is_largevalueblock: exact;
 //#endif
-		meta.meta.is_deleted: exact;
+		meta.is_deleted: exact;
 		hdr.inswitch_hdr.client_sid: exact;
-		meta.meta.is_lastclone_for_pktloss: exact;
+		meta.is_lastclone_for_pktloss: exact;
 		hdr.inswitch_hdr.snapshot_flag: exact;
-		meta.meta.is_case1: exact;
+		meta.is_case1: exact;
 	}
 	actions = {
 		update_getreq_inswitch_to_getreq;
@@ -690,17 +690,17 @@ table eg_port_forward_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
 		hdr.inswitch_hdr.is_cached: exact;
-		meta.meta.is_hot: exact;
+		meta.is_hot: exact;
 		
 		hdr.validvalue_hdr.validvalue: exact;
-		meta.meta.is_latest: exact;
-		meta.meta.is_deleted: exact;
+		meta.is_latest: exact;
+		meta.is_deleted: exact;
 		
 		hdr.inswitch_hdr.client_sid: exact;
-		meta.meta.is_lastclone_for_pktloss: exact;
+		meta.is_lastclone_for_pktloss: exact;
 		
 		hdr.inswitch_hdr.snapshot_flag: exact;
-		meta.meta.is_case1: exact;
+		meta.is_case1: exact;
 	}
 	actions = {
 		//update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // clone for first CACHE_POP_INSWITCH_ACK
@@ -795,7 +795,7 @@ action update_pktlen(bit<16> udplen,bit<16> iplen) {
 action add_pktlen(bit<16> udplen_delta,bit<16> iplen_delta) {
 	hdr.udp_hdr.hdrlen = hdr.udp_hdr.hdrlen +  udplen_delta;
 	hdr.ipv4_hdr.totalLen = hdr.ipv4_hdr.totalLen +  iplen_delta;
-	//hdr.meta.meta.udp_hdrlen = hdr.meta.meta.udp_hdrlen +  udplen_delta
+	//hdr.meta.udp_hdrlen = hdr.meta.udp_hdrlen +  udplen_delta
 }
 
 @pragma stage 11

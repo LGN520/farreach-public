@@ -9,15 +9,15 @@ control farreachIngress (inout headers hdr,
         if (!hdr.op_hdr.isValid()) {
             l2l3_forward_tbl.apply(); // forward traditional packet
         }else {
-        need_recirculate_tbl.apply(); // set meta.meta.need_recirculate
+        need_recirculate_tbl.apply(); // set meta.need_recirculate
         set_hot_threshold_tbl.apply(); // set inswitch_hdr.hot_threshold
 
-        /* if meta.meta.need_recirculate == 1 */
+        /* if meta.need_recirculate == 1 */
 
         // Stage 1
         recirculate_tbl.apply(); // recirculate for atomic snapshot (NOTE: recirculate will collide with modifying egress port)
 
-        /* else if meta.meta.need_recirculate == 0 */
+        /* else if meta.need_recirculate == 0 */
 
         // Stage 1
     #ifndef RANGE_SUPPORT

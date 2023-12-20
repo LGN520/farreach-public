@@ -6,24 +6,24 @@ register<bit<16>>(KV_BUCKET_COUNT) vallen_reg;
 action get_vallen() {
 	// get_vallen_alu.execute_stateful_alu(hdr.inswitch_hdr.idx);
 	vallen_reg.read(hdr.vallen_hdr.vallen,(bit<32>)hdr.inswitch_hdr.idx);
-	meta.meta.access_val_mode = 1; // get val_reg
+	meta.access_val_mode = 1; // get val_reg
 }
 
 action set_and_get_vallen() {
 	// set_and_get_vallen_alu.execute_stateful_alu(hdr.inswitch_hdr.idx);
 	vallen_reg.write((bit<32>)hdr.inswitch_hdr.idx,hdr.vallen_hdr.vallen);
-	meta.meta.access_val_mode = 2; // set_and_get val_reg
+	meta.access_val_mode = 2; // set_and_get val_reg
 }
 
 action reset_and_get_vallen() {
 	// reset_and_get_vallen_alu.execute_stateful_alu(hdr.inswitch_hdr.idx);
 	vallen_reg.write((bit<32>)hdr.inswitch_hdr.idx,0);
 	hdr.vallen_hdr.vallen=0;
-	meta.meta.access_val_mode = 3; // reset_and_get val_reg
+	meta.access_val_mode = 3; // reset_and_get val_reg
 }
 
 action reset_access_val_mode() {
-	meta.meta.access_val_mode = 0; // not access val_reg
+	meta.access_val_mode = 0; // not access val_reg
 }
 
 @pragma stage 3
@@ -32,7 +32,7 @@ table update_vallen_tbl {
 		hdr.op_hdr.optype: exact;
 		hdr.inswitch_hdr.is_cached: exact;
 		hdr.validvalue_hdr.validvalue: exact;
-		meta.meta.is_latest: exact;
+		meta.is_latest: exact;
 	}
 	actions = {
 		get_vallen;
@@ -62,7 +62,7 @@ action reset_and_get_vallo1() {
 @pragma stage 4
 table update_vallo1_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo1;
@@ -90,7 +90,7 @@ action reset_and_get_valhi1() {
 @pragma stage 4
 table update_valhi1_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi1;
@@ -118,7 +118,7 @@ action reset_and_get_vallo2() {
 @pragma stage 4
 table update_vallo2_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo2;
@@ -147,7 +147,7 @@ action reset_and_get_valhi2() {
 @pragma stage 4
 table update_valhi2_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi2;
@@ -175,7 +175,7 @@ action reset_and_get_vallo3() {
 @pragma stage 5
 table update_vallo3_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo3;
@@ -204,7 +204,7 @@ action reset_and_get_valhi3() {
 @pragma stage 5
 table update_valhi3_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi3;
@@ -233,7 +233,7 @@ action reset_and_get_vallo4() {
 @pragma stage 5
 table update_vallo4_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo4;
@@ -262,7 +262,7 @@ action reset_and_get_valhi4() {
 @pragma stage 5
 table update_valhi4_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi4;
@@ -289,7 +289,7 @@ action reset_and_get_vallo5() {
 @pragma stage 6
 table update_vallo5_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo5;
@@ -316,7 +316,7 @@ action reset_and_get_valhi5() {
 @pragma stage 6
 table update_valhi5_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi5;
@@ -343,7 +343,7 @@ action reset_and_get_vallo6() {
 @pragma stage 6
 table update_vallo6_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo6;
@@ -371,7 +371,7 @@ action reset_and_get_valhi6() {
 @pragma stage 6
 table update_valhi6_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi6;
@@ -401,7 +401,7 @@ action reset_and_get_vallo7() {
 @pragma stage 7
 table update_vallo7_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo7;
@@ -431,7 +431,7 @@ action reset_and_get_valhi7() {
 @pragma stage 7
 table update_valhi7_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi7;
@@ -460,7 +460,7 @@ action reset_and_get_vallo8() {
 @pragma stage 7
 table update_vallo8_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo8;
@@ -489,7 +489,7 @@ action reset_and_get_valhi8() {
 @pragma stage 7
 table update_valhi8_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi8;
@@ -517,7 +517,7 @@ action reset_and_get_vallo9() {
 @pragma stage 8
 table update_vallo9_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo9;
@@ -545,7 +545,7 @@ action reset_and_get_valhi9() {
 @pragma stage 8
 table update_valhi9_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi9;
@@ -574,7 +574,7 @@ action reset_and_get_vallo10() {
 @pragma stage 8
 table update_vallo10_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo10;
@@ -602,7 +602,7 @@ action reset_and_get_valhi10() {
 @pragma stage 8
 table update_valhi10_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi10;
@@ -630,7 +630,7 @@ action reset_and_get_vallo11() {
 @pragma stage 9
 table update_vallo11_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo11;
@@ -659,7 +659,7 @@ action reset_and_get_valhi11() {
 @pragma stage 9
 table update_valhi11_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi11;
@@ -689,7 +689,7 @@ action reset_and_get_vallo12() {
 @pragma stage 9
 table update_vallo12_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo12;
@@ -717,7 +717,7 @@ action reset_and_get_valhi12() {
 @pragma stage 9
 table update_valhi12_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi12;
@@ -745,7 +745,7 @@ action reset_and_get_vallo13() {
 @pragma stage 10
 table update_vallo13_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo13;
@@ -771,7 +771,7 @@ action reset_and_get_valhi13() {
 }@pragma stage 10
 table update_valhi13_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi13;
@@ -799,7 +799,7 @@ action reset_and_get_vallo14() {
 @pragma stage 10
 table update_vallo14_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo14;
@@ -828,7 +828,7 @@ action reset_and_get_valhi14() {
 @pragma stage 10
 table update_valhi14_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi14;
@@ -856,7 +856,7 @@ action reset_and_get_vallo15() {
 @pragma stage 11
 table update_vallo15_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo15;
@@ -885,7 +885,7 @@ action reset_and_get_valhi15() {
 @pragma stage 11
 table update_valhi15_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi15;
@@ -913,7 +913,7 @@ action reset_and_get_vallo16() {
 @pragma stage 11
 table update_vallo16_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_vallo16;
@@ -941,7 +941,7 @@ action reset_and_get_valhi16() {
 @pragma stage 11
 table update_valhi16_tbl {
 	key = {
-		meta.meta.access_val_mode: exact;
+		meta.access_val_mode: exact;
 	}
 	actions = {
 		get_valhi16;

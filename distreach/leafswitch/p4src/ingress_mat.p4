@@ -21,14 +21,14 @@ table l2l3_forward_tbl {
 }
 
 action set_need_recirculate(bit<16> eport) {
-	// meta.meta.need_recirculate = 1;
-	// meta.meta.recirport = eport;
+	// meta.need_recirculate = 1;
+	// meta.recirport = eport;
 	// ???
-	meta.meta.need_recirculate = 0;
+	meta.need_recirculate = 0;
 }
 
 action reset_need_recirculate() {
-	meta.meta.need_recirculate = 0;
+	meta.need_recirculate = 0;
 }
 
 @pragma stage 0
@@ -66,7 +66,7 @@ table set_hot_threshold_tbl {
 
 // NOTE: as our Tofino does not support cross-ingress-pipeline recirculation, we use hardware link to simluate it
 action recirculate_pkt() {
-	// standard_metadata.egress_spec = (bit<9>) meta.meta.recirport;
+	// standard_metadata.egress_spec = (bit<9>) meta.recirport;
 	// bypass_egress();
 	// ???
 }
@@ -75,7 +75,7 @@ action recirculate_pkt() {
 table recirculate_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		recirculate_pkt;
@@ -92,7 +92,7 @@ table recirculate_tbl {
 }*/
 #ifndef RANGE_SUPPORT
 action hash_for_partition() {
-	hash(meta.meta.hashval_for_partition, HashAlgorithm.crc32, (bit<32>)0, {
+	hash(meta.hashval_for_partition, HashAlgorithm.crc32, (bit<32>)0, {
 		hdr.op_hdr.keylolo,
 		hdr.op_hdr.keylohi,
 		hdr.op_hdr.keyhilo,
@@ -104,7 +104,7 @@ action hash_for_partition() {
 table hash_for_partition_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		hash_for_partition;
@@ -130,9 +130,9 @@ action hash_partition_for_special_response(bit<9> eport) {
 table hash_partition_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.hashval_for_partition: range;
+		meta.hashval_for_partition: range;
 		//standard_metadata.ingress_port: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		hash_partition;
@@ -167,7 +167,7 @@ action hash_for_cm12() {
 table hash_for_cm12_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		hash_for_cm12;
@@ -197,7 +197,7 @@ table cache_lookup_tbl {
 		
 		hdr.op_hdr.keyhihilo: exact;
 		hdr.op_hdr.keyhihihi: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		cached_action;
@@ -229,7 +229,7 @@ table cache_lookup_tbl {
 		
 		hdr.op_hdr.keyhihilo: exact;
 		hdr.op_hdr.keyhihihi: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		cached_action;
@@ -256,7 +256,7 @@ action hash_for_seq() {
 table hash_for_seq_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		hash_for_seq;
@@ -289,7 +289,7 @@ action hash_for_cm34() {
 table hash_for_cm34_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		hash_for_cm34;
@@ -315,7 +315,7 @@ action reset_snapshot_flag() {
 table snapshot_flag_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		set_snapshot_flag;
@@ -341,7 +341,7 @@ table prepare_for_cachehit_tbl {
 		hdr.op_hdr.optype: exact;
 		//standard_metadata.ingress_port: exact;
 		hdr.ipv4_hdr.srcAddr: lpm;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		set_client_sid;
@@ -367,7 +367,7 @@ table ipv4_forward_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
 		hdr.ipv4_hdr.dstAddr: lpm;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		forward_normal_response;
@@ -395,7 +395,7 @@ action sample() {
 table sample_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		sample;
@@ -452,7 +452,7 @@ action update_putreq_largevalue_to_putreq_largevalue_inswitch() {
 table ig_port_forward_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		update_getreq_to_getreq_inswitch;

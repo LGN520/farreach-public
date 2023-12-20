@@ -3,7 +3,6 @@ control farreachEgress(inout headers hdr,
                  inout standard_metadata_t standard_metadata){ 
     #include"egress_mat.p4"
     // registers and MATs
-    #include "regs/cm.p4"
     #include "regs/cache_frequency.p4"
     #include "regs/validvalue.p4"
     #include "regs/latest.p4"
@@ -21,11 +20,6 @@ control farreachEgress(inout headers hdr,
     apply {
         debug_tbl.apply();
         // Stage 0
-        //eg_copy_udplen_for_checksum_tbl.apply();
-        access_cm1_tbl.apply();
-        access_cm2_tbl.apply();
-        access_cm3_tbl.apply();
-        access_cm4_tbl.apply();
 
         // Stage 1
         is_hot_tbl.apply();
@@ -35,10 +29,8 @@ control farreachEgress(inout headers hdr,
 
         // Stage 2
         access_latest_tbl.apply();
-    //#ifdef ENABLE_LARGEVALUEBLOCK
         // save seq_hdr.seq into clone_hdr.assignedseq_for_farreach for PUT/DELREQ_INSWITCH, which is used by cache hit response of PUT/DELREQ_INSWITCH and PUT/DELREQ_SEQ_INSWITCH_CASE1 -> [IMPORTANT] must be placed between access_seq_tbl and access_savedseq_tbl
         access_largevalueseq_and_save_assignedseq_tbl.apply(); // used for invalidation of PUTREQ_LARGEVALUE
-    //#endif
         // save udp.dstport (client port) for GET/PUT/DELREQ_INSWITCH, which is used by cache hit response of GET/PUT/DELREQ_INSWITCH and PUTREQ/DELREQ_SEQ_INSWITCH_CASE1
         save_client_udpport_tbl.apply();
 
@@ -49,18 +41,17 @@ control farreachEgress(inout headers hdr,
         // TODO: serverstatus_tbl.apply();
 
         // Stage 3
-    //#ifdef ENABLE_LARGEVALUEBLOCK
-        if (meta.meta.largevalueseq != 0) {
+
+        if (meta.largevalueseq != 0) {
             is_largevalueblock_tbl.apply(); // used for invalidation of PUTREQ_LARGEVALUE
         }
-    //#endif
         access_deleted_tbl.apply();
         update_vallen_tbl.apply();
         access_savedseq_tbl.apply();
         access_case1_tbl.apply();
 
         // Stage 4-6
-        // NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.meta.access_val_mode, which is set by update_vallen_tbl in stage 3
+        // NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
         update_vallo1_tbl.apply();
         update_valhi1_tbl.apply();
         update_vallo2_tbl.apply();
@@ -117,8 +108,9 @@ control farreachEgress(inout headers hdr,
         update_valhi16_tbl.apply();
 
         lastclone_lastscansplit_tbl.apply(); // including is_last_scansplit
-        another_eg_port_forward_tbl.apply(); // used to reduce VLIW usage of eg_port_forward_tbl
-        eg_port_forward_tbl.apply(); // including scan forwarding
+        // another_eg_port_forward_tbl.apply(); // used to reduce VLIW usage of eg_port_forward_tbl
+        // eg_port_forward_tbl.apply(); // including scan forwarding
+        spine_eg_port_forward_tbl.apply();
         update_ipmac_srcport_tbl.apply(); // Update ip, mac, and srcport for RES to client and notification to switchos
         update_pktlen_tbl.apply(); // Update udl_hdr.en for pkt with variable-length value
         add_and_remove_value_header_tbl.apply(); // Add or remove vallen and val according to optype and vallen

@@ -21,14 +21,14 @@ table l2l3_forward_tbl {
 }
 
 action set_need_recirculate(bit<16> eport) {
-	// meta.meta.need_recirculate = 1;
-	// meta.meta.recirport = eport;
+	// meta.need_recirculate = 1;
+	// meta.recirport = eport;
 	// ???
-	meta.meta.need_recirculate = 0;
+	meta.need_recirculate = 0;
 }
 
 action reset_need_recirculate() {
-	meta.meta.need_recirculate = 0;
+	meta.need_recirculate = 0;
 }
 
 @pragma stage 0
@@ -60,13 +60,9 @@ table set_hot_threshold_tbl {
 
 // Stage 1 (need_recirculate = 1)
 
-//action recirculate_pkt(port) {
-//	recirculate(port);
-//}
-
 // NOTE: as our Tofino does not support cross-ingress-pipeline recirculation, we use hardware link to simluate it
 action recirculate_pkt() {
-	// standard_metadata.egress_spec = (bit<9>) meta.meta.recirport;
+	// standard_metadata.egress_spec = (bit<9>) meta.recirport;
 	// bypass_egress();
 	// ???
 }
@@ -75,7 +71,7 @@ action recirculate_pkt() {
 table recirculate_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		recirculate_pkt;
@@ -87,12 +83,9 @@ table recirculate_tbl {
 
 // Stage 1 (need_recirculate = 0)
 
-/*action reset_is_wrong_pipeline() {
-	hdr.inswitch_hdr.is_wrong_pipeline = 0;
-}*/
 #ifndef RANGE_SUPPORT
 action hash_for_partition() {
-	hash(meta.meta.hashval_for_partition, HashAlgorithm.crc32, (bit<32>)0, {
+	hash(meta.hashval_for_partition, HashAlgorithm.crc32, (bit<32>)0, {
 		hdr.op_hdr.keylolo,
 		hdr.op_hdr.keylohi,
 		hdr.op_hdr.keyhilo,
@@ -104,7 +97,7 @@ action hash_for_partition() {
 table hash_for_partition_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		hash_for_partition;
@@ -117,8 +110,6 @@ table hash_for_partition_tbl {
 
 // Stage 2
 
-
-
 action hash_partition(bit<16> udpport,bit<9> eport) {
 	hdr.udp_hdr.dstPort = udpport;
 	standard_metadata.egress_spec = eport;
@@ -130,87 +121,20 @@ action hash_partition_for_special_response(bit<9> eport) {
 table hash_partition_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.hashval_for_partition: range;
-		//standard_metadata.ingress_port: exact;
-		meta.meta.need_recirculate: exact;
+		meta.hashval_for_partition: range;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		hash_partition;
-		//reset_is_wrong_pipeline;
 		hash_partition_for_special_response;
 		NoAction;
 	}
-	//default_action = reset_is_wrong_pipeline();
+
 	default_action = NoAction();
 	size = HASH_PARTITION_ENTRY_NUM;
 }
-
-
-action hash_for_cm12() {
-	hash(hdr.inswitch_hdr.hashval_for_cm1, HashAlgorithm.crc32, (bit<32>)0, {
-		hdr.op_hdr.keylolo,
-		hdr.op_hdr.keylohi,
-		hdr.op_hdr.keyhilo,
-		hdr.op_hdr.keyhihilo,
-		hdr.op_hdr.keyhihihi
-	}, (bit<32>)CM_BUCKET_COUNT);
-	hash(hdr.inswitch_hdr.hashval_for_cm2, HashAlgorithm.crc32_custom, (bit<32>)0, {
-		hdr.op_hdr.keylolo,
-		hdr.op_hdr.keylohi,
-		hdr.op_hdr.keyhilo,
-		hdr.op_hdr.keyhihilo,
-		hdr.op_hdr.keyhihihi
-	}, (bit<32>) CM_BUCKET_COUNT);
-}
-
-@pragma stage 2
-table hash_for_cm12_tbl {
-	key = {
-		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
-	}
-	actions = {
-		hash_for_cm12;
-		NoAction;
-	}
-	default_action = NoAction();
-	size = 2;
-}
-
-#ifndef USE_BFSDE920
-action cached_action(bit<16> idx) {
-	hdr.inswitch_hdr.idx = idx;
-	hdr.inswitch_hdr.is_cached = 1;
-}
-
-action uncached_action() {
-	hdr.inswitch_hdr.is_cached = 0;
-}
-
-@pragma stage 2 16384
-@pragma stage 3
-table cache_lookup_tbl {
-	key = {
-		hdr.op_hdr.keylolo: exact;
-		hdr.op_hdr.keylohi: exact;
-		hdr.op_hdr.keyhilo: exact;
-		
-		hdr.op_hdr.keyhihilo: exact;
-		hdr.op_hdr.keyhihihi: exact;
-		meta.meta.need_recirculate: exact;
-	}
-	actions = {
-		cached_action;
-		uncached_action;
-	}
-	default_action = uncached_action();
-	size = LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
-}
-#endif
-
 // Stage 3
 
-#ifdef USE_BFSDE920
 action cached_action(bit<16> idx) {
 	hdr.inswitch_hdr.idx = idx;
 	hdr.inswitch_hdr.is_cached = 1;
@@ -226,10 +150,9 @@ table cache_lookup_tbl {
 		hdr.op_hdr.keylolo: exact;
 		hdr.op_hdr.keylohi: exact;
 		hdr.op_hdr.keyhilo: exact;
-		
 		hdr.op_hdr.keyhihilo: exact;
 		hdr.op_hdr.keyhihihi: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		cached_action;
@@ -238,9 +161,6 @@ table cache_lookup_tbl {
 	default_action = uncached_action();
 	size = LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
 }
-#endif
-
-
 
 action hash_for_seq() {
 	hash(hdr.inswitch_hdr.hashval_for_seq, HashAlgorithm.crc32, (bit<32>)0, {
@@ -256,7 +176,7 @@ action hash_for_seq() {
 table hash_for_seq_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		hash_for_seq;
@@ -267,37 +187,6 @@ table hash_for_seq_tbl {
 }
 
 // Stage 4
-
-action hash_for_cm34() {
-	hash(hdr.inswitch_hdr.hashval_for_cm3, HashAlgorithm.identity, (bit<32>)0, {
-		hdr.op_hdr.keylolo,
-		hdr.op_hdr.keylohi,
-		hdr.op_hdr.keyhilo,
-		hdr.op_hdr.keyhihilo,
-		hdr.op_hdr.keyhihihi
-	}, (bit<32>) CM_BUCKET_COUNT);
-	hash(hdr.inswitch_hdr.hashval_for_cm4, HashAlgorithm.csum16, (bit<32>)0, {
-		hdr.op_hdr.keylolo,
-		hdr.op_hdr.keylohi,
-		hdr.op_hdr.keyhilo,
-		hdr.op_hdr.keyhihilo,
-		hdr.op_hdr.keyhihihi
-	}, (bit<32>) CM_BUCKET_COUNT);
-}
-
-@pragma stage 4
-table hash_for_cm34_tbl {
-	key = {
-		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
-	}
-	actions = {
-		hash_for_cm34;
-		NoAction;
-	}
-	default_action = NoAction();
-	size = 2;
-}
 
 action set_snapshot_flag(bit<32> snapshotid) {
 	hdr.inswitch_hdr.snapshot_flag = 1;
@@ -315,7 +204,7 @@ action reset_snapshot_flag() {
 table snapshot_flag_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		set_snapshot_flag;
@@ -326,8 +215,6 @@ table snapshot_flag_tbl {
 }
 
 // Stage 5
-
-
 
 // NOTE: standard_metadata.engress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
 // NOTE: using inswitch_hdr.client_sid for clone_e2e in ALU needs to maintain inswitch_hdr.client_sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
@@ -341,7 +228,7 @@ table prepare_for_cachehit_tbl {
 		hdr.op_hdr.optype: exact;
 		//standard_metadata.ingress_port: exact;
 		hdr.ipv4_hdr.srcAddr: lpm;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		set_client_sid;
@@ -367,7 +254,7 @@ table ipv4_forward_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
 		hdr.ipv4_hdr.dstAddr: lpm;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		forward_normal_response;
@@ -381,13 +268,6 @@ table ipv4_forward_tbl {
 // Stage 6
 
 action sample() {
-	//hash((inswitch_hdr.is_sampled, 0, hash_calc, 2), HashAlgorithm.crc32, (bit<32>)0, {
-	// 	hdr.op_hdr.keylolo,
-	// 	hdr.op_hdr.keylohi,
-	// 	hdr.op_hdr.keyhilo,
-	// 	hdr.op_hdr.keyhihilo,
-	// 	hdr.op_hdr.keyhihihi
-	// }, (bit<32>) (inswitch_hdr.is_sampled); // WRONG: we should not sample key
 	random(hdr.inswitch_hdr.is_sampled,(bit<1>)0,(bit<1>)1);; // generate a random value in [0, 1] to sample packet
 }
 
@@ -395,7 +275,7 @@ action sample() {
 table sample_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		sample;
@@ -452,7 +332,7 @@ action update_putreq_largevalue_to_putreq_largevalue_inswitch() {
 table ig_port_forward_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
-		meta.meta.need_recirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions = {
 		update_getreq_to_getreq_inswitch;

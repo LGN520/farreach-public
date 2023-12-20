@@ -860,7 +860,7 @@ void* run_switchos_popworker(void* param) {
                 // send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
                 cache_pop_inswitch_t tmp_cache_pop_inswitch(CURMETHOD_ID, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
                 pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
-                printf("[debug]pktsize %d\n",pktsize);fflush(stdout);
+                // printf("[debug]pktsize %d\n",pktsize);fflush(stdout);
                 while (true) {
                     udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient");
 

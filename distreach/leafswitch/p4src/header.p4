@@ -113,37 +113,6 @@ header fraginfo_t {
     bit<16> max_fragnum;
 }
 
-struct metadata_t {
-
-    bit<1> need_recirculate;
-#ifndef RANGE_SUPPORT
-    bit<16> hashval_for_partition; // at most 32K
-#endif
-    bit<4> cm1_predicate;
-    bit<4> cm2_predicate;
-    bit<4> cm3_predicate;
-    bit<4> cm4_predicate;
-    bit<1> is_hot;
-    bit<1> is_latest; // if the entry is latest
-//#ifdef ENABLE_LARGEVALUEBLOCK
-    bit<32> largevalueseq;
-    bit<1> is_largevalueblock;
-//#endif
-    bit<1> is_deleted; // if the entry is deleted
-    bit<1> is_case1;
-    bit<1> is_lastclone_for_pktloss;
-    bit<4> access_val_mode; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
-    bit<16> recirport;
-}
-
-/*header debug_t {
-
-		// 8-bit container
-    bit<1> is_hot;
-    bit<1> is_lastclone_for_pktloss;
-    bit<6> padding;
-}*/
-
 // Header instances
 struct headers {
 	ethernet_t ethernet_hdr;
@@ -178,7 +147,26 @@ struct headers {
 }
 struct metadata {
     /* empty */
-    metadata_t meta;
+    
+    bit<1> need_recirculate;
+#ifndef RANGE_SUPPORT
+    bit<16> hashval_for_partition; // at most 32K
+#endif
+    bit<4> cm1_predicate;
+    bit<4> cm2_predicate;
+    bit<4> cm3_predicate;
+    bit<4> cm4_predicate;
+    bit<1> is_hot;
+    bit<1> is_latest; // if the entry is latest
+//#ifdef ENABLE_LARGEVALUEBLOCK
+    bit<32> largevalueseq;
+    bit<1> is_largevalueblock;
+//#endif
+    bit<1> is_deleted; // if the entry is deleted
+    bit<1> is_case1;
+    bit<1> is_lastclone_for_pktloss;
+    bit<4> access_val_mode; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
+    bit<16> recirport;
 }
 
 //header debug_t debug_hdr;

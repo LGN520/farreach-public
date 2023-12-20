@@ -49,7 +49,7 @@ table access_savedseq_tbl {
 		hdr.op_hdr.optype: exact;
 		hdr.inswitch_hdr.is_cached: exact;
 		hdr.validvalue_hdr.validvalue: exact;
-		meta.meta.is_latest: exact;
+		meta.is_latest: exact;
 	}
 	actions = {
 		get_savedseq;

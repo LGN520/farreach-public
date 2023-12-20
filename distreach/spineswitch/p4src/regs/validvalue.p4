@@ -8,7 +8,6 @@ action get_validvalue() {
 }
 
 action set_validvalue() {
-	hdr.validvalue_hdr.setValid();
 	validvalue_reg.write((bit<32>)hdr.inswitch_hdr.idx,hdr.validvalue_hdr.validvalue);
 }
 action reset_meta_validvalue() {

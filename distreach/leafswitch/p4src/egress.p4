@@ -50,7 +50,7 @@ control farreachEgress(inout headers hdr,
 
         // Stage 3
     //#ifdef ENABLE_LARGEVALUEBLOCK
-        if (meta.meta.largevalueseq != 0) {
+        if (meta.largevalueseq != 0) {
             is_largevalueblock_tbl.apply(); // used for invalidation of PUTREQ_LARGEVALUE
         }
     //#endif
@@ -60,7 +60,7 @@ control farreachEgress(inout headers hdr,
         access_case1_tbl.apply();
 
         // Stage 4-6
-        // NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.meta.access_val_mode, which is set by update_vallen_tbl in stage 3
+        // NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
         update_vallo1_tbl.apply();
         update_valhi1_tbl.apply();
         update_vallo2_tbl.apply();

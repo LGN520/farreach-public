@@ -27,7 +27,7 @@ control partitionswitchIngress (inout headers hdr,
 	}
 	#ifndef RANGE_SUPPORT
 	action hash_for_partition() {
-		hash(meta.meta.hashval_for_partition, HashAlgorithm.crc32, (bit<32>)0, {
+		hash(meta.hashval_for_partition, HashAlgorithm.crc32, (bit<32>)0, {
 			hdr.op_hdr.keylolo,
 			hdr.op_hdr.keylohi,
 			hdr.op_hdr.keyhilo,
@@ -57,7 +57,7 @@ control partitionswitchIngress (inout headers hdr,
 	table hash_partition_tbl {
 		key = {
 			hdr.op_hdr.optype: exact;
-			meta.meta.hashval_for_partition: range;
+			meta.hashval_for_partition: range;
 		}
 		actions = {
 			hash_partition;

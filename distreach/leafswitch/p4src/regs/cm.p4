@@ -8,15 +8,15 @@ register<bit<16>>(CM_BUCKET_COUNT) cm1_reg;
 action update_cm1() {
 	// update_cm1_alu.execute_stateful_alu(hdr.inswitch_hdr.hashval_for_cm1);
 	cm1_reg.read(cm1_res,(bit<32>)hdr.inswitch_hdr.hashval_for_cm1);
-	meta.meta.cm1_predicate = 1;
+	meta.cm1_predicate = 1;
 	if(cm1_res >= hdr.inswitch_hdr.hot_threshold){
-		meta.meta.cm1_predicate = 2;
+		meta.cm1_predicate = 2;
 	}
 	cm1_reg.write((bit<32>)hdr.inswitch_hdr.hashval_for_cm1,cm1_res+1);
 }
 
 action initialize_cm1_predicate() {
-	meta.meta.cm1_predicate = 1; // default: false (1)
+	meta.cm1_predicate = 1; // default: false (1)
 }
 
 @pragma stage 0
@@ -39,15 +39,15 @@ register<bit<16>>(CM_BUCKET_COUNT) cm2_reg;
 action update_cm2() {
 
 	cm2_reg.read(cm2_res,(bit<32>)hdr.inswitch_hdr.hashval_for_cm2);
-	meta.meta.cm2_predicate = 1;
+	meta.cm2_predicate = 1;
 	if(cm2_res >= hdr.inswitch_hdr.hot_threshold){
-		meta.meta.cm2_predicate = 2;
+		meta.cm2_predicate = 2;
 	}
 	cm2_reg.write((bit<32>)hdr.inswitch_hdr.hashval_for_cm2,cm2_res+1);
 }
 
 action initialize_cm2_predicate() {
-	meta.meta.cm2_predicate = 1; // default: false (1)
+	meta.cm2_predicate = 1; // default: false (1)
 }
 
 @pragma stage 0
@@ -69,16 +69,16 @@ register<bit<16>>(CM_BUCKET_COUNT) cm3_reg;
 
 action update_cm3() {
 	cm3_reg.read(cm3_res,(bit<32>)hdr.inswitch_hdr.hashval_for_cm3);
-	meta.meta.cm3_predicate = 1;
+	meta.cm3_predicate = 1;
 	if(cm3_res >= hdr.inswitch_hdr.hot_threshold){
-		meta.meta.cm3_predicate = 2;
+		meta.cm3_predicate = 2;
 	}
 	cm3_reg.write((bit<32>)hdr.inswitch_hdr.hashval_for_cm3,cm3_res+1);
 }
 
 
 action initialize_cm3_predicate() {
-	meta.meta.cm3_predicate = 1; // default: false (1)
+	meta.cm3_predicate = 1; // default: false (1)
 }
 
 @pragma stage 0
@@ -100,15 +100,15 @@ register<bit<16>>(CM_BUCKET_COUNT) cm4_reg;
 
 action update_cm4() {
 	cm4_reg.read(cm4_res,(bit<32>)hdr.inswitch_hdr.hashval_for_cm4);
-	meta.meta.cm4_predicate = 1;
+	meta.cm4_predicate = 1;
 	if(cm4_res >= hdr.inswitch_hdr.hot_threshold){
-		meta.meta.cm4_predicate = 2;
+		meta.cm4_predicate = 2;
 	}
 	cm4_reg.write((bit<32>)hdr.inswitch_hdr.hashval_for_cm4,cm4_res+1);
 }
 
 action initialize_cm4_predicate() {
-	meta.meta.cm4_predicate = 1; // default: false (1)
+	meta.cm4_predicate = 1; // default: false (1)
 }
 
 @pragma stage 0

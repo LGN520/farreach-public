@@ -12,7 +12,7 @@ method = "netbufferv4"
 sw_path = subprocess.getstatusoutput("whereis simple_switch")[1].split(" ")[1]
 p4_path = current_dir+"/"+method + ".p4"
 json_path = current_dir+"/"+method + ".json"
-partition_json_path = current_dir+"/"+"../spineswitch/partitionswitch.json"
+partition_json_path = current_dir+"/"+"../spineswitch/spineswitch.json"
 print(partition_json_path)
 def P4compile(p4_path, json_path):
     os.system("p4c-bm2-ss --p4v 16 " + p4_path + " -o  " + json_path)
@@ -49,7 +49,7 @@ def create_network():
         "spine_s{}".format(0),
         cls=P4Switch,
         json_path=partition_json_path,
-        thrift_port=9090 + 0,
+        thrift_port=9100 + 1,
         pcap_dump=debug,
         pcap_dir="./pcap",
         log_enabled=debug,

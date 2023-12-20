@@ -1,26 +1,26 @@
 register<bit<32>>(KV_BUCKET_COUNT) largevalueseq_reg;
 
 action get_largevalueseq() {
-	largevalueseq_reg.read(meta.meta.largevalueseq,(bit<32>)hdr.inswitch_hdr.idx);
+	largevalueseq_reg.read(meta.largevalueseq,(bit<32>)hdr.inswitch_hdr.idx);
 }
 
 action set_largevalueseq() {
 	largevalueseq_reg.write((bit<32>)hdr.inswitch_hdr.idx,hdr.seq_hdr.seq);
-	meta.meta.largevalueseq = 0;
-	meta.meta.is_largevalueblock = 0;
+	meta.largevalueseq = 0;
+	meta.is_largevalueblock = 0;
 }
 
 // CACHE_POP_INSWITCH 
 action reset_largevalueseq() {
 	largevalueseq_reg.write((bit<32>)hdr.inswitch_hdr.idx,0);
-	meta.meta.largevalueseq = 0;
-	meta.meta.is_largevalueblock = 0;
+	meta.largevalueseq = 0;
+	meta.is_largevalueblock = 0;
 	hdr.clone_hdr.assignedseq_for_farreach = hdr.seq_hdr.seq;
 }
 
 action reset_meta_largevalueseq() {
-	meta.meta.largevalueseq = 0;
-	meta.meta.is_largevalueblock = 0;
+	meta.largevalueseq = 0;
+	meta.is_largevalueblock = 0;
 }
 
 @pragma stage 2
