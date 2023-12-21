@@ -16,14 +16,14 @@ sys.path.append(os.path.dirname(this_dir))
 from common import *
 
 switchos_ptf_popserver_udpsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-switchos_ptf_popserver_udpsock.bind(("127.0.0.1", switchos_ptf_popserver_port))
+switchos_ptf_popserver_udpsock.bind(("0.0.0.0", switchos_ptf_popserver_port))
 
 
 class RegisterUpdate:
     def __init__(self, rack_idx):
         self.rack_idx = rack_idx
         self.controller = SimpleSwitchThriftAPI(
-            9090 + rack_idx + 1, "192.168.122.229"
+            9100 + rack_idx + 1, "192.168.122.229"
         )  # 9090，127.0.0.1
 
     def set_valid0(self, freeidx, pipeidx):

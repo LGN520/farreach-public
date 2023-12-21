@@ -354,6 +354,9 @@ class TableConfigure:
                 SCANRES_SPLIT,
                 LOADACK,
                 GETRES_LARGEVALUE_SEQ,
+                CACHE_POP_INSWITCH_FORWARD,
+                SETVALID_INSWITCH_FORWARD,
+                CACHE_EVICT_FORWARD
             ]:
                 matchspec0 = [
                     hex(tmpoptype),
@@ -424,7 +427,25 @@ class TableConfigure:
             "update_putreq_largevalue_to_putreq_largevalue_inswitch",
             matchspec0,
         )
-
+        for iport in self.server_devports:
+            matchspec0 = [hex(CACHE_POP_INSWITCH_FORWARD), iport]
+            self.controller.table_add(
+                "cache_pop_ig_port_forward_tbl",
+                "update_cache_pop_inswitch_forward_to_cache_pop_inswitch",
+                matchspec0,
+            )
+            matchspec0 = [hex(SETVALID_INSWITCH_FORWARD), iport]
+            self.controller.table_add(
+                "cache_pop_ig_port_forward_tbl",
+                "update_setvalid_inswitch_forward_to_setvalid_inswitch",
+                matchspec0,
+            )
+            matchspec0 = [hex(CACHE_EVICT_FORWARD), iport]
+            self.controller.table_add(
+                "cache_pop_ig_port_forward_tbl",
+                "update_cache_evict_inswitch_forward_to_cache_evict_inswitch",
+                matchspec0,
+            )
         # Egress pipeline
 
         # Stage 0
@@ -1238,6 +1259,8 @@ class TableConfigure:
             PUTREQ_SEQ_CASE3_BEINGEVICTED,
             GETREQ_BEINGEVICTED_RECORD,
             GETREQ_LARGEVALUEBLOCK_RECORD,
+            CACHE_POP_INSWITCH,
+            CACHE_POP_INSWITCH_FORWARD
         ]:
             for i in range(int(switch_max_vallen / 8 + 1)):  # i from 0 to 16
                 if i == 0:

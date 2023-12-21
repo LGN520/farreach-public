@@ -413,8 +413,6 @@ void* run_controller_evictserver(void* param) {
             bandwidthcost += tmpack.bwcost();
 
             // send CACHE_EVICT_ACK to switchos.popworker.evictclient
-            // printf("receive CACHE_EVICT_ACK from server and send to switchos\n");
-            // dump_buf(buf, recvsize);
             udpsendto(controller_evictserver_udpsock, buf, recvsize, 0, &switchos_evictclient_addr, switchos_evictclient_addrlen, "controller.evictserver");
         }
     }

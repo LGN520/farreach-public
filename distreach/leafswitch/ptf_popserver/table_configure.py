@@ -22,8 +22,11 @@ switchos_ptf_popserver_udpsock.bind(("127.0.0.1", switchos_ptf_popserver_port))
 class RegisterUpdate:
     def __init__(self, rack_idx):
         self.rack_idx = rack_idx
-        self.controller = SimpleSwitchThriftAPI(
+        self.leaf_controller = SimpleSwitchThriftAPI(
             9090 + rack_idx + 1, "192.168.122.229"
+        )  # 9090，127.0.0.1
+        self.spine_controller = SimpleSwitchThriftAPI(
+            9100 + rack_idx + 1, "192.168.122.229"
         )  # 9090，127.0.0.1
 
     def set_valid0(self, freeidx, pipeidx):
@@ -35,7 +38,7 @@ class RegisterUpdate:
 
         index = freeidx
         value = 0
-        self.controller.register_write("validvalue_reg", index, value)
+        self.leaf_controller.register_write("validvalue_reg", index, value)
 
     # def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, piptidx):
     def add_cache_lookup(
@@ -51,7 +54,10 @@ class RegisterUpdate:
             hex(0),
         ]
         actnspec0 = [hex(freeidx)]
-        self.controller.table_add(
+        self.leaf_controller.table_add(
+            "cache_lookup_tbl", "cached_action", matchspec0, actnspec0
+        )
+        self.spine_controller.table_add(
             "cache_lookup_tbl", "cached_action", matchspec0, actnspec0
         )
 
@@ -61,7 +67,7 @@ class RegisterUpdate:
         exit(-1)
         index = evictidx
         value = 3
-        self.controller.register_write("validvalue_reg", index, value)
+        self.leaf_controller.register_write("validvalue_reg", index, value)
 
     def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi):
         # print "Remove key from cache_lookup_tbl for all pipelines"
@@ -74,11 +80,13 @@ class RegisterUpdate:
             hex(0),
         ]
         # actnspec0 = netbufferv4_cached_action_action_spec_t(evictidx)
-        self.controller.table_delete_match("cache_lookup_tbl", matchspec0)
+        self.leaf_controller.table_delete_match("cache_lookup_tbl", matchspec0)
+        self.spine_controller.table_delete_match("cache_lookup_tbl", matchspec0)
 
     def writeallseq(self, maxseq):
         index = [0, 32768 - 1]  # 32768
-        self.controller.register_write("seq_reg", index, maxseq)
+        self.leaf_controller.register_write("seq_reg", index, maxseq)
+        self.spine_controller.register_write("seq_reg", index, maxseq)
         # self.client.register_write_all_seq_reg(self.sess_hdl, self.dev_tgt, maxseq)
 
     def runTest(self):

@@ -265,7 +265,7 @@ void prepare_switchos() {
     // memset(switchos_evictvalbytes, 0, val_t::MAX_VALLEN);
 
     // popworker <-> reflector.cp2dpserver
-    create_udpsock(switchos_popworker_popclient_for_reflector_udpsock, true, "switchos.popworker.popclient_for_reflector", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);  // to reduce snapshot latency
+    create_udpsock(switchos_popworker_popclient_for_reflector_udpsock, true, "switchos.popworker.popclient_for_reflector", 0, 5 * SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);  // to reduce snapshot latency
 
     // cached metadata
     switchos_cached_keyidx_map.clear();
@@ -849,7 +849,6 @@ void* run_switchos_popworker(void* param) {
                     switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx] = -1;
 
                     // CUR_TIME(evict_total_t2);
-
                 }
 
                 /* cache population for new record */
@@ -861,9 +860,10 @@ void* run_switchos_popworker(void* param) {
                 cache_pop_inswitch_t tmp_cache_pop_inswitch(CURMETHOD_ID, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
                 pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
                 // printf("[debug]pktsize %d\n",pktsize);fflush(stdout);
+                int testtimeoutdebug=0;
                 while (true) {
                     udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient");
-
+                    printf("[debug]send %d\n",testtimeoutdebug++);fflush(stdout);
                     // loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
                     bool is_timeout = false;
                     bool with_correctack = false;

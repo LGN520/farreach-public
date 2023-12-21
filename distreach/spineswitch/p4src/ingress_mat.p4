@@ -327,7 +327,6 @@ action update_putreq_largevalue_to_putreq_largevalue_inswitch() {
 	hdr.inswitch_hdr.setValid();
 }
 
-
 @pragma stage 6
 table ig_port_forward_tbl {
 	key = {
@@ -347,5 +346,46 @@ table ig_port_forward_tbl {
 	default_action = NoAction();
 	size = 8;
 }
+
+action update_cache_pop_inswitch_to_cache_pop_inswitch_forward(){
+	hdr.op_hdr.optype = CACHE_POP_INSWITCH_FORWARD;
+}
+action update_cache_pop_inswitch_forward_to_cache_pop_inswitch(){
+	hdr.op_hdr.optype = CACHE_POP_INSWITCH;
+	standard_metadata.egress_spec = standard_metadata.ingress_port;
+}
+action update_setvalid_inswitch_to_setvalid_inswitch_forward(){
+	hdr.op_hdr.optype = SETVALID_INSWITCH_FORWARD;
+}
+action update_setvalid_inswitch_forward_to_setvalid_inswitch(){
+	hdr.op_hdr.optype = SETVALID_INSWITCH;
+	standard_metadata.egress_spec = standard_metadata.ingress_port;
+}
+action update_cache_evict_inswitch_to_cache_evict_inswitch_forward(){
+	hdr.op_hdr.optype = CACHE_EVICT_FORWARD;
+}
+action update_cache_evict_inswitch_forward_to_cache_evict_inswitch(){
+	hdr.op_hdr.optype = CACHE_EVICT;
+	standard_metadata.egress_spec = standard_metadata.ingress_port;
+}
+@pragma stage 6
+table cache_pop_ig_port_forward_tbl {
+	key = {
+		hdr.op_hdr.optype: exact;
+		standard_metadata.ingress_port:exact;
+	}
+	actions = {
+		update_cache_pop_inswitch_to_cache_pop_inswitch_forward;
+		update_cache_pop_inswitch_forward_to_cache_pop_inswitch;
+		update_setvalid_inswitch_to_setvalid_inswitch_forward;
+		update_setvalid_inswitch_forward_to_setvalid_inswitch;
+		update_cache_evict_inswitch_to_cache_evict_inswitch_forward;
+		update_cache_evict_inswitch_forward_to_cache_evict_inswitch;
+		NoAction;
+	}
+	default_action = NoAction();
+	size = 8;
+}
+
 
 

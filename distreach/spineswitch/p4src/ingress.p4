@@ -40,11 +40,13 @@ control farreachIngress (inout headers hdr,
         // Stage 5
         //hash_for_cm4_tbl.apply(); // for CM (access inswitch_hdr.hashval_for_cm4)
         prepare_for_cachehit_tbl.apply(); // for response of cache hit (access inswitch_hdr.client_sid)
-        ipv4_forward_tbl.apply(); // update egress_port for normal/speical response packets
+        
 
         // Stage 6
         sample_tbl.apply(); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
         ig_port_forward_tbl.apply(); // update op_hdr.optype
+        cache_pop_ig_port_forward_tbl.apply();
+        ipv4_forward_tbl.apply(); // update egress_port for normal/speical response packets
         }
         // Stage 7
         //ig_copy_udplen_for_checksum_tbl.apply();
