@@ -11,7 +11,7 @@ import random
 import sys
 import time
 import unittest
-
+from itertools import product
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(this_dir))
@@ -25,6 +25,7 @@ validvalue_list = [0, 1, 3]
 # validvalue_list = [0, 1, 2, 3] # If with PUTREQ_LARGE
 latest_list = [0, 1]
 stat_list = [0, 1]
+found_list=[0,1]
 deleted_list = [0, 1]
 sampled_list = [0, 1]
 lastclone_list = [0, 1]
@@ -40,6 +41,20 @@ class TableConfigure:
         self.controller = SimpleSwitchThriftAPI(
             9090 + rack_idx + 1, "192.168.122.229"
         )  # 9090，127.0.0.1
+    def configure_recover_tbl(self):
+        for (is_cached,isfound) in product(found_list,cached_list):
+            if (is_cached,isfound) == (1,0):
+                self.controller.table_add(
+                    "recover_tbl",
+                    "get_backup",
+                    matchspec0,
+                )
+            if (is_cached,isfound) == (0,1) or (is_cached,isfound) == (1,1):
+                self.controller.table_add(
+                    "recover_tbl",
+                    "recover",
+                    matchspec0,
+                )
 
     def configure_update_val_tbl(self, valname):
         # size = 3
@@ -191,16 +206,16 @@ class TableConfigure:
 
         # Table: recirculate_tbl (default: NoAction	; size = 5)
         print("Configuring recirculate_tbl")
-        for tmpoptype in [
-            PUTREQ,
-            DELREQ,
-            GETRES_LATEST_SEQ,
-            GETRES_DELETED_SEQ,
-            PUTREQ_LARGEVALUE,
-        ]:
-            matchspec0 = [hex(tmpoptype), hex(1)]
-            # recirculate to the pipeline of the first physical client for atomicity of setting snapshot flag
-            self.controller.table_add("recirculate_tbl", "recirculate_pkt", matchspec0)
+        # for tmpoptype in [
+        #     PUTREQ,
+        #     DELREQ,
+        #     GETRES_LATEST_SEQ,
+        #     GETRES_DELETED_SEQ,
+        #     PUTREQ_LARGEVALUE,
+        # ]:
+        #     matchspec0 = [hex(tmpoptype), hex(1)]
+        #     # recirculate to the pipeline of the first physical client for atomicity of setting snapshot flag
+        #     self.controller.table_add("recirculate_tbl", "recirculate_pkt", matchspec0)
 
         # Stage 1
 
@@ -289,11 +304,11 @@ class TableConfigure:
                         tmpoptype == GETRES_LATEST_SEQ
                         or tmpoptype == GETRES_DELETED_SEQ
                     ):
-                        actnspec0 = [eport]
+                        actnspec0 = [hex(udp_dstport), eport]
                         # 0 is priority (range may be overlapping)
                         self.controller.table_add(
                             "hash_partition_tbl",
-                            "hash_partition_for_special_response",
+                            "hash_partition",
                             matchspec0,
                             actnspec0,
                             0,
@@ -365,7 +380,9 @@ class TableConfigure:
                 GETRES_LARGEVALUE_SEQ,
                 CACHE_POP_INSWITCH_FORWARD,
                 SETVALID_INSWITCH_FORWARD,
-                CACHE_EVICT_FORWARD
+                CACHE_EVICT_FORWARD,
+                GETRES_LATEST_SEQ_INSWITCH,
+                GETRES_DELETED_SEQ_INSWITCH
             ]:
                 matchspec0 = [
                     hex(tmpoptype),
@@ -377,16 +394,16 @@ class TableConfigure:
                 self.controller.table_add(
                     "ipv4_forward_tbl", "forward_normal_response", matchspec0, actnspec0
                 )
-            for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
                 matchspec0 = [
                     hex(tmpoptype),
                     "" + client_ips[tmp_client_physical_idx] + "/32",
                     hex(0),
                 ]
-                actnspec0 = [hex(tmpsid)]
+                actnspec0 = [eport]
                 self.controller.table_add(
                     "ipv4_forward_tbl",
-                    "forward_special_get_response",
+                    "forward_normal_response",
                     matchspec0,
                     actnspec0,
                 )
@@ -439,22 +456,38 @@ class TableConfigure:
         for iport in self.server_devports:
             matchspec0 = [hex(CACHE_POP_INSWITCH), iport]
             self.controller.table_add(
-                "cache_pop_ig_port_forward_tbl",
+                "special_ig_port_forward_tbl",
                 "update_cache_pop_inswitch_to_cache_pop_inswitch_forward",
                 matchspec0,
             )
             matchspec0 = [hex(SETVALID_INSWITCH), iport]
             self.controller.table_add(
-                "cache_pop_ig_port_forward_tbl",
+                "special_ig_port_forward_tbl",
                 "update_setvalid_inswitch_to_setvalid_inswitch_forward",
                 matchspec0,
             )
             matchspec0 = [hex(CACHE_EVICT), iport]
             self.controller.table_add(
-                "cache_pop_ig_port_forward_tbl",
+                "special_ig_port_forward_tbl",
                 "update_cache_evict_inswitch_to_cache_evict_inswitch_forward",
                 matchspec0,
             )
+        matchspec0 = [hex(BACKUP), self.server_devports[0]]
+        actnspec0 = [self.client_devports[0]]
+        self.controller.table_add(
+            "special_ig_port_forward_tbl",
+            "forward_backup",
+            matchspec0,
+            actnspec0
+        )
+        matchspec0 = [hex(BACKUP), self.client_devports[0]]
+        actnspec0 = [self.server_devports[0]]
+        self.controller.table_add(
+            "special_ig_port_forward_tbl",
+            "forward_backup",
+            matchspec0,
+            actnspec0
+        )
         # Egress pipeline
 
         # Stage 0
@@ -520,6 +553,13 @@ class TableConfigure:
             ]  # key may or may not be cached for SETVALID_INSWITCH
             self.controller.table_add(
                 "access_validvalue_tbl", "set_validvalue", matchspec0
+            )
+            matchspec0 = [
+                hex(SETVALID_INSWITCH_FORWARD),
+                hex(is_cached),
+            ]  # key may or may not be cached for SETVALID_INSWITCH
+            self.controller.table_add(
+                "access_validvalue_tbl", "NoAction", matchspec0
             )
 
         # Table: access_seq_tbl (default: NoAction	; size = 3)
@@ -920,17 +960,18 @@ class TableConfigure:
 
         # Table: access_case1_tbl (default: reset_is_case1; 6)
         print("Configuring access_case1_tbl")
-        for is_latest in latest_list:
-            for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
-                matchspec0 = [hex(tmpoptype), hex(1), hex(1), hex(is_latest), hex(1)]
-                if is_latest == 0:
-                    self.controller.table_add(
-                        "access_case1_tbl", "try_case1", matchspec0
-                    )
-            for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
-                matchspec0 = [hex(tmpoptype), hex(1), hex(1), hex(is_latest), hex(1)]
-                self.controller.table_add("access_case1_tbl", "try_case1", matchspec0)
-
+        # for is_latest in latest_list:
+        #     for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+        #         matchspec0 = [hex(tmpoptype), hex(1), hex(1), hex(is_latest), hex(1)]
+        #         if is_latest == 0:
+        #             self.controller.table_add(
+        #                 "access_case1_tbl", "try_case1", matchspec0
+        #             )
+        #     for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+        #         matchspec0 = [hex(tmpoptype), hex(1), hex(1), hex(is_latest), hex(1)]
+        #         self.controller.table_add("access_case1_tbl", "try_case1", matchspec0)
+        print("Configuring recover_tbl")
+        self.configure_recover_tbl();
         # Stage 4-11
 
         # Table: update_vallo1_tbl (default: nop; 14)
@@ -975,174 +1016,7 @@ class TableConfigure:
 
         # Table: update_pktlen_tbl (default: NoAction	; 15*17+14=269)
         print("Configuring update_pktlen_tbl")
-        for i in range(int(int(switch_max_vallen / 8 + 1))):  # i from 0 to 16
-            if i == 0:
-                vallen_start = 0
-                vallen_end = 0
-                aligned_vallen = 0
-            else:
-                vallen_start = (i - 1) * 8 + 1  # 1, 9, ..., 121
-                vallen_end = (i - 1) * 8 + 8  # 8, 16, ..., 128
-                aligned_vallen = vallen_end  # 8, 16, ..., 128
-            val_stat_seq_udplen = aligned_vallen + 42
-            val_stat_seq_iplen = aligned_vallen + 62
-            val_seq_inswitch_stat_clone_udplen = aligned_vallen + 66
-            val_seq_inswitch_stat_clone_iplen = aligned_vallen + 86
-            val_seq_udplen = aligned_vallen + 38
-            val_seq_iplen = aligned_vallen + 58
-            val_seq_stat_udplen = aligned_vallen + 42
-            val_seq_stat_iplen = aligned_vallen + 62
-            val_seq_inswitch_stat_udplen = aligned_vallen + 62
-            val_seq_inswitch_stat_iplen = aligned_vallen + 82
-            for tmpoptype in [
-                GETRES_SEQ,
-                GETREQ_BEINGEVICTED_RECORD,
-                GETREQ_LARGEVALUEBLOCK_RECORD,
-            ]:
-                matchspec0 = [
-                    hex(tmpoptype),
-                    "" + hex(vallen_start) + "->" + hex(vallen_end),
-                ]  # [vallen_start, vallen_end]
-                actnspec0 = [hex(val_stat_seq_udplen), hex(val_stat_seq_iplen)]
-                self.controller.table_add(
-                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-                )  # 0 is priority (range may be overlapping]
-            for tmpoptype in [
-                GETRES_LATEST_SEQ_INSWITCH_CASE1,
-                GETRES_DELETED_SEQ_INSWITCH_CASE1,
-                PUTREQ_SEQ_INSWITCH_CASE1,
-                DELREQ_SEQ_INSWITCH_CASE1,
-            ]:
-                matchspec0 = [
-                    hex(tmpoptype),
-                    "" + hex(vallen_start) + "->" + hex(vallen_end),
-                ]  # [vallen_start, vallen_end]
-                actnspec0 = [
-                    hex(val_seq_inswitch_stat_clone_udplen),
-                    hex(val_seq_inswitch_stat_clone_iplen),
-                ]
-                self.controller.table_add(
-                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-                )  # 0 is priority (range may be overlapping]
-            for tmpoptype in [
-                PUTREQ_SEQ,
-                PUTREQ_POP_SEQ,
-                PUTREQ_SEQ_CASE3,
-                PUTREQ_POP_SEQ_CASE3,
-                PUTREQ_SEQ_BEINGEVICTED,
-                PUTREQ_SEQ_CASE3_BEINGEVICTED,
-            ]:
-                matchspec0 = [
-                    hex(tmpoptype),
-                    "" + hex(vallen_start) + "->" + hex(vallen_end),
-                ]  # [vallen_start, vallen_end]
-                actnspec0 = [hex(val_seq_udplen), hex(val_seq_iplen)]
-                self.controller.table_add(
-                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-                )  # 0 is priority (range may be overlapping]
-            matchspec0 = [
-                hex(CACHE_EVICT_LOADDATA_INSWITCH_ACK),
-                "" + hex(vallen_start) + "->" + hex(vallen_end),
-            ]  # [vallen_start, vallen_end]
-            actnspec0 = [hex(val_seq_stat_udplen), hex(val_seq_stat_iplen)]
-            self.controller.table_add(
-                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping]
-            matchspec0 = [
-                hex(LOADSNAPSHOTDATA_INSWITCH_ACK),
-                "" + hex(vallen_start) + "->" + hex(vallen_end),
-            ]  # [vallen_start, vallen_end]
-            actnspec0 = [
-                hex(val_seq_inswitch_stat_udplen),
-                hex(val_seq_inswitch_stat_iplen),
-            ]
-            self.controller.table_add(
-                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping]
-
-        onlyop_udplen = 26
-        onlyop_iplen = 46
-        seq_stat_udplen = 40
-        seq_stat_iplen = 60
-        seq_udplen = 36
-        seq_iplen = 56
-        scanreqsplit_udplen = 49
-        scanreqsplit_iplen = 69
-        frequency_udplen = 30
-        frequency_iplen = 50
-        matchspec0 = [
-            hex(CACHE_POP_INSWITCH_ACK),
-            "" + hex(0) + "->" + hex(switch_max_vallen),
-        ]  # [0, 128]
-        actnspec0 = [hex(onlyop_udplen), hex(onlyop_iplen)]
-        self.controller.table_add(
-            "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-        )  # 0 is priority (range may be overlapping]
-        for tmpoptype in [PUTRES_SEQ, DELRES_SEQ]:
-            matchspec0 = [
-                hex(tmpoptype),
-                "" + hex(0) + "->" + hex(switch_max_vallen),
-            ]  # [0, 128]
-            actnspec0 = [hex(seq_stat_udplen), hex(seq_stat_iplen)]
-            self.controller.table_add(
-                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping]
-        # , GETREQ_LARGEVALUEBLOCK_SEQ
-        for tmpoptype in [
-            DELREQ_SEQ,
-            DELREQ_SEQ_CASE3,
-            DELREQ_SEQ_BEINGEVICTED,
-            DELREQ_SEQ_CASE3_BEINGEVICTED,
-        ]:
-            matchspec0 = [
-                hex(tmpoptype),
-                "" + hex(0) + "->" + hex(switch_max_vallen),
-            ]  # [0, 128]
-            actnspec0 = [hex(seq_udplen), hex(seq_iplen)]
-            self.controller.table_add(
-                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping]
-        matchspec0 = [
-            hex(SCANREQ_SPLIT),
-            "" + hex(0) + "->" + hex(switch_max_vallen),
-        ]  # [0, 128]
-        actnspec0 = [hex(scanreqsplit_udplen), hex(scanreqsplit_iplen)]
-        self.controller.table_add(
-            "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-        )  # 0 is priority (range may be overlapping]
-        matchspec0 = [
-            hex(CACHE_EVICT_LOADFREQ_INSWITCH_ACK),
-            "" + hex(0) + "->" + hex(switch_max_vallen),
-        ]  # [0, 128]
-        actnspec0 = [hex(frequency_udplen), hex(frequency_iplen)]
-        self.controller.table_add(
-            "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-        )  # 0 is priority (range may be overlapping]
-        matchspec0 = [
-            hex(SETVALID_INSWITCH_ACK),
-            "" + hex(0) + "->" + hex(switch_max_vallen),
-        ]  # [0, 128]
-        actnspec0 = [hex(onlyop_udplen), hex(onlyop_iplen)]
-        self.controller.table_add(
-            "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-        )  # 0 is priority (range may be overlapping]
-        # For large value
-        shadowtype_seq_udp_delta = 10
-        shadowtype_seq_ip_delta = 10
-        for tmpoptype in [
-            PUTREQ_LARGEVALUE_SEQ,
-            PUTREQ_LARGEVALUE_SEQ_CASE3,
-            PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED,
-            PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED,
-        ]:
-            matchspec0 = [
-                hex(tmpoptype),
-                "" + hex(0) + "->" + hex(65535),
-            ]  # [0, 65535] (NOTE: vallen MUST = 0 for PUTREQ_LARGEVALUE_INSWITCH]
-            actnspec0 = [hex(shadowtype_seq_udp_delta), hex(shadowtype_seq_ip_delta)]
-            self.controller.table_add(
-                "update_pktlen_tbl", "add_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping)
+        self.configure_update_pktlen_tbl()
 
         # Table: update_ipmac_srcport_tbl (default: NoAction	; 6*client_physical_num+20*server_physical_num+7=59 < 26*8+7=215 < 256)
         # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
@@ -1267,6 +1141,8 @@ class TableConfigure:
             PUTREQ_POP_SEQ_CASE3,
             GETRES_LATEST_SEQ_INSWITCH_CASE1,
             GETRES_DELETED_SEQ_INSWITCH_CASE1,
+            GETRES_LATEST_SEQ_INSWITCH,
+            GETRES_DELETED_SEQ_INSWITCH,
             PUTREQ_SEQ_INSWITCH_CASE1,
             DELREQ_SEQ_INSWITCH_CASE1,
             GETRES_SEQ,
@@ -1308,14 +1184,14 @@ class TableConfigure:
                     )
 
         # Table: drop_tbl (default: NoAction	; size = 2)
-        print("Configuring drop_tbl")
+        print("Configuring forward_tbl")
         matchspec0 = [hex(GETRES_LATEST_SEQ_INSWITCH)]
         self.controller.table_add(
-            "drop_tbl", "drop_getres_latest_seq_inswitch", matchspec0
+            "forward_tbl", "forward_getres_latest_seq_inswitch", matchspec0
         )
         matchspec0 = [hex(GETRES_DELETED_SEQ_INSWITCH)]
         self.controller.table_add(
-            "drop_tbl", "drop_getres_deleted_seq_inswitch", matchspec0
+            "forward_tbl", "forward_getres_deleted_seq_inswitch", matchspec0
         )
 
     def configure_another_eg_port_forward_tbl(self):
@@ -2965,913 +2841,191 @@ class TableConfigure:
                                                 # NOTE: default action is NoAction	 -> forward the packet to sid set by clone_e2e
                                                 pass
 
-    def configure_eg_port_forward_tbl_with_range(self):
-        # Table: eg_port_forward_tbl (default: NoAction	; size = 27+852*client_physical_num+2*server_physical_num=27+854*2=1735 < 2048 < 21+854*8=6859 < 8192)
-        tmp_client_sids = [0] + self.client_sids
-        tmp_server_sids = [0] + self.server_sids
-        for is_cached in cached_list:
-            for is_hot in hot_list:
-                for validvalue in validvalue_list:
-                    for is_latest in latest_list:
-                        for is_deleted in deleted_list:
-                            # Use tmpstat as action data to reduce action number
-                            if is_deleted == 1:
-                                tmpstat = 0
-                            else:
-                                tmpstat = 1
-                            # NOTE: eg_intr_md.egress_port is read-only
-                            # for is_wrong_pipeline in pipeline_list:
-                            # for tmp_client_sid in self.sids:
-                            for tmp_client_sid in tmp_client_sids:
-                                for is_lastclone_for_pktloss in lastclone_list:
-                                    for snapshot_flag in snapshot_flag_list:
-                                        for is_case1 in case1_list:
-                                            for is_last_scansplit in [0, 1]:
-                                                for tmp_server_sid in tmp_server_sids:
-                                                    # is_cached=0 (memset inswitch_hdr by end-host, and key must not be cached in cache_lookup_tbl for CACHE_POP_INSWITCH), is_hot (cm_predicate=1), validvalue, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_POP_INSWITCH
-                                                    # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size = 4
-                                                    # if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
-                                                    if (
-                                                        is_cached == 0
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(CACHE_POP_INSWITCH),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # Update CACHE_POP_INSWITCH as CACHE_POP_INSWITCH_ACK to reflector (deprecated: w/ clone)
-                                                        actnspec0 = [
-                                                            hex(self.reflector_sid),
-                                                            hex(
-                                                                reflector_dp2cpserver_port
-                                                            ),
-                                                        ]
-                                                        self.controller.table_add(
-                                                            "eg_port_forward_tbl",
-                                                            "update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone",
-                                                            matchspec0,
-                                                            actnspec0,
-                                                        )
-                                                    # is_cached=0 (no inswitch_hdr after clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), snapshot_flag, is_case1, is_lastclone_for_pktloss should be 0 for CACHE_POP_INSWITCH_ACK
-                                                    # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size = 0
-                                                    # if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and snapshot_flag == 0 and is_case1 == 0:
-                                                    if (
-                                                        is_cached == 0
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and tmp_client_sid == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(CACHE_POP_INSWITCH_ACK),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # if is_lastclone_for_pktloss == 0:
-                                                        #    # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector (w/ clone)
-                                                        #    actnspec0 = [hex(self.reflector_sid)]
-                                                        #    self.controller.table_add('eg_port_forward_tbl','forward_cache_pop_inswitch_ack_clone_for_pktloss',matchspec0, actnspec0)
-                                                        # elif is_lastclone_for_pktloss == 1:
-                                                        #    # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector
-                                                        #    self.controller.table_add('eg_port_forward_tbl','forward_cache_pop_inswitch_ack',matchspec0)
+    def configure_update_pktlen_tbl(self):
+        for i in range(int(int(switch_max_vallen / 8 + 1))):  # i from 0 to 16
+                if i == 0:
+                    vallen_start = 0
+                    vallen_end = 0
+                    aligned_vallen = 0
+                else:
+                    vallen_start = (i - 1) * 8 + 1  # 1, 9, ..., 121
+                    vallen_end = (i - 1) * 8 + 8  # 8, 16, ..., 128
+                    aligned_vallen = vallen_end  # 8, 16, ..., 128
+                val_stat_seq_udplen = aligned_vallen + 42
+                val_stat_seq_iplen = aligned_vallen + 62
+                val_seq_inswitch_stat_clone_udplen = aligned_vallen + 66
+                val_seq_inswitch_stat_clone_iplen = aligned_vallen + 86
+                val_seq_udplen = aligned_vallen + 38
+                val_seq_iplen = aligned_vallen + 58
+                val_seq_stat_udplen = aligned_vallen + 42
+                val_seq_stat_iplen = aligned_vallen + 62
+            
+                val_seq_inswitch_stat_udplen = aligned_vallen + 62 
+                val_seq_inswitch_stat_iplen = aligned_vallen + 82         
+                # 32*3/8 backup_hdr
+                val_seq_inswitch_stat_backup_udplen = aligned_vallen + 62 + 12
+                val_seq_inswitch_stat_backup_iplen = aligned_vallen + 82 + 12
 
-                                                        # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector
-                                                        # self.controller.table_add('eg_port_forward_tbl','forward_cache_pop_inswitch_ack',matchspec0)
-                                                        # NOTE: default action is NoAction	 -> forward the packet to sid set by clone_e2e
-                                                        pass
-                                                    # is_lastclone_for_pktloss should be 0 for PUTREQ_INSWITCH
-                                                    # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size = 512*client_physical_num=1024 < 512*8 = 4096
-                                                    if (
-                                                        is_lastclone_for_pktloss == 0
-                                                        and tmp_client_sid != 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(PUTREQ_INSWITCH),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        if is_cached == 0:
-                                                            if snapshot_flag == 1:
-                                                                if is_hot == 1:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_POP_SEQ_CASE3 to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putreq_pop_seq_case3",
-                                                                        matchspec0,
-                                                                    )
-                                                                elif is_hot == 0:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ_CASE3 to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putreq_seq_case3",
-                                                                        matchspec0,
-                                                                    )
-                                                            elif snapshot_flag == 0:
-                                                                if is_hot == 1:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_POP_SEQ to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putreq_pop_seq",
-                                                                        matchspec0,
-                                                                    )
-                                                                elif is_hot == 0:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putreq_seq",
-                                                                        matchspec0,
-                                                                    )
-                                                        elif is_cached == 1:
-                                                            if validvalue == 0:
-                                                                if snapshot_flag == 1:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ_CASE3 to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putreq_seq_case3",
-                                                                        matchspec0,
-                                                                    )
-                                                                elif snapshot_flag == 0:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putreq_seq",
-                                                                        matchspec0,
-                                                                    )
-                                                            elif validvalue == 3:
-                                                                if snapshot_flag == 1:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ_CASE3_BEINGEVICTED to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putreq_seq_case3_beingevicted",
-                                                                        matchspec0,
-                                                                    )
-                                                                elif snapshot_flag == 0:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ_BEINGEVICTED to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putreq_seq_beingevicted",
-                                                                        matchspec0,
-                                                                    )
-                                                            elif validvalue == 1:
-                                                                if (
-                                                                    snapshot_flag == 1
-                                                                    and is_case1 == 0
-                                                                ):
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                                    if (
-                                                                        is_deleted == 0
-                                                                    ):  # is_deleted=0 -> stat=1
-                                                                        actnspec0 = [
-                                                                            hex(
-                                                                                self.reflector_sid
-                                                                            ),
-                                                                            hex(1),
-                                                                            hex(
-                                                                                reflector_dp2cpserver_port
-                                                                            ),
-                                                                        ]
-                                                                    elif (
-                                                                        is_deleted == 1
-                                                                    ):  # is_deleted=1 -> stat=0
-                                                                        actnspec0 = [
-                                                                            hex(
-                                                                                self.reflector_sid
-                                                                            ),
-                                                                            hex(0),
-                                                                            hex(
-                                                                                reflector_dp2cpserver_port
-                                                                            ),
-                                                                        ]
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres",
-                                                                        matchspec0,
-                                                                        actnspec0,
-                                                                    )
-                                                                else:
-                                                                    # Update PUTREQ_INSWITCH as PUTRES_SEQ to client by mirroring
-                                                                    actnspec0 = [
-                                                                        hex(
-                                                                            tmp_client_sid
-                                                                        ),
-                                                                        hex(
-                                                                            server_worker_port_start
-                                                                        ),
-                                                                    ]
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_putreq_inswitch_to_putres_seq_by_mirroring",
-                                                                        matchspec0,
-                                                                        actnspec0,
-                                                                    )
-                                                    # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for PUTREQ_SEQ_INSWITCH_CASE1
-                                                    # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size = 4*client_physical_num=8 < 4*8=32
-                                                    if (
-                                                        is_cached == 1
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and snapshot_flag == 1
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(
-                                                                PUTREQ_SEQ_INSWITCH_CASE1
-                                                            ),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        if (
-                                                            is_lastclone_for_pktloss
-                                                            == 0
-                                                        ):
-                                                            # Forward PUTREQ_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
-                                                            actnspec0 = [
-                                                                hex(self.reflector_sid)
-                                                            ]
-                                                            self.controller.table_add(
-                                                                "eg_port_forward_tbl",
-                                                                "forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres",
-                                                                matchspec0,
-                                                                actnspec0,
-                                                            )
-                                                        elif (
-                                                            is_lastclone_for_pktloss
-                                                            == 1
-                                                        ):
-                                                            # Update PUTREQ_SEQ_INSWITCH_CASE1 as PUTRES_SEQ to client by mirroring
-                                                            actnspec0 = [
-                                                                hex(tmp_client_sid),
-                                                                hex(
-                                                                    server_worker_port_start
-                                                                ),
-                                                            ]
-                                                            self.controller.table_add(
-                                                                "eg_port_forward_tbl",
-                                                                "update_putreq_seq_inswitch_case1_to_putres_seq_by_mirroring",
-                                                                matchspec0,
-                                                                actnspec0,
-                                                            )
-                                                    # is_hot (cm_predicate=1), is_lastclone_for_pktloss should be 0 for DELREQ_INSWITCH
-                                                    # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size = 256*client_physical_num=512 < 256*8=2048
-                                                    if (
-                                                        is_hot == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and tmp_client_sid != 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(DELREQ_INSWITCH),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        if is_cached == 0:
-                                                            if snapshot_flag == 1:
-                                                                # Update DELREQ_INSWITCH as DELREQ_SEQ_CASE3 to server
-                                                                self.controller.table_add(
-                                                                    "eg_port_forward_tbl",
-                                                                    "update_delreq_inswitch_to_delreq_seq_case3",
-                                                                    matchspec0,
-                                                                )
-                                                            elif snapshot_flag == 0:
-                                                                # Update DELREQ_INSWITCH as DELREQ_SEQ to server
-                                                                self.controller.table_add(
-                                                                    "eg_port_forward_tbl",
-                                                                    "update_delreq_inswitch_to_delreq_seq",
-                                                                    matchspec0,
-                                                                )
-                                                        elif is_cached == 1:
-                                                            if validvalue == 0:
-                                                                if snapshot_flag == 1:
-                                                                    # Update DELREQ_INSWITCH as DELREQ_SEQ_CASE3 to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_delreq_inswitch_to_delreq_seq_case3",
-                                                                        matchspec0,
-                                                                    )
-                                                                elif snapshot_flag == 0:
-                                                                    # Update DELREQ_INSWITCH as DELREQ_SEQ to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_delreq_inswitch_to_delreq_seq",
-                                                                        matchspec0,
-                                                                    )
-                                                            elif validvalue == 3:
-                                                                if snapshot_flag == 1:
-                                                                    # Update DELREQ_INSWITCH as DELREQ_SEQ_CASE3_BEINGEVICTED to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_delreq_inswitch_to_delreq_seq_case3_beingevicted",
-                                                                        matchspec0,
-                                                                    )
-                                                                elif snapshot_flag == 0:
-                                                                    # Update DELREQ_INSWITCH as DELREQ_SEQ_BEINGEVICTED to server
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_delreq_inswitch_to_delreq_seq_beingevicted",
-                                                                        matchspec0,
-                                                                    )
-                                                            elif validvalue == 1:
-                                                                if (
-                                                                    snapshot_flag == 1
-                                                                    and is_case1 == 0
-                                                                ):
-                                                                    # Update DELREQ_INSWITCH as DELREQ_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                                    if (
-                                                                        is_deleted == 0
-                                                                    ):  # is_deleted=0 -> stat=1
-                                                                        actnspec0 = [
-                                                                            hex(
-                                                                                self.reflector_sid
-                                                                            ),
-                                                                            hex(1),
-                                                                            hex(
-                                                                                reflector_dp2cpserver_port
-                                                                            ),
-                                                                        ]
-                                                                    elif (
-                                                                        is_deleted == 1
-                                                                    ):  # is_deleted=1 -> stat=0
-                                                                        actnspec0 = [
-                                                                            hex(
-                                                                                self.reflector_sid
-                                                                            ),
-                                                                            hex(0),
-                                                                            hex(
-                                                                                reflector_dp2cpserver_port
-                                                                            ),
-                                                                        ]
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres",
-                                                                        matchspec0,
-                                                                        actnspec0,
-                                                                    )
-                                                                else:
-                                                                    # Update DELREQ_INSWITCH as DELRES_SEQ to client by mirroring
-                                                                    actnspec0 = [
-                                                                        hex(
-                                                                            tmp_client_sid
-                                                                        ),
-                                                                        hex(
-                                                                            server_worker_port_start
-                                                                        ),
-                                                                    ]
-                                                                    self.controller.table_add(
-                                                                        "eg_port_forward_tbl",
-                                                                        "update_delreq_inswitch_to_delres_seq_by_mirroring",
-                                                                        matchspec0,
-                                                                        actnspec0,
-                                                                    )
-                                                    # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for DELREQ_SEQ_INSWITCH_CASE1
-                                                    # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size = 16*client_physical_num=32 < 16*8=128
-                                                    if (
-                                                        is_cached == 1
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and snapshot_flag == 1
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(
-                                                                DELREQ_SEQ_INSWITCH_CASE1
-                                                            ),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        if (
-                                                            is_lastclone_for_pktloss
-                                                            == 0
-                                                        ):
-                                                            # Forward DELREQ_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
-                                                            actnspec0 = [
-                                                                hex(self.reflector_sid)
-                                                            ]
-                                                            self.controller.table_add(
-                                                                "eg_port_forward_tbl",
-                                                                "forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres",
-                                                                matchspec0,
-                                                                actnspec0,
-                                                            )
-                                                        elif (
-                                                            is_lastclone_for_pktloss
-                                                            == 1
-                                                        ):
-                                                            # Update DELREQ_SEQ_INSWITCHCASE1 as DELRES_SEQ to client by mirroring
-                                                            actnspec0 = [
-                                                                hex(tmp_client_sid),
-                                                                hex(
-                                                                    server_worker_port_start
-                                                                ),
-                                                            ]
-                                                            self.controller.table_add(
-                                                                "eg_port_forward_tbl",
-                                                                "update_delreq_seq_inswitch_case1_to_delres_seq_by_mirroring",
-                                                                matchspec0,
-                                                                actnspec0,
-                                                            )
-                                                    # is_cached=0 (no inswitch_hdr after entering egress pipeline), is_hot, validvalue,  is_latest, is_deleted, client_sid, is_lastclone_for_pktloss, snapshot_flag, is_case1 must be 0 for SCANREQ_SPLIT
-                                                    # size = 2*server_physical_num=4 < 2*8=16
-                                                    if (
-                                                        is_cached == 0
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and tmp_server_sid != 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(SCANREQ_SPLIT),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        if is_last_scansplit == 1:
-                                                            self.controller.table_add(
-                                                                "eg_port_forward_tbl",
-                                                                "forward_scanreq_split",
-                                                                matchspec0,
-                                                            )
-                                                        elif is_last_scansplit == 0:
-                                                            actnspec0 = [
-                                                                hex(tmp_server_sid)
-                                                            ]
-                                                            self.controller.table_add(
-                                                                "eg_port_forward_tbl",
-                                                                "forward_scanreq_split_and_clone",
-                                                                matchspec0,
-                                                                actnspec0,
-                                                            )
-                                                    # is_cached=1 (key must be cached in cache_lookup_tbl for CACHE_EVICT_LOADFREQ_INSWITCH), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADFREQ_INSWITCH
-                                                    # NOTE: is_cached must be 1 (CACHE_EVCIT must match an entry in cache_lookup_tbl)
-                                                    # size = 1
-                                                    if (
-                                                        is_cached == 1
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(
-                                                                CACHE_EVICT_LOADFREQ_INSWITCH
-                                                            ),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # Update CACHE_EVICT_LOADFREQ_INSWITCH as CACHE_EVICT_LOADFREQ_INSWITCH_ACK to reflector (w/ clone)
-                                                        actnspec0 = [
-                                                            hex(self.reflector_sid),
-                                                            hex(
-                                                                reflector_dp2cpserver_port
-                                                            ),
-                                                        ]
-                                                        self.controller.table_add(
-                                                            "eg_port_forward_tbl",
-                                                            "update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone",
-                                                            matchspec0,
-                                                            actnspec0,
-                                                        )
-                                                    # is_cached=0 (no inswitch_hdr after clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADFREQ_INSWITCH_ACK
-                                                    # NOTE: is_cached must be 1 (CACHE_EVCIT must match an entry in cache_lookup_tbl)
-                                                    # size = 0
-                                                    if (
-                                                        is_cached == 0
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(
-                                                                CACHE_EVICT_LOADFREQ_INSWITCH_ACK
-                                                            ),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # Forward CACHE_EVICT_LOADFREQ_INSWITCH_ACK (by clone_e2e) to reflector
-                                                        # self.controller.table_add('eg_port_forward_tbl','forward_cache_evict_loadfreq_inswitch_ack',matchspec0)
-                                                        # NOTE: default action is NoAction	 -> forward the packet to sid set by clone_e2e
-                                                        pass
-                                                    # is_cached=1 (key must be cached in cache_lookup_tbl for CACHE_EVICT_LOADDATA_INSWITCH), is_hot (cm_predicate=1), validvalue, is_latest, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADDATA_INSWITCH
-                                                    # NOTE: is_cached must be 1 (CACHE_EVCIT must match an entry in cache_lookup_tbl)
-                                                    # size = 2
-                                                    if (
-                                                        is_cached == 1
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(
-                                                                CACHE_EVICT_LOADDATA_INSWITCH
-                                                            ),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # Update CACHE_EVICT_LOADDATA_INSWITCH as CACHE_EVICT_LOADDATA_INSWITCH_ACK to reflector
-                                                        actnspec0 = [
-                                                            hex(self.reflector_sid),
-                                                            hex(
-                                                                reflector_dp2cpserver_port
-                                                            ),
-                                                            hex(tmpstat),
-                                                        ]
-                                                        self.controller.table_add(
-                                                            "eg_port_forward_tbl",
-                                                            "update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone",
-                                                            matchspec0,
-                                                            actnspec0,
-                                                        )
-                                                    # is_cached=0 (no inswitch_hdr after clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADDATA_INSWITCH_ACK
-                                                    # size = 0
-                                                    if (
-                                                        is_cached == 0
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(
-                                                                CACHE_EVICT_LOADDATA_INSWITCH_ACK
-                                                            ),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # Forward CACHE_EVICT_LOADDATA_INSWITCH_ACK (by clone_e2e) to reflector
-                                                        # self.controller.table_add('eg_port_forward_tbl','forward_cache_evict_loaddata_inswitch_ack',matchspec0)
-                                                        # NOTE: default action is NoAction	 -> forward the packet to sid set by clone_e2e
-                                                        pass
-                                                    # is_hot (cm_predicate=1), validvalue, is_latest, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for LOADSNAPSHOTDATA_INSWITCH
-                                                    # NOTE: is_cached can be 0 or 1 (key may be / may not be evicted after snapshot timepoint)
-                                                    # size = 4
-                                                    if (
-                                                        is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(
-                                                                LOADSNAPSHOTDATA_INSWITCH
-                                                            ),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # Update LOADSNAPSHOTDATA_INSWITCH as LOADSNAPSHOTDATA_INSWITCH_ACK to reflector
-                                                        actnspec0 = [
-                                                            hex(self.reflector_sid),
-                                                            hex(
-                                                                reflector_dp2cpserver_port
-                                                            ),
-                                                            hex(tmpstat),
-                                                        ]
-                                                        self.controller.table_add(
-                                                            "eg_port_forward_tbl",
-                                                            "update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone",
-                                                            matchspec0,
-                                                            actnspec0,
-                                                        )
-                                                    # is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for LOADSNAPSHOTDATA_INSWITCH_ACK
-                                                    # NOTE: is_cached can be 0 or 1 (inswitch_hdr inherited from LOADSNAPSHOTDATA_INSWITCH)
-                                                    # size = 0
-                                                    if (
-                                                        is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(
-                                                                LOADSNAPSHOTDATA_INSWITCH_ACK
-                                                            ),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # Forward LOADSNAPSHOTDATA_INSWITCH_ACK (by clone_e2e) to reflector
-                                                        # self.controller.table_add('eg_port_forward_tbl','forward_loadsnapshotdata_inswitch_ack',matchspec0)
-                                                        # NOTE: default action is NoAction	 -> forward the packet to sid set by clone_e2e
-                                                        pass
-                                                    # is_hot (cm_predicate=1), is_latest, is_deleted, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for SETVALID_INSWITCH
-                                                    # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for SETVALID_INSWITCH)
-                                                    # NOTE: validvalue can be 0/1/3 for SETVALID_INSWITCH
-                                                    # size = 8
-                                                    if (
-                                                        is_hot == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(SETVALID_INSWITCH),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # Update SETVALID_INSWITCH as SETVALID_INSWITCH_ACK to reflector
-                                                        actnspec0 = [
-                                                            hex(self.reflector_sid),
-                                                            hex(
-                                                                reflector_dp2cpserver_port
-                                                            ),
-                                                        ]
-                                                        self.controller.table_add(
-                                                            "eg_port_forward_tbl",
-                                                            "update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone",
-                                                            matchspec0,
-                                                            actnspec0,
-                                                        )
-                                                    # is_cached=0 (no inswtich_hdr), is_hot (cm_predicate=1), validvalue (no validvalue_hdr), is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for SETVALID_INSWITCH_ACK
-                                                    # NOTE: is_cached must be 0 (SETVALID_INSWITCH_ACK does not have inswitch_hdr)
-                                                    # NOTE: validvalue must be 0 (no validvalue_hdr and not touch validvalue_reg)
-                                                    # size = 0
-                                                    if (
-                                                        is_cached == 0
-                                                        and is_hot == 0
-                                                        and validvalue == 0
-                                                        and is_latest == 0
-                                                        and is_deleted == 0
-                                                        and tmp_client_sid == 0
-                                                        and is_lastclone_for_pktloss
-                                                        == 0
-                                                        and snapshot_flag == 0
-                                                        and is_case1 == 0
-                                                        and is_last_scansplit == 0
-                                                        and tmp_server_sid == 0
-                                                    ):
-                                                        matchspec0 = [
-                                                            hex(SETVALID_INSWITCH_ACK),
-                                                            hex(is_cached),
-                                                            hex(is_hot),
-                                                            hex(validvalue),
-                                                            hex(is_latest),
-                                                            hex(is_deleted),
-                                                            # inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            hex(tmp_client_sid),
-                                                            hex(
-                                                                is_lastclone_for_pktloss
-                                                            ),
-                                                            hex(snapshot_flag),
-                                                            hex(is_case1),
-                                                            hex(is_last_scansplit),
-                                                            hex(tmp_server_sid),
-                                                        ]
-                                                        # Forward SETVALID_INSWITCH_ACK (by clone_e2e) to reflector
-                                                        # self.controller.table_add('eg_port_forward_tbl','forward_setvalid_inswitch_ack',matchspec0)
-                                                        # NOTE: default action is NoAction	 -> forward the packet to sid set by clone_e2e
-                                                        pass
+                for tmpoptype in [
+                    GETRES_SEQ,
+                    GETREQ_BEINGEVICTED_RECORD,
+                    GETREQ_LARGEVALUEBLOCK_RECORD,
+                ]:
+                    matchspec0 = [
+                        hex(tmpoptype),
+                        "" + hex(vallen_start) + "->" + hex(vallen_end),
+                    ]  # [vallen_start, vallen_end]
+                    actnspec0 = [hex(val_stat_seq_udplen), hex(val_stat_seq_iplen)]
+                    self.controller.table_add(
+                        "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                    )  # 0 is priority (range may be overlapping]
+                for tmpoptype in [
+                    GETRES_LATEST_SEQ_INSWITCH_CASE1,
+                    GETRES_DELETED_SEQ_INSWITCH_CASE1,
+                    PUTREQ_SEQ_INSWITCH_CASE1,
+                    DELREQ_SEQ_INSWITCH_CASE1,
+                ]:
+                    matchspec0 = [
+                        hex(tmpoptype),
+                        "" + hex(vallen_start) + "->" + hex(vallen_end),
+                    ]  # [vallen_start, vallen_end]
+                    actnspec0 = [
+                        hex(val_seq_inswitch_stat_clone_udplen),
+                        hex(val_seq_inswitch_stat_clone_iplen),
+                    ]
+                    self.controller.table_add(
+                        "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                    )  # 0 is priority (range may be overlapping]
+                for tmpoptype in [
+                    PUTREQ_SEQ,
+                    PUTREQ_POP_SEQ,
+                    PUTREQ_SEQ_CASE3,
+                    PUTREQ_POP_SEQ_CASE3,
+                    PUTREQ_SEQ_BEINGEVICTED,
+                    PUTREQ_SEQ_CASE3_BEINGEVICTED,
+                ]:
+                    matchspec0 = [
+                        hex(tmpoptype),
+                        "" + hex(vallen_start) + "->" + hex(vallen_end),
+                    ]  # [vallen_start, vallen_end]
+                    actnspec0 = [hex(val_seq_udplen), hex(val_seq_iplen)]
+                    self.controller.table_add(
+                        "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                    )  # 0 is priority (range may be overlapping]
+                matchspec0 = [
+                    hex(CACHE_EVICT_LOADDATA_INSWITCH_ACK),
+                    "" + hex(vallen_start) + "->" + hex(vallen_end),
+                ]  # [vallen_start, vallen_end]
+                actnspec0 = [hex(val_seq_stat_udplen), hex(val_seq_stat_iplen)]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping]
+                matchspec0 = [
+                    hex(LOADSNAPSHOTDATA_INSWITCH_ACK),
+                    "" + hex(vallen_start) + "->" + hex(vallen_end),
+                ]  # [vallen_start, vallen_end]
+                actnspec0 = [
+                    hex(val_seq_inswitch_stat_udplen),
+                    hex(val_seq_inswitch_stat_iplen),
+                ]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping]
+                matchspec0 = [
+                    hex(BACKUP),
+                    "" + hex(vallen_start) + "->" + hex(vallen_end),
+                ]  # [vallen_start, vallen_end]
+                actnspec0 = [
+                    hex(val_seq_inswitch_stat_backup_udplen),
+                    hex(val_seq_inswitch_stat_backup_iplen),
+                ]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )
 
+            onlyop_udplen = 26
+            onlyop_iplen = 46
+            seq_stat_udplen = 40
+            seq_stat_iplen = 60
+            seq_udplen = 36
+            seq_iplen = 56
+            scanreqsplit_udplen = 49
+            scanreqsplit_iplen = 69
+            frequency_udplen = 30
+            frequency_iplen = 50
+            matchspec0 = [
+                hex(CACHE_POP_INSWITCH_ACK),
+                "" + hex(0) + "->" + hex(switch_max_vallen),
+            ]  # [0, 128]
+            actnspec0 = [hex(onlyop_udplen), hex(onlyop_iplen)]
+            self.controller.table_add(
+                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+            )  # 0 is priority (range may be overlapping]
+            for tmpoptype in [PUTRES_SEQ, DELRES_SEQ]:
+                matchspec0 = [
+                    hex(tmpoptype),
+                    "" + hex(0) + "->" + hex(switch_max_vallen),
+                ]  # [0, 128]
+                actnspec0 = [hex(seq_stat_udplen), hex(seq_stat_iplen)]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping]
+            # , GETREQ_LARGEVALUEBLOCK_SEQ
+            for tmpoptype in [
+                DELREQ_SEQ,
+                DELREQ_SEQ_CASE3,
+                DELREQ_SEQ_BEINGEVICTED,
+                DELREQ_SEQ_CASE3_BEINGEVICTED,
+            ]:
+                matchspec0 = [
+                    hex(tmpoptype),
+                    "" + hex(0) + "->" + hex(switch_max_vallen),
+                ]  # [0, 128]
+                actnspec0 = [hex(seq_udplen), hex(seq_iplen)]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping]
+            matchspec0 = [
+                hex(SCANREQ_SPLIT),
+                "" + hex(0) + "->" + hex(switch_max_vallen),
+            ]  # [0, 128]
+            actnspec0 = [hex(scanreqsplit_udplen), hex(scanreqsplit_iplen)]
+            self.controller.table_add(
+                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+            )  # 0 is priority (range may be overlapping]
+            matchspec0 = [
+                hex(CACHE_EVICT_LOADFREQ_INSWITCH_ACK),
+                "" + hex(0) + "->" + hex(switch_max_vallen),
+            ]  # [0, 128]
+            actnspec0 = [hex(frequency_udplen), hex(frequency_iplen)]
+            self.controller.table_add(
+                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+            )  # 0 is priority (range may be overlapping]
+            matchspec0 = [
+                hex(SETVALID_INSWITCH_ACK),
+                "" + hex(0) + "->" + hex(switch_max_vallen),
+            ]  # [0, 128]
+            actnspec0 = [hex(onlyop_udplen), hex(onlyop_iplen)]
+            self.controller.table_add(
+                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+            )  # 0 is priority (range may be overlapping]
+            # For large value
+            shadowtype_seq_udp_delta = 10
+            shadowtype_seq_ip_delta = 10
+            for tmpoptype in [
+                PUTREQ_LARGEVALUE_SEQ,
+                PUTREQ_LARGEVALUE_SEQ_CASE3,
+                PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED,
+                PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED,
+            ]:
+                matchspec0 = [
+                    hex(tmpoptype),
+                    "" + hex(0) + "->" + hex(65535),
+                ]  # [0, 65535] (NOTE: vallen MUST = 0 for PUTREQ_LARGEVALUE_INSWITCH]
+                actnspec0 = [hex(shadowtype_seq_udp_delta), hex(shadowtype_seq_ip_delta)]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "add_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping)
 
 for i in range(int(server_physical_num / 2)):
     print("Configuring RACK {}".format(i))

@@ -10,23 +10,24 @@ control farreachEgress(inout headers hdr,
     #include "regs/deleted.p4"
     #include "regs/seq.p4"
     #include "regs/val.p4"
-    #include "regs/case1.p4"
+    // #include "regs/case1.p4"
 
     //#ifdef ENABLE_LARGEVALUEBLOCK
     #include "regs/largevalueseq.p4"
+    #include "regs/recover.p4"
     #include "debug.p4"
     //#endif
      /* Egress Processing */
 
     apply {
-        debug_tbl.apply();
+        
         // Stage 0
         //eg_copy_udplen_for_checksum_tbl.apply();
         access_cm1_tbl.apply();
         access_cm2_tbl.apply();
         access_cm3_tbl.apply();
         access_cm4_tbl.apply();
-
+        // recover_tbl.apply();
         // Stage 1
         is_hot_tbl.apply();
         access_cache_frequency_tbl.apply();
@@ -47,7 +48,7 @@ control farreachEgress(inout headers hdr,
         // LOADDATA_INSWITCH always read it, while GETREQ key = it if cached=1 and valid=3
         // Only if cached=1, valid=3, and serverstatus=0, GETREQ will try to trigger read blocking
         // TODO: serverstatus_tbl.apply();
-
+        debug_tbl.apply();
         // Stage 3
     //#ifdef ENABLE_LARGEVALUEBLOCK
         if (meta.largevalueseq != 0) {
@@ -57,8 +58,8 @@ control farreachEgress(inout headers hdr,
         access_deleted_tbl.apply();
         update_vallen_tbl.apply();
         access_savedseq_tbl.apply();
-        access_case1_tbl.apply();
-
+        // access_case1_tbl.apply();
+        recover_tbl.apply();
         // Stage 4-6
         // NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
         update_vallo1_tbl.apply();
@@ -115,13 +116,14 @@ control farreachEgress(inout headers hdr,
         update_valhi15_tbl.apply();
         update_vallo16_tbl.apply();
         update_valhi16_tbl.apply();
-
+        debugend_tbl.apply();
         lastclone_lastscansplit_tbl.apply(); // including is_last_scansplit
         another_eg_port_forward_tbl.apply(); // used to reduce VLIW usage of eg_port_forward_tbl
         eg_port_forward_tbl.apply(); // including scan forwarding
         update_ipmac_srcport_tbl.apply(); // Update ip, mac, and srcport for RES to client and notification to switchos
         update_pktlen_tbl.apply(); // Update udl_hdr.en for pkt with variable-length value
         add_and_remove_value_header_tbl.apply(); // Add or remove vallen and val according to optype and vallen
-        drop_tbl.apply(); // drop GETRES_LATEST_SEQ_INSWITCH and GETRES_DELETED_SEQ_INSWITCH
+        forward_tbl.apply(); // drop GETRES_LATEST_SEQ_INSWITCH and GETRES_DELETED_SEQ_INSWITCH
+
     }              
 }

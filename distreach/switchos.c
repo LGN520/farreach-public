@@ -902,7 +902,7 @@ void* run_switchos_popworker(void* param) {
                     setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, tmp_cache_pop_ptr->key(), switchos_freeidx, 1);
                     pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
                     udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
-
+                    printf("[debug] set valid = 1\n");fflush(stdout);
                     bool is_timeout = false;
                     is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
                     if (unlikely(is_timeout)) {

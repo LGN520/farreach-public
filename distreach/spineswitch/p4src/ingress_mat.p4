@@ -20,30 +20,30 @@ table l2l3_forward_tbl {
 	size = 16;
 }
 
-action set_need_recirculate(bit<16> eport) {
-	// meta.need_recirculate = 1;
-	// meta.recirport = eport;
-	// ???
-	meta.need_recirculate = 0;
-}
+// action set_need_recirculate(bit<16> eport) {
+// 	// meta.need_recirculate = 1;
+// 	// meta.recirport = eport;
+// 	// ???
+// 	meta.need_recirculate = 0;
+// }
 
-action reset_need_recirculate() {
-	meta.need_recirculate = 0;
-}
+// action reset_need_recirculate() {
+// 	meta.need_recirculate = 0;
+// }
 
-@pragma stage 0
-table need_recirculate_tbl {
-	key = {
-		hdr.op_hdr.optype: exact;
-		standard_metadata.ingress_port: exact;
-	}
-	actions = {
-		set_need_recirculate;
-		reset_need_recirculate;
-	}
-	default_action = reset_need_recirculate();
-	size = 8;
-}
+// @pragma stage 0
+// table need_recirculate_tbl {
+// 	key = {
+// 		hdr.op_hdr.optype: exact;
+// 		standard_metadata.ingress_port: exact;
+// 	}
+// 	actions = {
+// 		set_need_recirculate;
+// 		reset_need_recirculate;
+// 	}
+// 	default_action = reset_need_recirculate();
+// 	size = 8;
+// }
 
 action set_hot_threshold(bit<16> hot_threshold) {
 	hdr.inswitch_hdr.hot_threshold = hot_threshold;
@@ -61,25 +61,25 @@ table set_hot_threshold_tbl {
 // Stage 1 (need_recirculate = 1)
 
 // NOTE: as our Tofino does not support cross-ingress-pipeline recirculation, we use hardware link to simluate it
-action recirculate_pkt() {
-	// standard_metadata.egress_spec = (bit<9>) meta.recirport;
-	// bypass_egress();
-	// ???
-}
+// action recirculate_pkt() {
+// 	// standard_metadata.egress_spec = (bit<9>) meta.recirport;
+// 	// bypass_egress();
+// 	// ???
+// }
 
-@pragma stage 1
-table recirculate_tbl {
-	key = {
-		hdr.op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions = {
-		recirculate_pkt;
-		NoAction;
-	}
-	default_action = NoAction();
-	size = 16;
-}
+// @pragma stage 1
+// table recirculate_tbl {
+// 	key = {
+// 		hdr.op_hdr.optype: exact;
+// 		meta.need_recirculate: exact;
+// 	}
+// 	actions = {
+// 		recirculate_pkt;
+// 		NoAction;
+// 	}
+// 	default_action = NoAction();
+// 	size = 16;
+// }
 
 // Stage 1 (need_recirculate = 0)
 
@@ -184,34 +184,6 @@ table hash_for_seq_tbl {
 	}
 	default_action = NoAction();
 	size = 4;
-}
-
-// Stage 4
-
-action set_snapshot_flag(bit<32> snapshotid) {
-	hdr.inswitch_hdr.snapshot_flag = 1;
-	//seq_hdr.snapshot_token = snapshotid;
-	hdr.inswitch_hdr.snapshot_token = snapshotid;
-}
-
-action reset_snapshot_flag() {
-	hdr.inswitch_hdr.snapshot_flag = 0;
-	//seq_hdr.snapshot_token = 0;
-	hdr.inswitch_hdr.snapshot_token = 0;
-}
-
-@pragma stage 4
-table snapshot_flag_tbl {
-	key = {
-		hdr.op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions = {
-		set_snapshot_flag;
-		reset_snapshot_flag;
-	}
-	default_action = reset_snapshot_flag();
-	size = 8;
 }
 
 // Stage 5
@@ -355,21 +327,22 @@ action update_cache_pop_inswitch_forward_to_cache_pop_inswitch(){
 	standard_metadata.egress_spec = standard_metadata.ingress_port;
 }
 action update_setvalid_inswitch_to_setvalid_inswitch_forward(){
-	hdr.op_hdr.optype = SETVALID_INSWITCH_FORWARD;
+	hdr.op_hdr.optype = SETVALID_INSWITCH_FORWARD;hdr.validvalue_hdr.setValid();
 }
 action update_setvalid_inswitch_forward_to_setvalid_inswitch(){
 	hdr.op_hdr.optype = SETVALID_INSWITCH;
-	standard_metadata.egress_spec = standard_metadata.ingress_port;
+	standard_metadata.egress_spec = standard_metadata.ingress_port;hdr.validvalue_hdr.setValid();
 }
 action update_cache_evict_inswitch_to_cache_evict_inswitch_forward(){
 	hdr.op_hdr.optype = CACHE_EVICT_FORWARD;
+	
 }
 action update_cache_evict_inswitch_forward_to_cache_evict_inswitch(){
 	hdr.op_hdr.optype = CACHE_EVICT;
 	standard_metadata.egress_spec = standard_metadata.ingress_port;
 }
 @pragma stage 6
-table cache_pop_ig_port_forward_tbl {
+table special_ig_port_forward_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
 		standard_metadata.ingress_port:exact;

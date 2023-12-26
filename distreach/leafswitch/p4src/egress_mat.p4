@@ -353,14 +353,10 @@ table another_eg_port_forward_tbl {
 		update_getreq_inswitch_to_getres_seq_by_mirroring;
 		update_getres_latest_seq_to_getres_seq; // GETRES_LATEST_SEQ must be cloned from ingress to egress
 		update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss; // drop original packet of GETRES_LATEST_SEQ -> clone for first GETRES_LATEST_SEQ_INSWITCH_CASE1
-		//drop_getres_latest_seq_inswitch; // drop original packet of GETRES_LATEST_SEQ
 		forward_getres_latest_seq_inswitch_case1_clone_for_pktloss; // not last clone of GETRES_LATEST_SEQ_INSWITCH_CASE1
-		//forward_getres_latest_seq_inswitch_case1; // last clone of GETRES_LATEST_SEQ_INSWITCH_CASE1
 		update_getres_deleted_seq_to_getres_seq; // GETRES_DELETED_SEQ must be cloned from ingress to egress
 		update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss; // drop original packet of GETRES_DELETED_SEQ -> clone for first GETRES_DELETED_SEQ_INSWITCH_CASE1
-		//drop_getres_deleted_seq_inswitch; // original packet of GETRES_DELETED_SEQ
 		forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss; // not last clone of GETRES_DELETED_SEQ_INSWITCH_CASE1
-		//forward_getres_deleted_seq_inswitch_case1; // last clone of GETRES_DELETED_SEQ_INSWITCH_CASE1
 		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq;
 		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_case3;
 		update_putreq_largevalue_inswitch_to_putreq_largevalue_seq_beingevicted;
@@ -1203,23 +1199,27 @@ table add_and_remove_value_header_tbl {
 	size = 512;
 }
 
-action drop_getres_latest_seq_inswitch() {
+action forward_getres_latest_seq_inswitch() {
 	// NOTE: MATs after drop will not be accessed
-	mark_to_drop(standard_metadata);
+	hdr.op_hdr.optype=GETRES_LATEST_SEQ;	hdr.shadowtype_hdr.shadowtype=GETRES_LATEST_SEQ;
+	hdr.inswitch_hdr.setInvalid();
+	hdr.validvalue_hdr.setInvalid();
 }
 
-action drop_getres_deleted_seq_inswitch() {
-	mark_to_drop(standard_metadata);
+action forward_getres_deleted_seq_inswitch() {
+	hdr.op_hdr.optype=GETRES_DELETED_SEQ;	hdr.shadowtype_hdr.shadowtype=GETRES_DELETED_SEQ;
+	hdr.inswitch_hdr.setInvalid();
+	hdr.validvalue_hdr.setInvalid();
 }
 
 @pragma stage 11
-table drop_tbl {
+table forward_tbl {
 	key = {
 		hdr.op_hdr.optype: exact;
 	}
 	actions = {
-		drop_getres_latest_seq_inswitch;
-		drop_getres_deleted_seq_inswitch;
+		forward_getres_latest_seq_inswitch;
+		forward_getres_deleted_seq_inswitch;
 		NoAction;
 	}
 	default_action = NoAction();

@@ -25,7 +25,8 @@ table access_validvalue_tbl {
 		get_validvalue;
 		set_validvalue;
 		reset_meta_validvalue; // not touch validvalue_reg
+		NoAction;
 	}
 	default_action = reset_meta_validvalue();
-	size = 8;
+	size = 10;
 }

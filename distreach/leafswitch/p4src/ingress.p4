@@ -9,13 +9,13 @@ control farreachIngress (inout headers hdr,
         if (!hdr.op_hdr.isValid()) {
             l2l3_forward_tbl.apply(); // forward traditional packet
         }else {
-        need_recirculate_tbl.apply(); // set meta.need_recirculate
+        // need_recirculate_tbl.apply(); // set meta.need_recirculate
         set_hot_threshold_tbl.apply(); // set inswitch_hdr.hot_threshold
 
         /* if meta.need_recirculate == 1 */
 
         // Stage 1
-        recirculate_tbl.apply(); // recirculate for atomic snapshot (NOTE: recirculate will collide with modifying egress port)
+        // recirculate_tbl.apply(); // recirculate for atomic snapshot (NOTE: recirculate will collide with modifying egress port)
 
         /* else if meta.need_recirculate == 0 */
 
@@ -45,7 +45,7 @@ control farreachIngress (inout headers hdr,
 
         // Stage 4
         hash_for_cm34_tbl.apply(); // for CM (access inswitch_hdr.hashval_for_cm3/4)
-        snapshot_flag_tbl.apply(); // for snapshot (access inswitch_hdr.snapshot_flag)
+        // snapshot_flag_tbl.apply(); // for snapshot (access inswitch_hdr.snapshot_flag)
 
         // Stage 5
         //hash_for_cm4_tbl.apply(); // for CM (access inswitch_hdr.hashval_for_cm4)
@@ -54,7 +54,7 @@ control farreachIngress (inout headers hdr,
         // Stage 6
         sample_tbl.apply(); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
         ig_port_forward_tbl.apply(); // update op_hdr.optype
-        cache_pop_ig_port_forward_tbl.apply();
+        special_ig_port_forward_tbl.apply();
         ipv4_forward_tbl.apply(); // update egress_port for normal/speical response packets
 
         }

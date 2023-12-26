@@ -9,10 +9,11 @@ control farreachEgress(inout headers hdr,
     #include "regs/deleted.p4"
     #include "regs/seq.p4"
     #include "regs/val.p4"
-    #include "regs/case1.p4"
+    // #include "regs/case1.p4"
 
     //#ifdef ENABLE_LARGEVALUEBLOCK
     #include "regs/largevalueseq.p4"
+    #include "regs/recover.p4"
     #include "debug.p4"
     //#endif
      /* Egress Processing */
@@ -48,8 +49,8 @@ control farreachEgress(inout headers hdr,
         access_deleted_tbl.apply();
         update_vallen_tbl.apply();
         access_savedseq_tbl.apply();
-        access_case1_tbl.apply();
-
+        // access_case1_tbl.apply();
+        recover_tbl.apply();
         // Stage 4-6
         // NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
         update_vallo1_tbl.apply();
@@ -115,5 +116,6 @@ control farreachEgress(inout headers hdr,
         update_pktlen_tbl.apply(); // Update udl_hdr.en for pkt with variable-length value
         add_and_remove_value_header_tbl.apply(); // Add or remove vallen and val according to optype and vallen
         drop_tbl.apply(); // drop GETRES_LATEST_SEQ_INSWITCH and GETRES_DELETED_SEQ_INSWITCH
+        debugend_tbl.apply();
     }              
 }

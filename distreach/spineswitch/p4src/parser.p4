@@ -14,6 +14,7 @@
 // op_hdr + vallen&value + shadowtype + seq (0b0011): PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, NETCACHE_PUTREQ_SEQ_CACHED
 // op_hdr + vallen&value + shadowtype + seq + inswitch_hdr (0b0111): NONE
 // op_hdr + vallen&value + shadowtype + seq + inswitch_hdr + stat (0b1111) (XXX_CASE1 w/ clone_hdr): GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, LOADSNAPSHOTDATA_INSWITCH_ACK, CACHE_POP_INSWITC, NETCACHE_VALUEUPDATE_INSWITCHH
+// op_hdr + vallen&value + shadowtype + seq + inswitch_hdr + stat + backuphdr(0xf00f) (XXX_CASE1 w/ clone_hdr): BACKUP
 // op_hdr + vallen&value + shadowtype + seq + stat (0b1011): GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, NETCACHE_VALUEUPDATE
 // op_hdr + vallen&value + shadowtype + stat (0b1001): GETRES
 // op_hdr + vallen&value + shadowtype + inswitch (0b0101): PUTREQ_INSWITCH
@@ -364,14 +365,6 @@ parser farreachParser(packet_in packet,
 			PUTREQ_LARGEVALUE_SEQ_INSWITCH: parse_fraginfo;
 			8 &&& 0x08: parse_stat;
 			default: accept;
-			//default: parse_debug;
-			
-			/*GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_stat;
-			GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_stat;
-			PUTREQ_SEQ_INSWITCH_CASE1: parse_stat;
-			DELREQ_SEQ_INSWITCH_CASE1: parse_stat;
-			default: accept;
-			//default: parse_debug; // GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH, CACHE_POP_INSWITCH */
 		}
 	}
 
@@ -382,13 +375,17 @@ parser farreachParser(packet_in packet,
 			GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_clone;
 			PUTREQ_SEQ_INSWITCH_CASE1: parse_clone;
 			DELREQ_SEQ_INSWITCH_CASE1: parse_clone;
+			BACKUP: parse_backup;
 			default: accept; // CACHE_POP_INSWITCH
 			//default: parse_debug;
 		}
 		//return ingress;
 		////return parse_debug; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 	}
-
+	state parse_backup{
+		packet.extract(hdr.backup_hdr);
+		transition accept;		
+	}
 	state parse_clone {
 		packet.extract(hdr.clone_hdr);
 		transition accept;
@@ -445,5 +442,6 @@ control farreachDeparser(packet_out packet, in headers hdr) {
 		packet.emit(hdr.clone_hdr);
 		packet.emit(hdr.frequency_hdr);
 		packet.emit(hdr.validvalue_hdr);
+		packet.emit(hdr.backup_hdr);
     }
 }

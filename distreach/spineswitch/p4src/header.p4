@@ -113,7 +113,15 @@ header fraginfo_t {
     bit<16> max_fragnum;
 }
 
-
+header register_backup_t {
+    bit<32> cache_frequency;
+    bit<32> largevalueseq;
+    bit<16> vallen;
+    bit<1> is_deleted; // if the entry is deleted
+    bit<1> is_latest;
+    bit<8> validvalue;
+    bit<6> is_found;//if founded it 
+}
 /*header debug_t {
 
 		// 8-bit container
@@ -153,6 +161,7 @@ struct headers {
 	frequency_t frequency_hdr;
 	validvalue_t validvalue_hdr;
 	fraginfo_t fraginfo_hdr;
+    register_backup_t backup_hdr;
 }
 struct metadata {
     /* empty */

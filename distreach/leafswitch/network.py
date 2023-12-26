@@ -10,10 +10,12 @@ rack_physical_num = int(server_physical_num / 2)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 method = "netbufferv4"
 sw_path = subprocess.getstatusoutput("whereis simple_switch")[1].split(" ")[1]
-p4_path = current_dir+"/"+method + ".p4"
-json_path = current_dir+"/"+method + ".json"
-partition_json_path = current_dir+"/"+"../spineswitch/spineswitch.json"
+p4_path = current_dir + "/" + method + ".p4"
+json_path = current_dir + "/" + method + ".json"
+partition_json_path = current_dir + "/" + "../spineswitch/spineswitch.json"
 print(partition_json_path)
+
+
 def P4compile(p4_path, json_path):
     os.system("p4c-bm2-ss --p4v 16 " + p4_path + " -o  " + json_path)
 
@@ -22,7 +24,8 @@ host = []
 rackswitchs = []
 switchoses = []
 
-debug=True
+debug = True
+
 
 def create_network():
     net = Mininet(cleanup=True, autoStaticArp=True)
@@ -44,18 +47,18 @@ def create_network():
                 device_id=1 + i + 1,
             )
         )
-    # 0 1 2 3 4
-    client_s1 = net.addSwitch(
-        "spine_s{}".format(0),
-        cls=P4Switch,
-        json_path=partition_json_path,
-        thrift_port=9100 + 1,
-        pcap_dump=debug,
-        pcap_dir="./pcap",
-        log_enabled=debug,
-        log_dir="./log",
-        device_id=1 + 0,
-    )
+        # 0 1 2 3 4
+        client_s1 = net.addSwitch(
+            "spine_s{}".format(rack_physical_num + i + 1),
+            cls=P4Switch,
+            json_path=partition_json_path,
+            thrift_port=9100 + i + 1,
+            pcap_dump=debug,
+            pcap_dir="./pcap",
+            log_enabled=debug,
+            log_dir="./log",
+            device_id=1 + rack_physical_num + i + 1,
+        )
 
     nat_s1 = net.addSwitch("nat_s1", Controller=c1)
 
@@ -113,6 +116,7 @@ def create_network():
     for i in range(rack_physical_num):
         switchoses[i].cmdPrint("ip route add default via 192.168.1.200")
     CLI(net)
+
     def handler(signum, frame):
         print("Signal handler called with signal", signum)
         time.sleep(1)

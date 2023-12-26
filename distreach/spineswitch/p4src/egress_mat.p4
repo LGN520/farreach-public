@@ -2,14 +2,6 @@
 
 // Stage 0
 
-/*@pragma stage 0
-table eg_copy_udplen_for_checksum_tbl {
-	actions = {
-		copy_udplen_for_checksum;
-	}
-	default_action = copy_udplen_for_checksum();
-	size = 1;
-}*/
 
 // Stage 1
 
@@ -1227,23 +1219,18 @@ table drop_tbl {
 }
 
 
-// action update_getreq_inswitch_to_getreq() {
-// 	hdr.op_hdr.optype = GETREQ;
-// 	hdr.shadowtype_hdr.shadowtype = GETREQ;	hdr.shadowtype_hdr.setInvalid();
-// 	hdr.inswitch_hdr.setInvalid();
-// 	hdr.validvalue_hdr.setInvalid(); //add
-// }
-
 action update_getres_latest_seq_inswitch_to_getres_latest_seq() {
 	hdr.op_hdr.optype = GETRES_LATEST_SEQ;
-	hdr.shadowtype_hdr.shadowtype = GETRES_LATEST_SEQ;	hdr.shadowtype_hdr.setInvalid();
+	hdr.shadowtype_hdr.shadowtype = GETRES_LATEST_SEQ;	
+	hdr.shadowtype_hdr.setValid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.validvalue_hdr.setInvalid(); //add
 }
 
 action update_getres_deleted_seq_inswitch_to_getres_deleted_seq() {
 	hdr.op_hdr.optype = GETRES_DELETED_SEQ;
-	hdr.shadowtype_hdr.shadowtype = GETRES_DELETED_SEQ;	hdr.shadowtype_hdr.setInvalid();
+	hdr.shadowtype_hdr.shadowtype = GETRES_DELETED_SEQ;	
+	hdr.shadowtype_hdr.setValid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.validvalue_hdr.setInvalid(); //add
 }

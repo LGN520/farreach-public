@@ -40,6 +40,20 @@ class TableConfigure:
         self.controller = SimpleSwitchThriftAPI(
             9100 + rack_idx + 1, "192.168.122.229"
         )  # 9090，127.0.0.1
+    def configure_recover_tbl(self):
+        for (is_cached,isfound) in product(found_list,cached_list):
+            if (is_cached,isfound) == (1,0):
+                self.controller.table_add(
+                    "recover_tbl",
+                    "get_backup",
+                    matchspec0,
+                )
+            if (is_cached,isfound) == (0,1) or (is_cached,isfound) == (1,1):
+                self.controller.table_add(
+                    "recover_tbl",
+                    "recover",
+                    matchspec0,
+                )
 
     def configure_update_val_tbl(self, valname):
         # size = 3
@@ -191,16 +205,16 @@ class TableConfigure:
 
         # Table: recirculate_tbl (default: NoAction	; size = 5)
         print("Configuring recirculate_tbl")
-        for tmpoptype in [
-            PUTREQ,
-            DELREQ,
-            GETRES_LATEST_SEQ,
-            GETRES_DELETED_SEQ,
-            PUTREQ_LARGEVALUE,
-        ]:
-            matchspec0 = [hex(tmpoptype), hex(1)]
-            # recirculate to the pipeline of the first physical client for atomicity of setting snapshot flag
-            self.controller.table_add("recirculate_tbl", "recirculate_pkt", matchspec0)
+        # for tmpoptype in [
+        #     PUTREQ,
+        #     DELREQ,
+        #     GETRES_LATEST_SEQ,
+        #     GETRES_DELETED_SEQ,
+        #     PUTREQ_LARGEVALUE,
+        # ]:
+        #     matchspec0 = [hex(tmpoptype), hex(1)]
+        #     # recirculate to the pipeline of the first physical client for atomicity of setting snapshot flag
+        #     self.controller.table_add("recirculate_tbl", "recirculate_pkt", matchspec0)
 
         # Stage 1
 
@@ -356,7 +370,9 @@ class TableConfigure:
                 GETRES_LARGEVALUE_SEQ,
                 CACHE_POP_INSWITCH_FORWARD,
                 SETVALID_INSWITCH_FORWARD,
-                CACHE_EVICT_FORWARD
+                CACHE_EVICT_FORWARD,
+                GETRES_LATEST_SEQ_INSWITCH,
+                GETRES_DELETED_SEQ_INSWITCH,
             ]:
                 matchspec0 = [
                     hex(tmpoptype),
@@ -374,10 +390,10 @@ class TableConfigure:
                     "" + client_ips[tmp_client_physical_idx] + "/32",
                     hex(0),
                 ]
-                actnspec0 = [hex(tmpsid)]
+                actnspec0 = [eport]
                 self.controller.table_add(
                     "ipv4_forward_tbl",
-                    "forward_special_get_response",
+                    "forward_normal_response",
                     matchspec0,
                     actnspec0,
                 )
@@ -430,22 +446,31 @@ class TableConfigure:
         for iport in self.server_devports:
             matchspec0 = [hex(CACHE_POP_INSWITCH_FORWARD), iport]
             self.controller.table_add(
-                "cache_pop_ig_port_forward_tbl",
+                "special_ig_port_forward_tbl",
                 "update_cache_pop_inswitch_forward_to_cache_pop_inswitch",
                 matchspec0,
             )
             matchspec0 = [hex(SETVALID_INSWITCH_FORWARD), iport]
             self.controller.table_add(
-                "cache_pop_ig_port_forward_tbl",
+                "special_ig_port_forward_tbl",
                 "update_setvalid_inswitch_forward_to_setvalid_inswitch",
                 matchspec0,
             )
             matchspec0 = [hex(CACHE_EVICT_FORWARD), iport]
             self.controller.table_add(
-                "cache_pop_ig_port_forward_tbl",
+                "special_ig_port_forward_tbl",
                 "update_cache_evict_inswitch_forward_to_cache_evict_inswitch",
                 matchspec0,
             )
+        # 最后一个spine只接受server来的 push-pull的终点站
+        matchspec0 = [hex(BACKUP), self.server_devports[0]]
+        actnspec0 = [self.server_devports[0]]
+        self.controller.table_add(
+            "special_ig_port_forward_tbl",
+            "forward_backup",
+            matchspec0,
+            actnspec0
+        )
         # Egress pipeline
 
         # Stage 0
@@ -502,6 +527,11 @@ class TableConfigure:
             self.controller.table_add(
                 "access_validvalue_tbl", "set_validvalue", matchspec0
             )
+            matchspec0 = [
+                hex(SETVALID_INSWITCH_FORWARD),
+                hex(is_cached),
+            ]  # key may or may not be cached for SETVALID_INSWITCH
+            self.controller.table_add("access_validvalue_tbl", "NoAction", matchspec0)
 
         # Table: access_seq_tbl (default: NoAction	; size = 3)
         # NOTE: PUT/DELREQ_INSWITCH do NOT have fraginfo_hdr, while we ONLY assign seq for fragment 0 of PUTREQ_LARGEVALUE_INSWITCH
@@ -768,10 +798,10 @@ class TableConfigure:
                         hex(validvalue),
                         hex(is_latest),
                     ]
-                    if is_cached == 1:
-                        self.controller.table_add(
-                            "update_vallen_tbl", "get_vallen", matchspec0
-                        )
+                    # if is_cached == 1:
+                    #     self.controller.table_add(
+                    #         "update_vallen_tbl", "get_vallen", matchspec0
+                    #     )
                     for tmpoptype in [
                         GETRES_LATEST_SEQ_INSWITCH,
                         GETRES_DELETED_SEQ_INSWITCH,
@@ -786,26 +816,26 @@ class TableConfigure:
                             self.controller.table_add(
                                 "update_vallen_tbl", "set_and_get_vallen", matchspec0
                             )
-                    matchspec0 = [
-                        hex(PUTREQ_INSWITCH),
-                        hex(is_cached),
-                        hex(validvalue),
-                        hex(is_latest),
-                    ]
-                    if is_cached == 1 and validvalue == 1:
-                        self.controller.table_add(
-                            "update_vallen_tbl", "set_and_get_vallen", matchspec0
-                        )
-                    matchspec0 = [
-                        hex(DELREQ_INSWITCH),
-                        hex(is_cached),
-                        hex(validvalue),
-                        hex(is_latest),
-                    ]
-                    if is_cached == 1 and validvalue == 1:
-                        self.controller.table_add(
-                            "update_vallen_tbl", "reset_and_get_vallen", matchspec0
-                        )
+                    # matchspec0 = [
+                    #     hex(PUTREQ_INSWITCH),
+                    #     hex(is_cached),
+                    #     hex(validvalue),
+                    #     hex(is_latest),
+                    # ]
+                    # if is_cached == 1 and validvalue == 1:
+                    #     self.controller.table_add(
+                    #         "update_vallen_tbl", "set_and_get_vallen", matchspec0
+                    #     )
+                    # matchspec0 = [
+                    #     hex(DELREQ_INSWITCH),
+                    #     hex(is_cached),
+                    #     hex(validvalue),
+                    #     hex(is_latest),
+                    # ]
+                    # if is_cached == 1 and validvalue == 1:
+                    #     self.controller.table_add(
+                    #         "update_vallen_tbl", "reset_and_get_vallen", matchspec0
+                    #     )
                     matchspec0 = [
                         hex(CACHE_POP_INSWITCH),
                         hex(is_cached),
@@ -901,17 +931,18 @@ class TableConfigure:
 
         # Table: access_case1_tbl (default: reset_is_case1; 6)
         print("Configuring access_case1_tbl")
-        for is_latest in latest_list:
-            for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
-                matchspec0 = [hex(tmpoptype), hex(1), hex(1), hex(is_latest), hex(1)]
-                if is_latest == 0:
-                    self.controller.table_add(
-                        "access_case1_tbl", "try_case1", matchspec0
-                    )
-            for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
-                matchspec0 = [hex(tmpoptype), hex(1), hex(1), hex(is_latest), hex(1)]
-                self.controller.table_add("access_case1_tbl", "try_case1", matchspec0)
-
+        # for is_latest in latest_list:
+        #     for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+        #         matchspec0 = [hex(tmpoptype), hex(1), hex(1), hex(is_latest), hex(1)]
+        #         if is_latest == 0:
+        #             self.controller.table_add(
+        #                 "access_case1_tbl", "try_case1", matchspec0
+        #             )
+        #     for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+        #         matchspec0 = [hex(tmpoptype), hex(1), hex(1), hex(is_latest), hex(1)]
+        #         self.controller.table_add("access_case1_tbl", "try_case1", matchspec0)
+        print("Configuring recover_tbl")
+        self.configure_recover_tbl();
         # Stage 4-11
 
         # Table: update_vallo1_tbl (default: nop; 14)
@@ -954,177 +985,10 @@ class TableConfigure:
         print("Configuring eg_port_forward_tbl")
         # self.configure_eg_port_forward_tbl()
         self.configure_spine_eg_port_forward_tbl()
-        
+
         # Table: update_pktlen_tbl (default: NoAction	; 15*17+14=269)
         print("Configuring update_pktlen_tbl")
-        for i in range(int(int(switch_max_vallen / 8 + 1))):  # i from 0 to 16
-            if i == 0:
-                vallen_start = 0
-                vallen_end = 0
-                aligned_vallen = 0
-            else:
-                vallen_start = (i - 1) * 8 + 1  # 1, 9, ..., 121
-                vallen_end = (i - 1) * 8 + 8  # 8, 16, ..., 128
-                aligned_vallen = vallen_end  # 8, 16, ..., 128
-            val_stat_seq_udplen = aligned_vallen + 42
-            val_stat_seq_iplen = aligned_vallen + 62
-            val_seq_inswitch_stat_clone_udplen = aligned_vallen + 66
-            val_seq_inswitch_stat_clone_iplen = aligned_vallen + 86
-            val_seq_udplen = aligned_vallen + 38
-            val_seq_iplen = aligned_vallen + 58
-            val_seq_stat_udplen = aligned_vallen + 42
-            val_seq_stat_iplen = aligned_vallen + 62
-            val_seq_inswitch_stat_udplen = aligned_vallen + 62
-            val_seq_inswitch_stat_iplen = aligned_vallen + 82
-            for tmpoptype in [
-                GETRES_SEQ,
-                GETREQ_BEINGEVICTED_RECORD,
-                GETREQ_LARGEVALUEBLOCK_RECORD,
-            ]:
-                matchspec0 = [
-                    hex(tmpoptype),
-                    "" + hex(vallen_start) + "->" + hex(vallen_end),
-                ]  # [vallen_start, vallen_end]
-                actnspec0 = [hex(val_stat_seq_udplen), hex(val_stat_seq_iplen)]
-                self.controller.table_add(
-                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-                )  # 0 is priority (range may be overlapping]
-            for tmpoptype in [
-                GETRES_LATEST_SEQ_INSWITCH_CASE1,
-                GETRES_DELETED_SEQ_INSWITCH_CASE1,
-                PUTREQ_SEQ_INSWITCH_CASE1,
-                DELREQ_SEQ_INSWITCH_CASE1,
-            ]:
-                matchspec0 = [
-                    hex(tmpoptype),
-                    "" + hex(vallen_start) + "->" + hex(vallen_end),
-                ]  # [vallen_start, vallen_end]
-                actnspec0 = [
-                    hex(val_seq_inswitch_stat_clone_udplen),
-                    hex(val_seq_inswitch_stat_clone_iplen),
-                ]
-                self.controller.table_add(
-                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-                )  # 0 is priority (range may be overlapping]
-            for tmpoptype in [
-                PUTREQ_SEQ,
-                PUTREQ_POP_SEQ,
-                PUTREQ_SEQ_CASE3,
-                PUTREQ_POP_SEQ_CASE3,
-                PUTREQ_SEQ_BEINGEVICTED,
-                PUTREQ_SEQ_CASE3_BEINGEVICTED,
-            ]:
-                matchspec0 = [
-                    hex(tmpoptype),
-                    "" + hex(vallen_start) + "->" + hex(vallen_end),
-                ]  # [vallen_start, vallen_end]
-                actnspec0 = [hex(val_seq_udplen), hex(val_seq_iplen)]
-                self.controller.table_add(
-                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-                )  # 0 is priority (range may be overlapping]
-            matchspec0 = [
-                hex(CACHE_EVICT_LOADDATA_INSWITCH_ACK),
-                "" + hex(vallen_start) + "->" + hex(vallen_end),
-            ]  # [vallen_start, vallen_end]
-            actnspec0 = [hex(val_seq_stat_udplen), hex(val_seq_stat_iplen)]
-            self.controller.table_add(
-                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping]
-            matchspec0 = [
-                hex(LOADSNAPSHOTDATA_INSWITCH_ACK),
-                "" + hex(vallen_start) + "->" + hex(vallen_end),
-            ]  # [vallen_start, vallen_end]
-            actnspec0 = [
-                hex(val_seq_inswitch_stat_udplen),
-                hex(val_seq_inswitch_stat_iplen),
-            ]
-            self.controller.table_add(
-                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping]
-
-        onlyop_udplen = 26
-        onlyop_iplen = 46
-        seq_stat_udplen = 40
-        seq_stat_iplen = 60
-        seq_udplen = 36
-        seq_iplen = 56
-        scanreqsplit_udplen = 49
-        scanreqsplit_iplen = 69
-        frequency_udplen = 30
-        frequency_iplen = 50
-        matchspec0 = [
-            hex(CACHE_POP_INSWITCH_ACK),
-            "" + hex(0) + "->" + hex(switch_max_vallen),
-        ]  # [0, 128]
-        actnspec0 = [hex(onlyop_udplen), hex(onlyop_iplen)]
-        self.controller.table_add(
-            "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-        )  # 0 is priority (range may be overlapping]
-        for tmpoptype in [PUTRES_SEQ, DELRES_SEQ]:
-            matchspec0 = [
-                hex(tmpoptype),
-                "" + hex(0) + "->" + hex(switch_max_vallen),
-            ]  # [0, 128]
-            actnspec0 = [hex(seq_stat_udplen), hex(seq_stat_iplen)]
-            self.controller.table_add(
-                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping]
-        # , GETREQ_LARGEVALUEBLOCK_SEQ
-        for tmpoptype in [
-            DELREQ_SEQ,
-            DELREQ_SEQ_CASE3,
-            DELREQ_SEQ_BEINGEVICTED,
-            DELREQ_SEQ_CASE3_BEINGEVICTED,
-        ]:
-            matchspec0 = [
-                hex(tmpoptype),
-                "" + hex(0) + "->" + hex(switch_max_vallen),
-            ]  # [0, 128]
-            actnspec0 = [hex(seq_udplen), hex(seq_iplen)]
-            self.controller.table_add(
-                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping]
-        matchspec0 = [
-            hex(SCANREQ_SPLIT),
-            "" + hex(0) + "->" + hex(switch_max_vallen),
-        ]  # [0, 128]
-        actnspec0 = [hex(scanreqsplit_udplen), hex(scanreqsplit_iplen)]
-        self.controller.table_add(
-            "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-        )  # 0 is priority (range may be overlapping]
-        matchspec0 = [
-            hex(CACHE_EVICT_LOADFREQ_INSWITCH_ACK),
-            "" + hex(0) + "->" + hex(switch_max_vallen),
-        ]  # [0, 128]
-        actnspec0 = [hex(frequency_udplen), hex(frequency_iplen)]
-        self.controller.table_add(
-            "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-        )  # 0 is priority (range may be overlapping]
-        matchspec0 = [
-            hex(SETVALID_INSWITCH_ACK),
-            "" + hex(0) + "->" + hex(switch_max_vallen),
-        ]  # [0, 128]
-        actnspec0 = [hex(onlyop_udplen), hex(onlyop_iplen)]
-        self.controller.table_add(
-            "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
-        )  # 0 is priority (range may be overlapping]
-        # For large value
-        shadowtype_seq_udp_delta = 10
-        shadowtype_seq_ip_delta = 10
-        for tmpoptype in [
-            PUTREQ_LARGEVALUE_SEQ,
-            PUTREQ_LARGEVALUE_SEQ_CASE3,
-            PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED,
-            PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED,
-        ]:
-            matchspec0 = [
-                hex(tmpoptype),
-                "" + hex(0) + "->" + hex(65535),
-            ]  # [0, 65535] (NOTE: vallen MUST = 0 for PUTREQ_LARGEVALUE_INSWITCH]
-            actnspec0 = [hex(shadowtype_seq_udp_delta), hex(shadowtype_seq_ip_delta)]
-            self.controller.table_add(
-                "update_pktlen_tbl", "add_pktlen", matchspec0, actnspec0, 0
-            )  # 0 is priority (range may be overlapping)
+        self.configure_update_pktlen_tbl()
 
         # Table: update_ipmac_srcport_tbl (default: NoAction	; 6*client_physical_num+20*server_physical_num+7=59 < 26*8+7=215 < 256)
         # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
@@ -1260,7 +1124,9 @@ class TableConfigure:
             GETREQ_BEINGEVICTED_RECORD,
             GETREQ_LARGEVALUEBLOCK_RECORD,
             CACHE_POP_INSWITCH,
-            CACHE_POP_INSWITCH_FORWARD
+            CACHE_POP_INSWITCH_FORWARD,
+            GETRES_LATEST_SEQ,
+            GETRES_DELETED_SEQ,
         ]:
             for i in range(int(switch_max_vallen / 8 + 1)):  # i from 0 to 16
                 if i == 0:
@@ -2982,7 +2848,7 @@ class TableConfigure:
         #         hex(snapshot_flag),
         #         hex(is_case1),
         #     ]
-    
+
     def configure_spine_eg_port_forward_tbl(self):
         tmp_client_sids = [0] + self.client_sids
 
@@ -3009,7 +2875,7 @@ class TableConfigure:
             "spine_eg_port_forward_tbl",
             "update_getres_deleted_seq_inswitch_to_getres_deleted_seq",
             matchspec0,
-        )        
+        )
         matchspec0 = [
             hex(PUTREQ_INSWITCH),
         ]
@@ -3034,6 +2900,193 @@ class TableConfigure:
             "update_putreq_largevalue_inswitch_to_putreq_largevalue",
             matchspec0,
         )
+
+    def configure_update_pktlen_tbl(self):
+        for i in range(int(int(switch_max_vallen / 8 + 1))):  # i from 0 to 16
+                if i == 0:
+                    vallen_start = 0
+                    vallen_end = 0
+                    aligned_vallen = 0
+                else:
+                    vallen_start = (i - 1) * 8 + 1  # 1, 9, ..., 121
+                    vallen_end = (i - 1) * 8 + 8  # 8, 16, ..., 128
+                    aligned_vallen = vallen_end  # 8, 16, ..., 128
+                val_stat_seq_udplen = aligned_vallen + 42
+                val_stat_seq_iplen = aligned_vallen + 62
+                val_seq_inswitch_stat_clone_udplen = aligned_vallen + 66
+                val_seq_inswitch_stat_clone_iplen = aligned_vallen + 86
+                val_seq_udplen = aligned_vallen + 38
+                val_seq_iplen = aligned_vallen + 58
+                val_seq_stat_udplen = aligned_vallen + 42
+                val_seq_stat_iplen = aligned_vallen + 62
+            
+                val_seq_inswitch_stat_udplen = aligned_vallen + 62 
+                val_seq_inswitch_stat_iplen = aligned_vallen + 82         
+                # 32*3/8 backup_hdr
+                val_seq_inswitch_stat_backup_udplen = aligned_vallen + 62 + 12
+                val_seq_inswitch_stat_backup_iplen = aligned_vallen + 82 + 12
+
+                for tmpoptype in [
+                    GETRES_SEQ,
+                    GETREQ_BEINGEVICTED_RECORD,
+                    GETREQ_LARGEVALUEBLOCK_RECORD,
+                ]:
+                    matchspec0 = [
+                        hex(tmpoptype),
+                        "" + hex(vallen_start) + "->" + hex(vallen_end),
+                    ]  # [vallen_start, vallen_end]
+                    actnspec0 = [hex(val_stat_seq_udplen), hex(val_stat_seq_iplen)]
+                    self.controller.table_add(
+                        "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                    )  # 0 is priority (range may be overlapping]
+                for tmpoptype in [
+                    GETRES_LATEST_SEQ_INSWITCH_CASE1,
+                    GETRES_DELETED_SEQ_INSWITCH_CASE1,
+                    PUTREQ_SEQ_INSWITCH_CASE1,
+                    DELREQ_SEQ_INSWITCH_CASE1,
+                ]:
+                    matchspec0 = [
+                        hex(tmpoptype),
+                        "" + hex(vallen_start) + "->" + hex(vallen_end),
+                    ]  # [vallen_start, vallen_end]
+                    actnspec0 = [
+                        hex(val_seq_inswitch_stat_clone_udplen),
+                        hex(val_seq_inswitch_stat_clone_iplen),
+                    ]
+                    self.controller.table_add(
+                        "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                    )  # 0 is priority (range may be overlapping]
+                for tmpoptype in [
+                    PUTREQ_SEQ,
+                    PUTREQ_POP_SEQ,
+                    PUTREQ_SEQ_CASE3,
+                    PUTREQ_POP_SEQ_CASE3,
+                    PUTREQ_SEQ_BEINGEVICTED,
+                    PUTREQ_SEQ_CASE3_BEINGEVICTED,
+                ]:
+                    matchspec0 = [
+                        hex(tmpoptype),
+                        "" + hex(vallen_start) + "->" + hex(vallen_end),
+                    ]  # [vallen_start, vallen_end]
+                    actnspec0 = [hex(val_seq_udplen), hex(val_seq_iplen)]
+                    self.controller.table_add(
+                        "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                    )  # 0 is priority (range may be overlapping]
+                matchspec0 = [
+                    hex(CACHE_EVICT_LOADDATA_INSWITCH_ACK),
+                    "" + hex(vallen_start) + "->" + hex(vallen_end),
+                ]  # [vallen_start, vallen_end]
+                actnspec0 = [hex(val_seq_stat_udplen), hex(val_seq_stat_iplen)]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping]
+                matchspec0 = [
+                    hex(LOADSNAPSHOTDATA_INSWITCH_ACK),
+                    "" + hex(vallen_start) + "->" + hex(vallen_end),
+                ]  # [vallen_start, vallen_end]
+                actnspec0 = [
+                    hex(val_seq_inswitch_stat_udplen),
+                    hex(val_seq_inswitch_stat_iplen),
+                ]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping]
+                matchspec0 = [
+                    hex(BACKUP),
+                    "" + hex(vallen_start) + "->" + hex(vallen_end),
+                ]  # [vallen_start, vallen_end]
+                actnspec0 = [
+                    hex(val_seq_inswitch_stat_backup_udplen),
+                    hex(val_seq_inswitch_stat_backup_iplen),
+                ]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )
+
+            onlyop_udplen = 26
+            onlyop_iplen = 46
+            seq_stat_udplen = 40
+            seq_stat_iplen = 60
+            seq_udplen = 36
+            seq_iplen = 56
+            scanreqsplit_udplen = 49
+            scanreqsplit_iplen = 69
+            frequency_udplen = 30
+            frequency_iplen = 50
+            matchspec0 = [
+                hex(CACHE_POP_INSWITCH_ACK),
+                "" + hex(0) + "->" + hex(switch_max_vallen),
+            ]  # [0, 128]
+            actnspec0 = [hex(onlyop_udplen), hex(onlyop_iplen)]
+            self.controller.table_add(
+                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+            )  # 0 is priority (range may be overlapping]
+            for tmpoptype in [PUTRES_SEQ, DELRES_SEQ]:
+                matchspec0 = [
+                    hex(tmpoptype),
+                    "" + hex(0) + "->" + hex(switch_max_vallen),
+                ]  # [0, 128]
+                actnspec0 = [hex(seq_stat_udplen), hex(seq_stat_iplen)]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping]
+            # , GETREQ_LARGEVALUEBLOCK_SEQ
+            for tmpoptype in [
+                DELREQ_SEQ,
+                DELREQ_SEQ_CASE3,
+                DELREQ_SEQ_BEINGEVICTED,
+                DELREQ_SEQ_CASE3_BEINGEVICTED,
+            ]:
+                matchspec0 = [
+                    hex(tmpoptype),
+                    "" + hex(0) + "->" + hex(switch_max_vallen),
+                ]  # [0, 128]
+                actnspec0 = [hex(seq_udplen), hex(seq_iplen)]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping]
+            matchspec0 = [
+                hex(SCANREQ_SPLIT),
+                "" + hex(0) + "->" + hex(switch_max_vallen),
+            ]  # [0, 128]
+            actnspec0 = [hex(scanreqsplit_udplen), hex(scanreqsplit_iplen)]
+            self.controller.table_add(
+                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+            )  # 0 is priority (range may be overlapping]
+            matchspec0 = [
+                hex(CACHE_EVICT_LOADFREQ_INSWITCH_ACK),
+                "" + hex(0) + "->" + hex(switch_max_vallen),
+            ]  # [0, 128]
+            actnspec0 = [hex(frequency_udplen), hex(frequency_iplen)]
+            self.controller.table_add(
+                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+            )  # 0 is priority (range may be overlapping]
+            matchspec0 = [
+                hex(SETVALID_INSWITCH_ACK),
+                "" + hex(0) + "->" + hex(switch_max_vallen),
+            ]  # [0, 128]
+            actnspec0 = [hex(onlyop_udplen), hex(onlyop_iplen)]
+            self.controller.table_add(
+                "update_pktlen_tbl", "update_pktlen", matchspec0, actnspec0, 0
+            )  # 0 is priority (range may be overlapping]
+            # For large value
+            shadowtype_seq_udp_delta = 10
+            shadowtype_seq_ip_delta = 10
+            for tmpoptype in [
+                PUTREQ_LARGEVALUE_SEQ,
+                PUTREQ_LARGEVALUE_SEQ_CASE3,
+                PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED,
+                PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED,
+            ]:
+                matchspec0 = [
+                    hex(tmpoptype),
+                    "" + hex(0) + "->" + hex(65535),
+                ]  # [0, 65535] (NOTE: vallen MUST = 0 for PUTREQ_LARGEVALUE_INSWITCH]
+                actnspec0 = [hex(shadowtype_seq_udp_delta), hex(shadowtype_seq_ip_delta)]
+                self.controller.table_add(
+                    "update_pktlen_tbl", "add_pktlen", matchspec0, actnspec0, 0
+                )  # 0 is priority (range may be overlapping)
+
 
 for i in range(int(server_physical_num / 2)):
     print("Configuring RACK {}".format(i))
