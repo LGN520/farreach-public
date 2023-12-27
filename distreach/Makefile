@@ -10,7 +10,7 @@ CLEAN :=
 
 CC := g++
 #CFLAGS += -std=c++14 -O3 -g -Wall -Werror -march=native -fno-omit-frame-pointer
-CFLAGS += -std=c++14 -O3 -g -Wall -march=native -fno-omit-frame-pointer
+CFLAGS += -std=c++14 -O0 -g -Wall -march=native -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS_SHARED += $(CFLAGS) -fPIC
 LDLIBS += -lpthread -ldl -lstdc++fs -lboost_system -lboost_thread -lcommon
@@ -156,6 +156,17 @@ CLEAN += controller.o
 SERVER_TARGETS += controller
 
 
+recover: recover.o $(UTILS_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += recover.d
+CLEAN += recover.o
+SERVER_TARGETS += recover
+
+# 1: 1.o $(UTILS_OBJECTS)
+# 	$(LINK) $^ $(LDLIBS) -o $@
+# DEPS += 1.d
+# CLEAN += 1.o
+# SERVER_TARGETS += 1
 ##############################################################################
 # Top level targets
 

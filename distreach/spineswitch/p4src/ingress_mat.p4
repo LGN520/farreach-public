@@ -341,6 +341,10 @@ action update_cache_evict_inswitch_forward_to_cache_evict_inswitch(){
 	hdr.op_hdr.optype = CACHE_EVICT;
 	standard_metadata.egress_spec = standard_metadata.ingress_port;
 }
+action forward_backup(bit<9> eport){
+	// hdr.op_hdr.optype = CACHE_EVICT;
+	standard_metadata.egress_spec = eport;
+}
 @pragma stage 6
 table special_ig_port_forward_tbl {
 	key = {
@@ -354,10 +358,11 @@ table special_ig_port_forward_tbl {
 		update_setvalid_inswitch_forward_to_setvalid_inswitch;
 		update_cache_evict_inswitch_to_cache_evict_inswitch_forward;
 		update_cache_evict_inswitch_forward_to_cache_evict_inswitch;
+		forward_backup;
 		NoAction;
 	}
 	default_action = NoAction();
-	size = 8;
+	size = 18;
 }
 
 

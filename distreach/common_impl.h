@@ -89,6 +89,8 @@ typedef PutRequestLargevalueSeqCase3Beingevicted<netreach_key_t, val_t> put_requ
 typedef GetRequestBeingevictedRecord<netreach_key_t, val_t> get_request_beingevicted_record_t;
 typedef GetRequestLargevalueblockRecord<netreach_key_t, val_t> get_request_largevalueblock_record_t;
 
+// recover
+typedef RecoverPkt<netreach_key_t, val_t> recoverpkt_t;
 /*
  * Constants
  */
@@ -169,7 +171,9 @@ short switchos_snapshotserver_port = -1;
 short switchos_specialcaseserver_port = -1;
 short switchos_ptf_popserver_port = -1;
 short switchos_ptf_snapshotserver_port = -1;
-
+short switchos_recover_sync_port = 4091;
+// recover
+short recover_server_port = 4090;
 // reflector
 const char* reflector_ip_for_switchos = nullptr;
 short reflector_dp2cpserver_port = -1;
@@ -199,6 +203,7 @@ int SWITCHOS_GET_CACHEDEMPTYINDEX = -1; // ptf get cached_empty_index*/
 // int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = -1;
 int SWITCHOS_ADD_CACHE_LOOKUP = -1;
 int SWITCHOS_ADD_CACHE_LOOKUP_ACK = -1;
+int EMPTY_CACHE_LOOKUP = 156;
 // int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
 // int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
 // int SWITCHOS_SETVALID3 = -1;
@@ -235,6 +240,9 @@ int SNAPSHOT_GETDATA_ACK = -1;
 int SNAPSHOT_SENDDATA = -1;
 int SNAPSHOT_SENDDATA_ACK = -1;
 
+//  Packet types used by switchos/controller/server for recover
+int FETCH_RECOVERKEY_START = 9707;
+int FETCH_RECOVERKEY_END = 9708;
 /*
  * Get configuration
  */

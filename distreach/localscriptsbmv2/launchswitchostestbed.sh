@@ -41,7 +41,7 @@ cd ..
 # cd ..
 
 echo "launch switchos"
-mx switchos1 ./switchos 0 > tmp_switchos0.out &
+# mx switchos1 ./switchos 0 > tmp_switchos0.out &
 # mx switchos2 ./switchos 1 > tmp_switchos1.out &
 # mx switchos3 ./switchos 2 > tmp_switchos2.out &
 # mx switchos4 ./switchos 3 > tmp_switchos3.out &

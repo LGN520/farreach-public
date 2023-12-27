@@ -5,6 +5,7 @@ action get_backup(){
     latest_reg.read(hdr.backup_hdr.is_latest,(bit<32>)hdr.inswitch_hdr.idx);
     validvalue_reg.read(hdr.backup_hdr.validvalue,(bit<32>)hdr.inswitch_hdr.idx);
     vallen_reg.read(hdr.backup_hdr.vallen,(bit<32>)hdr.inswitch_hdr.idx);
+    hdr.vallen_hdr.vallen = hdr.backup_hdr.vallen;
     meta.access_val_mode = 1; //get val
     hdr.backup_hdr.is_found = 1; //founded it 
 }
@@ -14,7 +15,8 @@ action recover(){
     deleted_reg.write((bit<32>)hdr.inswitch_hdr.idx,hdr.backup_hdr.is_deleted);
     latest_reg.write((bit<32>)hdr.inswitch_hdr.idx,hdr.backup_hdr.is_latest);
     validvalue_reg.write((bit<32>)hdr.inswitch_hdr.idx,hdr.backup_hdr.validvalue);
-    meta.access_val_mode = 3; //set val
+    vallen_reg.write((bit<32>)hdr.inswitch_hdr.idx,hdr.backup_hdr.vallen);
+    meta.access_val_mode = 2; //set val
     // hdr.backup_hdr.is_found = 1; //founded it 
 }
 // (is_cached,is_found)
@@ -32,6 +34,6 @@ table recover_tbl {
         NoAction;
 	}
 	default_action = NoAction();
-	size = 2;
+	size = 12;
 }
 

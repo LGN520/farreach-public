@@ -444,10 +444,12 @@ action update_cache_pop_inswitch_forward_to_cache_pop_inswitch(){
 	// standard_metadata.egress_spec = standard_metadata.ingress_port;
 }
 action update_setvalid_inswitch_to_setvalid_inswitch_forward(){
-	hdr.op_hdr.optype = SETVALID_INSWITCH_FORWARD;hdr.validvalue_hdr.setValid();
+	hdr.op_hdr.optype = SETVALID_INSWITCH_FORWARD;
+	hdr.validvalue_hdr.setValid();
 }
 action update_setvalid_inswitch_forward_to_setvalid_inswitch(){
-	hdr.op_hdr.optype = SETVALID_INSWITCH;hdr.validvalue_hdr.setValid();
+	hdr.op_hdr.optype = SETVALID_INSWITCH;
+	hdr.validvalue_hdr.setValid();
 	// standard_metadata.egress_spec = standard_metadata.ingress_port;
 }
 action update_cache_evict_inswitch_to_cache_evict_inswitch_forward(){
@@ -458,8 +460,34 @@ action update_cache_evict_inswitch_forward_to_cache_evict_inswitch(){
 	// standard_metadata.egress_spec = standard_metadata.ingress_port;
 }
 action forward_backup(bit<9> eport){
-	hdr.op_hdr.optype = CACHE_EVICT;
+	// hdr.op_hdr.optype = CACHE_EVICT;
 	standard_metadata.egress_spec = eport;
+}
+action reverse_ip(){
+	bit<32> tmp_ip;
+	tmp_ip = hdr.ipv4_hdr.srcAddr;
+	hdr.ipv4_hdr.srcAddr = hdr.ipv4_hdr.dstAddr;
+	hdr.ipv4_hdr.dstAddr = tmp_ip;
+}
+action reverse_mac(){
+	bit<48> tmp_mac;
+	tmp_mac = hdr.ethernet_hdr.srcAddr;
+	hdr.ethernet_hdr.srcAddr = hdr.ethernet_hdr.dstAddr;
+	hdr.ethernet_hdr.dstAddr = tmp_mac;
+}
+action reverse_port(){
+	bit<16> tmp_port;
+	tmp_port = hdr.udp_hdr.srcPort;
+	hdr.udp_hdr.srcPort = hdr.udp_hdr.dstPort;
+	hdr.udp_hdr.dstPort = tmp_port;
+}
+action update_backup_to_backupack(bit<9> eport){
+	hdr.op_hdr.optype = BACKUPACK;
+	standard_metadata.egress_spec = eport;
+	reverse_ip();
+	reverse_mac();
+	reverse_port();
+	hdr.udp_hdr.dstPort = 4090;
 }
 @pragma stage 6
 table special_ig_port_forward_tbl {
@@ -475,9 +503,10 @@ table special_ig_port_forward_tbl {
 		update_cache_evict_inswitch_to_cache_evict_inswitch_forward;
 		update_cache_evict_inswitch_forward_to_cache_evict_inswitch;
 		forward_backup;
+		update_backup_to_backupack;
 		NoAction;
 	}
 	default_action = NoAction();
-	size = 8;
+	size = 18;
 }
 

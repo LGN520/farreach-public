@@ -450,5 +450,6 @@ control farreachDeparser(packet_out packet, in headers hdr) {
 		packet.emit(hdr.clone_hdr);
 		packet.emit(hdr.frequency_hdr);
 		packet.emit(hdr.validvalue_hdr);
+		packet.emit(hdr.backup_hdr);
     }
 }

@@ -2114,6 +2114,11 @@ CachePopInswitch<key_t, val_t>::CachePopInswitch(method_t methodid, switchidx_t 
 }
 
 template <class key_t, class val_t>
+CachePopInswitch<key_t, val_t>::CachePopInswitch(method_t methodid, const char* data, uint32_t recvsize) {
+    // COUT_N_EXIT("Invalid invoke of deserialize for CachePopInswitch");
+}
+
+template <class key_t, class val_t>
 uint32_t CachePopInswitch<key_t, val_t>::serialize(char* const data, uint32_t max_size) {
     // uint32_t my_size = this->size();
     // INVARIANT(max_size >= my_size);
@@ -2128,7 +2133,7 @@ uint32_t CachePopInswitch<key_t, val_t>::serialize(char* const data, uint32_t ma
     memcpy(begin, (void*)&bigendian_seq, sizeof(uint32_t));  // little-endian to big-endian
     begin += sizeof(uint32_t);
     if (this->_methodid == FARREACH_ID) {  // seq_hdr.snapshot_token
-        printf("[debug]\n");
+        // printf("[debug]\n");
         bigendian_seq = htonl(0);
         memcpy(begin, (void*)&bigendian_seq, sizeof(uint32_t));  // little-endian to big-endian
         begin += sizeof(uint32_t);
@@ -2166,6 +2171,113 @@ uint32_t CachePopInswitch<key_t, val_t>::size() {  // unused
 template <class key_t, class val_t>
 void CachePopInswitch<key_t, val_t>::deserialize(const char* data, uint32_t recv_size) {
     COUT_N_EXIT("Invalid invoke of deserialize for CachePopInswitch");
+}
+
+// RecoverPkt
+
+template <class key_t, class val_t>
+RecoverPkt<key_t, val_t>::RecoverPkt(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat)
+    : CachePopInswitch<key_t, val_t>(methodid, key, val, seq, freeidx, stat) {
+    this->_type = optype_t(packet_type_t::BACKUP);
+    this->cache_frequency = 0;
+    this->largevalueseq = 0;
+    this->vallen = 0;
+    this->reg_meta = 0;
+    INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+    INVARIANT(seq >= 0);
+    INVARIANT(freeidx >= 0);
+}
+
+template <class key_t, class val_t>
+RecoverPkt<key_t, val_t>::RecoverPkt(method_t methodid, const char* data, uint32_t recvsize) {
+    this->_methodid = methodid;
+    this->deserialize(data, recvsize);
+}
+
+template <class key_t, class val_t>
+uint32_t RecoverPkt<key_t, val_t>::serialize(char* const data, uint32_t max_size) {
+    char* begin = data;
+    uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+    begin += tmp_ophdrsize;
+    uint32_t tmp_valsize = this->_val.serialize(begin, max_size - uint32_t(begin - data));
+    begin += tmp_valsize;
+    uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - uint32_t(begin - data));  // shadowtype
+    begin += tmp_shadowtypesize;
+    uint32_t bigendian_seq = htonl(this->_seq);
+    memcpy(begin, (void*)&bigendian_seq, sizeof(uint32_t));  // little-endian to big-endian
+    begin += sizeof(uint32_t);
+    if (this->_methodid == FARREACH_ID) {  // seq_hdr.snapshot_token
+        // printf("[debug]\n");
+        bigendian_seq = htonl(0);
+        memcpy(begin, (void*)&bigendian_seq, sizeof(uint32_t));  // little-endian to big-endian
+        begin += sizeof(uint32_t);
+    }
+    int tmp_inswitch_prev_bytes = Packet<key_t>::get_inswitch_prev_bytes(this->_methodid);
+    memset(begin, 0, tmp_inswitch_prev_bytes);  // the first bytes of inswitch_hdr
+    begin += tmp_inswitch_prev_bytes;
+    uint16_t bigendian_freeidx = htons(uint16_t(this->_freeidx));
+    memcpy(begin, (void*)&bigendian_freeidx, sizeof(uint16_t));  // little-endian to big-endian
+    begin += sizeof(uint16_t);
+    memcpy(begin, (void*)&this->_stat, sizeof(bool));
+    begin += sizeof(bool);               // stat_hdr.stat
+    memset(begin, 0, sizeof(uint16_t));  // stat_hdr.nodeidx_foreval
+    begin += sizeof(uint16_t);
+    begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+    // mark 0 for backup_hdr
+    memset(begin, 0, sizeof(uint32_t));
+    begin += sizeof(uint32_t);
+    memset(begin, 0, sizeof(uint32_t));
+    begin += sizeof(uint32_t);
+    memset(begin, 0, sizeof(uint32_t));
+    begin += sizeof(uint32_t);
+    return uint32_t(begin - data);
+}
+template <class key_t, class val_t>
+void RecoverPkt<key_t, val_t>::deserialize(const char* data, uint32_t recv_size) {
+    const char* begin = data;
+    uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
+    begin += tmp_ophdrsize;
+    uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - uint32_t(begin - data));
+    begin += tmp_valsize;
+    // memcpy((void*)&this->_seq, begin, sizeof(uint32_t));
+    // this->_seq = ntohl(this->_seq);  // Big-endian to little-endian
+    // begin += sizeof(uint32_t);
+    // skip shadowtype
+    begin += sizeof(uint16_t);
+    // skip seq
+    begin += sizeof(uint32_t);
+    begin += sizeof(uint32_t);
+    // skip inswitch hdr 5*32
+    int tmp_inswitch_prev_bytes = Packet<key_t>::get_inswitch_prev_bytes(this->_methodid);
+    begin += tmp_inswitch_prev_bytes;
+    memcpy((void*)&this->_freeidx, begin, sizeof(uint16_t));
+    this->_seq = ntohl(this->_freeidx);  // Big-endian to little-endian
+    begin += sizeof(uint16_t);
+    // skip stat
+    begin += sizeof(uint32_t);
+    // deserialize backup
+    // cache_frequency 32
+    memcpy((void*)&this->cache_frequency, begin, sizeof(uint32_t));
+    this->_seq = ntohl(this->cache_frequency);  // Big-endian to little-endian
+    begin += sizeof(uint32_t);
+
+    // largevalueseq 32
+    memcpy((void*)&this->largevalueseq, begin, sizeof(uint32_t));
+    this->_seq = ntohl(this->largevalueseq);  // Big-endian to little-endian
+    begin += sizeof(uint32_t);
+    // vallen 16
+    memcpy((void*)&this->vallen, begin, sizeof(uint16_t));
+    this->_seq = ntohl(this->vallen);  // Big-endian to little-endian
+    begin += sizeof(uint16_t);
+    // reg_meta 16
+    memcpy((void*)&this->reg_meta, begin, sizeof(uint16_t));
+    this->_seq = ntohl(this->reg_meta);  // Big-endian to little-endian
+    begin += sizeof(uint16_t);
+}
+template <class key_t, class val_t>
+uint32_t RecoverPkt<key_t, val_t>::size() {  // unused
+    // return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES + backup_hdr;
+    return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid) + sizeof(uint32_t) * 3;
 }
 
 // CachePopInswitchAck (no value)

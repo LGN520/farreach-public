@@ -69,7 +69,8 @@ control farreachComputeChecksum(inout headers hdr, inout metadata meta) {
                 hdr.clone_hdr,
                 hdr.frequency_hdr,
                 hdr.validvalue_hdr,
-                hdr.fraginfo_hdr
+                hdr.fraginfo_hdr,
+                hdr.backup_hdr
                 
             }, 
             hdr.udp_hdr.checksum, 

@@ -1,3 +1,4 @@
+# mx h3 ./recover > tmp_recover0.out &
 mx h3 ./server 0 > tmp_server0.out &
 mx h4 ./server 1 > tmp_server1.out &
 # mx h5 ./server 2 > tmp_server2.out &
