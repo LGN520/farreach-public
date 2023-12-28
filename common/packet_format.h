@@ -641,7 +641,7 @@ class RecoverPkt : public CachePopInswitch<key_t, val_t> { // ophdr + val + shad
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
-
+		uint16_t getreg_meta(){return this->reg_meta;}
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);

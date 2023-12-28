@@ -57,6 +57,7 @@ bool idx_cached_is_recovered[MQ_SIZE];
 // n-th item key
 Key idx_cached_key[MQ_SIZE];
 int recover_ack_num = 0;
+int persistent_ack_num = 0;
 struct recover_key_idx {
     Key recoverkey;
     uint16_t idx;
@@ -71,6 +72,8 @@ int recover_worker_for_switch_udpsock = -1;
 int recover_start_end_udpsock = -1;
 // recover <-> ptf_popserver
 int recover_popworker_popclient_for_ptf_udpsock = -1;
+// recover <-> server
+int fake_client_udpsock = -1;
 
 int all_recover_thread_count = 3;
 int recover_thread_count = 0;
@@ -164,10 +167,17 @@ void* main_recover(void* param) {
     // waiting for recover switch
     while (recover_ack_num < switch_kv_bucket_num) {
     }
+
     printf("[debug] recover_ack_num > switch_kv_bucket_num finished\n");
     CUR_TIME(recover_t2);
     DELTA_TIME(recover_t2, recover_t1, recover_t3);
-    printf("[Statistics] Replay time of switch&switchos: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
+    printf("[Statistics] recover switch: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
+    fflush(stdout);
+    while (persistent_ack_num < switch_kv_bucket_num) {
+    }
+    CUR_TIME(recover_t2);
+    DELTA_TIME(recover_t2, recover_t1, recover_t3);
+    printf("[Statistics] persist server: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
     fflush(stdout);
     main_recover_finish = true;
     close(recover_start_end_udpsock);
@@ -180,6 +190,8 @@ void prepare_recover() {
     create_udpsock(recover_start_end_udpsock, true, "recover.start_end", 0, 5 * SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);
     create_udpsock(recover_worker_for_switch_udpsock, false, "recover.worker");  //, 0, 5 * SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);
     create_udpsock(recover_popworker_popclient_for_ptf_udpsock, false, "recover.popworker.popclient_for_ptf");
+    create_udpsock(fake_client_udpsock, false, "recover.fake.client");
+
     memory_fence();
 
     printf("[recover] prepare end\n");
@@ -192,12 +204,18 @@ void* run_recover_server(void* param) {
     struct sockaddr_in ptf_popserver_addr;
     set_sockaddr(ptf_popserver_addr, inet_addr(switchos_ip), switchos_ptf_popserver_port);
     int ptf_popserver_addr_len = sizeof(struct sockaddr);
-
+    std::vector<struct sockaddr_in> server_addr;
+    socklen_t server_addrlen = sizeof(struct sockaddr_in);
+    for(auto server_ip_for_controller:server_ip_for_controller_list){
+        struct sockaddr_in tmp_sockaddr;
+        set_sockaddr(tmp_sockaddr, inet_addr(server_ip_for_controller), server_worker_port_start);
+    }
     char ptfbuf[MAX_BUFSIZE];
     uint32_t ptf_sendsize = 0;
     int ptf_recvsize = 0;
     char buf[MAX_BUFSIZE];
     int recvsize = 0;
+    int req_size = 0;
     int controltype = -1;
 
     printf("[recover.server] ready\n");
@@ -219,6 +237,7 @@ void* run_recover_server(void* param) {
             idx_cached_is_recovered[((int*)buf)[1]] = true;
             printf("[debug][recover_server] recv empty entry %d\n", ((int*)buf)[1]);
             recover_ack_num++;
+            persistent_ack_num++;
             ((int*)buf)[0] = SWITCHOS_ADD_CACHE_LOOKUP_ACK;
             udpsendto(recover_server_for_switchos_udpsock, buf, sizeof(int), 0, &switchos_recover_client_addr, switchos_recover_client_addrlen, "switchos.recover.popack");
 
@@ -246,6 +265,18 @@ void* run_recover_server(void* param) {
             udpsendto(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
             udprecvfrom(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
             INVARIANT(*((int*)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK);  // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
+            // do persistent to server
+            // 4041
+            if (tmp_recoverpkt.getreg_meta() == 0x4041) {  // is_deleted 0 is_latest 1 validvalue 1 is_founded 1
+                put_request_seq_t req(CURMETHOD_ID, tmp_recoverpkt.key(), tmp_recoverpkt.val(), 0);
+                req_size = req.serialize(buf, MAX_BUFSIZE);
+                int server_idx=tmp_recoverpkt.key().get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
+                udpsendto(fake_client_udpsock, buf, req_size, 0, &server_addr[server_idx], server_addrlen, "recover.client");
+                udprecvfrom(fake_client_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, req_size, "recover.client");
+                printf("[debug] send persistent\n");
+            } else {
+            }
+            persistent_ack_num++;
             recover_ack_num++;
             printf("[debug] recover_ack_num %x\n", recover_ack_num);
             if (recover_ack_num >= switch_kv_bucket_num)
@@ -255,10 +286,12 @@ void* run_recover_server(void* param) {
 
     printf("[recover server] exit\n");
     // switchos_popserver_finish = true;
+    close(fake_client_udpsock);
     close(recover_popworker_popclient_for_ptf_udpsock);
     close(recover_server_for_switchos_udpsock);
     pthread_exit(nullptr);
 }
+// put_request_seq_t persistent
 void* run_recover_worker(void* param) {
     char pktbuf[MAX_BUFSIZE];
     uint32_t pktsize = 0;

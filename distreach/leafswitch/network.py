@@ -24,7 +24,7 @@ host = []
 rackswitchs = []
 switchoses = []
 
-debug = True
+debug = False
 
 
 def create_network():
