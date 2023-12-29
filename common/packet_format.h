@@ -474,7 +474,7 @@ class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCa
 };
 
 template<class key_t, class val_t>
-class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq_hdr
+class PutRequestSeq : public Packet<key_t> { // ophdr 2+16 + val 2+128 +  2 + seq_hdr 8
 	public: 
 		PutRequestSeq();
 		PutRequestSeq(method_t methodid, key_t key, val_t val, uint32_t seq);

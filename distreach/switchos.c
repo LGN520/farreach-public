@@ -293,9 +293,9 @@ void prepare_switchos() {
     for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
         switchos_perpipeline_cached_keyarray[tmp_pipeidx] = new netreach_key_t[switch_kv_bucket_num]();
         switchos_perpipeline_cached_serveridxarray[tmp_pipeidx] = new uint16_t[switch_kv_bucket_num];
-        memset((void*)switchos_perpipeline_cached_serveridxarray[tmp_pipeidx], 0, sizeof(uint16_t) * switch_kv_bucket_num);
+        memset((void*)switchos_perpipeline_cached_serveridxarray[tmp_pipeidx], -1, sizeof(uint16_t) * switch_kv_bucket_num);
         switchos_perpipeline_cached_empty_index[tmp_pipeidx] = 0;
-
+        // printf("[debug]switchos_perpipeline_cached_serveridxarray %d\n",switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][0]);
         switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] = NULL;
         switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] = NULL;
         switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx] = 0;
@@ -538,21 +538,22 @@ void* run_switchos_recover(void* param) {
         int pipeidx = server_pipeidxes[0];
         // for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
         for (uint32_t cachedidx = 0; cachedidx < switch_kv_bucket_num; cachedidx++) {
-            if (switchos_perpipeline_cached_serveridxarray[server_pipeidxes[0]][cachedidx] == -1 &&
-                switchos_perpipeline_cached_serveridxarray[server_pipeidxes[1]][cachedidx] == -1) {  // uncached
+            if (switchos_perpipeline_cached_serveridxarray[server_pipeidxes[0]][cachedidx] == (uint16_t)-1 &&
+                switchos_perpipeline_cached_serveridxarray[server_pipeidxes[1]][cachedidx] == (uint16_t)-1) {  // uncached
                 pktsize = sizeof(int) * 2;
                 memcpy(pktbuf, &EMPTY_CACHE_LOOKUP, sizeof(int));
                 memcpy(pktbuf + sizeof(int), &cachedidx, sizeof(int));
                 udpsendto(switchos_recover_client_for_recover_udpsock, pktbuf, pktsize, 0, &recover_server_addr, recover_server_addrlen, "switchos.recover.pop");
-                // printf("[debug] send EMPTY_CACHE_LOOKUP to\n");
+              //printf("[debug]%d send EMPTY_CACHE_LOOKUP to\n", cachedidx);
                 udprecvfrom(switchos_recover_client_for_recover_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.recover.popack");
                 INVARIANT(*((int*)ackbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK);  // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
             } else {
                 // reuse it to send key and idx
-                if (switchos_perpipeline_cached_serveridxarray[server_pipeidxes[0]][cachedidx] == -1)
+                if (switchos_perpipeline_cached_serveridxarray[server_pipeidxes[0]][cachedidx] == (uint16_t)-1)
                     pipeidx = server_pipeidxes[1];
                 else
                     pipeidx = server_pipeidxes[0];
+              //printf("[debug]%d send cachellokup to %d\n", cachedidx, pipeidx);
                 pktsize = serialize_add_cache_lookup(pktbuf, switchos_perpipeline_cached_keyarray[pipeidx][cachedidx], cachedidx);
                 udpsendto(switchos_recover_client_for_recover_udpsock, pktbuf, pktsize, 0, &recover_server_addr, recover_server_addrlen, "switchos.recover.pop");
                 udprecvfrom(switchos_recover_client_for_recover_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.recover.popack");
@@ -562,7 +563,7 @@ void* run_switchos_recover(void* param) {
         // }
         ((int*)pktbuf)[0] = FETCH_RECOVERKEY_END;
         udpsendto(switchos_recover_sync_for_recover_udpsock, pktbuf, sizeof(int), 0, &recover_sync_addr, recover_sync_addrlen, "switchos.recover.sync");
-        printf("[debug] send FETCH_RECOVERKEY_END to\n");
+      //printf("[debug] send FETCH_RECOVERKEY_END to\n");
     }
 
     // switchos_popserver_finish = true;

@@ -544,7 +544,7 @@ void *run_server_worker(void * param) {
 #endif
 
 				put_request_seq_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+				// COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				UNUSED(tmp_stat);
 				//COUT_THIS("[server] stat = " << tmp_stat)
@@ -552,7 +552,7 @@ void *run_server_worker(void * param) {
 #ifdef DEBUG_SERVER
 				CUR_TIME(rocksdb_t2);
 #endif
-				
+				dump_buf(buf, recv_size);
 				put_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");

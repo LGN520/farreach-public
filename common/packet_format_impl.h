@@ -1714,10 +1714,39 @@ void PutRequestSeq<key_t, val_t>::deserialize(const char* data, uint32_t recv_si
         begin += sizeof(uint32_t);  // seq_hdr.snapshot_token
     }
 }
-
 template <class key_t, class val_t>
 uint32_t PutRequestSeq<key_t, val_t>::serialize(char* const data, uint32_t max_size) {
-    COUT_N_EXIT("Invalid invoke of serialize for PutRequestSeq");
+    // COUT_N_EXIT("Invalid invoke of serialize for PutRequestSeq");
+    // Serialize seq_hdr
+    char* begin = data;
+    uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
+    begin += tmp_ophdrsize;  //+18
+    // max_size -= tmp_ophdrsize;
+
+    // Serialize value
+    uint32_t tmp_valsize = this->_val.serialize(begin, max_size - uint32_t(begin - data));
+    begin += tmp_valsize;  //+128
+                           // max_size -= tmp_valsize;
+    //printf("[debug]%d\n", begin - data);
+    // Serialize shadowtype
+    uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - uint32_t(begin - data));  // shadowtype
+    begin += tmp_shadowtypesize;                                                                                 //+2
+    //printf("[debug]%d\n", begin - data);
+    // Serialize seq
+    uint32_t seq_network_order = htonl(this->_seq);  // Convert little-endian to big-endian
+    memcpy(begin, (const void*)&seq_network_order, sizeof(uint32_t));
+    begin += sizeof(uint32_t);
+    // max_size -= sizeof(uint32_t);
+    //printf("[debug]%d\n", begin - data);
+    // Serialize snapshot_token for FARREACH_ID
+    if (this->_methodid == FARREACH_ID) {
+        uint32_t snapshot_token_network_order = htonl(this->_snapshot_token);
+        memcpy(begin, (const void*)&snapshot_token_network_order, sizeof(uint32_t));
+        begin += sizeof(uint32_t);
+        // max_size -= sizeof(uint32_t);
+    }  //+8
+    //printf("[debug]%d\n", begin - data);
+    return begin - data;
 }
 
 // PutRequestPopSeq (value must <= 128B)
