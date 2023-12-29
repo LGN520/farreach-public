@@ -12,7 +12,7 @@ fi
 
 ##### Part 0 #####
 echo "[part 0] clean up server storages"
-rm -r /tmp/${DIRNAME}/*
+# rm -r /tmp/${DIRNAME}/*
 
 if [[ ${with_controller} -eq 1 ]]; then
 	# NOTE: if w/ in-switch cache, finish warmup phase by launching servers of correpsonding method + warmup_client + stopping servers
@@ -49,13 +49,15 @@ cd ${SWITCH_ROOTPATH}
 # Retrieve both dl16.bottleneckserver and dl13.rotatedservers to the state just after loading phase
 echo "retrieve both bottleneck partition and rotated partition back to the state after loading phase"
 # ssh ${USER}@${SERVER0} "
-rm -r /tmp/${DIRNAME}/*; 
-cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
-cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker0.db                       # retrieve rocksdb and reset rotatedservers.snapshotid = 0
+# rm -r /tmp/${DIRNAME}/*; 
+# cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker${bottleneck_serveridx}.db # retrieve rocksdb and reset bottleneckserver/controller.snapshotid = 0
+# cp -r ${BACKUPS_ROOTPATH}/worker0.db /tmp/${DIRNAME}/worker0.db                       # retrieve rocksdb and reset rotatedservers.snapshotid = 0
 # run twice for some sync bug
 source scriptsbmv2/remote/test_server_rotation_p1.sh 0
 source scriptsbmv2/remote/test_server_rotation_p1.sh 0
-
+source scriptsbmv2/remote/test_server_rotation_p1.sh 0
+source scriptsbmv2/remote/test_server_rotation_p1.sh 0
+source scriptsbmv2/remote/test_server_rotation_p1.sh 0
 ##### Part 2 #####
 echo "[part 2] run bottleneck server thread + rotated server thread"
 

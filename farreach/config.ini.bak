@@ -1,5 +1,5 @@
 [global]
-workload_name=synthetic
+workload_name=workloada
 ;workload_name=synthetic
 ; workload_mode: 0 - static mode; 1 - dynamic mode
 workload_mode=0
@@ -24,7 +24,7 @@ server_total_logical_num=16
 ; only used by remote_client for server rotation under static workload
 server_total_logical_num_for_rotation=16
 ; bottleneck server logical idx (bottleneck partition) for server rotation (change test_server_rotation.sh accordingly)
-bottleneck_serveridx_for_rotation=4
+bottleneck_serveridx_for_rotation=2
 
 [client]
 ; a single port (the first physical client uses the port the receive rotation data from other physical clients)
@@ -132,7 +132,7 @@ controller_warmupfinishserver_port=5010
 switch_partition_count=32768
 ; change KV_BUCKET_COUNT in tofino/netbufferv4.p4 accordingly (one stage can hold at most 32700 instead of 32768)
 ;switch_kv_bucket_num=32700
-switch_kv_bucket_num=100
+switch_kv_bucket_num=10000
 ; max # of pipelines in switch
 switch_pipeline_num=2
 ; max # of bytes supported in switch (8B aligned)

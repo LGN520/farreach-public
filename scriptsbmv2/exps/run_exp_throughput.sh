@@ -11,8 +11,9 @@ if [ $# -ne 1 ]; then
 fi
 roundnumber=$1
 # "netcache" "nocache" "workloadb" "workloadc" "workloadd" "workloadf" "workload-load"
+# "netcache" 
 exp1_method_list=("farreach" )
-exp1_core_workload_list=("workloada")
+exp1_core_workload_list=("workloada" "workloadb" "workloadc" "workloadd" "workloadf" "workload-load")
 exp1_server_scale=16
 exp1_output_path="${EVALUATION_OUTPUT_PREFIX}/exp1/${roundnumber}"
 

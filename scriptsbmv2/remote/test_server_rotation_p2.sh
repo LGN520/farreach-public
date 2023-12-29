@@ -57,9 +57,9 @@ fi
 cd ${SWITCH_ROOTPATH}/${DIRNAME}
 echo "start servers"
 mx h3  ./server 0 >tmp_serverrotation_part2_server0.out 2>&1 &
-sleep 30s
+sleep 20s
 mx h4  ./server 1 >tmp_serverrotation_part2_server1.out 2>&1 &
-sleep 30s
+sleep 20s
 
 # sleep 30s
 # sleep 30s
@@ -94,7 +94,7 @@ else
 	echo "sleep 5s"
 	sleep 5s
 fi
-
+sleep 20s
 echo "start clients"
 if [ $# -eq 3 ]; then
 	# ssh ${USER}@${SECONDARY_CLIENT} "

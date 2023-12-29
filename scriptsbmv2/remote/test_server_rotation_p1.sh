@@ -51,7 +51,7 @@ echo "start servers"
 cd ${SERVER_ROOTPATH}/${DIRNAME}; 
 mx h3  ./server 0 >tmp_serverrotation_part1_server0.out 2>&1 &
 
-sleep 30s
+sleep 20s
 
 if [ ${with_controller} -eq 1 ]; then
 	echo "start controller"
@@ -66,13 +66,13 @@ if [ ${with_reflector} -eq 1 ]; then
 	cd ${SERVER_ROOTPATH}/${DIRNAME}; 
 	mx h3  ./reflector leaf >tmp_serverrotation_part1_reflector.out.leaf 2>&1 &
 	cd ${DIRNAME}
-	sudo mx h1  ./reflector spine >tmp_serverrotation_part1_reflector.out.spine 2>&1 &
+	mx h1  ./reflector spine >tmp_serverrotation_part1_reflector.out.spine 2>&1 &
 	sleep 10s
 	cd ..
 fi
 # sleep 5s
-
-sleep 120s # wait longer time for the first rotation, as rocksdb needs to load the files overwritten by the backups
+sleep 20s
+# sleep 120s # wait longer time for the first rotation, as rocksdb needs to load the files overwritten by the backups
 
 # NOTE: we trigger snapshot in the physical client 0 during transaction phase for farreach/distfarreach
 echo "start clients"
