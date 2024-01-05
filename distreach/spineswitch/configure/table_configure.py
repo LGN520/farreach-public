@@ -378,6 +378,7 @@ class TableConfigure:
             # GETRES, GETRES_LARGEVALUE, PUTRES, DELRES
             for tmpoptype in [
                 GETRES_SEQ,
+                PUTRES_SPINE_SEQ,
                 PUTRES_SEQ,
                 DELRES_SEQ,
                 WARMUPACK,
@@ -443,6 +444,10 @@ class TableConfigure:
         matchspec0 = [hex(PUTREQ), hex(0)]
         self.controller.table_add(
             "ig_port_forward_tbl", "update_putreq_to_putreq_inswitch", matchspec0
+        )
+        matchspec0 = [hex(PUTRES_SPINE_SEQ), hex(0)]
+        self.controller.table_add(
+            "ig_port_forward_tbl", "update_putres_spine_seq", matchspec0
         )
         matchspec0 = [hex(DELREQ), hex(0)]
         self.controller.table_add(
@@ -526,6 +531,7 @@ class TableConfigure:
             PUTREQ_INSWITCH,
             DELREQ_INSWITCH,
             PUTREQ_LARGEVALUE_INSWITCH,
+            PUTRES_SPINE_SEQ
         ]:
             matchspec0 = [hex(tmpoptype), hex(1)]
             self.controller.table_add(
@@ -591,7 +597,7 @@ class TableConfigure:
                         self.controller.table_add(
                             "access_latest_tbl", "set_and_get_latest", matchspec0
                         )
-                for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+                for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH,PUTRES_SPINE_SEQ]:
                     matchspec0 = [
                         hex(tmpoptype),
                         hex(is_cached),
@@ -757,6 +763,20 @@ class TableConfigure:
                                 "reset_and_get_deleted",
                                 matchspec0,
                             )
+                            # PUTRES_SPINE_SEQ
+                        matchspec0 = [
+                            hex(PUTRES_SPINE_SEQ),
+                            hex(is_cached),
+                            hex(validvalue),
+                            hex(is_latest),
+                            hex(is_stat),
+                        ]
+                        if is_cached == 1 and validvalue == 1:
+                            self.controller.table_add(
+                                "access_deleted_tbl",
+                                "reset_and_get_deleted",
+                                matchspec0,
+                            )
                         matchspec0 = [
                             hex(DELREQ_INSWITCH),
                             hex(is_cached),
@@ -829,16 +849,16 @@ class TableConfigure:
                             self.controller.table_add(
                                 "update_vallen_tbl", "set_and_get_vallen", matchspec0
                             )
-                    # matchspec0 = [
-                    #     hex(PUTREQ_INSWITCH),
-                    #     hex(is_cached),
-                    #     hex(validvalue),
-                    #     hex(is_latest),
-                    # ]
-                    # if is_cached == 1 and validvalue == 1:
-                    #     self.controller.table_add(
-                    #         "update_vallen_tbl", "set_and_get_vallen", matchspec0
-                    #     )
+                    matchspec0 = [
+                        hex(PUTRES_SPINE_SEQ),
+                        hex(is_cached),
+                        hex(validvalue),
+                        hex(is_latest),
+                    ]
+                    if is_cached == 1 and validvalue == 1:
+                        self.controller.table_add(
+                            "update_vallen_tbl", "set_and_get_vallen", matchspec0
+                        )
                     # matchspec0 = [
                     #     hex(DELREQ_INSWITCH),
                     #     hex(is_cached),
@@ -1130,6 +1150,7 @@ class TableConfigure:
             PUTREQ_SEQ_INSWITCH_CASE1,
             DELREQ_SEQ_INSWITCH_CASE1,
             GETRES_SEQ,
+            PUTRES_SPINE_SEQ,
             CACHE_EVICT_LOADDATA_INSWITCH_ACK,
             LOADSNAPSHOTDATA_INSWITCH_ACK,
             PUTREQ_SEQ_BEINGEVICTED,
@@ -2915,6 +2936,14 @@ class TableConfigure:
             "update_putreq_largevalue_inswitch_to_putreq_largevalue",
             matchspec0,
         )
+        matchspec0 = [
+            hex(PUTRES_SPINE_SEQ),
+        ]
+        self.controller.table_add(
+            "spine_eg_port_forward_tbl",
+            "update_putres_spine_seq_to_putres_seq",
+            matchspec0,
+        )
 
     def configure_update_pktlen_tbl(self):
         for i in range(int(int(switch_max_vallen / 8 + 1))):  # i from 0 to 16
@@ -2943,6 +2972,7 @@ class TableConfigure:
 
             for tmpoptype in [
                 GETRES_SEQ,
+                PUTRES_SPINE_SEQ,
                 GETREQ_BEINGEVICTED_RECORD,
                 GETREQ_LARGEVALUEBLOCK_RECORD,
             ]:

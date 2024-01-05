@@ -419,8 +419,8 @@ action update_putreq_inswitch_to_putreq_pop_seq() {
 }
 
 action update_putreq_inswitch_to_putres_seq_by_mirroring(bit<10> client_sid,bit<16> server_port) {
-	hdr.op_hdr.optype = PUTRES_SEQ;
-	hdr.shadowtype_hdr.shadowtype = PUTRES_SEQ;
+	hdr.op_hdr.optype = PUTRES_SPINE_SEQ;
+	hdr.shadowtype_hdr.shadowtype = PUTRES_SPINE_SEQ;
 	hdr.seq_hdr.seq = hdr.clone_hdr.assignedseq_for_farreach;
 	hdr.stat_hdr.stat = 1;
 	hdr.stat_hdr.nodeidx_foreval = SWITCHIDX_FOREVAL;

@@ -298,7 +298,12 @@ action update_putreq_largevalue_to_putreq_largevalue_inswitch() {
 	hdr.shadowtype_hdr.setValid();
 	hdr.inswitch_hdr.setValid();
 }
-
+action update_putres_spine_seq() {
+	// hdr.op_hdr.optype = PUTREQ_INSWITCH;
+	// hdr.shadowtype_hdr.shadowtype = PUTREQ_INSWITCH;
+	hdr.shadowtype_hdr.setValid();
+	hdr.inswitch_hdr.setValid();
+}
 @pragma stage 6
 table ig_port_forward_tbl {
 	key = {
@@ -311,7 +316,7 @@ table ig_port_forward_tbl {
 		update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
 		update_putreq_to_putreq_inswitch;
 		update_delreq_to_delreq_inswitch;
-
+		update_putres_spine_seq;
 		update_putreq_largevalue_to_putreq_largevalue_inswitch;
 		NoAction;
 	}

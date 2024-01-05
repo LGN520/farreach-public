@@ -1263,6 +1263,12 @@ action return_cache_pop_inswitch() {
 	hdr.op_hdr.optype = CACHE_POP_INSWITCH;
 	hdr.shadowtype_hdr.shadowtype = CACHE_POP_INSWITCH;
 }
+
+action update_putres_spine_seq_to_putres_seq() {
+	// NOTE: PUTREQ_LARGEVALUE only w/ op_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr
+	hdr.op_hdr.optype = PUTRES_SEQ;
+	hdr.shadowtype_hdr.shadowtype = PUTRES_SEQ;
+}
 @pragma stage 6
 table spine_eg_port_forward_tbl {
 	key = {
@@ -1275,6 +1281,7 @@ table spine_eg_port_forward_tbl {
 		update_putreq_inswitch_to_putreq;
 		update_delreq_inswitch_to_delreq;
 		update_putreq_largevalue_inswitch_to_putreq_largevalue;
+		update_putres_spine_seq_to_putres_seq;
 		return_cache_pop_inswitch;
 		NoAction;
 	}

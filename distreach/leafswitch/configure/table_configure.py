@@ -1172,6 +1172,7 @@ class TableConfigure:
             CACHE_POP_INSWITCH_FORWARD,
             BACKUP,
             BACKUPACK,
+            PUTRES_SPINE_SEQ
         ]:
             for i in range(int(switch_max_vallen / 8 + 1)):  # i from 0 to 16
                 if i == 0:
@@ -2888,6 +2889,7 @@ class TableConfigure:
                 GETRES_SEQ,
                 GETREQ_BEINGEVICTED_RECORD,
                 GETREQ_LARGEVALUEBLOCK_RECORD,
+                PUTRES_SPINE_SEQ
             ]:
                 matchspec0 = [
                     hex(tmpoptype),
