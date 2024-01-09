@@ -12,9 +12,7 @@ method = "netbufferv4"
 sw_path = subprocess.getstatusoutput("whereis simple_switch")[1].split(" ")[1]
 p4_path = current_dir + "/" + method + ".p4"
 json_path = current_dir + "/" + method + ".json"
-partition_json_path = current_dir + "/" + "../spineswitch/spineswitch.json"
-print(partition_json_path)
-
+spine_json_path = current_dir + "/" + "../spineswitch/spineswitch.json"
 
 def P4compile(p4_path, json_path):
     os.system("p4c-bm2-ss --p4v 16 " + p4_path + " -o  " + json_path)
@@ -24,7 +22,7 @@ host = []
 rackswitchs = []
 switchoses = []
 
-# debug = True
+debug = False
 
 
 def create_network():
@@ -49,9 +47,9 @@ def create_network():
         )
         # 0 1 2 3 4
         client_s1 = net.addSwitch(
-            "spine_s{}".format(rack_physical_num + i + 1),
+            "spine_s{}".format(i + 1),
             cls=P4Switch,
-            json_path=partition_json_path,
+            json_path=spine_json_path,
             thrift_port=9100 + i + 1,
             pcap_dump=debug,
             pcap_dir="./pcap",
@@ -115,7 +113,7 @@ def create_network():
     net.start()
     for i in range(rack_physical_num):
         switchoses[i].cmdPrint("ip route add default via 192.168.1.200")
-    CLI(net)
+    # CLI(net)
 
     def handler(signum, frame):
         print("Signal handler called with signal", signum)

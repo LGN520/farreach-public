@@ -131,7 +131,7 @@ def create_network():
     for i in range(rack_physical_num):
         spineswitchoses[i].cmdPrint("ip route add default via 192.168.1.200")
         leafswitchoses[i].cmdPrint("ip route add default via 192.168.1.200")
-    CLI(net)
+    // CLI(net)
 
     def handler(signum, frame):
         print("Signal handler called with signal", signum)

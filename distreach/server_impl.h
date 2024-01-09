@@ -509,6 +509,7 @@ void *run_server_worker(void * param) {
 #endif
 
 				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
+// #ifdef TOFINO_IMPL
 					if (tmp_stat) { // key exists
 						get_response_latest_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, global_server_logical_idx);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -517,6 +518,11 @@ void *run_server_worker(void * param) {
 						get_response_deleted_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, global_server_logical_idx);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
+// #else
+// 					// for distreach we only simulate key in BMV2
+// 					get_response_latest_seq_t rsp(CURMETHOD_ID, req.key(), tmp_val, tmp_seq, global_server_logical_idx);
+// 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+// #endif
 					udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 					dump_buf(buf, rsp_size);
@@ -552,7 +558,7 @@ void *run_server_worker(void * param) {
 #ifdef DEBUG_SERVER
 				CUR_TIME(rocksdb_t2);
 #endif
-				dump_buf(buf, recv_size);
+				// dump_buf(buf, recv_size);
 				put_response_seq_t rsp(CURMETHOD_ID, req.key(), req.seq(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");

@@ -101,7 +101,13 @@ typedef RecoverPkt<netreach_key_t, val_t> recoverpkt_t;
 /*
  * Parameters
  */
+#undef WARMUP_RAW_WORKLOAD
+#undef DYNAMIC_RULEPATH
+#define WARMUP_RAW_WORKLOAD(buf, workload) \
+	sprintf(buf, "../benchmarkdist/output/%s-hotest.out", workload)
 
+#define DYNAMIC_RULEPATH(buf, workload, prefix) \
+	sprintf(buf, "../benchmarkdist/output/%s-%srules/", workload, prefix)
 // global
 const char* workload_name = nullptr;
 int workload_mode = 0;

@@ -70,7 +70,7 @@ header val_t {
 }
 
 
-struct metadata_t {
+struct metadata {
 #ifndef RANGE_SUPPORT
     bit<16> hashval_for_partition; // at most 32K
 #else
@@ -91,9 +91,6 @@ struct headers {
     split_t split_hdr;
 #endif
 }
-// metadata metadata_t meta;
-struct metadata {
-    /* empty */
-    metadata_t meta;
-}
+
+
 

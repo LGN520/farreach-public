@@ -147,6 +147,8 @@ class TableConfigure:
                 PUTRES,
                 DELRES,
                 GETRES_LARGEVALUE,
+                GETRES_LATEST_SEQ, 
+                GETRES_DELETED_SEQ
             ]:
                 matchspec0 = [
                     hex(tmpoptype),
@@ -158,18 +160,18 @@ class TableConfigure:
                     "ipv4_forward_tbl", "forward_normal_response", matchspec0, actnspec0
                 )
             # 2 client
-            for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-                matchspec0 = [
-                    hex(tmpoptype),
-                    "" + client_ips[tmp_client_physical_idx] + "/32",
-                ]
-                actnspec0 = [hex(tmpsid)]
-                self.controller.table_add(
-                    "ipv4_forward_tbl",
-                    "forward_special_get_response",
-                    matchspec0,
-                    actnspec0,
-                )
+            # for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                # matchspec0 = [
+                #     hex(tmpoptype),
+                #     "" + client_ips[tmp_client_physical_idx] + "/32",
+                # ]
+                # actnspec0 = [hex(tmpsid)]
+                # self.controller.table_add(
+                #     "ipv4_forward_tbl",
+                #     "forward_special_get_response",
+                #     matchspec0,
+                #     actnspec0,
+                # )
 
     def configure_hash_partition_tbl(self):
         # partition for rack 3 4 5 6

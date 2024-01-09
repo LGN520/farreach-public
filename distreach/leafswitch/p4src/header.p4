@@ -65,7 +65,7 @@ header seq_t {
 }
 
 // NOTE: inswicth_t affects INSWITCH_PREV_BYTES in packet_format.h
-header inswitch_t {
+header inswitch_t { //20 byte
 	// 32-bit container
     bit<1> snapshot_flag;
     bit<1> is_cached;

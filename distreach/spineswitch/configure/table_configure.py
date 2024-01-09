@@ -114,23 +114,26 @@ class TableConfigure:
         for i in range((self.rack_idx) * 2, (self.rack_idx) * 2 + 2):
             print(
                 "Binding sid {} with server devport {} for both direction mirroring".format(
-                    self.server_sids[i % 2], self.server_devports[i]
+                    self.server_sids[i % 2], self.server_devports[i % 2]
                 )
             )  # clone to server
             self.controller.mirroring_add(
-                self.server_sids[i % 2], self.server_devports[i]
+                self.server_sids[i % 2], self.server_devports[i % 2]
             )
 
     def setUp(self):
         print("\nSetup")
-
-        self.client_devports = []
-        self.server_devports = ["3", "3"]
         self.recir_devports = []
-        # get the device ports from front panel ports
-        for client_fpport in client_fpports:
-            port, chnl = client_fpport.split("/")
-            self.client_devports.append(port)
+        if server_physical_num <=2:
+            self.client_devports = []
+            self.server_devports = ["3", "3"]
+            # get the device ports from front panel ports
+            for client_fpport in client_fpports:
+                port, chnl = client_fpport.split("/")
+                self.client_devports.append(port)
+        else:
+            self.client_devports = ["1","1"]
+            self.server_devports = ["2","2"]
         # for server_fpport in server_fpports:
         #     port, chnl = server_fpport.split("/")
         #     self.server_devports.append(port)
@@ -205,7 +208,7 @@ class TableConfigure:
                 "l2l3_forward_tbl",
                 "l2l3_forward",
                 [server_macs[i], server_ips[i] + "/32"],
-                [self.server_devports[i]],
+                [self.server_devports[i % 2]],
             )
 
         # Table: need_recirculate_tbl (default: reset_need_recirculate; size = <=8)
@@ -272,8 +275,8 @@ class TableConfigure:
             CACHE_EVICT_LOADDATA_INSWITCH,
             LOADSNAPSHOTDATA_INSWITCH,
             SETVALID_INSWITCH,
-            GETRES_LATEST_SEQ,
-            GETRES_DELETED_SEQ,
+            # GETRES_LATEST_SEQ,
+            # GETRES_DELETED_SEQ,
             PUTREQ_LARGEVALUE,
         ]:
             hash_start = 0  # [0, partition_count-1]
@@ -314,7 +317,7 @@ class TableConfigure:
                 else:
                     # udp_dstport = server_worker_port_start + global_server_logical_idx
                     udp_dstport = server_worker_port_start + local_server_logical_idx
-                    eport = self.server_devports[server_physical_idx]
+                    eport = self.server_devports[server_physical_idx % 2]
                     if (
                         tmpoptype == GETRES_LATEST_SEQ
                         or tmpoptype == GETRES_DELETED_SEQ
@@ -1063,7 +1066,7 @@ class TableConfigure:
         for tmp_server_physical_idx in range(
             (self.rack_idx) * 2, (self.rack_idx) * 2 + 2
         ):
-            tmp_devport = self.server_devports[tmp_server_physical_idx]
+            tmp_devport = self.server_devports[tmp_server_physical_idx % 2]
             tmp_server_mac = server_macs[tmp_server_physical_idx]
             tmp_server_ip = server_ips[tmp_server_physical_idx]
             actnspec1 = [tmp_server_mac, tmp_server_ip]

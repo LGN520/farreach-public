@@ -16,7 +16,7 @@ from itertools import product
 this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 from common import *
-
+rack_physical_num = int(server_physical_num / 2)
 # controller = SimpleSwitchThriftAPI(9090, "192.168.122.229")
 
 cached_list = [0, 1]
@@ -272,8 +272,8 @@ class TableConfigure:
             CACHE_EVICT_LOADDATA_INSWITCH,
             LOADSNAPSHOTDATA_INSWITCH,
             SETVALID_INSWITCH,
-            GETRES_LATEST_SEQ,
-            GETRES_DELETED_SEQ,
+            # GETRES_LATEST_SEQ,
+            # GETRES_DELETED_SEQ,
             PUTREQ_LARGEVALUE,
         ]:
             hash_start = 0  # [0, partition_count-1]

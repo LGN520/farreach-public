@@ -1220,16 +1220,24 @@ table drop_tbl {
 
 
 action update_getres_latest_seq_inswitch_to_getres_latest_seq() {
-	hdr.op_hdr.optype = GETRES_LATEST_SEQ;
-	hdr.shadowtype_hdr.shadowtype = GETRES_LATEST_SEQ;	
+	hdr.op_hdr.optype = GETRES_SEQ;
+	hdr.shadowtype_hdr.shadowtype = GETRES_SEQ;	
+
+	hdr.seq_hdr.setValid();
+	hdr.stat_hdr.setValid();
 	hdr.shadowtype_hdr.setValid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.validvalue_hdr.setInvalid(); //add
 }
 
 action update_getres_deleted_seq_inswitch_to_getres_deleted_seq() {
-	hdr.op_hdr.optype = GETRES_DELETED_SEQ;
-	hdr.shadowtype_hdr.shadowtype = GETRES_DELETED_SEQ;	
+	hdr.op_hdr.optype = GETRES_SEQ;
+	hdr.shadowtype_hdr.shadowtype = GETRES_SEQ;	
+	hdr.stat_hdr.stat = 0;
+
+	//seq_hdr.setInvalid();
+	hdr.seq_hdr.setValid();
+	hdr.stat_hdr.setValid();
 	hdr.shadowtype_hdr.setValid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.validvalue_hdr.setInvalid(); //add
@@ -1237,14 +1245,15 @@ action update_getres_deleted_seq_inswitch_to_getres_deleted_seq() {
 
 action update_putreq_inswitch_to_putreq() {
 	hdr.op_hdr.optype = PUTREQ;
-	hdr.shadowtype_hdr.shadowtype = PUTREQ;	hdr.shadowtype_hdr.setInvalid();
+	hdr.shadowtype_hdr.shadowtype = PUTREQ;	
+	// hdr.shadowtype_hdr.setInvalid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.validvalue_hdr.setInvalid(); //add
 }
 
 action update_delreq_inswitch_to_delreq() {
 	hdr.op_hdr.optype = DELREQ;
-	hdr.shadowtype_hdr.shadowtype = DELREQ;	hdr.shadowtype_hdr.setInvalid();
+	hdr.shadowtype_hdr.shadowtype = DELREQ;	//hdr.shadowtype_hdr.setInvalid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.validvalue_hdr.setInvalid(); //add
 }
@@ -1253,7 +1262,7 @@ action update_putreq_largevalue_inswitch_to_putreq_largevalue() {
 	// NOTE: PUTREQ_LARGEVALUE only w/ op_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr
 	hdr.op_hdr.optype = PUTREQ_LARGEVALUE;
 	hdr.shadowtype_hdr.shadowtype = PUTREQ_LARGEVALUE;
-		hdr.shadowtype_hdr.setInvalid();
+		// hdr.shadowtype_hdr.setInvalid();
 	hdr.inswitch_hdr.setInvalid();
 	hdr.validvalue_hdr.setInvalid(); //add
 }
@@ -1268,6 +1277,8 @@ action update_putres_spine_seq_to_putres_seq() {
 	// NOTE: PUTREQ_LARGEVALUE only w/ op_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr
 	hdr.op_hdr.optype = PUTRES_SEQ;
 	hdr.shadowtype_hdr.shadowtype = PUTRES_SEQ;
+	hdr.validvalue_hdr.setInvalid(); 
+	hdr.inswitch_hdr.setInvalid();
 }
 @pragma stage 6
 table spine_eg_port_forward_tbl {

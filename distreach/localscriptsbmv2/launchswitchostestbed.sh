@@ -28,7 +28,8 @@ cd leafswitch; bash configure.sh; cd ..
 sleep 1s
 cd spineswitch; bash configure.sh; cd ..
 sleep 1s
-
+cd partitionswitch; bash configure.sh; cd ..
+sleep 1s
 echo "launch ptfserver"
 cd leafswitch; 
 bash ptf_popserver.sh >../tmp_popserver.out 2>&1 &
@@ -41,10 +42,10 @@ cd ..
 # cd ..
 
 echo "launch switchos"
-# mx switchos1 ./switchos 0 > tmp_switchos0.out &
-# mx switchos2 ./switchos 1 > tmp_switchos1.out &
-# mx switchos3 ./switchos 2 > tmp_switchos2.out &
-# mx switchos4 ./switchos 3 > tmp_switchos3.out &
+mx switchos1 ./switchos 0 > tmp_switchos0.out &
+mx switchos2 ./switchos 1 > tmp_switchos1.out &
+mx switchos3 ./switchos 2 > tmp_switchos2.out &
+mx switchos4 ./switchos 3 > tmp_switchos3.out &
 # if [ "x${recovermode}" == "xrecover" ]
 # then
 # 	sleep 10s # wait for data plane interfaces UP; wait for ptf_popserver
