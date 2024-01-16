@@ -1,0 +1,1 @@
+killall python server controller switchos simple_switch ovs-testcontroller
