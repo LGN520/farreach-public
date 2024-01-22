@@ -1,15 +1,15 @@
-import ConfigParser
-
+import configparser
+import os
 hot_threshold = 20 # for 200 keys under 2 server threads for YCSB-based workload
 #hot_threshold = 100 # for 200/500 keys under 16/2 server threads (around from 125) for NetCache synthetic workload
 #hot_threshold = 200 # for 500 keys under 16/2 server threads w/o WAL or 1000 keys under 16/2 server threads
 
-this_dir = os.path.dirname(os.path.abspath(__file__))
+this_dir = '/root/jzcai/farreach-private/nocache/'
 
-config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(this_dir), "config.ini"), "r") as f:
+config = configparser.ConfigParser()
+with open(os.path.join(this_dir, "config.ini"), "r") as f:
     config.readfp(f)
-
+# print(os.path.join(this_dir, "config.ini"))
 client_physical_num = int(config.get("global", "client_physical_num"))
 server_physical_num = int(config.get("global", "server_physical_num"))
 server_total_logical_num = int(config.get("global", "server_total_logical_num"))
@@ -61,26 +61,13 @@ for i in range(server_physical_num):
         server_logical_idxes[j] = int(server_logical_idxes[j])
     server_logical_idxes_list.append(server_logical_idxes)
 
-control_config = ConfigParser.ConfigParser()
+control_config = configparser.ConfigParser()
 with open(os.path.join(os.path.dirname(this_dir), "control_type.ini"), "r") as f:
     control_config.readfp(f)
 
-#SWITCHOS_GET_FREEIDX = int(control_config.get("switchos", "switchos_get_freeidx"))
-#SWITCHOS_GET_KEY_FREEIDX = int(control_config.get("switchos", "switchos_get_key_freeidx"))
-#SWITCHOS_SET_EVICTDATA = int(control_config.get("switchos", "switchos_set_evictdata"))
-#SWITCHOS_GET_CACHEDEMPTYINDEX = int(control_config.get("switchos", "switchos_get_cachedemptyindex"))
-#SWITCHOS_GET_EVICTKEY = int(control_config.get("switchos", "switchos_get_evictkey"))
 
-#SWITCHOS_SETVALID0 = int(control_config.get("switchos", "SWITCHOS_SETVALID0"))
-#SWITCHOS_SETVALID0_ACK = int(control_config.get("switchos", "SWITCHOS_SETVALID0_ACK"))
-#SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1"))
-#SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK"))
 SWITCHOS_ADD_CACHE_LOOKUP = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP"))
 SWITCHOS_ADD_CACHE_LOOKUP_ACK = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP_ACK"))
-#SWITCHOS_GET_EVICTDATA_SETVALID3 = int(control_config.get("switchos", "SWITCHOS_GET_EVICTDATA_SETVALID3"))
-#SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = int(control_config.get("switchos", "SWITCHOS_GET_EVICTDATA_SETVALID3_ACK"))
-#SWITCHOS_SETVALID3 = int(control_config.get("switchos", "SWITCHOS_SETVALID3"))
-#SWITCHOS_SETVALID3_ACK = int(control_config.get("switchos", "SWITCHOS_SETVALID3_ACK"))
 SWITCHOS_REMOVE_CACHE_LOOKUP = int(control_config.get("switchos", "SWITCHOS_REMOVE_CACHE_LOOKUP"))
 SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = int(control_config.get("switchos", "SWITCHOS_REMOVE_CACHE_LOOKUP_ACK"))
 SWITCHOS_CLEANUP = int(control_config.get("switchos", "SWITCHOS_CLEANUP"))
@@ -212,49 +199,10 @@ LOADREQ_SPINE = 0x0320
 NETCACHE_CACHE_POP_ACK_NLATEST = 0x0330
 GETREQ_BEINGEVICTED = 0x0340
 
-#GETREQ = 0x00
-#PUTREQ = 0x01
-#DELREQ = 0x02
-#SCANREQ = 0x03
-#GETRES = 0x04
-#PUTRES = 0x05
-#DELRES = 0x06
-#SCANRES_SPLIT = 0x07
-#GETREQ_INSWITCH = 0x08
-#GETREQ_POP = 0x09
-#GETREQ_NLATEST = 0x0a
-#GETRES_LATEST_SEQ = 0x0b
-#GETRES_LATEST_SEQ_INSWITCH = 0x0c
-#GETRES_LATEST_SEQ_INSWITCH_CASE1 = 0x0d
-#GETRES_DELETED_SEQ = 0x0e
-#GETRES_DELETED_SEQ_INSWITCH = 0x0f
-#GETRES_DELETED_SEQ_INSWITCH_CASE1 = 0x10
-#PUTREQ_INSWITCH = 0x11
-#PUTREQ_SEQ = 0x12
-#PUTREQ_POP_SEQ = 0x13
-#PUTREQ_SEQ_INSWITCH_CASE1 = 0x14
-#PUTREQ_SEQ_CASE3 = 0x15
-#PUTREQ_POP_SEQ_CASE3 = 0x16
-#DELREQ_INSWITCH = 0x17
-#DELREQ_SEQ = 0x18
-#DELREQ_SEQ_INSWITCH_CASE1 = 0x19
-#DELREQ_SEQ_CASE3 = 0x1a
-#SCANREQ_SPLIT = 0x1b
-#CACHE_POP = 0x1c
-#CACHE_POP_INSWITCH = 0x1d
-#CACHE_POP_INSWITCH_ACK = 0x1e
-#CACHE_EVICT = 0x1f
-#CACHE_EVICT_ACK = 0x20
-#CACHE_EVICT_CASE2 = 0x21
 
-#NOT_CLONED = 0
-#CLONED_FROM_INGRESS = 1
-#CLONED_FROM_EGRESS = 3
-
-# u8val in [0, 255] -> i8val in [-128, 127]
 def convert_u8_to_i8(u8val):
     if u8val < 0 or u8val >= 256:
-        print "Invalid u8val: {}".format(u8val)
+        print ("Invalid u8val: {}".format(u8val))
     if u8val >= 128: # [128, 255] -> [-128, -1]
         i8val = u8val - 256
     else:
@@ -264,7 +212,7 @@ def convert_u8_to_i8(u8val):
 # u16val in [0, 2^16-1] -> i16val in [-2^15, 2^15-1]
 def convert_u16_to_i16(u16val):
     if u16val < 0 or u16val >= pow(2, 16):
-        print "Invalid u16val: {}".format(u16val)
+        print ("Invalid u16val: {}".format(u16val))
     if u16val >= pow(2, 15): # [2^15, 2^16-1] -> [-2^15, -1]
         i16val = u16val - pow(2, 16)
     else: # [0, 2^15-1] -> [0, 2^15-1]
@@ -274,7 +222,7 @@ def convert_u16_to_i16(u16val):
 # i16val in [-2^15, 2^15-1] -> u16val in [0, 2^16-1]
 def convert_i16_to_u16(i16val):
     if i16val < -pow(2, 15) or i16val >= pow(2, 15):
-        print "Invalid i16val: {}".format(i16val)
+        print ("Invalid i16val: {}".format(i16val))
     if i16val < 0: # [-2^15, -1] -> [2^15, 2^16-1]
         u16val = i16val + pow(2, 16)
     else: # [0, 2^15-1] -> [0, 2^15-1]
@@ -284,7 +232,7 @@ def convert_i16_to_u16(i16val):
 # u32val in [0, 2^32-1] -> i32val in [-2^31, 2^31-1]
 def convert_u32_to_i32(u32val):
     if u32val < 0 or u32val >= pow(2, 32):
-        print "Invalid u32val: {}".format(u32val)
+        print ("Invalid u32val: {}".format(u32val))
     if u32val >= pow(2, 31): # [2^31, 2^32-1] -> [-2^31, -1]
         i32val = u32val - pow(2, 32)
     else: # [0, 2^31-1] -> [0, 2^31-1]
@@ -294,7 +242,7 @@ def convert_u32_to_i32(u32val):
 # i32val in [-2^31, 2^31-1] -> u32val in [0, 2^32-1]
 def convert_i32_to_u32(i32val):
     if i32val < -pow(2, 31) or i32val >= pow(2, 31):
-        print "Invalid i32val: {}".format(i32val)
+        print ("Invalid i32val: {}".format(i32val))
     if i32val < 0: # [-2^31, -1] -> [2^31, 2^32-1]
         u32val = i32val + pow(2, 32)
     else: # [0, 2^31-1] -> [0, 2^31-1]

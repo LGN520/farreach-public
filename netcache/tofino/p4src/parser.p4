@@ -1,14 +1,13 @@
-/* Parser */
+/* state */
 
 #define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_VLAN 0x8100
 #define PROTOTYPE_TCP 0x06
 #define PROTOTYPE_UDP 0x11
-
 // NOTE: due to hardware limitation, we cannot make too many branches in switch expression
 
 // NOTE: carefully assign optype to reduce branches
-// (1) vallen&value: mask 0b0001; seq: mask 0b0010; inswitch_hdr: mask 0b0100; stat: mask 0b1000;
+// (1) vallen&value: &&& 0b0001; seq: &&& 0b0010; inswitch_hdr: &&& 0b0100; stat: &&& 0b1000;
 // (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
 // op_hdr + vallen&value + shadowtype (0b0001): PUTREQ, WARMUPREQ (deprecated), LOADREQ
 // op_hdr + vallen&value + shadowtype + seq (0b0011): PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, NETCACHE_PUTREQ_SEQ_CACHED
@@ -26,387 +25,585 @@
 // only op_hdr (default): WARMUPREQ, GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK (deprecated: w/ clone_hdr), WARMUPACK, LOADACK, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK (w/ frequency_hdr), NETCACHE_GETREQ_POP, NETCACHE_VALUEUPATE_ACK
 // not parsed in switch: SCANRES_SPLIT, CACHE_POP, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK, SETVALID_INSWITCH_ACK, NETCACHE_CACHE_POP/_ACK, NETCACHE_CACHE_POP_FINISH/_ACK, NETCACHE_CACHE_EVICT/_ACK
 
-parser start {
-	return parse_ethernet;
-}
-
-parser parse_ethernet {
-	extract(ethernet_hdr);
-	return select(ethernet_hdr.etherType) {
-		ETHERTYPE_IPV4: parse_ipv4;
-		default: ingress;
+control IngressDeparser(packet_out packet,
+    /* User */
+    inout headers                       hdr,
+    in    ingress_metadata                      meta,
+    /* Intrinsic */
+    in    ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md)
+{
+	apply{
+		packet.emit(hdr);
 	}
 }
 
-parser parse_ipv4 {
-	extract(ipv4_hdr);
-	return select(ipv4_hdr.protocol) {
-		PROTOTYPE_UDP: parse_udp_dstport;
-		default: ingress;
-	}
-}
-
-parser parse_udp_dstport {
-	extract(udp_hdr);
-	return select(udp_hdr.dstPort) {
-		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
-		0x1080 mask 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
-		5008: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
-		default: parse_udp_srcport;
-	}
-}
-
-parser parse_udp_srcport {
-	return select(udp_hdr.srcPort) {
-		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
-		0x1080 mask 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
-		5009: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
-		default: ingress; // traditional packet
-	}
-}
-
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr/fraginfo_hdr
-
-parser parse_op {
-	extract(op_hdr);
-	return select(op_hdr.optype) {
-		//CACHE_POP_INSWITCH_ACK: parse_clone;
-		NETCACHE_GETREQ_POP: parse_clone;
-		CACHE_EVICT_LOADFREQ_INSWITCH_ACK: parse_frequency;
-		PUTREQ_LARGEVALUE: parse_fraginfo;
-		1 mask 0x01: parse_vallen;
-		/*2 mask 0x02: parse_seq;
-		4 mask 0x04: parse_inswitch;
-		8 mask 0x08: parse_stat;*/
-		2 mask 0x02: parse_shadowtype;
-		4 mask 0x04: parse_shadowtype;
-		8 mask 0x08: parse_shadowtype;
-#ifdef RANGE_SUPPORT
-		SCANREQ: parse_scan;
-		SCANREQ_SPLIT: parse_scan;
-#endif
-		default: ingress;
-		//default: parse_debug;
-		
-		/*GETREQ_INSWITCH: parse_inswitch;
-		GETRES: parse_vallen;
-		GETRES_LATEST_SEQ: parse_vallen;
-		GETRES_LATEST_SEQ_INSWITCH: parse_vallen;
-		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_vallen;
-		GETRES_DELETED_SEQ: parse_vallen;
-		GETRES_DELETED_SEQ_INSWITCH: parse_vallen;
-		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_vallen;
-		CACHE_POP_INSWITCH: parse_vallen;
-		PUTREQ: parse_vallen;
-		PUTREQ_INSWITCH: parse_vallen;
-		PUTREQ_SEQ: parse_vallen;
-		PUTREQ_POP_SEQ: parse_vallen;
-		PUTREQ_SEQ_INSWITCH_CASE1: parse_vallen;
-		PUTREQ_SEQ_CASE3: parse_vallen;
-		PUTREQ_POP_SEQ_CASE3: parse_vallen;
-		PUTRES: parse_stat;
-		DELREQ_INSWITCH: parse_inswitch;
-		DELREQ_SEQ: parse_seq;
-		DELREQ_SEQ_INSWITCH_CASE1: parse_vallen;
-		DELREQ_SEQ_CASE3: parse_seq;
-		DELRES: parse_stat;
-#ifdef RANGE_SUPPORT
-		SCANREQ: parse_scan;
-		SCANREQ_SPLIT: parse_scan;
-#endif
-		default: ingress;
-		//default: parse_debug; // GETREQ, GETREQ_POP, GETREQ_NLATEST, DELREQ*/
-	}
-}
-
-#ifdef RANGE_SUPPORT
-parser parse_scan {
-	extract(scan_hdr);
-	return select(op_hdr.optype) {
-		SCANREQ_SPLIT: parse_split;
-		default: ingress; // SCANREQ
-	}
-}
-
-parser parse_split {
-	extract(split_hdr);
-	return ingress;
-}
-#endif
-
-parser parse_vallen {
-	extract(vallen_hdr);
-	return select(vallen_hdr.vallen) {
-		//0: parse_val_len0;
-		0: parse_shadowtype;
-		0 mask 0xFFFFFFF8: parse_val_len1;
-		8: parse_val_len1;
-		8 mask 0xFFFFFFF8: parse_val_len2;
-		16: parse_val_len2;
-		16 mask 0xFFFFFFF8: parse_val_len3;
-		24: parse_val_len3;
-		24 mask 0xFFFFFFF8: parse_val_len4;
-		32: parse_val_len4;
-		32 mask 0xFFFFFFF8: parse_val_len5;
-		40: parse_val_len5;
-		40 mask 0xFFFFFFF8: parse_val_len6;
-		48: parse_val_len6;
-		48 mask 0xFFFFFFF8: parse_val_len7;
-		56: parse_val_len7;
-		56 mask 0xFFFFFFF8: parse_val_len8;
-		64: parse_val_len8;
-		64 mask 0xFFFFFFF8: parse_val_len9;
-		72: parse_val_len9;
-		72 mask 0xFFFFFFF8: parse_val_len10;
-		80: parse_val_len10;
-		80 mask 0xFFFFFFF8: parse_val_len11;
-		88: parse_val_len11;
-		88 mask 0xFFFFFFF8: parse_val_len12;
-		96: parse_val_len12;
-		96 mask 0xFFFFFFF8: parse_val_len13;
-		104: parse_val_len13;
-		104 mask 0xFFFFFFF8: parse_val_len14;
-		112: parse_val_len14;
-		112 mask 0xFFFFFFF8: parse_val_len15;
-		120: parse_val_len15;
-		120 mask 0xFFFFFFF8: parse_val_len16;
-		128: parse_val_len16;
-		//default: parse_val_len0; // > 128
-		default: parse_shadowtype; // > 128
-	}
-}
-
-/*parser parse_val_len0 {
-	return select(op_hdr.optype) {
-		2 mask 0x02: parse_seq;
-		4 mask 0x04: parse_inswitch;
-		8 mask 0x08: parse_stat;
-		default: ingress;
-		//default: parse_debug;
-		
-		//GETRES: parse_stat;
-		//GETRES_LATEST_SEQ: parse_seq;
-		//GETRES_LATEST_SEQ_INSWITCH: parse_seq;
-		//GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_seq;
-		//GETRES_DELETED_SEQ: parse_seq;
-		//GETRES_DELETED_SEQ_INSWITCH: parse_seq;
-		//GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_seq;
-		//CACHE_POP_INSWITCH: parse_seq;
-		//PUTREQ_INSWITCH: parse_inswitch;
-		//PUTREQ_SEQ: parse_seq;
-		//PUTREQ_POP_SEQ: parse_seq;
-		//PUTREQ_SEQ_INSWITCH_CASE1: parse_seq;
-		//PUTREQ_SEQ_CASE3: parse_seq;
-		//PUTREQ_POP_SEQ_CASE3: parse_seq;
-		//DELREQ_INSWITCH: parse_inswitch;
-		//DELREQ_SEQ_INSWITCH_CASE1: parse_seq;
-		//default: ingress; // PUTREQ
-		////default: parse_debug; // PUTREQ
-	}
-}*/
-
-parser parse_val_len1 {
-	extract(val1_hdr);
-	//return parse_val_len0;
-	return parse_shadowtype;
-}
-
-parser parse_val_len2 {
-	extract(val2_hdr);
-	return parse_val_len1;
-}
-
-parser parse_val_len3 {
-	extract(val3_hdr);
-	return parse_val_len2;
-}
-
-parser parse_val_len4 {
-	extract(val4_hdr);
-	return parse_val_len3;
-}
-
-parser parse_val_len5 {
-	extract(val5_hdr);
-	return parse_val_len4;
-}
-
-parser parse_val_len6 {
-	extract(val6_hdr);
-	return parse_val_len5;
-}
-
-parser parse_val_len7 {
-	extract(val7_hdr);
-	return parse_val_len6;
-}
-
-parser parse_val_len8 {
-	extract(val8_hdr);
-	return parse_val_len7;
-}
-
-parser parse_val_len9 {
-	extract(val9_hdr);
-	return parse_val_len8;
-}
-
-parser parse_val_len10 {
-	extract(val10_hdr);
-	return parse_val_len9;
-}
-
-parser parse_val_len11 {
-	extract(val11_hdr);
-	return parse_val_len10;
-}
-
-parser parse_val_len12 {
-	extract(val12_hdr);
-	return parse_val_len11;
-}
-
-parser parse_val_len13 {
-	extract(val13_hdr);
-	return parse_val_len12;
-}
-
-parser parse_val_len14 {
-	extract(val14_hdr);
-	return parse_val_len13;
-}
-
-parser parse_val_len15 {
-	extract(val15_hdr);
-	return parse_val_len14;
-}
-
-parser parse_val_len16 {
-	extract(val16_hdr);
-	return parse_val_len15;
-}
-
-parser parse_shadowtype {
-	extract(shadowtype_hdr);
-	return select(shadowtype_hdr.shadowtype) {
-		2 mask 0x02: parse_seq;
-		4 mask 0x04: parse_inswitch;
-		8 mask 0x08: parse_stat;
-		default: ingress;
-		//default: parse_debug;
-	}
-}
-
-parser parse_seq {
-	extract(seq_hdr);
-	//return select(op_hdr.optype) {
-	return select(shadowtype_hdr.shadowtype) {
-		PUTREQ_LARGEVALUE_SEQ: parse_fraginfo;
-		PUTREQ_LARGEVALUE_SEQ_CACHED: parse_fraginfo;
-		PUTREQ_LARGEVALUE_SEQ_CASE3: parse_fraginfo;
-		4 mask 0x04: parse_inswitch;
-		8 mask 0x08: parse_stat;
-		default: ingress;
-		//default: parse_debug;
-		
-		/*GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
-		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_inswitch;
-		GETRES_DELETED_SEQ_INSWITCH: parse_inswitch;
-		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_inswitch;
-		CACHE_POP_INSWITCH: parse_inswitch; // inswitch_hdr is set by switchos
-		PUTREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
-		DELREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
-		default: ingress;
-		//default: parse_debug; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ, DELREQ_SEQ_CASE3 */
-	}
-}
-
-parser parse_inswitch {
-	extract(inswitch_hdr);
-	//return select(op_hdr.optype) {
-	return select(shadowtype_hdr.shadowtype) {
-		NETCACHE_WARMUPREQ_INSWITCH_POP: parse_clone;
-		PUTREQ_LARGEVALUE_INSWITCH: parse_fraginfo;
-		PUTREQ_LARGEVALUE_SEQ_INSWITCH: parse_fraginfo;
-		8 mask 0x08: parse_stat;
-		default: ingress;
-		//default: parse_debug;
-		
-		/*GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_stat;
-		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_stat;
-		PUTREQ_SEQ_INSWITCH_CASE1: parse_stat;
-		DELREQ_SEQ_INSWITCH_CASE1: parse_stat;
-		default: ingress;
-		//default: parse_debug; // GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH, CACHE_POP_INSWITCH */
-	}
-}
-
-parser parse_stat {
-	extract(stat_hdr);
-	return select(shadowtype_hdr.shadowtype) {
-		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_clone;
-		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_clone;
-		PUTREQ_SEQ_INSWITCH_CASE1: parse_clone;
-		DELREQ_SEQ_INSWITCH_CASE1: parse_clone;
-		default: ingress; // CACHE_POP_INSWITCH
-		//default: parse_debug;
-	}
-	//return ingress;
-	////return parse_debug; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
-}
-
-parser parse_clone {
-	extract(clone_hdr);
-	return ingress;
-	//return parse_debug; // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
-	// CACHE_POP_INSWITCH_ACK does not need clond_hdr now
-}
-
-parser parse_frequency {
-	extract(frequency_hdr);
-	return ingress; // CACHE_EVICT_LOADFREQ_INSWITCH_ACK
-}
-
-parser parse_fraginfo {
-	extract(fraginfo_hdr);
-	return ingress; // PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_INSWITCH, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH, PUTREQ_LARGEVALUE_SEQ_CACHED, PUTREQ_LARGEVALUE_SEQ_CASE3
-}
-
-/*parser parse_debug {
-	extract(debug_hdr);
-	return ingress;
-}*/
-
-// checksum calculation (deparser phase)
-
-field_list ipv4_field_list {
-    ipv4_hdr.version;
-    ipv4_hdr.ihl;
-    ipv4_hdr.diffserv;
-    ipv4_hdr.totalLen;
-    ipv4_hdr.identification;
-    ipv4_hdr.flags;
-    ipv4_hdr.fragOffset;
-    ipv4_hdr.ttl;
-    ipv4_hdr.protocol;
-    ipv4_hdr.srcAddr;
-    ipv4_hdr.dstAddr;
-}
-
-field_list_calculation ipv4_chksum_calc {
-    input {
-        ipv4_field_list;
+parser EgressParser(packet_in      packet,
+    /* User */
+    out headers          hdr,
+    out egress_metadata         meta,
+    /* Intrinsic */
+    out egress_intrinsic_metadata_t  eg_intr_md)
+{
+    /* This is a mandatory state, required by Tofino Architecture */
+    state start {
+        packet.extract(eg_intr_md);
+        transition parse_metadata;
     }
-#ifndef __p4c__
-    algorithm : csum16;
-#else
-    algorithm : crc16;
-#endif
-    output_width: 16;
+
+    state parse_metadata {
+        mirror_h mirror_md = packet.lookahead<mirror_h>();
+        transition select(mirror_md.pkt_type) {
+            PKT_TYPE_MIRROR : parse_mirror_md;
+            // PKT_TYPE_NORMAL : parse_ethernet;
+            default : parse_ethernet;
+        }
+    }
+
+    state parse_mirror_md {
+        mirror_h mirror_md;
+        packet.extract(mirror_md);
+        transition parse_ethernet;
+    }
+
+	state parse_ethernet {
+		packet.extract(hdr.ethernet_hdr);
+		transition select(hdr.ethernet_hdr.etherType) {
+			ETHERTYPE_IPV4: parse_ipv4;
+			default: accept;
+		}
+	}
+
+	state parse_ipv4 {
+		packet.extract(hdr.ipv4_hdr);
+		transition select(hdr.ipv4_hdr.protocol) {
+			PROTOTYPE_UDP: parse_udp_dstport;
+			default: accept;
+		}
+	}
+
+	state parse_udp_dstport {
+		packet.extract(hdr.udp_hdr);
+		transition select(hdr.udp_hdr.dstPort) {
+			0x0480 &&& 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+			0x1080 &&& 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
+			5008: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
+			default: parse_udp_srcport;
+		}
+	}
+
+	state parse_udp_srcport {
+		transition select(hdr.udp_hdr.srcPort) {
+			0x0480 &&& 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+			0x1080 &&& 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
+			5009: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
+			default: accept; // traditional packet
+		}
+	}
+
+	// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr/fraginfo_hdr
+
+	state parse_op {
+		packet.extract(hdr.op_hdr);
+		transition select(hdr.op_hdr.optype) {
+			//CACHE_POP_INSWITCH_ACK: parse_clone;
+			NETCACHE_GETREQ_POP: parse_clone;
+			CACHE_EVICT_LOADFREQ_INSWITCH_ACK: parse_frequency;
+			PUTREQ_LARGEVALUE: parse_fraginfo;
+			1 &&& 0x01: parse_vallen;
+			/*2 &&& 0x02: parse_seq;
+			4 &&& 0x04: parse_inswitch;
+			8 &&& 0x08: parse_stat;*/
+			2 &&& 0x02: parse_shadowtype;
+			4 &&& 0x04: parse_shadowtype;
+			8 &&& 0x08: parse_shadowtype;
+
+			default: accept;
+		}
+	}
+
+
+	state parse_vallen {
+		packet.extract(hdr.vallen_hdr);
+		transition select(hdr.vallen_hdr.vallen) {
+			//0: parse_val_len0;
+			0: parse_shadowtype;
+			0 &&& 0xFFF8: parse_val_len1;
+			8: parse_val_len1;
+			8 &&& 0xFFF8: parse_val_len2;
+			16: parse_val_len2;
+			16 &&& 0xFFF8: parse_val_len3;
+			24: parse_val_len3;
+			24 &&& 0xFFF8: parse_val_len4;
+			32: parse_val_len4;
+			32 &&& 0xFFF8: parse_val_len5;
+			40: parse_val_len5;
+			40 &&& 0xFFF8: parse_val_len6;
+			48: parse_val_len6;
+			48 &&& 0xFFF8: parse_val_len7;
+			56: parse_val_len7;
+			56 &&& 0xFFF8: parse_val_len8;
+			64: parse_val_len8;
+			64 &&& 0xFFF8: parse_val_len9;
+			72: parse_val_len9;
+			72 &&& 0xFFF8: parse_val_len10;
+			80: parse_val_len10;
+			80 &&& 0xFFF8: parse_val_len11;
+			88: parse_val_len11;
+			88 &&& 0xFFF8: parse_val_len12;
+			96: parse_val_len12;
+			96 &&& 0xFFF8: parse_val_len13;
+			104: parse_val_len13;
+			104 &&& 0xFFF8: parse_val_len14;
+			112: parse_val_len14;
+			112 &&& 0xFFF8: parse_val_len15;
+			120: parse_val_len15;
+			120 &&& 0xFFF8: parse_val_len16;
+			128: parse_val_len16;
+			//default: parse_val_len0; // > 128
+			default: parse_shadowtype; // > 128
+		}
+	}
+
+	state parse_val_len1 {
+		packet.extract(hdr.val1_hdr);
+		transition parse_shadowtype;
+	}
+
+	state parse_val_len2 {
+		packet.extract(hdr.val2_hdr);
+		transition parse_val_len1;
+	}
+
+	state parse_val_len3 {
+		packet.extract(hdr.val3_hdr);
+		transition parse_val_len2;
+	}
+
+	state parse_val_len4 {
+		packet.extract(hdr.val4_hdr);
+		transition parse_val_len3;
+	}
+
+	state parse_val_len5 {
+		packet.extract(hdr.val5_hdr);
+		transition parse_val_len4;
+	}
+
+	state parse_val_len6 {
+		packet.extract(hdr.val6_hdr);
+		transition parse_val_len5;
+	}
+
+	state parse_val_len7 {
+		packet.extract(hdr.val7_hdr);
+		transition parse_val_len6;
+	}
+
+	state parse_val_len8 {
+		packet.extract(hdr.val8_hdr);
+		transition parse_val_len7;
+	}
+
+	state parse_val_len9 {
+		packet.extract(hdr.val9_hdr);
+		transition parse_val_len8;
+	}
+
+	state parse_val_len10 {
+		packet.extract(hdr.val10_hdr);
+		transition parse_val_len9;
+	}
+
+	state parse_val_len11 {
+		packet.extract(hdr.val11_hdr);
+		transition parse_val_len10;
+	}
+
+	state parse_val_len12 {
+		packet.extract(hdr.val12_hdr);
+		transition parse_val_len11;
+	}
+
+	state parse_val_len13 {
+		packet.extract(hdr.val13_hdr);
+		transition parse_val_len12;
+	}
+
+	state parse_val_len14 {
+		packet.extract(hdr.val14_hdr);
+		transition parse_val_len13;
+	}
+
+	state parse_val_len15 {
+		packet.extract(hdr.val15_hdr);
+		transition parse_val_len14;
+	}
+
+	state parse_val_len16 {
+		packet.extract(hdr.val16_hdr);
+		transition parse_val_len15;
+	}
+
+	state parse_shadowtype {
+		packet.extract(hdr.shadowtype_hdr);
+		transition select(hdr.shadowtype_hdr.shadowtype) {
+			2 &&& 0x02: parse_seq;
+			4 &&& 0x04: parse_inswitch;
+			8 &&& 0x08: parse_stat;
+			default: accept;
+		}
+	}
+
+	state parse_seq {
+		packet.extract(hdr.seq_hdr);
+		//transition select(hdr.op_hdr.optype) {
+		transition select(hdr.shadowtype_hdr.shadowtype) {
+			PUTREQ_LARGEVALUE_SEQ: parse_fraginfo;
+			PUTREQ_LARGEVALUE_SEQ_CACHED: parse_fraginfo;
+			PUTREQ_LARGEVALUE_SEQ_CASE3: parse_fraginfo;
+			4 &&& 0x04: parse_inswitch;
+			8 &&& 0x08: parse_stat;
+			default: accept;
+			//default: parse_debug;
+			
+		}
+	}
+
+	state parse_inswitch {
+		packet.extract(hdr.inswitch_hdr);
+		//transition select(hdr.op_hdr.optype) {
+		transition select(hdr.shadowtype_hdr.shadowtype) {
+			NETCACHE_WARMUPREQ_INSWITCH_POP: parse_clone;
+			PUTREQ_LARGEVALUE_INSWITCH: parse_fraginfo;
+			PUTREQ_LARGEVALUE_SEQ_INSWITCH: parse_fraginfo;
+			8 &&& 0x08: parse_stat;
+			default: accept;
+			//default: parse_debug;
+			
+		}
+	}
+
+	state parse_stat {
+		packet.extract(hdr.stat_hdr);
+		transition select(hdr.shadowtype_hdr.shadowtype) {
+			GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_clone;
+			GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_clone;
+			PUTREQ_SEQ_INSWITCH_CASE1: parse_clone;
+			DELREQ_SEQ_INSWITCH_CASE1: parse_clone;
+			default: accept; // CACHE_POP_INSWITCH
+			//default: parse_debug;
+		}
+		
+	}
+
+	state parse_clone {
+		packet.extract(hdr.clone_hdr);
+		transition accept;
+		
+	}
+
+	state parse_frequency {
+		packet.extract(hdr.frequency_hdr);
+		transition accept; // CACHE_EVICT_LOADFREQ_INSWITCH_ACK
+	}
+
+	state parse_fraginfo {
+		packet.extract(hdr.fraginfo_hdr);
+		transition accept; // PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_INSWITCH, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH, PUTREQ_LARGEVALUE_SEQ_CACHED, PUTREQ_LARGEVALUE_SEQ_CASE3
+	}
 }
 
-// NOTE: verify means check the calculated_field at packet ingress (aka parser)
-// NOTE: update means change the calculated_field at packet egress (akak deparser)
-calculated_field ipv4_hdr.hdrChecksum {
-    update ipv4_chksum_calc;
+parser netcacheParser(packet_in packet,
+                out headers hdr,
+                out ingress_metadata meta,
+                out ingress_intrinsic_metadata_t  ig_intr_md){
+	state start {
+		packet.extract(ig_intr_md);
+        packet.advance(PORT_METADATA_SIZE);
+		transition parse_ethernet;
+	}
+
+	state parse_ethernet {
+		packet.extract(hdr.ethernet_hdr);
+		transition select(hdr.ethernet_hdr.etherType) {
+			ETHERTYPE_IPV4: parse_ipv4;
+			default: accept;
+		}
+	}
+
+	state parse_ipv4 {
+		packet.extract(hdr.ipv4_hdr);
+		transition select(hdr.ipv4_hdr.protocol) {
+			PROTOTYPE_UDP: parse_udp_dstport;
+			default: accept;
+		}
+	}
+
+	state parse_udp_dstport {
+		packet.extract(hdr.udp_hdr);
+		transition select(hdr.udp_hdr.dstPort) {
+			0x0480 &&& 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+			0x1080 &&& 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
+			5008: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
+			default: parse_udp_srcport;
+		}
+	}
+
+	state parse_udp_srcport {
+		transition select(hdr.udp_hdr.srcPort) {
+			0x0480 &&& 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+			0x1080 &&& 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
+			5009: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
+			default: accept; // traditional packet
+		}
+	}
+
+	// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr/fraginfo_hdr
+
+	state parse_op {
+		packet.extract(hdr.op_hdr);
+		transition select(hdr.op_hdr.optype) {
+			//CACHE_POP_INSWITCH_ACK: parse_clone;
+			NETCACHE_GETREQ_POP: parse_clone;
+			CACHE_EVICT_LOADFREQ_INSWITCH_ACK: parse_frequency;
+			PUTREQ_LARGEVALUE: parse_fraginfo;
+			1 &&& 0x01: parse_vallen;
+			/*2 &&& 0x02: parse_seq;
+			4 &&& 0x04: parse_inswitch;
+			8 &&& 0x08: parse_stat;*/
+			2 &&& 0x02: parse_shadowtype;
+			4 &&& 0x04: parse_shadowtype;
+			8 &&& 0x08: parse_shadowtype;
+
+			default: accept;
+		}
+	}
+
+
+	state parse_vallen {
+		packet.extract(hdr.vallen_hdr);
+		transition select(hdr.vallen_hdr.vallen) {
+			//0: parse_val_len0;
+			0: parse_shadowtype;
+			0 &&& 0xFFF8: parse_val_len1;
+			8: parse_val_len1;
+			8 &&& 0xFFF8: parse_val_len2;
+			16: parse_val_len2;
+			16 &&& 0xFFF8: parse_val_len3;
+			24: parse_val_len3;
+			24 &&& 0xFFF8: parse_val_len4;
+			32: parse_val_len4;
+			32 &&& 0xFFF8: parse_val_len5;
+			40: parse_val_len5;
+			40 &&& 0xFFF8: parse_val_len6;
+			48: parse_val_len6;
+			48 &&& 0xFFF8: parse_val_len7;
+			56: parse_val_len7;
+			56 &&& 0xFFF8: parse_val_len8;
+			64: parse_val_len8;
+			64 &&& 0xFFF8: parse_val_len9;
+			72: parse_val_len9;
+			72 &&& 0xFFF8: parse_val_len10;
+			80: parse_val_len10;
+			80 &&& 0xFFF8: parse_val_len11;
+			88: parse_val_len11;
+			88 &&& 0xFFF8: parse_val_len12;
+			96: parse_val_len12;
+			96 &&& 0xFFF8: parse_val_len13;
+			104: parse_val_len13;
+			104 &&& 0xFFF8: parse_val_len14;
+			112: parse_val_len14;
+			112 &&& 0xFFF8: parse_val_len15;
+			120: parse_val_len15;
+			120 &&& 0xFFF8: parse_val_len16;
+			128: parse_val_len16;
+			//default: parse_val_len0; // > 128
+			default: parse_shadowtype; // > 128
+		}
+	}
+
+
+	state parse_val_len1 {
+		packet.extract(hdr.val1_hdr);
+		transition parse_shadowtype;
+	}
+
+	state parse_val_len2 {
+		packet.extract(hdr.val2_hdr);
+		transition parse_val_len1;
+	}
+
+	state parse_val_len3 {
+		packet.extract(hdr.val3_hdr);
+		transition parse_val_len2;
+	}
+
+	state parse_val_len4 {
+		packet.extract(hdr.val4_hdr);
+		transition parse_val_len3;
+	}
+
+	state parse_val_len5 {
+		packet.extract(hdr.val5_hdr);
+		transition parse_val_len4;
+	}
+
+	state parse_val_len6 {
+		packet.extract(hdr.val6_hdr);
+		transition parse_val_len5;
+	}
+
+	state parse_val_len7 {
+		packet.extract(hdr.val7_hdr);
+		transition parse_val_len6;
+	}
+
+	state parse_val_len8 {
+		packet.extract(hdr.val8_hdr);
+		transition parse_val_len7;
+	}
+
+	state parse_val_len9 {
+		packet.extract(hdr.val9_hdr);
+		transition parse_val_len8;
+	}
+
+	state parse_val_len10 {
+		packet.extract(hdr.val10_hdr);
+		transition parse_val_len9;
+	}
+
+	state parse_val_len11 {
+		packet.extract(hdr.val11_hdr);
+		transition parse_val_len10;
+	}
+
+	state parse_val_len12 {
+		packet.extract(hdr.val12_hdr);
+		transition parse_val_len11;
+	}
+
+	state parse_val_len13 {
+		packet.extract(hdr.val13_hdr);
+		transition parse_val_len12;
+	}
+
+	state parse_val_len14 {
+		packet.extract(hdr.val14_hdr);
+		transition parse_val_len13;
+	}
+
+	state parse_val_len15 {
+		packet.extract(hdr.val15_hdr);
+		transition parse_val_len14;
+	}
+
+	state parse_val_len16 {
+		packet.extract(hdr.val16_hdr);
+		transition parse_val_len15;
+	}
+	
+	state parse_shadowtype {
+		packet.extract(hdr.shadowtype_hdr);
+		transition select(hdr.shadowtype_hdr.shadowtype) {
+			2 &&& 0x02: parse_seq;
+			4 &&& 0x04: parse_inswitch;
+			8 &&& 0x08: parse_stat;
+			default: accept;
+		}
+	}
+
+	state parse_seq {
+		packet.extract(hdr.seq_hdr);
+		//transition select(hdr.op_hdr.optype) {
+		transition select(hdr.shadowtype_hdr.shadowtype) {
+			PUTREQ_LARGEVALUE_SEQ: parse_fraginfo;
+			PUTREQ_LARGEVALUE_SEQ_CACHED: parse_fraginfo;
+			PUTREQ_LARGEVALUE_SEQ_CASE3: parse_fraginfo;
+			4 &&& 0x04: parse_inswitch;
+			8 &&& 0x08: parse_stat;
+			default: accept;
+			//default: parse_debug;
+			
+		}
+	}
+
+	state parse_inswitch {
+		packet.extract(hdr.inswitch_hdr);
+		//transition select(hdr.op_hdr.optype) {
+		transition select(hdr.shadowtype_hdr.shadowtype) {
+			NETCACHE_WARMUPREQ_INSWITCH_POP: parse_clone;
+			PUTREQ_LARGEVALUE_INSWITCH: parse_fraginfo;
+			PUTREQ_LARGEVALUE_SEQ_INSWITCH: parse_fraginfo;
+			8 &&& 0x08: parse_stat;
+			default: accept;
+			//default: parse_debug;
+			
+		}
+	}
+
+	state parse_stat {
+		packet.extract(hdr.stat_hdr);
+		transition select(hdr.shadowtype_hdr.shadowtype) {
+			GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_clone;
+			GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_clone;
+			PUTREQ_SEQ_INSWITCH_CASE1: parse_clone;
+			DELREQ_SEQ_INSWITCH_CASE1: parse_clone;
+			default: accept; // CACHE_POP_INSWITCH
+			//default: parse_debug;
+		}
+		
+	}
+
+	state parse_clone {
+		packet.extract(hdr.clone_hdr);
+		transition accept;
+		
+	}
+
+	state parse_frequency {
+		packet.extract(hdr.frequency_hdr);
+		transition accept; // CACHE_EVICT_LOADFREQ_INSWITCH_ACK
+	}
+
+	state parse_fraginfo {
+		packet.extract(hdr.fraginfo_hdr);
+		transition accept; // PUTREQ_LARGEVALUE, PUTREQ_LARGEVALUE_INSWITCH, PUTREQ_LARGEVALUE_SEQ, PUTREQ_LARGEVALUE_SEQ_INSWITCH, PUTREQ_LARGEVALUE_SEQ_CACHED, PUTREQ_LARGEVALUE_SEQ_CASE3
+	}
+}
+
+control netcacheDeparser(packet_out packet,
+    /* User */
+    inout headers                       hdr,
+    in    egress_metadata                      meta,
+    /* Intrinsic */
+    in    egress_intrinsic_metadata_for_deparser_t  eg_dprsr_md)  {
+    Checksum() ipv4_checksum;
+    Mirror() mirror;
+    apply {
+		if (hdr.ipv4_hdr.isValid())
+        {
+            hdr.ipv4_hdr.hdrChecksum = ipv4_checksum.update({
+                hdr.ipv4_hdr.version,
+                hdr.ipv4_hdr.ihl,
+                hdr.ipv4_hdr.diffserv,
+                hdr.ipv4_hdr.totalLen,
+                hdr.ipv4_hdr.identification,
+                hdr.ipv4_hdr.flags,
+                hdr.ipv4_hdr.fragOffset,
+                hdr.ipv4_hdr.ttl,
+                hdr.ipv4_hdr.protocol,
+                hdr.ipv4_hdr.srcAddr,
+                hdr.ipv4_hdr.dstAddr
+            });
+        }
+
+		if (eg_dprsr_md.mirror_type == MIRROR_TYPE_E2E) {
+            mirror.emit<mirror_h>(meta.egr_mir_ses, {meta.pkt_type});
+            // mirror.emit(meta.egr_mir_ses);
+        }
+
+
+        packet.emit(hdr);
+    }
 }

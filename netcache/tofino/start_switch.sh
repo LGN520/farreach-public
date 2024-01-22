@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-source /root/.zshrc
+source /root/.bashrc
 
-cd $SDE
-./run_switchd.sh -p netcache
+$SDE/run_switchd.sh -p netcache

@@ -1,9 +1,2 @@
-#!/usr/bin/env bash
-cd ../../
-source scripts/common.sh
-cd farreach/tofino
+mx switchos python cleanup_obselete_snapshottoken/table_configure.py
 
-source /root/.zshrc
-
-cd $SDE
-./run_p4_tests.sh -p netbufferv4 -t ${SWITCH_ROOTPATH}/farreach/tofino/cleanup_obselete_snapshottoken/ --target hw --setup

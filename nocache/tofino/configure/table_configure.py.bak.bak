@@ -1,0 +1,215 @@
+import os
+import time
+import json
+import math
+# from scapy.all import *
+this_dir = '/root/jzcai/farreach-private/nocache/tofino/configure'
+sys.path.append(os.path.dirname(this_dir))
+# print(this_dir,sys.path) 
+from common import *
+
+cached_list = [0, 1]
+hot_list = [0, 1]
+validvalue_list = [0, 1, 3]
+#validvalue_list = [0, 1, 2, 3] # If with PUTREQ_LARGE
+latest_list = [0, 1]
+deleted_list = [0, 1]
+sampled_list = [0, 1]
+lastclone_list = [0, 1]
+snapshot_flag_list = [0, 1]
+case1_list = [0, 1]
+# RECIRCULATION_PORT = 68 + 128
+
+# config
+with open("/root/jzcai/farreach-private/switchconfig.json") as load_f:
+    config = json.load(load_f)
+    # print("config :", json.dumps(config, indent=4, ensure_ascii=False))
+
+# environ
+os.environ['SDE'] = "/".join(os.environ['PATH'].split(":")[0].split("/"))
+os.environ['SDE_INSTALL'] = "/".join([os.environ['SDE'], 'install'])
+
+# ip
+ipv4 = os.popen('ip addr show ma1').read().split("inet ")[1].split("/")[0]
+ipv6 = os.popen('ip addr show ma1').read().split("inet6 ")[1].split("/")[0]
+
+# switch
+switch_id = config["ipv42switch"][ipv4]
+port_dict = config["port_dict"]
+
+# p4 control
+# 每个 p4 程序都用不一样的名字
+# 观察 /root/bf-sde-9.2.0/install/lib/python3.4/bfrtcli.py
+# 找到 bfrt 对应的 BFNODE
+# p4 = bfrt.basic_forwarding2
+child_names = ["mirror", "pktgen", "port", "pre", "tm"]
+for child in bfrt._children:
+    if child._get_name() not in child_names:
+        p4_name = child._get_name()
+print("p4 name : {}".format(p4_name))
+exec("p4 = bfrt." + p4_name)
+# print("after ", locals()["p4"])
+p4 = locals()["p4"]
+
+# table
+# forward = p4.pipe.Ingress.forward
+
+# port manage
+port = bfrt.port
+# Initializing all tables
+port_table = port.port
+port_fp_idx_info_table = port.port_fp_idx_info
+port_hdl_info_table = port.port_hdl_info
+port_stat_table = port.port_stat
+port_str_info_table = port.port_str_info
+
+# This function can clear all the tables and later on other fixed objects
+# once bfrt support is added.
+def clear_all(verbose=True, batching=True):
+    global p4
+    global bfrt
+    
+    def _clear(table, verbose=False, batching=False):
+        if verbose:
+            print("Clearing table {:<40} ... ".
+                  format(table['full_name']), end='', flush=True)
+        try:    
+            entries = table['node'].get(regex=True, print_ents=False)
+            try:
+                if batching:
+                    bfrt.batch_begin()
+                for entry in entries:
+                    entry.remove()
+            except Exception as e:
+                print("Problem clearing table {}: {}".format(
+                    table['name'], e.sts))
+            finally:
+                if batching:
+                    bfrt.batch_end()
+        except Exception as e:
+            if e.sts == 6:
+                if verbose:
+                    print('(Empty) ', end='')
+        finally:
+            if verbose:
+                print('Done')
+
+        # Optionally reset the default action, but not all tables
+        # have that
+        try:
+            table['node'].reset_default()
+        except:
+            pass
+    
+    # The order is important. We do want to clear from the top, i.e.
+    # delete objects that use other objects, e.g. table entries use
+    # selector groups and selector groups use action profile members
+    
+    # Clear Match Tables
+    for table in p4.info(return_info=True, print_info=False):
+        if table['type'] in ['MATCH_DIRECT', 'MATCH_INDIRECT_SELECTOR']:
+            _clear(table, verbose=verbose, batching=batching)
+
+    # Clear Selectors
+    for table in p4.info(return_info=True, print_info=False):
+        if table['type'] in ['SELECTOR']:
+            _clear(table, verbose=verbose, batching=batching)
+            
+    # Clear Action Profiles
+    for table in p4.info(return_info=True, print_info=False):
+        if table['type'] in ['ACTION_PROFILE']:
+            _clear(table, verbose=verbose, batching=batching)
+
+# switch port->dev_port
+switch = copy.deepcopy(config["switch"]) # 深拷贝，不修改 config 中的原值
+# clear_all()
+# for table in p4.info(return_info=True, print_info=False):
+#     if table['type'] in ['MATCH_DIRECT', 'MATCH_INDIRECT_SELECTOR']:
+#         print(table['full_name'])
+
+# print(port_str_info_table)
+# def init():
+#     global config, switch
+    
+#     port_dict = config["port_dict"]
+#     # switch[switch_id][host][port] -> port_dict[port]
+#     for s_id, s in switch.items():
+#         for h_id in s.keys():
+#             switch[s_id][h_id]["port"] = port_dict[switch[s_id][h_id]["port"]]
+
+#     global switch_id
+#     # def add_ports(switch_id=244):
+#     global port_table
+
+#     # "PORT_NAME" read only, 不能用它初始化端口
+#     if switch_id in config["sde"]["9.2.0"]: # [203, 204]: # [240, 244]: # bf-sde-9.2.0 要小写才能用
+#         for host in switch[switch_id].values():
+#             print('port_table.add(dev_port={}, speed="BF_SPEED_{}", fec="BF_FEC_TYP_NONE", port_enable=True)'.format(host["port"], host["speed"]))
+#             port_table.add(dev_port=host["port"], speed="BF_SPEED_"+host["speed"], fec="BF_FEC_TYP_NONE", port_enable=True)
+#     elif switch_id in config["sde"]["9.7.0"]: # bf-sde-9.7.0 要大写才能用
+#         for host in switch[switch_id].values():
+#             print('port_table.add(DEV_PORT={}, SPEED="BF_SPEED_{}", FEC="BF_FEC_TYP_NONE", PORT_ENABLE=True)'.format(host["port"], host["speed"]))
+#             port_table.add(DEV_PORT=host["port"], SPEED="BF_SPEED_"+host["speed"], FEC="BF_FEC_TYP_NONE", PORT_ENABLE=True)
+# print(client_fpports)
+client_devports = []
+server_devports = []
+for client_fpport in client_fpports:
+    port, chnl = client_fpport.split("/")
+    devport = port_dict[port]
+    client_devports.append(devport)
+    port_table.add(dev_port=devport, speed="BF_SPEED_40G", fec="BF_FEC_TYP_NONE", port_enable=True)
+
+for server_fpport in server_fpports:
+    port, chnl = server_fpport.split("/")
+    devport = port_dict[port]
+    server_devports.append(devport)
+    port_table.add(dev_port=devport, speed="BF_SPEED_40G", fec="BF_FEC_TYP_NONE", port_enable=True)
+
+def configure_hash_partition_tbl():
+    global server_fpports,client_fpports
+    hash_range_per_server = switch_partition_count / server_total_logical_num
+    for tmpoptype in [GETREQ, PUTREQ, DELREQ, LOADREQ, PUTREQ_LARGEVALUE]:
+        hash_start = 0 # [0, partition_count-1]
+        for global_server_logical_idx in range(server_total_logical_num):
+            if global_server_logical_idx == server_total_logical_num - 1:
+                hash_end = switch_partition_count - 1 # if end is not included, then it is just processed by port 1111
+            else:
+                hash_end = hash_start + hash_range_per_server - 1
+            # NOTE: both start and end are included
+            # matchspec0 = nocache_hash_partition_tbl_match_spec_t(\
+            #         op_hdr_optype = convert_u16_to_i16(tmpoptype),
+            #         meta_hashval_for_partition_start = convert_u16_to_i16(hash_start),
+            #         meta_hashval_for_partition_end = convert_u16_to_i16(hash_end))
+            # Forward to the egress pipeline of server
+            server_physical_idx = -1
+            local_server_logical_idx = -1
+            for tmp_server_physical_idx in range(server_physical_num):
+                for tmp_local_server_logical_idx in range(len(server_logical_idxes_list[tmp_server_physical_idx])):
+                    if global_server_logical_idx == server_logical_idxes_list[tmp_server_physical_idx][tmp_local_server_logical_idx]:
+                        server_physical_idx = tmp_server_physical_idx
+                        local_server_logical_idx = tmp_local_server_logical_idx
+                        break
+            if server_physical_idx == -1:
+                print("WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in hash_partition_tbl".format(global_server_logical_idx))
+            else:
+                #udp_dstport = server_worker_port_start + global_server_logical_idx
+                udp_dstport = server_worker_port_start + local_server_logical_idx
+                eport = server_devports[server_physical_idx]
+                # actnspec0 = nocache_hash_partition_action_spec_t(udp_dstport, eport)
+                # self.client.hash_partition_tbl_table_add_with_hash_partition(\
+                #         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                p4.pipe.nocacheIngress.hash_for_partition_tbl.add_with_hash_for_partition(optype=tmpoptype, hashval_for_partition_start = start,hashval_for_partition_end = end)
+
+            hash_start = hash_end + 1
+
+def runTest():
+    global configure_hash_partition_tbl
+    print("init table")
+    # for table in p4.info(return_info=True, print_info=False):
+    #     if table['type'] in ['MATCH_DIRECT', 'MATCH_INDIRECT_SELECTOR']:
+    #         table_fullname = table['full_name']
+    #         table_name = table_fullname.split('.')[-1]
+    #         eval(f'{table_name} = p4.{table_fullname}')
+    print("Configuring hash_partition_tbl")
+    configure_hash_partition_tbl()
+runTest()

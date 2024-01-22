@@ -1,7 +1,5 @@
-set -x
 #!/usr/bin/env bash
 
-source /root/.zshrc
+source /root/.bashrc
 
-cd $SDE
-./run_switchd.sh -p netbufferv4
+$SDE/run_switchd.sh -p netbufferv4

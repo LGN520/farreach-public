@@ -1,235 +1,193 @@
 /* Packet Header Types */
+typedef bit<8>  pkt_type_t;
+const pkt_type_t PKT_TYPE_NORMAL = 1;
+const pkt_type_t PKT_TYPE_MIRROR = 2;
+header mirror_h {
+  	pkt_type_t  pkt_type;
+}
 
 // PUT ipv4 in T-PHV
 
-header_type ethernet_t {
-	fields {
-		dstAddr: 48;
-		srcAddr: 48;
-		etherType: 16;
-	}
+header ethernet_t {
+    bit<48> dstAddr;
+    bit<48> srcAddr;
+    bit<16> etherType;
 }
 
-header_type ipv4_t {
-	fields {
-		version: 4;
-		ihl: 4;
-		diffserv: 8;
-		totalLen: 16;
-		identification: 16;
-		flags: 3;
-		fragOffset: 13;
-		ttl: 8;
-		protocol: 8;
-		hdrChecksum: 16;
-		srcAddr: 32;
-		dstAddr: 32;
-	}
+header ipv4_t {
+    bit<4> version;
+    bit<4> ihl;
+    bit<8> diffserv;
+    bit<16> totalLen;
+    bit<16> identification;
+    bit<3> flags;
+    bit<13> fragOffset;
+    bit<8> ttl;
+    bit<8> protocol;
+    bit<16> hdrChecksum;
+    bit<32> srcAddr;
+    bit<32> dstAddr;
 }
 
-header_type udp_t {
-	fields {
-		srcPort: 16;
-		dstPort: 16;
-		hdrlen: 16;
-		checksum: 16;
-	}
+header udp_t {
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<16> hdrlen;
+    bit<16> checksum;
 }
 
-header_type op_t {
-	fields {
-		optype: 16;
-		keylolo: 32;
-		keylohi: 32;
-		keyhilo: 32;
-		//keyhihi: 32;
-		keyhihilo: 16;
-		keyhihihi: 16;
-	}
+header op_t {
+    bit<16> optype;
+    bit<32> keylolo;
+    bit<32> keylohi;
+    bit<32> keyhilo;
+    bit<16> keyhihilo;
+    bit<16> keyhihihi;
 }
 
-#ifdef RANGE_SUPPORT
-header_type scan_t {
-	fields {
-		keylolo: 32;
-		keylohi: 32;
-		keyhilo: 32;
-		//keyhihi: 32;
-		keyhihilo: 16;
-		keyhihihi: 16;
-	}
-}
-header_type split_t {
-	fields {
-		is_clone: 8;
-		globalserveridx: 16;
-		cur_scanidx: 16;
-		max_scannum: 16;
-	}
-}
-#endif
-
-// Used by PUTREQ and GETRES to save PHV
-header_type vallen_t {
-	fields {
-		vallen: 16;
-	}
+header vallen_t {
+    bit<16> vallen;
 }
 
-header_type val_t {
-	fields {
-		vallo: 32;
-		valhi: 32;
-	}
+header val_t {
+    bit<32> vallo;
+    bit<32> valhi;
 }
 
-header_type shadowtype_t {
-	fields {
-		shadowtype: 16;
-	}
+header shadowtype_t {
+    bit<16> shadowtype;
 }
 
-header_type seq_t {
-	fields {
-		seq: 32;
-	}
+header seq_t {
+    bit<32> seq;
 }
-
 // NOTE: inswicth_t affects INSWITCH_PREV_BYTES in packet_format.h
-header_type inswitch_t {
-	fields {
-		// 32-bit container
-		is_cached: 1;
-		is_sampled: 1;
-		client_sid: 10; // clone to client for cache hit; NOTE: clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
-		padding1: 4;
-		hot_threshold: 16;
-		// 32-bit containers
-		hashval_for_cm1: 16; // at most 64K
-		hashval_for_cm2: 16; // at most 64K
-		hashval_for_cm3: 16; // at most 64K
-		hashval_for_cm4: 16; // at most 64K
-		// using multiple paddings due to PHV limitation: total bit width of split containers of a header field cannot exceed 32 bits
-		hashval_for_bf1: 18; // at most 256K
-		padding2: 14;
-		hashval_for_bf2: 18; // at most 256K
-		padding3: 14;
-		hashval_for_bf3: 18; // at most 256K
-		padding4: 14;
-		hashval_for_seq: 16; // at most 32K
-		idx: 16; // index for in-switch cache
-	}
+header inswitch_t {
+	// 32-bit container
+	bit<1> is_cached;
+	bit<1> is_sampled;
+	bit<10> client_sid; // clone to client for cache hit; NOTE: clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
+	bit<4> padding1;
+	bit<16> hot_threshold;
+	// 32-bit containers
+	bit<16> hashval_for_cm1; // at most 64K
+	bit<16> hashval_for_cm2; // at most 64K
+	bit<16> hashval_for_cm3; // at most 64K
+	bit<16> hashval_for_cm4; // at most 64K
+	// using multiple paddings due to PHV limitation: total bit width of split containers of a header field cannot exceed 32 bits
+	bit<18> hashval_for_bf1; // at most 256K
+	bit<14> padding2;
+	bit<18> hashval_for_bf2; // at most 256K
+	bit<14> padding3;
+	bit<18> hashval_for_bf3; // at most 256K
+	bit<14> padding4;
+	bit<16> hashval_for_seq; // at most 32K
+	bit<16> idx; // index for in-switch cache
 }
 
-header_type stat_t {
-	fields {
-		stat: 8;
-		nodeidx_foreval: 16; // cache hit: 0xFFFF; cache miss: [0, servernum-1]
-		padding: 8;
-	}
+header stat_t {
+	bit<8> stat;
+	bit<16> nodeidx_foreval; // cache hit: 0xFFFF; cache miss: [0, servernum-1]
+	bit<8> padding;
 }
 
-header_type clone_t {
-	fields {
-		clonenum_for_pktloss: 16;
-		client_udpport: 16;
-		server_sid: 10; // clone to server for SCANREQ_SPLIT or last cloned NETCACHE_GETREQ_POP
-		padding: 6;
-		server_udpport: 16;
-	}
+header clone_t {
+	bit<16> clonenum_for_pktloss;
+	bit<16> client_udpport;
+	bit<10> server_sid; // clone to server for SCANREQ_SPLIT or last cloned NETCACHE_GETREQ_POP
+	bit<6> padding;
+	bit<16> server_udpport;
 }
 
-header_type frequency_t {
-	fields {
-		frequency: 32;
-	}
+header frequency_t {
+	bit<32> frequency;
 }
 
-header_type fraginfo_t {
-	fields {
-		padding1: 16; // clientlogicalidx in T-PHV
-		padding2: 32; // fragseq in T-PHV
-		cur_fragidx: 16;
-		max_fragnum: 16;
-	}
+header fraginfo_t {
+	bit<16> padding1; // clientlogicalidx in T-PHV
+	bit<32> padding2; // fragseq in T-PHV
+	bit<16> cur_fragidx;
+	bit<16> max_fragnum;
 }
 
-header_type metadata_t {
-	fields {
+struct ingress_metadata {
 #ifndef RANGE_SUPPORT
-		hashval_for_partition: 16; // at most 32K
+	bit<16>	hashval_for_partition; // at most 32K
 #endif
-		cm1_predicate: 4;
-		cm2_predicate: 4;
-		cm3_predicate: 4;
-		cm4_predicate: 4;
-		is_hot: 1;
-		is_report1: 1;
-		is_report2: 1;
-		is_report3: 1;
-		is_report: 1;
-		is_latest: 1; // if the entry is latest
-		is_deleted: 1; // if the entry is deleted
-		is_lastclone_for_pktloss: 1;
-		access_val_mode: 4; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
-#ifdef RANGE_SUPPORT
-		remain_scannum: 16;
-		is_last_scansplit: 1;
-#endif
-	}
 }
 
-/*header_type debug_t {
-	fields {
-		// 8-bit container
-		is_hot: 1;
-		is_lastclone_for_pktloss: 1;
-		padding: 6;
-	}
-}*/
-
+struct egress_metadata {
+	MirrorId_t egr_mir_ses;
+	bit<6> padding1;
+	bit<2> cm1_predicate;
+	bit<2> cm2_predicate;
+	bit<2> cm3_predicate;
+	bit<2> cm4_predicate;
+	bit<1> is_hot;
+	bit<1> is_report1;
+	bit<1> is_report2;
+	bit<1> is_report3;
+	bit<1> is_report;
+	bit<1> is_latest; // if the entry is latest
+	bit<1> is_deleted; // if the entry is deleted
+	bit<1> is_lastclone_for_pktloss;
+	bit<4> access_val_mode; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
+	bit<4> padding;
+	pkt_type_t  pkt_type;
+}
 // Header instances
+struct headers {
+	ethernet_t ethernet_hdr;
+	ipv4_t ipv4_hdr;
+	udp_t udp_hdr;
+	op_t op_hdr;
+	vallen_t vallen_hdr;
+	val_t val1_hdr;
+	val_t val2_hdr;
+	val_t val3_hdr;
+	val_t val4_hdr;
+	val_t val5_hdr;
+	val_t val6_hdr;
+	val_t val7_hdr;
+	val_t val8_hdr;
+	val_t val9_hdr;
+	val_t val10_hdr;
+	val_t val11_hdr;
+	val_t val12_hdr;
+	val_t val13_hdr;
+	val_t val14_hdr;
+	val_t val15_hdr;
+	val_t val16_hdr;
+	shadowtype_t shadowtype_hdr;
+	seq_t seq_hdr;
+	inswitch_t inswitch_hdr;
+	stat_t stat_hdr;
+	clone_t clone_hdr;
 
-header ethernet_t ethernet_hdr;
-header ipv4_t ipv4_hdr;
-header udp_t udp_hdr;
-header op_t op_hdr;
-#ifdef RANGE_SUPPORT
-header scan_t scan_hdr;
-header split_t split_hdr;
-#endif
-header vallen_t vallen_hdr;
-header val_t val1_hdr;
-header val_t val2_hdr;
-header val_t val3_hdr;
-header val_t val4_hdr;
-header val_t val5_hdr;
-header val_t val6_hdr;
-header val_t val7_hdr;
-header val_t val8_hdr;
-header val_t val9_hdr;
-header val_t val10_hdr;
-header val_t val11_hdr;
-header val_t val12_hdr;
-header val_t val13_hdr;
-header val_t val14_hdr;
-header val_t val15_hdr;
-header val_t val16_hdr;
-header shadowtype_t shadowtype_hdr;
-header seq_t seq_hdr;
-header inswitch_t inswitch_hdr;
-header stat_t stat_hdr;
-header clone_t clone_hdr;
-header frequency_t frequency_hdr;
-@pragma pa_no_overlay ingress fraginfo_hdr.padding1
-@pragma pa_no_overlay egress fraginfo_hdr.padding1
-@pragma pa_no_overlay ingress fraginfo_hdr.padding2
-@pragma pa_no_overlay egress fraginfo_hdr.padding2
-@pragma pa_no_overlay ingress fraginfo_hdr.cur_fragidx
-@pragma pa_no_overlay egress fraginfo_hdr.cur_fragidx
-@pragma pa_no_overlay ingress fraginfo_hdr.max_fragnum
-@pragma pa_no_overlay egress fraginfo_hdr.max_fragnum
-header fraginfo_t fraginfo_hdr;
-metadata metadata_t meta;
+	
+	// @pa_no_overlay("ingress","fraginfo_hdr.padding1")
+	// @pa_no_overlay("egress","fraginfo_hdr.padding1")
+	// @pa_no_overlay("ingress","fraginfo_hdr.padding2")
+	// @pa_no_overlay("egress","fraginfo_hdr.padding2")
+	// @pa_no_overlay("ingress","fraginfo_hdr.cur_fragidx")
+	// @pa_no_overlay("egress","fraginfo_hdr.cur_fragidx")
+	// @pa_no_overlay("ingress","fraginfo_hdr.max_fragnum")
+	// @pa_no_overlay("egress","fraginfo_hdr.max_fragnum")
+	frequency_t frequency_hdr;
+	fraginfo_t fraginfo_hdr;
+}
+@pa_no_overlay("egress","eg_intr_md_for_dprsr.drop_ctl")
+@pa_no_overlay("egress","eg_intr_md.egress_port")
+@pa_no_overlay("egress","meta.egr_mir_ses")
+@pa_no_overlay("ingress","op_hdr.optype")
+@pa_no_overlay("egress","op_hdr.optype")
+@pa_no_overlay("egress","hdr.op_hdr.optype")
+@pa_no_overlay("egress","hdr.inswitch_hdr.is_cached")
+@pa_no_overlay("egress","meta.is_hot")
+@pa_no_overlay("egress","meta.is_report") 
+@pa_no_overlay("egress","meta.is_latest")
+@pa_no_overlay("egress","meta.is_deleted")
+@pa_no_overlay("egress","hdr.inswitch_hdr.client_sid")
+@pa_no_overlay("egress","meta.is_lastclone_for_pktloss")
+@pa_no_overlay("egress","hdr.clone_hdr.server_sid")
 
-//header debug_t debug_hdr;

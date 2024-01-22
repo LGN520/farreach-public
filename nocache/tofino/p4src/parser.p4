@@ -26,101 +26,151 @@
 // only op_hdr (default): WARMUPREQ, GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK (deprecated: w/ clone_hdr), WARMUPACK, LOADACK, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK (w/ frequency_hdr), NETCACHE_GETREQ_POP, NETCACHE_VALUEUPATE_ACK
 // not parsed in switch: SCANRES_SPLIT, CACHE_POP, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK, SETVALID_INSWITCH_ACK, NETCACHE_CACHE_POP/_ACK, NETCACHE_CACHE_POP_FINISH/_ACK, NETCACHE_CACHE_EVICT/_ACK
 
-parser start {
-	return parse_ethernet;
-}
-
-parser parse_ethernet {
-	extract(ethernet_hdr);
-	return select(ethernet_hdr.etherType) {
-		ETHERTYPE_IPV4: parse_ipv4;
-		default: ingress;
-	}
-}
-
-parser parse_ipv4 {
-	extract(ipv4_hdr);
-	return select(ipv4_hdr.protocol) {
-		PROTOTYPE_UDP: parse_udp_dstport;
-		default: ingress;
-	}
-}
-
-parser parse_udp_dstport {
-	extract(udp_hdr);
-	return select(udp_hdr.dstPort) {
-		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
-		5008: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
-		default: parse_udp_srcport;
-	}
-}
-
-parser parse_udp_srcport {
-	return select(udp_hdr.srcPort) {
-		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
-		5009: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
-		default: ingress; // traditional packet
-	}
-}
-
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr
-
-parser parse_op {
-	extract(op_hdr);
-	return select(op_hdr.optype) {
-#ifdef RANGE_SUPPORT
-		SCANREQ: parse_scan;
-		SCANREQ_SPLIT: parse_scan;
-#endif
-		default: ingress;
-	}
-}
-
-#ifdef RANGE_SUPPORT
-parser parse_scan {
-	extract(scan_hdr);
-	return select(op_hdr.optype) {
-		SCANREQ_SPLIT: parse_split;
-		default: ingress; // SCANREQ
-	}
-}
-
-parser parse_split {
-	extract(split_hdr);
-	return ingress;
-}
-#endif
-
-// checksum calculation (deparser phase)
-
-field_list ipv4_field_list {
-    ipv4_hdr.version;
-    ipv4_hdr.ihl;
-    ipv4_hdr.diffserv;
-    ipv4_hdr.totalLen;
-    ipv4_hdr.identification;
-    ipv4_hdr.flags;
-    ipv4_hdr.fragOffset;
-    ipv4_hdr.ttl;
-    ipv4_hdr.protocol;
-    ipv4_hdr.srcAddr;
-    ipv4_hdr.dstAddr;
-}
-
-field_list_calculation ipv4_chksum_calc {
-    input {
-        ipv4_field_list;
+parser nocahceParser(packet_in packet,
+                out headers hdr,
+                out metadata meta,
+                out ingress_intrinsic_metadata_t  ig_intr_md){
+    state start {
+        packet.extract(ig_intr_md);
+        packet.advance(PORT_METADATA_SIZE);
+        transition parse_ethernet;
     }
-#ifndef __p4c__
-    algorithm : csum16;
-#else
-    algorithm : crc16;
-#endif
-    output_width: 16;
+
+	state parse_ethernet {
+		packet.extract(hdr.ethernet_hdr);
+		transition select(hdr.ethernet_hdr.etherType) {
+			ETHERTYPE_IPV4: parse_ipv4;
+			default: accept;
+		}
+	}
+
+	state parse_ipv4 {
+		packet.extract(hdr.ipv4_hdr);
+		transition select(hdr.ipv4_hdr.protocol) {
+			PROTOTYPE_UDP: parse_udp_dstport;
+			default: accept;
+		}
+	}
+
+	state parse_udp_dstport {
+		packet.extract(hdr.udp_hdr);
+		transition select(hdr.udp_hdr.dstPort) {
+			0x0480 &&& 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+			5008: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
+			default: parse_udp_srcport;
+		}
+	}
+
+	state parse_udp_srcport {
+		transition select(hdr.udp_hdr.srcPort) {
+			0x0480 &&& 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+			5009: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
+			default: accept; // traditional packet
+		}
+	}
+	// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr
+	state parse_op {
+		packet.extract(hdr.op_hdr);
+		transition select(hdr.op_hdr.optype) {
+			default: accept;
+		}
+	}
+}
+control IngressDeparser(packet_out pkt,
+    /* User */
+    inout headers                       hdr,
+    in    metadata                      meta,
+    /* Intrinsic */
+    in    ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md)
+{
+	apply{
+		pkt.emit(hdr);
+	}
 }
 
-// NOTE: verify means check the calculated_field at packet ingress (aka parser)
-// NOTE: update means change the calculated_field at packet egress (akak deparser)
-calculated_field ipv4_hdr.hdrChecksum {
-    update ipv4_chksum_calc;
+parser EgressParser(packet_in      packet,
+    /* User */
+    out headers          hdr,
+    out metadata         meta,
+    /* Intrinsic */
+    out egress_intrinsic_metadata_t  eg_intr_md)
+{
+    /* This is a mandatory state, required by Tofino Architecture */
+	state start {
+		packet.extract(eg_intr_md);
+		transition parse_ethernet;
+	}
+
+	state parse_ethernet {
+		packet.extract(hdr.ethernet_hdr);
+		transition select(hdr.ethernet_hdr.etherType) {
+			ETHERTYPE_IPV4: parse_ipv4;
+			default: accept;
+		}
+	}
+
+	state parse_ipv4 {
+		packet.extract(hdr.ipv4_hdr);
+		transition select(hdr.ipv4_hdr.protocol) {
+			PROTOTYPE_UDP: parse_udp_dstport;
+			default: accept;
+		}
+	}
+
+	state parse_udp_dstport {
+		packet.extract(hdr.udp_hdr);
+		transition select(hdr.udp_hdr.dstPort) {
+			0x0480 &&& 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+			5008: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
+			default: parse_udp_srcport;
+		}
+	}
+
+	state parse_udp_srcport {
+		transition select(hdr.udp_hdr.srcPort) {
+			0x0480 &&& 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+			5009: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
+			default: accept; // traditional packet
+		}
+	}
+	// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr
+	state parse_op {
+		packet.extract(hdr.op_hdr);
+		transition select(hdr.op_hdr.optype) {
+			default: accept;
+		}
+	}
+}
+control nocahceDeparser(packet_out packet,
+    /* User */
+    inout headers                       hdr,
+    in    metadata                      meta,
+    /* Intrinsic */
+    in    egress_intrinsic_metadata_for_deparser_t  eg_dprsr_md) {
+    Checksum() ipv4_checksum;
+
+    apply {
+        if (hdr.ipv4_hdr.isValid())
+        {
+            hdr.ipv4_hdr.hdrChecksum = ipv4_checksum.update({
+                hdr.ipv4_hdr.version,
+                hdr.ipv4_hdr.ihl,
+                hdr.ipv4_hdr.diffserv,
+                hdr.ipv4_hdr.totalLen,
+                hdr.ipv4_hdr.identification,
+                hdr.ipv4_hdr.flags,
+                hdr.ipv4_hdr.fragOffset,
+                hdr.ipv4_hdr.ttl,
+                hdr.ipv4_hdr.protocol,
+                hdr.ipv4_hdr.srcAddr,
+                hdr.ipv4_hdr.dstAddr
+            });
+        }
+        packet.emit(hdr);
+    }
+	// apply {
+
+    //     //parsed headers have to be added again into the packet.
+	// 	packet.emit(hdr);
+    // }
 }

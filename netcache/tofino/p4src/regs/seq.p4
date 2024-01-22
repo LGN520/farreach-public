@@ -1,88 +1,68 @@
-register seq_reg {
-	width: 32;
-	instance_count: SEQ_BUCKET_COUNT;
-}
-
-blackbox stateful_alu assign_seq_alu {
-	reg: seq_reg;
-
-	// TODO: we can use 0xFFFFFFFF or remove condition_lo if data plane does not use seq -> we can resort to servers to solve seq overflow issue
-	condition_lo: register_lo == 0x7FFFFFFF;
-
-	update_lo_1_predicate: not condition_lo;
-	update_lo_1_value: register_lo + 1;
-	update_lo_2_predicate: condition_lo;
-	update_lo_2_value: 0;
-
-	output_value: alu_lo;
-	output_dst: seq_hdr.seq;
-}
-
+Register<bit<32>,bit<32>>(SEQ_BUCKET_COUNT) seq_reg;
+bit<32>seq_res;
+RegisterAction<bit<32>, bit<32>, bit<32>>(seq_reg) seq_reg_get_set_alu = {
+	void apply(inout bit<32> register_data, out bit<32> result) {
+		if(register_data == 0x7FFFFFFF){
+			register_data = 0;result = register_data;
+		}
+		else{
+			register_data = register_data + 1;result = register_data;
+		}
+		
+	}
+};
 action assign_seq() {
-	assign_seq_alu.execute_stateful_alu(inswitch_hdr.hashval_for_seq);
+	hdr.seq_hdr.seq = seq_reg_get_set_alu.execute((bit<32>)hdr.inswitch_hdr.hashval_for_seq);
 }
 
 @pragma stage 0
 table access_seq_tbl {
-	reads {
-		op_hdr.optype: exact;
-		fraginfo_hdr.cur_fragidx: exact;
+	key = {
+		hdr.op_hdr.optype: exact;
+		hdr.fraginfo_hdr.cur_fragidx: exact;
 	}
-	actions {
+	actions = {
 		assign_seq;
-		nop;
+		NoAction;
 	}
-	default_action: nop();
+	default_action = NoAction();
 #ifdef DEBUG
-	size: 32; // use seq_req for debugging (check whether some packet type enters the egress pipeline)
+	size = 32; // use seq_req for debugging (check whether some packet type enters the egress pipeline)
 #else
-	size: 4;
+	size = 4;
 #endif
 }
 
-register savedseq_reg {
-	width: 32;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu get_savedseq_alu {
-	reg: savedseq_reg;
-
-	update_lo_1_value: register_lo;
-
-	output_value: register_lo;
-	output_dst: seq_hdr.seq;
-}
-
+Register<bit<32>,bit<32>>(KV_BUCKET_COUNT) savedseq_reg;
+RegisterAction<bit<32>, bit<32>, bit<32>>(savedseq_reg) savedseq_reg_get_alu = {
+	void apply(inout bit<32> register_data, out bit<32> result) {
+		result = register_data;
+	}
+};
 action get_savedseq() {
-	get_savedseq_alu.execute_stateful_alu(inswitch_hdr.idx);
+	hdr.seq_hdr.seq = savedseq_reg_get_alu.execute((bit<32>)hdr.inswitch_hdr.idx);
 }
-
-blackbox stateful_alu set_and_get_savedseq_alu {
-	reg: savedseq_reg;
-
-	update_lo_1_value: seq_hdr.seq;
-
-	output_value: register_lo;
-	output_dst: seq_hdr.seq;
-}
-
+RegisterAction<bit<32>, bit<32>, bit<32>>(savedseq_reg) savedseq_reg_get_set_alu = {
+	void apply(inout bit<32> register_data){
+        register_data = hdr.seq_hdr.seq;
+	}
+};
 action set_and_get_savedseq() {
-	set_and_get_savedseq_alu.execute_stateful_alu(inswitch_hdr.idx);
+	savedseq_reg_get_set_alu.execute((bit<32>)hdr.inswitch_hdr.idx);
 }
 
 @pragma stage 2
 table access_savedseq_tbl {
-	reads {
-		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
+	key = {
+		hdr.op_hdr.optype: exact;
+		hdr.inswitch_hdr.is_cached: exact;
 		meta.is_latest: exact;
 	}
-	actions {
+	actions = {
 		get_savedseq;
 		set_and_get_savedseq;
-		nop;
+		NoAction;
 	}
-	default_action: nop();
-	size: 16;
+	default_action = NoAction();
+	size = 16;
 }

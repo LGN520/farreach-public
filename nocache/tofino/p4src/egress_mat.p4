@@ -1,182 +1,90 @@
-/* Ingress Processing (Normal Operation) */
+control nocahceEgress(    /* User */
+    inout headers                          hdr,
+    inout metadata                         meta,
+    /* Intrinsic */    
+    in    egress_intrinsic_metadata_t                  eg_intr_md,
+    in    egress_intrinsic_metadata_from_parser_t      eg_prsr_md,
+    inout egress_intrinsic_metadata_for_deparser_t     eg_dprsr_md,
+    inout egress_intrinsic_metadata_for_output_port_t  eg_oport_md){ 
+	/* Ingress Processing (Normal Operation) */
 
-// stage 0
+	// stage 0
 
-#ifdef RANGE_SUPPORT
-action process_scanreq_split(server_sid) {
-	modify_field(meta.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
-}
-action process_cloned_scanreq_split(udpport, server_sid) {
-	//add_to_field(udp_hdr.dstPort, 1);
-	modify_field(udp_hdr.dstPort, udpport); // set udpport for current SCANREQ_SPLIT
-	modify_field(meta.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
-}
-action reset_meta_serversid_remainscannum() {
-	modify_field(meta.server_sid, 0);
-	modify_field(meta.remain_scannum, 0);
-}
-@pragma stage 0
-table process_scanreq_split_tbl {
-	reads {
-		op_hdr.optype: exact;
-		//udp_hdr.dstPort: exact;
-		split_hdr.globalserveridx: exact;
-		split_hdr.is_clone: exact;
+
+	// Stage 1
+
+
+	// Stage 2
+
+
+	// stage 3
+
+	#ifdef DEBUG
+	// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+	counter update_ipmac_srcport_counter {
+		type : packets_and_bytes;
+		direct: update_ipmac_srcport_tbl;
 	}
-	actions {
-		process_scanreq_split;
-		process_cloned_scanreq_split;
-		reset_meta_serversid_remainscannum;
+	#endif
+
+	action update_ipmac_srcport_server2client(bit<48> client_mac,
+												bit<48> server_mac,
+												bit<32> client_ip,
+												bit<32> server_ip,
+												bit<16> server_port) {
+		hdr.ethernet_hdr.srcAddr = server_mac;
+		hdr.ethernet_hdr.dstAddr = client_mac;
+		hdr.ipv4_hdr.srcAddr  = server_ip;
+		hdr.ipv4_hdr.dstAddr =  client_ip;
+		hdr.udp_hdr.srcPort = server_port;
 	}
-	default_action: reset_meta_serversid_remainscannum();
-	size: PROCESS_SCANREQ_SPLIT_ENTRY_NUM;
-}
-#endif
 
-// Stage 1
-
-#ifdef RANGE_SUPPORT
-
-#ifdef DEBUG
-// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
-counter lastscansplit_counter {
-	type : packets_and_bytes;
-	direct: lastscansplit_tbl;
-}
-#endif
-
-action set_is_lastscansplit() {
-	modify_field(meta.is_last_scansplit, 1);
-}
-
-action reset_is_lastscansplit() {
-	modify_field(meta.is_last_scansplit, 0);
-}
-
-@pragma stage 1
-table lastscansplit_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.remain_scannum: exact;
+	action update_dstipmac_client2server(bit<48> server_mac,bit<32> server_ip) {
+		hdr.ethernet_hdr.dstAddr = server_mac;
+		hdr.ipv4_hdr.dstAddr = server_ip;
 	}
-	actions {
-		set_is_lastscansplit;
-		reset_is_lastscansplit;
+
+	// NOTE: dstport of REQ, RES, and notification has been updated in partition_tbl, server, and eg_port_forward_tbl
+	@pragma stage 3
+	table update_ipmac_srcport_tbl {
+		key = {
+			hdr.op_hdr.optype: exact;
+			// eg_intr_md.egress_port: exact;
+			eg_intr_md.egress_port: exact;
+		}
+		actions =  {
+			update_ipmac_srcport_server2client; // focus on dstip and dstmac to corresponding client; use server[0] as srcip and srcmac; use server_worker_port_start as srcport
+			update_dstipmac_client2server; // focus on dstip and dstmac to corresponding server; NOT change srcip, srcmac, and srcport
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 128;
 	}
-	default_action: reset_is_lastscansplit();
-	size: 8;
-}
-#endif
 
-// Stage 2
-
-#ifdef RANGE_SUPPORT
-action forward_scanreq_split_and_clone(server_sid) {
-	modify_field(split_hdr.is_clone, 1);
-	add_to_field(split_hdr.cur_scanidx, 1);
-	add_to_field(split_hdr.globalserveridx, 1);
-	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
-	clone_egress_pkt_to_egress(server_sid); // clone to server (meta.server_sid)
-}
-action forward_scanreq_split() {
-	modify_field(split_hdr.is_clone, 1);
-	add_to_field(split_hdr.cur_scanidx, 1);
-	add_to_field(split_hdr.globalserveridx, 1);
-	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
-}
-
-#ifdef DEBUG
-// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
-counter eg_port_forward_counter {
-	type : packets_and_bytes;
-	direct: eg_port_forward_tbl;
-}
-#endif
-
-@pragma stage 2
-table eg_port_forward_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.is_last_scansplit: exact;
-		meta.server_sid: exact;
+	action update_pktlen(bit<16> udplen,bit<16> iplen) {
+		hdr.udp_hdr.hdrlen = udplen;
+		hdr.ipv4_hdr.totalLen = iplen;
 	}
-	actions {
-		forward_scanreq_split_and_clone;
-		forward_scanreq_split;
-		nop;
+
+	@pragma stage 4
+	table update_pktlen_tbl {
+		key = {
+			hdr.op_hdr.optype: exact;
+		}
+		actions =  {
+			update_pktlen;
+			NoAction;
+		}
+		default_action = NoAction(); // not change udp_hdr.hdrlen (GETREQ/GETREQ_POP/GETREQ_NLATEST)
+		size = 4;
 	}
-	default_action: nop();
-	size: 32;
-}
-#endif
+	apply{
 
-// stage 3
+		// stage 3
+		// NOTE: resource in stage 11 is not enough for update_ipmac_src_port_tbl, so we place it into stage 10
+		update_ipmac_srcport_tbl.apply(); // Update ip, mac, and srcport for RES to client and notification to switchos
 
-#ifdef DEBUG
-// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
-counter update_ipmac_srcport_counter {
-	type : packets_and_bytes;
-	direct: update_ipmac_srcport_tbl;
-}
-#endif
-
-action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, server_ip, server_port) {
-	modify_field(ethernet_hdr.srcAddr, server_mac);
-	modify_field(ethernet_hdr.dstAddr, client_mac);
-	modify_field(ipv4_hdr.srcAddr, server_ip);
-	modify_field(ipv4_hdr.dstAddr, client_ip);
-	modify_field(udp_hdr.srcPort, server_port);
-}
-
-action update_dstipmac_client2server(server_mac, server_ip) {
-	modify_field(ethernet_hdr.dstAddr, server_mac);
-	modify_field(ipv4_hdr.dstAddr, server_ip);
-}
-
-// NOTE: dstport of REQ, RES, and notification has been updated in partition_tbl, server, and eg_port_forward_tbl
-@pragma stage 3
-table update_ipmac_srcport_tbl {
-	reads {
-		op_hdr.optype: exact;
-		eg_intr_md.egress_port: exact;
+		// Stage 4
+		update_pktlen_tbl.apply(); // Update udl_hdr.hdrLen for pkt with variable-length value
 	}
-	actions {
-		update_ipmac_srcport_server2client; // focus on dstip and dstmac to corresponding client; use server[0] as srcip and srcmac; use server_worker_port_start as srcport
-		update_dstipmac_client2server; // focus on dstip and dstmac to corresponding server; NOT change srcip, srcmac, and srcport
-		nop;
-	}
-	default_action: nop();
-	size: 128;
-}
-
-// stage 4
-
-// NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
-/*
-// SCANREQ_SPLIT
-action update_scanreqsplit_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 16(endkey) + 7(split_hdr)
-	modify_field(udp_hdr.hdrlen, 49);
-	modify_field(ipv4_hdr.totalLen, 69);
-}
-*/
-
-action update_pktlen(udplen, iplen) {
-	modify_field(udp_hdr.hdrlen, udplen);
-	modify_field(ipv4_hdr.totalLen, iplen);
-}
-
-@pragma stage 4
-table update_pktlen_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		update_pktlen;
-		nop;
-	}
-	default_action: nop(); // not change udp_hdr.hdrlen (GETREQ/GETREQ_POP/GETREQ_NLATEST)
-	size: 4;
 }

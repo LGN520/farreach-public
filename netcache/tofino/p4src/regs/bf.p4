@@ -1,107 +1,90 @@
-register bf1_reg {
-	width: 1;
-	instance_count: BF_BUCKET_COUNT;
-}
+Register<bit<1>,bit<32>>(BF_BUCKET_COUNT) bf1_reg;
+Register<bit<1>,bit<32>>(BF_BUCKET_COUNT) bf2_reg;
+Register<bit<1>,bit<32>>(BF_BUCKET_COUNT) bf3_reg;
 
-blackbox stateful_alu update_bf1_alu {
-	reg: bf1_reg;
-
-	update_lo_1_value: set_bit;
-
-	output_value: alu_lo;
-	output_dst: meta.is_report1;
-}
-
+RegisterAction<bit<1>, bit<32>, bit<1>>(bf1_reg) bf1_reg_update_alu = {
+	void apply(inout bit<1> register_data,out bit<1> result) {
+		result = register_data;
+		register_data = 1;
+	}
+};
 action update_bf1() {
-	update_bf1_alu.execute_stateful_alu(inswitch_hdr.hashval_for_bf1);
+	meta.is_report1 = bf1_reg_update_alu.execute((bit<32>)hdr.inswitch_hdr.hashval_for_bf1);
 }
 
 action reset_is_report1() {
-	modify_field(meta.is_report1, 0);
+	meta.is_report1 = 0;
 }
 
 @pragma stage 3
 table access_bf1_tbl {
-	reads {
-		op_hdr.optype: exact;
+	key = {
+		hdr.op_hdr.optype: exact;
 		meta.is_hot: exact;
 	}
-	actions {
+	actions = {
 		update_bf1;
 		reset_is_report1;
 	}
-	default_action: reset_is_report1;
-	size: 4;
+	default_action = reset_is_report1;
+	size = 4;
 }
 
-register bf2_reg {
-	width: 1;
-	instance_count: BF_BUCKET_COUNT;
-}
-
-blackbox stateful_alu update_bf2_alu {
-	reg: bf2_reg;
-
-	update_lo_1_value: set_bit;
-
-	output_value: alu_lo;
-	output_dst: meta.is_report2;
-}
-
+RegisterAction<bit<1>, bit<32>, bit<1>>(bf2_reg) bf2_reg_update_alu = {
+	void apply(inout bit<1> register_data,out bit<1> result) {
+		result = register_data;
+		register_data = 1;
+	}
+};
 action update_bf2() {
-	update_bf2_alu.execute_stateful_alu(inswitch_hdr.hashval_for_bf2);
+	meta.is_report2 = bf2_reg_update_alu.execute((bit<32>)hdr.inswitch_hdr.hashval_for_bf2);
 }
 
 action reset_is_report2() {
-	modify_field(meta.is_report2, 0);
+	meta.is_report2 = 0;
 }
 
 @pragma stage 3
 table access_bf2_tbl {
-	reads {
-		op_hdr.optype: exact;
+	key = {
+		hdr.op_hdr.optype: exact;
 		meta.is_hot: exact;
 	}
-	actions {
+	actions = {
 		update_bf2;
 		reset_is_report2;
 	}
-	default_action: reset_is_report2;
-	size: 4;
+	default_action = reset_is_report2;
+	size = 4;
 }
 
-register bf3_reg {
-	width: 1;
-	instance_count: BF_BUCKET_COUNT;
-}
-
-blackbox stateful_alu update_bf3_alu {
-	reg: bf3_reg;
-
-	update_lo_1_value: set_bit;
-
-	output_value: alu_lo;
-	output_dst: meta.is_report3;
-}
-
+RegisterAction<bit<1>, bit<32>, bit<1>>(bf3_reg) bf3_reg_update_alu = {
+	void apply(inout bit<1> register_data,out bit<1> result) {
+		result = register_data;
+		register_data = 1;
+	}
+};
 action update_bf3() {
-	update_bf3_alu.execute_stateful_alu(inswitch_hdr.hashval_for_bf3);
+	// meta.is_report1 = 1;
+	// meta.is_report2 = 1;
+	meta.is_report3 = bf3_reg_update_alu.execute((bit<32>)hdr.inswitch_hdr.hashval_for_bf3);
 }
-
 action reset_is_report3() {
-	modify_field(meta.is_report3, 0);
+	// meta.is_report1 = 0;
+	// meta.is_report2 = 0;
+	meta.is_report3 = 0;
 }
 
 @pragma stage 3
 table access_bf3_tbl {
-	reads {
-		op_hdr.optype: exact;
+	key = {
+		hdr.op_hdr.optype: exact;
 		meta.is_hot: exact;
 	}
-	actions {
+	actions = {
 		update_bf3;
 		reset_is_report3;
 	}
-	default_action: reset_is_report3;
-	size: 4;
+	default_action = reset_is_report3;
+	size = 4;
 }

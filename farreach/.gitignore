@@ -12,7 +12,7 @@ split_workload
 loader
 remote_client
 server
-*.log
+*.log*
 *.out*
 *.pyc
 *.a

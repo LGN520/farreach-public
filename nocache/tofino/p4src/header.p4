@@ -2,107 +2,98 @@
 
 // PUT ipv4 in T-PHV
 
-header_type ethernet_t {
-	fields {
-		dstAddr: 48;
-		srcAddr: 48;
-		etherType: 16;
-	}
+header ethernet_t {
+    bit<48> dstAddr;
+    bit<48> srcAddr;
+    bit<16> etherType;
 }
 
-header_type ipv4_t {
-	fields {
-		version: 4;
-		ihl: 4;
-		diffserv: 8;
-		totalLen: 16;
-		identification: 16;
-		flags: 3;
-		fragOffset: 13;
-		ttl: 8;
-		protocol: 8;
-		hdrChecksum: 16;
-		srcAddr: 32;
-		dstAddr: 32;
-	}
+header ipv4_t {
+    bit<4> version;
+    bit<4> ihl;
+    bit<8> diffserv;
+    bit<16> totalLen;
+    bit<16> identification;
+    bit<3> flags;
+    bit<13> fragOffset;
+    bit<8> ttl;
+    bit<8> protocol;
+    bit<16> hdrChecksum;
+    bit<32> srcAddr;
+    bit<32> dstAddr;
 }
 
-header_type udp_t {
-	fields {
-		srcPort: 16;
-		dstPort: 16;
-		hdrlen: 16;
-		checksum: 16;
-	}
+header udp_t {
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<16> hdrlen;
+    bit<16> checksum;
 }
 
-header_type op_t {
-	fields {
-		optype: 16;
-		keylolo: 32;
-		keylohi: 32;
-		keyhilo: 32;
-		//keyhihi: 32;
-		keyhihilo: 16;
-		keyhihihi: 16;
-	}
+header op_t {
+    bit<16> optype;
+    bit<32> keylolo;
+    bit<32> keylohi;
+    bit<32> keyhilo;
+    bit<16> keyhihilo;
+    bit<16> keyhihihi;
 }
 
 #ifdef RANGE_SUPPORT
-header_type scan_t {
-	fields {
-		keylolo: 32;
-		keylohi: 32;
-		keyhilo: 32;
-		//keyhihi: 32;
-		keyhihilo: 16;
-		keyhihihi: 16;
-	}
+
+header scan_t {
+    bit<32> keylolo;
+    bit<32> keylohi;
+    bit<32> keyhilo;
+	//  bit<32> keyhihi;
+    bit<16> keyhihilo;
+    bit<16> keyhihihi;
 }
-header_type split_t {
-	fields {
-		is_clone: 8;
-		globalserveridx: 16;
-		cur_scanidx: 16;
-		max_scannum: 16;
-	}
+header split_t {
+    bit<8> is_clone;
+    bit<16> globalserveridx;
+    bit<16> cur_scanidx;
+    bit<16> max_scannum;
 }
+
 #endif
 
 // Used by PUTREQ and GETRES to save PHV
-header_type vallen_t {
-	fields {
-		vallen: 16;
-	}
+
+header vallen_t {
+    bit<16> vallen;
 }
 
-header_type val_t {
-	fields {
-		vallo: 32;
-		valhi: 32;
-	}
+header val_t {
+    bit<32> vallo;
+    bit<32> valhi;
 }
 
-header_type metadata_t {
-	fields {
+
+struct metadata {
 #ifndef RANGE_SUPPORT
-		hashval_for_partition: 16; // at most 32K
+    bit<16> hashval_for_partition; // at most 32K
 #else
-		server_sid: 10; // clone to server for SCANREQ_SPLIT
-		remain_scannum: 16;
-		is_last_scansplit: 1;
+    bit<10> server_sid; // clone to server for SCANREQ_SPLIT
+    bit<16> remain_scannum;
+    bit<1> is_last_scansplit;
 #endif
-	}
 }
 
 // Header instances
-
-header ethernet_t ethernet_hdr;
-header ipv4_t ipv4_hdr;
-header udp_t udp_hdr;
-header op_t op_hdr;
+struct headers {
+    ethernet_t ethernet_hdr;
+    ipv4_t ipv4_hdr;
+    udp_t udp_hdr;
+    op_t op_hdr;
 #ifdef RANGE_SUPPORT
-header scan_t scan_hdr;
-header split_t split_hdr;
+    scan_t scan_hdr;
+    split_t split_hdr;
 #endif
-metadata metadata_t meta;
+}
+// metadata metadata_t meta;
+// struct metadata {
+//     /* empty */
+//     metadata_t meta;
+// }
+

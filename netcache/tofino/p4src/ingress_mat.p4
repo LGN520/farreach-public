@@ -1,507 +1,464 @@
 /* Ingress Processing (Normal Operation) */
+/* Ingress Processing */
 
-field_list hash_fields {
-	op_hdr.keylolo;
-	op_hdr.keylohi;
-	op_hdr.keyhilo;
-	//op_hdr.keyhihi;
-	op_hdr.keyhihilo;
-	op_hdr.keyhihihi;
-}
+typedef bit<9>  egressSpec_t;
+control netcacheIngress(  /* User */
+    inout headers                       hdr,
+    inout ingress_metadata                      meta,
+    /* Intrinsic */
+    in    ingress_intrinsic_metadata_t               ig_intr_md,
+    in    ingress_intrinsic_metadata_from_parser_t   ig_prsr_md,
+    inout ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md,
+    inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md){
+	bit<32> tmp;
+	// Stage 0
 
-field_list_calculation hash_calc {
-	input {
-		hash_fields;
+	action l2l3_forward(egressSpec_t eport) {
+		ig_tm_md.ucast_egress_port = eport;
 	}
-	algorithm: crc32;
-	//output_width: 16;
-	output_width: 32;
-}
 
-field_list_calculation hash_calc2 {
-	input {
-		hash_fields;
+	@pragma stage 0
+	table l2l3_forward_tbl {
+		key = {
+			hdr.ethernet_hdr.dstAddr: exact;
+			hdr.ipv4_hdr.dstAddr: lpm;
+		}
+		actions = {
+			l2l3_forward;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 16;
 	}
-	algorithm: crc32_extend;
-	//output_width: 16;
-	output_width: 32;
-}
 
-field_list_calculation hash_calc3 {
-	input {
-		hash_fields;
+	action set_hot_threshold(bit<16> hot_threshold) {
+		hdr.inswitch_hdr.hot_threshold = hot_threshold;
 	}
-	algorithm: identity;
-	//output_width: 16;
-	output_width: 32;
-}
 
-field_list_calculation hash_calc4 {
-	input {
-		hash_fields;
+	@pragma stage 0
+	table set_hot_threshold_tbl {
+		actions = {
+			set_hot_threshold;
+		}
+		default_action = set_hot_threshold(DEFAULT_HH_THRESHOLD);
+		size = 1;
 	}
-	algorithm: identity_extend;
-	//output_width: 16;
-	output_width: 32;
-}
 
-action nop() {}
+	// Stage 1
 
-// Stage 0
-
-action l2l3_forward(eport) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-
-@pragma stage 0
-table l2l3_forward_tbl {
-	reads {
-		ethernet_hdr.dstAddr: exact;
-		ipv4_hdr.dstAddr: lpm;
-	}
-	actions {
-		l2l3_forward;
-		nop;
-	}
-	default_action: nop();
-	size: 16;
-}
-
-action set_hot_threshold(hot_threshold) {
-	modify_field(inswitch_hdr.hot_threshold, hot_threshold);
-}
-
-@pragma stage 0
-table set_hot_threshold_tbl {
-	actions {
-		set_hot_threshold;
-	}
-	default_action: set_hot_threshold(DEFAULT_HH_THRESHOLD);
-	size: 1;
-}
-
-// Stage 1
-
-/*action reset_is_wrong_pipeline() {
-	modify_field(inswitch_hdr.is_wrong_pipeline, 0);
-}*/
+	/*action reset_is_wrong_pipeline() {
+		modify_field(hdr.inswitch_hdr.is_wrong_pipeline, 0);
+	}*/
 #ifndef RANGE_SUPPORT
-action hash_for_partition() {
-	modify_field_with_hash_based_offset(meta.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
-}
-@pragma stage 1
-table hash_for_partition_tbl {
-	reads {
-		op_hdr.optype: exact;
+	Hash<bit<15>>(HashAlgorithm_t.CRC32) hash_partition_calc;
+	action hash_for_partition() {
+		meta.hashval_for_partition[14:0] = hash_partition_calc.get({
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		});
 	}
-	actions {
-		hash_for_partition;
-		nop;
+	@pragma stage 5
+	table hash_for_partition_tbl {
+		key = {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			hash_for_partition;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 16;
 	}
-	default_action: nop();
-	size: 16;
-}
 #endif
+	// Stage 2
 
-// Stage 2
-
-#ifdef RANGE_SUPPORT
-action range_partition(udpport, eport) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-action range_partition_for_scan(udpport, eport, start_globalserveridx) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(split_hdr.globalserveridx, start_globalserveridx);
-}
-@pragma stage 2
-table range_partition_tbl {
-	reads {
-		op_hdr.optype: exact;
-		//op_hdr.keyhihi: range;
-		op_hdr.keyhihihi: range;
-		//ig_intr_md.ingress_port: exact;
+	action hash_partition(bit<16> udpport,egressSpec_t eport) {
+		hdr.udp_hdr.dstPort = udpport;
+		ig_tm_md.ucast_egress_port = eport;
 	}
-	actions {
-		range_partition;
-		//reset_is_wrong_pipeline;
-		range_partition_for_scan;
-		nop;
+	@pragma stage 6
+	table hash_partition_tbl {
+		key = {
+			hdr.op_hdr.optype: exact;
+			// RANGE_SURPPORT
+			meta.hashval_for_partition: range;
+		}
+		actions = {
+			hash_partition;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = HASH_PARTITION_ENTRY_NUM;
 	}
-	//default_action: reset_is_wrong_pipeline();
-	default_action: nop();
-	size: RANGE_PARTITION_ENTRY_NUM;
-}
-#else
-/*action hash_partition(udpport, eport, is_wrong_pipeline) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
-}*/
-action hash_partition(udpport, eport) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-@pragma stage 2
-table hash_partition_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.hashval_for_partition: range;
-		//ig_intr_md.ingress_port: exact;
+
+	Hash<bit<16>>(HashAlgorithm_t.CRC32) hash_cm1_calc;
+	Hash<bit<16>>(HashAlgorithm_t.CRC16) hash_cm2_calc;
+	action hash_for_cm12() {
+		hdr.inswitch_hdr.hashval_for_cm1 = hash_cm1_calc.get({
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		});
+		hdr.inswitch_hdr.hashval_for_cm2 =  hash_cm2_calc.get({
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		});
 	}
-	actions {
-		hash_partition;
-		//reset_is_wrong_pipeline;
-		nop;
+
+	@pragma stage 6
+	table hash_for_cm12_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			hash_for_cm12;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 2;
 	}
-	//default_action: reset_is_wrong_pipeline();
-	default_action: nop();
-	size: HASH_PARTITION_ENTRY_NUM;
-}
-#endif
 
-action hash_for_cm12() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm1, 0, hash_calc, CM_BUCKET_COUNT);
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);
-}
-
-@pragma stage 2
-table hash_for_cm12_tbl {
-	reads {
-		op_hdr.optype: exact;
+	action cached_action(bit<16> idx) {
+		hdr.inswitch_hdr.idx = idx;
+		hdr.inswitch_hdr.is_cached = 1;
 	}
-	actions {
-		hash_for_cm12;
-		nop;
+
+	action uncached_action() {
+		hdr.inswitch_hdr.is_cached = 0;
 	}
-	default_action: nop();
-	size: 2;
-}
 
-action cached_action(idx) {
-	modify_field(inswitch_hdr.idx, idx);
-	modify_field(inswitch_hdr.is_cached, 1);
-}
-
-action uncached_action() {
-	modify_field(inswitch_hdr.is_cached, 0);
-}
-
-@pragma stage 2 16384
-@pragma stage 3
-table cache_lookup_tbl {
-	reads {
-		op_hdr.keylolo: exact;
-		op_hdr.keylohi: exact;
-		op_hdr.keyhilo: exact;
-		//op_hdr.keyhihi: exact;
-		op_hdr.keyhihilo: exact;
-		op_hdr.keyhihihi: exact;
+	// @pragma stage 2 
+	@pragma stage 0
+	table cache_lookup_tbl {
+		key =  {
+			hdr.op_hdr.keylolo: exact;
+			hdr.op_hdr.keylohi: exact;
+			hdr.op_hdr.keyhilo: exact;
+			hdr.op_hdr.keyhihilo: exact;
+			hdr.op_hdr.keyhihihi: exact;
+		}
+		actions = {
+			cached_action;
+			uncached_action;
+		}
+		default_action = uncached_action();
+		size = LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
 	}
-	actions {
-		cached_action;
-		uncached_action;
+
+	// Stage 3
+
+
+	// Stage 4
+
+	action hash_for_seq() {
+		hdr.inswitch_hdr.hashval_for_seq = meta.hashval_for_partition;
 	}
-	default_action: uncached_action();
-	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
-}
 
-// Stage 3
-
-#ifdef RANGE_SUPPORT
-//action range_partition_for_scan_endkey(last_udpport_plus_one) {
-action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
-	modify_field(split_hdr.is_clone, 0);
-	modify_field(split_hdr.cur_scanidx, 0);
-	//subtract(split_hdr.max_scannum, last_udpport_plus_one, udp_hdr.dstPort);
-	subtract(split_hdr.max_scannum, end_globalserveridx_plus_one, split_hdr.globalserveridx);
-}
-
-@pragma stage 3
-table range_partition_for_scan_endkey_tbl {
-	reads {
-		op_hdr.optype: exact;
-		//scan_hdr.keyhihi: range;
-		scan_hdr.keyhihihi: range;
+	@pragma stage 7
+	table hash_for_seq_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			hash_for_seq;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 4;
 	}
-	actions {
-		range_partition_for_scan_endkey;
-		nop;
+
+	// Stage 5
+	Hash<bit<16>>(HashAlgorithm_t.IDENTITY) hash_cm3_calc;
+	Hash<bit<16>>(HashAlgorithm_t.CRC16) hash_cm4_calc;
+	action hash_for_cm34() {
+		hdr.inswitch_hdr.hashval_for_cm3 = hash_cm3_calc.get({
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		});
+		hdr.inswitch_hdr.hashval_for_cm4 =  hash_cm4_calc.get({
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		});
 	}
-	default_action: nop();
-	size: RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM;
-}
-#endif
 
-// Stage 4
-
-/*action hash_for_cm2() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);
-}
-
-@pragma stage 4
-table hash_for_cm2_tbl {
-	reads {
-		op_hdr.optype: exact;
+	@pragma stage 8
+	table hash_for_cm34_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			hash_for_cm34;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 2;
 	}
-	actions {
-		hash_for_cm2;
-		nop;
+	Hash<bit<18>>(HashAlgorithm_t.CRC32) hash_bf1_calc;
+	action hash_for_bf1() {
+		// modify_field_with_hash_based_offset(hdr.inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
+		hdr.inswitch_hdr.hashval_for_bf1 = hash_bf1_calc.get({
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		});
 	}
-	default_action: nop();
-	size: 2;
-}*/
 
-action hash_for_seq() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
-}
-
-@pragma stage 4
-table hash_for_seq_tbl {
-	reads {
-		op_hdr.optype: exact;
+	@pragma stage 9
+	table hash_for_bf1_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			hash_for_bf1;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 2;
 	}
-	actions {
-		hash_for_seq;
-		nop;
+
+	// Stage 6
+
+	// CRCPolynomial<bit<18>>(18w0x34578, true, false, false,18w0x3FFFF, 18w0x3FFFF) crc32_bf2;
+	Hash<bit<18>>(HashAlgorithm_t.CRC16) hash_bf2_calc;
+	action hash_for_bf2() {
+		hdr.inswitch_hdr.hashval_for_bf2 = hash_bf2_calc.get({
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		});
 	}
-	default_action: nop();
-	size: 4;
-}
 
-// Stage 5
-
-action hash_for_cm34() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc3, CM_BUCKET_COUNT);
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
-}
-
-@pragma stage 5
-table hash_for_cm34_tbl {
-	reads {
-		op_hdr.optype: exact;
+	@pragma stage 10
+	table hash_for_bf2_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			hash_for_bf2;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 2;
 	}
-	actions {
-		hash_for_cm34;
-		nop;
+
+	// Stage 7
+	Hash<bit<18>>(HashAlgorithm_t.IDENTITY) hash_bf3_calc;
+	action hash_for_bf3() {
+		// modify_field_with_hash_based_offset(hdr.inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
+		hdr.inswitch_hdr.hashval_for_bf3 = hash_bf3_calc.get({
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		});
 	}
-	default_action: nop();
-	size: 2;
-}
 
-action hash_for_bf1() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
-}
-
-@pragma stage 5
-table hash_for_bf1_tbl {
-	reads {
-		op_hdr.optype: exact;
+	@pragma stage 11
+	table hash_for_bf3_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			hash_for_bf3;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 2;
 	}
-	actions {
-		hash_for_bf1;
-		nop;
+
+	action set_client_sid(bit<10> client_sid) {
+		hdr.inswitch_hdr.client_sid = client_sid;
 	}
-	default_action: nop();
-	size: 2;
-}
 
-// Stage 6
-
-/*action hash_for_cm4() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
-}
-
-@pragma stage 6
-table hash_for_cm4_tbl {
-	reads {
-		op_hdr.optype: exact;
+	@pragma stage 2
+	table prepare_for_cachehit_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+			//ig_intr_md.ingress_port: exact;
+			hdr.ipv4_hdr.srcAddr: lpm;
+		}
+		actions = {
+			set_client_sid;
+			NoAction;
+		}
+		default_action = set_client_sid(0); // deprecated: configured as set_client_sid(sids[0]) in ptf
+		size = 32;
 	}
-	actions {
-		hash_for_cm4;
-		nop;
+
+	action forward_normal_response(egressSpec_t eport) {
+		ig_tm_md.ucast_egress_port = eport;
 	}
-	default_action: nop();
-	size: 2;
-}*/
 
-action hash_for_bf2() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf2, 0, hash_calc2, BF_BUCKET_COUNT);
-}
-
-@pragma stage 6
-table hash_for_bf2_tbl {
-	reads {
-		op_hdr.optype: exact;
+	@pragma stage 7
+	table ipv4_forward_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+			hdr.ipv4_hdr.dstAddr: lpm;
+		}
+		actions = {
+			forward_normal_response;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 64;
 	}
-	actions {
-		hash_for_bf2;
-		nop;
+
+	// Stage 8
+	Random<bit<1>>() rnd1;
+	action sample() {
+		//modify_field_with_hash_based_offset(hdr.inswitch_hdr.is_sampled, 0, hash_calc, 2); // WRONG: we should not sample key
+		// modify_field_rng_uniform(hdr.inswitch_hdr.is_sampled, 0, 1); // generate a random value in [0, 1] to sample packet
+		// random(hdr.inswitch_hdr.is_sampled,(bit<1>)0,(bit<1>)1);
+		hdr.inswitch_hdr.is_sampled = rnd1.get();
 	}
-	default_action: nop();
-	size: 2;
-}
 
-// Stage 7
-
-action hash_for_bf3() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
-}
-
-@pragma stage 7
-table hash_for_bf3_tbl {
-	reads {
-		op_hdr.optype: exact;
+	@pragma stage 1
+	table sample_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			sample;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 2;
 	}
-	actions {
-		hash_for_bf3;
-		nop;
+
+	action update_getreq_to_getreq_inswitch() {
+		hdr.op_hdr.optype = GETREQ_INSWITCH;
+		hdr.shadowtype_hdr.shadowtype = GETREQ_INSWITCH;
+		hdr.shadowtype_hdr.setValid();
+		hdr.inswitch_hdr.setValid();
 	}
-	default_action: nop();
-	size: 2;
-}
 
-/*action set_client_sid(client_sid, eport) {
-	modify_field(inswitch_hdr.client_sid, client_sid);
-	// NOTE: eport_for_res and client_sid must be in the same group for ALU access; as compiler aims to place them into the same container, they must come from the same source (action parameter or PHV)
-	//modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
-	modify_field(inswitch_hdr.eport_for_res, eport);
-}*/
-
-// NOTE: eg_intr_md.egress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
-// NOTE: using inswitch_hdr.client_sid for clone_e2e in ALU needs to maintain inswitch_hdr.client_sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
-action set_client_sid(client_sid) {
-	modify_field(inswitch_hdr.client_sid, client_sid);
-}
-
-@pragma stage 7
-table prepare_for_cachehit_tbl {
-	reads {
-		op_hdr.optype: exact;
-		//ig_intr_md.ingress_port: exact;
-		ipv4_hdr.srcAddr: lpm;
+	action update_putreq_to_putreq_inswitch() {
+		hdr.op_hdr.optype = PUTREQ_INSWITCH;
+		hdr.shadowtype_hdr.shadowtype = PUTREQ_INSWITCH;
+		hdr.shadowtype_hdr.setValid();
+		hdr.inswitch_hdr.setValid();
 	}
-	actions {
-		set_client_sid;
-		nop;
+
+	action update_delreq_to_delreq_inswitch() {
+		hdr.op_hdr.optype = DELREQ_INSWITCH;
+		hdr.shadowtype_hdr.shadowtype = DELREQ_INSWITCH;
+		hdr.shadowtype_hdr.setValid();
+		hdr.inswitch_hdr.setValid();
 	}
-	default_action: set_client_sid(0); // deprecated: configured as set_client_sid(sids[0]) in ptf
-	size: 32;
-}
 
-action forward_normal_response(eport) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-
-@pragma stage 7
-table ipv4_forward_tbl {
-	reads {
-		op_hdr.optype: exact;
-		ipv4_hdr.dstAddr: lpm;
+	action update_warmupreq_to_netcache_warmupreq_inswitch() {
+		hdr.op_hdr.optype = NETCACHE_WARMUPREQ_INSWITCH;
+		hdr.shadowtype_hdr.shadowtype = NETCACHE_WARMUPREQ_INSWITCH;
+		hdr.shadowtype_hdr.setValid();
+		hdr.inswitch_hdr.setValid();
 	}
-	actions {
-		forward_normal_response;
-		nop;
+
+	action update_netcache_valueupdate_to_netcache_valueupdate_inswitch() {
+		hdr.op_hdr.optype = NETCACHE_VALUEUPDATE_INSWITCH;
+		hdr.shadowtype_hdr.shadowtype = NETCACHE_VALUEUPDATE_INSWITCH;
+
+		hdr.inswitch_hdr.setValid();
+
+		// NOTE: NETCACHE_VALUEUPDATE does not need partition_tbl, as in-switch record must in the same pipeline of the ingress port, which can also send NETCACHE_VALUEUPDATE_ACK back to corresponding server
+		// ig_tm_md.ucast_egress_port = standard_metadata.ingress_port;
+		ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
+		// swap to set dstport as corresponding server.valueupdateserver port
+		bit<16> tmp_port;
+		// swap(hdr.udp_hdr.srcPort,hdr.udp_hdr.dstPort);
+		tmp_port = hdr.udp_hdr.srcPort;
+		hdr.udp_hdr.srcPort = hdr.udp_hdr.dstPort;
+		hdr.udp_hdr.dstPort = tmp_port;
 	}
-	default_action: nop();
-	size: 64;
-}
 
-// Stage 8
+	action update_putreq_largevalue_to_putreq_largevalue_inswitch() {
+		// NOTE: PUTREQ_LARGEVALUE only w/ op_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr
+		hdr.op_hdr.optype = PUTREQ_LARGEVALUE_INSWITCH;
+		hdr.shadowtype_hdr.shadowtype = PUTREQ_LARGEVALUE_INSWITCH;
 
-action sample() {
-	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2); // WRONG: we should not sample key
-	modify_field_rng_uniform(inswitch_hdr.is_sampled, 0, 1); // generate a random value in [0, 1] to sample packet
-}
-
-@pragma stage 8
-table sample_tbl {
-	reads {
-		op_hdr.optype: exact;
+		hdr.shadowtype_hdr.setValid();
+		hdr.inswitch_hdr.setValid();
 	}
-	actions {
-		sample;
-		nop;
+
+	@pragma stage 11
+	table ig_port_forward_tbl {
+		key =  {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			update_getreq_to_getreq_inswitch;
+			update_putreq_to_putreq_inswitch;
+			update_delreq_to_delreq_inswitch;
+			update_warmupreq_to_netcache_warmupreq_inswitch;
+			update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
+			update_putreq_largevalue_to_putreq_largevalue_inswitch;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 8;
 	}
-	default_action: nop();
-	size: 2;
-}
+	apply{
+		// Stage 0
+		if (!hdr.op_hdr.isValid()) {
+			l2l3_forward_tbl.apply(); // forward traditional packet
+		}else{
+			hdr.udp_hdr.checksum = 0;
+			// // Stage 0
+			 // for response of cache hit (access inswitch_hdr.client_sid)
+			set_hot_threshold_tbl.apply(); // set inswitch_hdr.hot_threshold
+			cache_lookup_tbl.apply(); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
+			// stage 1
+			prepare_for_cachehit_tbl.apply();
+			sample_tbl.apply(); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
+			// // Stage 5
+			hash_for_partition_tbl.apply(); // for hash partition (including startkey of SCANREQ)
 
-action update_getreq_to_getreq_inswitch() {
-	modify_field(op_hdr.optype, GETREQ_INSWITCH);
-	modify_field(shadowtype_hdr.shadowtype, GETREQ_INSWITCH);
-	add_header(shadowtype_hdr);
-	add_header(inswitch_hdr);
-}
+			// // Stage 2 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
+			hash_partition_tbl.apply();
+			ipv4_forward_tbl.apply(); // update egress_port for normal/speical response packets
 
-action update_putreq_to_putreq_inswitch() {
-	modify_field(op_hdr.optype, PUTREQ_INSWITCH);
-	modify_field(shadowtype_hdr.shadowtype, PUTREQ_INSWITCH);
-	add_header(shadowtype_hdr);
-	add_header(inswitch_hdr);
-}
+			// // Stage 6
+			hash_for_cm12_tbl.apply(); // for CM (access inswitch_hdr.hashval_for_cm1/2)
 
-action update_delreq_to_delreq_inswitch() {
-	modify_field(op_hdr.optype, DELREQ_INSWITCH);
-	modify_field(shadowtype_hdr.shadowtype, DELREQ_INSWITCH);
-	add_header(shadowtype_hdr);
-	add_header(inswitch_hdr);
-}
+			// // IMPORTANT: to save TCAM, we do not match op_hdr.optype in cache_lookup_tbl 
+			// // -> so as long as op_hdr.key matches an entry in cache_lookup_tbl, inswitch_hdr.is_cached must be 1 (e.g., CACHE_EVICT_LOADXXX)
+			// // -> but note that if the optype does not have inswitch_hdr, is_cached of 1 will be dropped after entering egress pipeline, and is_cached is still 0 (e.g., SCANREQ_SPLIT)
+			// // Stage 3
+			// // Stage 7
+			
+			hash_for_seq_tbl.apply(); // for seq (access inswitch_hdr.hashval_for_seq)
 
-#ifdef RANGE_SUPPORT
-action update_scanreq_to_scanreq_split() {
-	modify_field(op_hdr.optype, SCANREQ_SPLIT);
-	add_header(split_hdr);
-}
-#endif
+			// // // Stgae 8
+			hash_for_cm34_tbl.apply(); // for CM (access inswitch_hdr.hashval_for_cm3/4)
+			// Stage 9
+			hash_for_bf1_tbl.apply();
 
-action update_warmupreq_to_netcache_warmupreq_inswitch() {
-	modify_field(op_hdr.optype, NETCACHE_WARMUPREQ_INSWITCH);
-	modify_field(shadowtype_hdr.shadowtype, NETCACHE_WARMUPREQ_INSWITCH);
-	add_header(shadowtype_hdr);
-	add_header(inswitch_hdr);
-}
+			// // // Stage 10
 
-action update_netcache_valueupdate_to_netcache_valueupdate_inswitch() {
-	modify_field(op_hdr.optype, NETCACHE_VALUEUPDATE_INSWITCH);
-	modify_field(shadowtype_hdr.shadowtype, NETCACHE_VALUEUPDATE_INSWITCH);
+			hash_for_bf2_tbl.apply();
 
-	add_header(inswitch_hdr);
-
-	// NOTE: NETCACHE_VALUEUPDATE does not need partition_tbl, as in-switch record must in the same pipeline of the ingress port, which can also send NETCACHE_VALUEUPDATE_ACK back to corresponding server
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
-
-	// swap to set dstport as corresponding server.valueupdateserver port
-	swap(udp_hdr.srcPort, udp_hdr.dstPort);
-}
-
-action update_putreq_largevalue_to_putreq_largevalue_inswitch() {
-	// NOTE: PUTREQ_LARGEVALUE only w/ op_hdr + fraginfo_hdr -> PUTREQ_LARGEVALUE_INSWITCH w/ op_hdr + shadowtype_hdr + inswitch_hdr + fraginfo_hdr
-	modify_field(op_hdr.optype, PUTREQ_LARGEVALUE_INSWITCH);
-	modify_field(shadowtype_hdr.shadowtype, PUTREQ_LARGEVALUE_INSWITCH);
-
-	add_header(shadowtype_hdr);
-	add_header(inswitch_hdr);
-}
-
-@pragma stage 8
-table ig_port_forward_tbl {
-	reads {
-		op_hdr.optype: exact;
+			// // // Stage 11
+			hash_for_bf3_tbl.apply();
+			// Stage 11
+			ig_port_forward_tbl.apply(); // update op_hdr.optype (update egress_port for NETCACHE_VALUEUPDATE)
+		}
 	}
-	actions {
-		update_getreq_to_getreq_inswitch;
-		update_putreq_to_putreq_inswitch;
-		update_delreq_to_delreq_inswitch;
-#ifdef RANGE_SUPPORT
-		update_scanreq_to_scanreq_split;
-#endif
-		update_warmupreq_to_netcache_warmupreq_inswitch;
-		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
-		update_putreq_largevalue_to_putreq_largevalue_inswitch;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
 }

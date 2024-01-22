@@ -1,175 +1,121 @@
 /* Ingress Processing (Normal Operation) */
 
-field_list hash_fields {
-	op_hdr.keylolo;
-	op_hdr.keylohi;
-	op_hdr.keyhilo;
-	//op_hdr.keyhihi;
-	op_hdr.keyhihilo;
-	op_hdr.keyhihihi;
-}
 
-field_list_calculation hash_calc {
-	input {
-		hash_fields;
-	}
-	algorithm: crc32;
-	//output_width: 16;
-	output_width: 32;
-}
-
-action nop() {}
-
+typedef bit<9>  egressSpec_t;
 // Stage 0
 
-action l2l3_forward(eport) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
+control nocahceIngress (    /* User */
+    inout headers                       hdr,
+    inout metadata                      meta,
+    /* Intrinsic */
+    in    ingress_intrinsic_metadata_t               ig_intr_md,
+    in    ingress_intrinsic_metadata_from_parser_t   ig_prsr_md,
+    inout ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md,
+    inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md){
 
-@pragma stage 0
-table l2l3_forward_tbl {
-	reads {
-		ethernet_hdr.dstAddr: exact;
-		ipv4_hdr.dstAddr: lpm;
+	action l2l3_forward(egressSpec_t eport) {
+		ig_tm_md.ucast_egress_port = eport;
 	}
-	actions {
-		l2l3_forward;
-		nop;
-	}
-	default_action: nop();
-	size: 16;
-}
 
-#ifndef RANGE_SUPPORT
-action hash_for_partition() {
-	modify_field_with_hash_based_offset(meta.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
-}
-@pragma stage 0
-table hash_for_partition_tbl {
-	reads {
-		op_hdr.optype: exact;
+	@pragma stage 0
+	table l2l3_forward_tbl {
+		key = {
+			hdr.ethernet_hdr.dstAddr: exact;
+			hdr.ipv4_hdr.dstAddr: lpm;
+		}
+		actions = {
+			l2l3_forward;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 16;
 	}
-	actions {
-		hash_for_partition;
-		nop;
+	#ifndef RANGE_SUPPORT
+	Hash<bit<15>>(HashAlgorithm_t.CRC32) hash_partition_calc;
+	action hash_for_partition() {
+		// hash(meta.hashval_for_partition, HashAlgorithm.crc32, (bit<32>)0, {
+		// 	hdr.op_hdr.keylolo,
+		// 	hdr.op_hdr.keylohi,
+		// 	hdr.op_hdr.keyhilo,
+		// 	hdr.op_hdr.keyhihilo,
+		// 	hdr.op_hdr.keyhihihi
+		// }, (bit<32>) PARTITION_COUNT);
+		meta.hashval_for_partition[14:0] = hash_partition_calc.get({
+			hdr.op_hdr.keylolo,
+			hdr.op_hdr.keylohi,
+			hdr.op_hdr.keyhilo,
+			hdr.op_hdr.keyhihilo,
+			hdr.op_hdr.keyhihihi
+		});
+		// meta.hashval_for_partition = meta.hashval_for_partition % (bit<16>) PARTITION_COUNT;
 	}
-	default_action: nop();
-	size: 8;
-}
-#endif
+	@pragma stage 0
+	table hash_for_partition_tbl {
+		key = {
+			hdr.op_hdr.optype: exact;
+		}
+		actions = {
+			hash_for_partition;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 16;
+	}
+	#endif
+	// Stage 1
 
-// Stage 1
-
-#ifdef RANGE_SUPPORT
-action range_partition(udpport, eport) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-action range_partition_for_scan(udpport, eport, start_globalserveridx) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(split_hdr.globalserveridx, start_globalserveridx);
-}
-@pragma stage 1
-table range_partition_tbl {
-	reads {
-		op_hdr.optype: exact;
-		op_hdr.keyhihihi: range;
+	action hash_partition(bit<16> udpport,egressSpec_t eport) {
+		hdr.udp_hdr.dstPort = udpport;
+		ig_tm_md.ucast_egress_port = eport;
 	}
-	actions {
-		range_partition;
-		range_partition_for_scan;
-		nop;
+	@pragma stage 1
+	table hash_partition_tbl {
+		key = {
+			hdr.op_hdr.optype: exact;
+			meta.hashval_for_partition: range;
+		}
+		actions = {
+			hash_partition;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = HASH_PARTITION_ENTRY_NUM;
 	}
-	default_action: nop();
-	size: RANGE_PARTITION_ENTRY_NUM;
-}
-#else
-action hash_partition(udpport, eport) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-@pragma stage 1
-table hash_partition_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.hashval_for_partition: range;
+
+	// Stage 3
+
+	action forward_normal_response(egressSpec_t eport) {
+		ig_tm_md.ucast_egress_port = eport;
 	}
-	actions {
-		hash_partition;
-		nop;
+
+	@pragma stage 3
+	table ipv4_forward_tbl {
+		key = {
+			hdr.op_hdr.optype: exact;
+			hdr.ipv4_hdr.dstAddr: lpm;
+		}
+		actions = {
+			forward_normal_response;
+			NoAction;
+		}
+		default_action = NoAction();
+		size = 64;
 	}
-	default_action: nop();
-	size: HASH_PARTITION_ENTRY_NUM;
-}
-#endif
 
-// Stage 2
+	apply{
+		// Stage 0
+		if (!hdr.op_hdr.isValid()) {
+			l2l3_forward_tbl.apply(); // forward traditional packet
+		}
+		// else{
 
-#ifdef RANGE_SUPPORT
-//action range_partition_for_scan_endkey(last_udpport_plus_one) {
-action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
-	modify_field(split_hdr.is_clone, 0);
-	modify_field(split_hdr.cur_scanidx, 0);
-	//subtract(split_hdr.max_scannum, last_udpport_plus_one, udp_hdr.dstPort);
-	subtract(split_hdr.max_scannum, end_globalserveridx_plus_one, split_hdr.globalserveridx);
-}
+		// Stage 1 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of bmv2 compiler)
+		hash_for_partition_tbl.apply();
+		hash_partition_tbl.apply();
 
-@pragma stage 2
-table range_partition_for_scan_endkey_tbl {
-	reads {
-		op_hdr.optype: exact;
-		scan_hdr.keyhihihi: range;
+		// Stage 3
+		ipv4_forward_tbl.apply(); // update egress_spec for normal/speical response packets
+
+		// }
 	}
-	actions {
-		range_partition_for_scan_endkey;
-		nop;
-	}
-	default_action: nop();
-	size: RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM;
 }
-#endif
-
-// Stage 3
-
-action forward_normal_response(eport) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-
-@pragma stage 3
-table ipv4_forward_tbl {
-	reads {
-		op_hdr.optype: exact;
-		ipv4_hdr.dstAddr: lpm;
-	}
-	actions {
-		forward_normal_response;
-		nop;
-	}
-	default_action: nop();
-	size: 64;
-}
-
-// Stage 4
-
-#ifdef RANGE_SUPPORT
-action update_scanreq_to_scanreq_split() {
-	modify_field(op_hdr.optype, SCANREQ_SPLIT);
-	add_header(split_hdr);
-}
-
-@pragma stage 4
-table ig_port_forward_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-#ifdef RANGE_SUPPORT
-		update_scanreq_to_scanreq_split;
-#endif
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-#endif

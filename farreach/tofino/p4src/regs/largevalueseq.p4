@@ -1,66 +1,57 @@
-register largevalueseq_reg {
-	width: 32;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu get_largevalueseq_alu {
-	reg: largevalueseq_reg;
-
-	update_lo_1_value: register_lo;
-
-	output_value: register_lo;
-	output_dst: meta.largevalueseq;
-}
-
+Register<bit<32>,bit<32>>(KV_BUCKET_COUNT) largevalueseq_reg;
+RegisterAction<bit<32>, bit<32>, bit<32>>(largevalueseq_reg) largevalueseq_reg_get_alu = {
+	void apply(inout bit<32> register_data, out bit<32> result) {
+		result = register_data;
+	}
+};
+RegisterAction<bit<32>, bit<32>, bit<32>>(largevalueseq_reg) largevalueseq_reg_set_alu = {
+	void apply(inout bit<32> register_data){
+        register_data = hdr.seq_hdr.seq;
+	}
+};
+RegisterAction<bit<32>, bit<32>, bit<32>>(largevalueseq_reg) largevalueseq_reg_reset_alu = {
+	void apply(inout bit<32> register_data){
+        register_data = 0;
+	}
+};
 action get_largevalueseq() {
-	get_largevalueseq_alu.execute_stateful_alu(inswitch_hdr.idx);
-}
-
-blackbox stateful_alu set_largevalueseq_alu {
-	reg: largevalueseq_reg;
-
-	update_lo_1_value: seq_hdr.seq;
+	// largevalueseq_reg.read(meta.largevalueseq,(bit<32>)hdr.inswitch_hdr.idx);
+	meta.largevalueseq = largevalueseq_reg_get_alu.execute((bit<32>)hdr.inswitch_hdr.idx);
 }
 
 action set_largevalueseq() {
-	set_largevalueseq_alu.execute_stateful_alu(inswitch_hdr.idx);
-	modify_field(meta.largevalueseq, 0);
-	modify_field(meta.is_largevalueblock, 0);
+	largevalueseq_reg_set_alu.execute((bit<32>)hdr.inswitch_hdr.idx);
+	meta.largevalueseq = 0;
+	meta.is_largevalueblock = 0;
 }
 
 // CACHE_POP_INSWITCH 
-blackbox stateful_alu reset_largevalueseq_alu {
-	reg: largevalueseq_reg;
-
-	update_lo_1_value: 0;
-}
-
 action reset_largevalueseq() {
-	reset_largevalueseq_alu.execute_stateful_alu(inswitch_hdr.idx);
-	modify_field(meta.largevalueseq, 0);
-	modify_field(meta.is_largevalueblock, 0);
-	modify_field(clone_hdr.assignedseq_for_farreach, seq_hdr.seq);
+	largevalueseq_reg_reset_alu.execute((bit<32>)hdr.inswitch_hdr.idx);
+	meta.largevalueseq = 0;
+	meta.is_largevalueblock = 0;
+	hdr.clone_hdr.assignedseq_for_farreach = hdr.seq_hdr.seq;
 }
 
 action reset_meta_largevalueseq() {
-	modify_field(meta.largevalueseq, 0);
-	modify_field(meta.is_largevalueblock, 0);
+	meta.largevalueseq = 0;
+	meta.is_largevalueblock = 0;
 }
 
 @pragma stage 2
 table access_largevalueseq_and_save_assignedseq_tbl {
-	reads {
-		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		validvalue_hdr.validvalue: exact;
-		fraginfo_hdr.cur_fragidx: exact;
+	key = {
+		hdr.op_hdr.optype: exact;
+		hdr.inswitch_hdr.is_cached: exact;
+		hdr.validvalue_hdr.validvalue: exact;
+		hdr.fraginfo_hdr.cur_fragidx: exact;
 	}	
-	actions {
+	actions = {
 		get_largevalueseq;
 		set_largevalueseq;
 		reset_largevalueseq; // PUT/DELREQ_INSWITCH will invoke resset_largevalueseq() and save the assignedseq into clone_hdr
 		reset_meta_largevalueseq; // not touch largevalueseq_reg
 	}
-	default_action: reset_meta_largevalueseq();
-	size: 32;
+	default_action = reset_meta_largevalueseq();
+	size = 32;
 }

@@ -1,4 +1,5 @@
-import ConfigParser
+import configparser
+import os
 
 hot_threshold = 20 # for 200 keys under 2 server threads for YCSB-based workload
 #hot_threshold = 100 # for 200/500 keys under 16/2 server threads (around from 125) for NetCache synthetic workload
@@ -9,7 +10,7 @@ hot_threshold = 20 # for 200 keys under 2 server threads for YCSB-based workload
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 with open(os.path.join(os.path.dirname(this_dir), "config.ini"), "r") as f:
     config.readfp(f)
 
@@ -81,7 +82,7 @@ for i in range(pipelinenum):
         if pipeline_recirports_fromsingle[i] == "NONE":
             pipeline_recirports_fromsingle[i] = None
 
-control_config = ConfigParser.ConfigParser()
+control_config = configparser.ConfigParser()
 with open(os.path.join(os.path.dirname(this_dir), "control_type.ini"), "r") as f:
     control_config.readfp(f)
 
@@ -281,53 +282,3 @@ GETRES_LARGEVALUE_SEQ = 0x0350
 #NOT_CLONED = 0
 #CLONED_FROM_INGRESS = 1
 #CLONED_FROM_EGRESS = 3
-
-# u8val in [0, 255] -> i8val in [-128, 127]
-def convert_u8_to_i8(u8val):
-    if u8val < 0 or u8val >= 256:
-        print "Invalid u8val: {}".format(u8val)
-    if u8val >= 128: # [128, 255] -> [-128, -1]
-        i8val = u8val - 256
-    else:
-        i8val = u8val
-    return i8val
-
-# u16val in [0, 2^16-1] -> i16val in [-2^15, 2^15-1]
-def convert_u16_to_i16(u16val):
-    if u16val < 0 or u16val >= pow(2, 16):
-        print "Invalid u16val: {}".format(u16val)
-    if u16val >= pow(2, 15): # [2^15, 2^16-1] -> [-2^15, -1]
-        i16val = u16val - pow(2, 16)
-    else: # [0, 2^15-1] -> [0, 2^15-1]
-        i16val = u16val
-    return i16val
-
-# i16val in [-2^15, 2^15-1] -> u16val in [0, 2^16-1]
-def convert_i16_to_u16(i16val):
-    if i16val < -pow(2, 15) or i16val >= pow(2, 15):
-        print "Invalid i16val: {}".format(i16val)
-    if i16val < 0: # [-2^15, -1] -> [2^15, 2^16-1]
-        u16val = i16val + pow(2, 16)
-    else: # [0, 2^15-1] -> [0, 2^15-1]
-        u16val = i16val
-    return u16val
-
-# u32val in [0, 2^32-1] -> i32val in [-2^31, 2^31-1]
-def convert_u32_to_i32(u32val):
-    if u32val < 0 or u32val >= pow(2, 32):
-        print "Invalid u32val: {}".format(u32val)
-    if u32val >= pow(2, 31): # [2^31, 2^32-1] -> [-2^31, -1]
-        i32val = u32val - pow(2, 32)
-    else: # [0, 2^31-1] -> [0, 2^31-1]
-        i32val = u32val
-    return i32val
-
-# i32val in [-2^31, 2^31-1] -> u32val in [0, 2^32-1]
-def convert_i32_to_u32(i32val):
-    if i32val < -pow(2, 31) or i32val >= pow(2, 31):
-        print "Invalid i32val: {}".format(i32val)
-    if i32val < 0: # [-2^31, -1] -> [2^31, 2^32-1]
-        u32val = i32val + pow(2, 32)
-    else: # [0, 2^31-1] -> [0, 2^31-1]
-        u32val = i32val
-    return u32val
