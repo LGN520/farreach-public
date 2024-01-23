@@ -315,17 +315,19 @@ void* run_controller_popserver(void* param) {
         // send CACHE_POP to switch os
         udpsendto(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &switchos_popserver_addr, switchos_popserver_addrlen, "controller.popserver.popclient");
 
-        // receive CACHE_POP_ACK from switch os
-        bool is_timeout = udprecvfrom(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient");
-        if (!is_timeout) {
-            // send CACHE_POP_ACK to server.popclient immediately to avoid timeout
-            cache_pop_ack_t tmp_cache_pop_ack(CURMETHOD_ID, buf, recvsize);
-            INVARIANT(tmp_cache_pop_ack.key() == tmp_cache_pop.key());
-            udpsendto(controller_popserver_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &server_popclient_addr, server_popclient_addrlen, "controller.popserver");
+        // send CACHE_POP_ACK to server.popclient immediately to avoid timeout
+        cache_pop_ack_t tmp_cache_pop_ack(CURMETHOD_ID, tmp_cache_pop.key());
+        recvsize = tmp_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
+        udpsendto(controller_popserver_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &server_popclient_addr, server_popclient_addrlen, "controller.popserver");
 
-            // update bandwidth usage
-            bandwidthcost += tmp_cache_pop_ack.bwcost();
-        }
+        // NOTE: receive CACHE_POP_ACK lead to udp buffer overflowso commemt it and make a fake ack 
+        // receive CACHE_POP_ACK from switch os
+        // bool is_timeout = udprecvfrom(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient");
+        // if (!is_timeout) {
+        //  // send CACHE_POP_ACK to server.popclient immediately to avoid timeout
+        //  cache_pop_ack_t tmp_cache_pop_ack(CURMETHOD_ID, buf, recvsize);
+        //  INVARIANT(tmp_cache_pop_ack.key() == tmp_cache_pop.key());
+        //  udpsendto(controller_popserver_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &server_popclient_addr, server_popclient_addrlen, "controller.popserver");
 
         /*if (controller_cachedkey_serveridx_map.find(tmp_cache_pop->key()) == controller_cachedkey_serveridx_map.end()) {
                 controller_cachedkey_serveridx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
