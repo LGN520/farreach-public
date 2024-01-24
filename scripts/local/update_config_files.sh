@@ -17,8 +17,8 @@ function getlinenum() {
 }
 
 configfile_list=("farreach/config.ini" "farreach/configs/config.ini.static.setup" "farreach/configs/config.ini.inmemory" "farreach/configs/config.ini.normal" "farreach/configs/config.ini.static.1p" "farreach/configs/config.ini.static.2p")
-configfile_list=("${configfile_list[@]}" "nocache/config.ini" "nocache/configs/config.ini.static.setup""nocache/configs/config.ini.normal" "nocache/configs/config.ini.static.1p" "nocache/configs/config.ini.static.2p")
-configfile_list=("${configfile_list[@]}" "netcache/config.ini" "netcache/configs/config.ini.static.setup""netcache/configs/config.ini.normal" "netcache/configs/config.ini.static.1p" "netcache/configs/config.ini.static.2p")
+configfile_list=("${configfile_list[@]}" "nocache/config.ini" "nocache/configs/config.ini.static.setup" "nocache/configs/config.ini.normal" "nocache/configs/config.ini.static.1p" "nocache/configs/config.ini.static.2p")
+configfile_list=("${configfile_list[@]}" "netcache/config.ini" "netcache/configs/config.ini.static.setup" "netcache/configs/config.ini.normal" "netcache/configs/config.ini.static.1p" "netcache/configs/config.ini.static.2p")
 configfile_list=("${configfile_list[@]}" "recordload/config.ini" "keydump/config.ini")
 
 for tmp_configfile in ${configfile_list[@]}; do
