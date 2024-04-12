@@ -399,14 +399,14 @@ class TableConfigure(BfRuntimeTest):
                     eport = self.server_devports[server_physical_idx]
                     if tmpoptype == GETRES_LATEST_SEQ or tmpoptype == GETRES_DELETED_SEQ :
                         data = self.hash_partition_tbl.make_data([
-                            gc.DataTuple('udpport', udp_dstport),
                             gc.DataTuple('eport', eport)],
-                            'farreachIngress.hash_partition')
+                            'farreachIngress.hash_partition_for_special_response')
                         self.hash_partition_tbl.entry_add(self.target, [key], [data])
                     else:
                         data = self.hash_partition_tbl.make_data([
+                            gc.DataTuple('udpport', udp_dstport),
                             gc.DataTuple('eport', eport)],
-                            'farreachIngress.hash_partition_for_special_response')
+                            'farreachIngress.hash_partition')
                         self.hash_partition_tbl.entry_add(self.target, [key], [data])
                 hash_start = hash_end + 1
 
