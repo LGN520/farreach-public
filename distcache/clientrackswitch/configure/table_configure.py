@@ -75,7 +75,7 @@ class TableConfigure:
         # initialize the connection
         self.client_devports = []
         self.server_devports = []
-        self.rack_devports = [3, 4, 5, 6]
+        self.rack_devports = [3+i for i in range(int(server_physical_num/2))]
         # get the device ports from front panel ports
         for client_fpport in client_fpports:
             port, chnl = client_fpport.split("/")
@@ -122,6 +122,8 @@ class TableConfigure:
             LOADSNAPSHOTDATA_INSWITCH,
             GETRES_LATEST_SEQ,
             GETRES_DELETED_SEQ,
+            GETRES_LEAF,
+            GETRES_SPINE
         ]:
             matchspec0 = [hex(tmpoptype)]
             self.controller.table_add(
@@ -174,7 +176,7 @@ class TableConfigure:
 
     def configure_hash_leaf_partition_tbl(self):
         # partition for rack 3 4 5 6
-        hash_range_per_server = switch_partition_count / server_physical_num
+        hash_range_per_server = switch_partition_count / server_total_logical_num
         for tmpoptype in [
             GETREQ,
             PUTREQ,
@@ -189,37 +191,90 @@ class TableConfigure:
             SETVALID_INSWITCH,
             GETRES_LATEST_SEQ,
             NETCACHE_CACHE_POP_INSWITCH_NLATEST,
+            GETRES_LEAF,
+            GETRES_SPINE
         ]:
             hash_start = 0  # [0, partition_count-1]
-            for server_idx in range(server_physical_num):
-                if server_idx == server_physical_num - 1:
-                    hash_end = (
-                        switch_partition_count - 1
-                    )  # if end is not included, then it is just processed by port 1111
+            for global_server_logical_idx in range(server_total_logical_num):
+                if global_server_logical_idx == server_total_logical_num - 1:
+                    # if end is not included, then it is just processed by port 1111
+                    hash_end = switch_partition_count - 1
                 else:
                     hash_end = hash_start + hash_range_per_server - 1
                 # NOTE: both start and end are included
                 op_hdr_optype = tmpoptype
                 meta_hashval_for_partition_start = int(hash_start)
                 meta_hashval_for_partition_end = int(hash_end)
-                self.controller.table_add(
-                    "hash_leaf_partition_tbl",
-                    "hash_leaf_partition",
-                    [
-                        hex(op_hdr_optype),
-                        ""
-                        + hex(meta_hashval_for_partition_start)
-                        + "->"
-                        + hex(meta_hashval_for_partition_end),
-                    ],
-                    [hex(int(2 + server_idx / 2))],
-                    0,
-                )
+                matchspec0 = matchspec0 = [
+                    hex(tmpoptype),
+                    "" + hex(int(hash_start)) + "->" + hex(int(hash_end)),
+                ]
+                # Forward to the egress pipeline of server
+                server_physical_idx = -1
+                local_server_logical_idx = -1
+                for tmp_server_physical_idx in range(server_physical_num):
+                    for tmp_local_server_logical_idx in range(
+                        len(server_logical_idxes_list[tmp_server_physical_idx])
+                    ):
+                        if (
+                            global_server_logical_idx
+                            == server_logical_idxes_list[tmp_server_physical_idx][
+                                tmp_local_server_logical_idx
+                            ]
+                        ):
+                            server_physical_idx = tmp_server_physical_idx
+                            local_server_logical_idx = tmp_local_server_logical_idx
+                            break
+                if server_physical_idx == -1:
+                    print(
+                        "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in hash_partition_tbl".format(
+                            global_server_logical_idx
+                        )
+                    )
+                else:
+                    # udp_dstport = server_worker_port_start + global_server_logical_idx
+                    udp_dstport = server_worker_port_start + local_server_logical_idx
+                    eport = self.server_devports[server_physical_idx]
+
+                    self.controller.table_add(
+                        "hash_leaf_partition_tbl",
+                        "hash_leaf_partition",
+                        matchspec0,
+                        [hex(int(2 + server_physical_idx / 2))],
+                        0,
+                    )
                 hash_start = hash_end + 1
+            # hash_start = 0  # [0, partition_count-1]
+            # for server_idx in range(server_physical_num):
+            #     if server_idx == server_physical_num - 1:
+            #         hash_end = (
+            #             switch_partition_count - 1
+            #         )  # if end is not included, then it is just processed by port 1111
+            #     else:
+            #         hash_end = hash_start + hash_range_per_server - 1
+            #     # NOTE: both start and end are included
+            #     op_hdr_optype = tmpoptype
+            #     meta_hashval_for_partition_start = int(hash_start)
+            #     meta_hashval_for_partition_end = int(hash_end)
+            #     self.controller.table_add(
+            #         "hash_leaf_partition_tbl",
+            #         "hash_leaf_partition",
+            #         [
+            #             hex(op_hdr_optype),
+            #             ""
+            #             + hex(meta_hashval_for_partition_start)
+            #             + "->"
+            #             + hex(meta_hashval_for_partition_end),
+            #         ],
+            #         [hex(int(2 + server_idx / 2))],
+            #         0,
+            #     )
+            #     hash_start = hash_end + 1
+            
 
     def configure_hash_spine_partition_tbl(self):
         # partition for rack 3 4 5 6
-        hash_range_per_server = switch_partition_count / server_physical_num
+        hash_range_per_server = switch_partition_count / server_total_logical_num
         for tmpoptype in [
             GETREQ,
             PUTREQ,
@@ -234,37 +289,92 @@ class TableConfigure:
             SETVALID_INSWITCH,
             GETRES_LATEST_SEQ,
             NETCACHE_CACHE_POP_INSWITCH_NLATEST,
+            GETRES_LEAF,
+            GETRES_SPINE
         ]:
             hash_start = 0  # [0, partition_count-1]
-            for server_idx in range(server_physical_num):
-                if server_idx == server_physical_num - 1:
-                    hash_end = (
-                        switch_partition_count - 1
-                    )  # if end is not included, then it is just processed by port 1111
+            for global_server_logical_idx in range(server_total_logical_num):
+                if global_server_logical_idx == server_total_logical_num - 1:
+                    # if end is not included, then it is just processed by port 1111
+                    hash_end = switch_partition_count - 1
                 else:
                     hash_end = hash_start + hash_range_per_server - 1
                 # NOTE: both start and end are included
                 op_hdr_optype = tmpoptype
                 meta_hashval_for_partition_start = int(hash_start)
                 meta_hashval_for_partition_end = int(hash_end)
-                self.controller.table_add(
-                    "hash_spine_partition_tbl",
-                    "hash_spine_partition",
-                    [
-                        hex(op_hdr_optype),
-                        ""
-                        + hex(meta_hashval_for_partition_start)
-                        + "->"
-                        + hex(meta_hashval_for_partition_end),
-                    ],
-                    [hex(int(3 + server_idx / 2))],
-                    0,
-                )
+                matchspec0 = matchspec0 = [
+                    hex(tmpoptype),
+                    "" + hex(int(hash_start)) + "->" + hex(int(hash_end)),
+                ]
+                # Forward to the egress pipeline of server
+                server_physical_idx = -1
+                local_server_logical_idx = -1
+                for tmp_server_physical_idx in range(server_physical_num):
+                    for tmp_local_server_logical_idx in range(
+                        len(server_logical_idxes_list[tmp_server_physical_idx])
+                    ):
+                        if (
+                            global_server_logical_idx
+                            == server_logical_idxes_list[tmp_server_physical_idx][
+                                tmp_local_server_logical_idx
+                            ]
+                        ):
+                            server_physical_idx = tmp_server_physical_idx
+                            local_server_logical_idx = tmp_local_server_logical_idx
+                            break
+                if server_physical_idx == -1:
+                    print(
+                        "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in hash_partition_tbl".format(
+                            global_server_logical_idx
+                        )
+                    )
+                else:
+                    # udp_dstport = server_worker_port_start + global_server_logical_idx
+                    udp_dstport = server_worker_port_start + local_server_logical_idx
+                    eport = self.server_devports[server_physical_idx]
+
+                    self.controller.table_add(
+                        "hash_spine_partition_tbl",
+                        "hash_spine_partition",
+                        matchspec0,
+                        [hex(int(3 + server_physical_idx / 2))],
+                        0,
+                    )
                 hash_start = hash_end + 1
+                
+            # hash_start = 0  # [0, partition_count-1]
+            # for server_idx in range(server_physical_num):
+            #     if server_idx == server_physical_num - 1:
+            #         hash_end = (
+            #             switch_partition_count - 1
+            #         )  # if end is not included, then it is just processed by port 1111
+            #     else:
+            #         hash_end = hash_start + hash_range_per_server - 1
+            #     # NOTE: both start and end are included
+            #     op_hdr_optype = tmpoptype
+            #     meta_hashval_for_partition_start = int(hash_start)
+            #     meta_hashval_for_partition_end = int(hash_end)
+            #     self.controller.table_add(
+            #         "hash_spine_partition_tbl",
+            #         "hash_spine_partition",
+            #         [
+            #             hex(op_hdr_optype),
+            #             ""
+            #             + hex(meta_hashval_for_partition_start)
+            #             + "->"
+            #             + hex(meta_hashval_for_partition_end),
+            #         ],
+            #         [hex(int(3 + server_idx / 2))],
+            #         0,
+            #     )
+            #     hash_start = hash_end + 1
 
     def configure_poweroftwochoice_tbl(self):
         for tmpoptype in [GETREQ,]:
             self.controller.table_add("poweroftwochoice_tbl","poweroftwochoice",[hex(tmpoptype)])
+        self.controller.table_add("poweroftwochoice_tbl","update_spine_load",[hex(GETRES_SPINE)])
+        self.controller.table_add("poweroftwochoice_tbl","update_leaf_load",[hex(GETRES_LEAF)])
     
     def configure_update_ipmac_srcport_tbl(self):
         # (1) for response from server to client, egress port has been set based on ip.dstaddr (or by clone_i2e) in ingress pipeline

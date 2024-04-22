@@ -14,13 +14,27 @@ action poweroftwochoice(){
     spineload_reg.read(spineload,(bit<32>)meta.spineswitchidx);
     leafload_reg.read(leafload,(bit<32>)meta.leafswitchidx);
     if(leafload > spineload){
-        spineload = spineload + 1;
+        // spineload = spineload + 1;
         meta.is_spine = 1;
     }else{
-        leafload = leafload + 1;
+        // leafload = leafload + 1;
         meta.is_spine = 0;
     }
+    // spineload_reg.write((bit<32>)meta.spineswitchidx,spineload);
+    // leafload_reg.write((bit<32>)meta.leafswitchidx,leafload);
+}
+
+action update_spine_load(){
+    hdr.op_hdr.optype = GETRES;
+    spineload_reg.read(spineload,(bit<32>)meta.spineswitchidx);
+    spineload = spineload + 1;
     spineload_reg.write((bit<32>)meta.spineswitchidx,spineload);
+}
+
+action update_leaf_load(){
+    hdr.op_hdr.optype = GETRES;
+    leafload_reg.read(leafload,(bit<32>)meta.leafswitchidx);
+    leafload = leafload + 1;
     leafload_reg.write((bit<32>)meta.leafswitchidx,leafload);
 }
 
@@ -30,8 +44,10 @@ table poweroftwochoice_tbl {
 	}
 	actions = {
 		poweroftwochoice;
+        update_spine_load;
+        update_leaf_load;
 		NoAction;
 	}
 	default_action= NoAction();
-	size = 2;
+	size = 16;
 }
