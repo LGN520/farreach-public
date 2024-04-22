@@ -34,7 +34,7 @@ exp7_method_dic = {
     "distcache": "netcache",
     "distnocache": "nocache",
 }
-exp7_dynamic_rule_list = ["hotin"]
+exp7_dynamic_rule_list = ["hotin","hotout","random"]
 exp7_output_path = f"{EVALUATION_OUTPUT_PREFIX}/dist_exp7/{args.roundidx}"
 
 os.makedirs(exp7_output_path, exist_ok=True)

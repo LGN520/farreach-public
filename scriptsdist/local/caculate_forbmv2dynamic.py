@@ -2,19 +2,10 @@
 import json
 import numpy as np
 import os
-# distnocache 2 synthetic-25 
-# distcache 2 synthetic-25
-# distnocache 2 workloadd
-# distcache 2 synthetic
-# distnocache 2 synthetic-75
-# distcache 2 synthetic-75
-# distcache 2 synthetic
-# distcache 2 workloada
-# distnocache 2 workloada
-exp_round= 10000
+
+exp_round=600
 result_path = f"/root/aeresults/exp_rack/{exp_round}"
-print(result_path)
-# print(len(os.walk(result_path)))
+
 for root, dirs, files in os.walk(result_path):
     for filename in files:
         method_idx = 0
@@ -36,7 +27,7 @@ for root, dirs, files in os.walk(result_path):
             method_idx = 2
             workload = split_filename[0] + "-" + split_filename[1]
         method = split_filename[method_idx]
-        print(split_filename)
+        # print(split_filename)
         rack_num = int(int(split_filename[method_idx + 2]) / 2)
 
         # skip bug
@@ -71,16 +62,14 @@ for root, dirs, files in os.walk(result_path):
         sumtotalOpsdone = 0
         serverOpsdone = np.zeros(server_num)
         # print(len(python_dict))
-        exectime=0
         for item in python_dict:
-            exectime = item["executionMillis"]/1000
             # print(len(item["perserverCachehits"]),server_num,rack_num)
             sumperserverCachehits += np.array(item["perserverCachehits"])
             tmpcachesum = np.sum(np.array(item["perserverCachehits"]))
             sumCachehits += np.array(item["perserverCachehits"])
             sumtotalOpsdone += item["totalOpsdone"]
             serverOpsdone = serverOpsdone + np.array(item["perserverOpsdone"])
-        print(exectime)
+        # print(serverOpsdone)
 
         # sum_of_squares = np.sum(np.square(serverOpsdone))
         # sum_of_elements = np.sum(serverOpsdone)
@@ -112,5 +101,5 @@ for root, dirs, files in os.walk(result_path):
         #     sumperserverCachehits[np.argmax(sumperserverCachehits)],
         # )
         # print(serverOpsdone.max())
-        # if workload =="skewness-90" or  workload =="skewness-95" or  workload =="synthetic" or  workload =="uniform": 
-        print(method, rack_num, workload, cache_hit_rate, fairness_index,(sum_of_elements+(np.sum(sumCachehits)))/exectime)#,serverOpsdone.max())
+        print(method, rack_num, workload, cache_hit_rate, fairness_index,sum_of_elements,(np.sum(sumCachehits)),serverOpsdone.max())
+        # print(np.where(serverOpsdone==serverOpsdone.max()))
