@@ -118,10 +118,10 @@ control nocahceComputeChecksum(inout headers hdr, inout metadata meta) {
 }
 //switch architecture
 V1Switch(
-nocahceParser(),
+nocacheParser(),
 nocahceVerifyChecksum(),
 nocahceIngress(),
 nocahceEgress(),
 nocahceComputeChecksum(),
-nocahceDeparser()
+nocacheDeparser()
 ) main;

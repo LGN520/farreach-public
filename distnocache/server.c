@@ -163,7 +163,7 @@ void transaction_main() {
 		}
 	}
 	printf("Execute %s\n", command);
-	system(command);
+	// system(command);
 
 	transaction_running = true;
 	COUT_THIS("[transaction.main] all threads ready");

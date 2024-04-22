@@ -60,20 +60,20 @@ void prepare_server() {
 		short tmp_server_worker_port = server_worker_port_start + tmp_local_server_logical_idx;
 #else
 		short tmp_server_worker_port = 0;
-		if (tmp_global_server_logical_idx == bottleneck_serveridx_for_rotation) {
-			INVARIANT(tmp_local_server_logical_idx == 0);
-			tmp_server_worker_port = server_worker_port_start;
-		}
-		else {
-			tmp_server_worker_port = server_worker_port_start + tmp_global_server_logical_idx;
-			if (tmp_global_server_logical_idx > bottleneck_serveridx_for_rotation) {
-				tmp_server_worker_port -= 1;
-			}
-		}
+		// if (tmp_global_server_logical_idx == bottleneck_serveridx_for_rotation) {
+		// 	INVARIANT(tmp_local_server_logical_idx == 0);
+		// 	tmp_server_worker_port = server_worker_port_start;
+		// }
+		// else {
+		tmp_server_worker_port = server_worker_port_start + tmp_global_server_logical_idx % (current_server_logical_num);
+			// if (tmp_global_server_logical_idx > bottleneck_serveridx_for_rotation) {
+			// 	tmp_server_worker_port -= 1;
+			// // }
+		// }
 #endif
 		//prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, tmp_server_worker_port, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 		prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, tmp_server_worker_port, "server.worker", 0, SERVER_SOCKET_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE);
-		printf("prepare udp socket for server.worker %d-%d on port %d\n", tmp_local_server_logical_idx, tmp_global_server_logical_idx, server_worker_port_start + tmp_local_server_logical_idx);
+		printf("prepare udp socket for server.worker %d-%d on port %d\n", tmp_local_server_logical_idx, tmp_global_server_logical_idx, tmp_server_worker_port);
 	}
 	server_worker_lwpid_list = new int[current_server_logical_num];
 	memset(server_worker_lwpid_list, 0, current_server_logical_num);
@@ -222,6 +222,7 @@ void *run_server_worker(void * param) {
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
@@ -229,6 +230,8 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				val_t tmp_val;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val);
+				// tune latency
+				
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 
 				if (tmp_val.val_length <= val_t::SWITCH_MAX_VALLEN) {
@@ -248,11 +251,13 @@ void *run_server_worker(void * param) {
 					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
 				}
+				
 				break;
 			}
 		case packet_type_t::PUTREQ:
 		// case packet_type_t::PUTREQ_SEQ:
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.arrau(), recv_size);
 #endif
@@ -264,6 +269,8 @@ void *run_server_worker(void * param) {
 				put_request_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val());
+				// tune latency
+				
 				UNUSED(tmp_stat);
 				//COUT_THIS("[server] stat = " << tmp_stat)
 
@@ -277,6 +284,7 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
+				
 				break;
 			}
 		case packet_type_t::PUTREQ_LARGEVALUE:

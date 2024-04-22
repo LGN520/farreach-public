@@ -46,7 +46,7 @@ class TableConfigure:
         # get the device ports from front panel ports
         for client_fpport in client_fpports:
             port, chnl = client_fpport.split("/")
-            self.client_devports.append(port)
+            self.client_devports.append("3")
         for server_fpport in server_fpports:
             port, chnl = server_fpport.split("/")
             self.server_devports.append(port)
@@ -74,7 +74,7 @@ class TableConfigure:
                 "l2l3_forward_tbl",
                 "l2l3_forward",
                 [client_macs[i], client_ips[i] + "/32"],
-                [hex(1)],
+                [self.client_devports[i]],
             )
         for i in range((self.rack_idx) * 2, (self.rack_idx) * 2 + 2):
             self.controller.table_add(
@@ -97,7 +97,7 @@ class TableConfigure:
         for tmpoptype in [GETREQ, PUTREQ, DELREQ, LOADREQ, PUTREQ_LARGEVALUE]:
             hash_start = 0  # [0, partition_count-1]
             for global_server_logical_idx in range(server_total_logical_num):
-                if global_server_logical_idx == server_per_rack_logical_num - 1:
+                if global_server_logical_idx == server_total_logical_num - 1:
                     hash_end = (
                         switch_partition_count - 1
                     )  # if end is not included, then it is just processed by port 1111
@@ -152,7 +152,7 @@ class TableConfigure:
         # Table: ipv4_forward_tbl (default: nop; size: 6*client_physical_num=12 < 6*8=48)
         print("Configuring ipv4_forward_tbl")
         for tmp_client_physical_idx in range(client_physical_num):
-            eport = 1  # from ToR to spine switch
+            eport = self.client_devports[tmp_client_physical_idx] # from ToR to spine switch
             for tmpoptype in [
                 GETRES,
                 PUTRES,
@@ -168,7 +168,7 @@ class TableConfigure:
                         hex(tmpoptype),
                         "" + client_ips[tmp_client_physical_idx] + "/32",
                     ],
-                    [hex(eport)],
+                    [eport],
                 )
 
         # Stage 10
@@ -242,6 +242,6 @@ class TableConfigure:
 
 for i in range(int(server_physical_num / 2)):
     print("Configuring RACK {}".format(i))
-    tableconfig = TableConfigure(1)
+    tableconfig = TableConfigure(i)
     tableconfig.setUp()
     tableconfig.runTest()
