@@ -83,7 +83,7 @@ def create_network():
             net.addHost(
                 "h{}".format(i + 1),
                 ip="10.0.1.{}/24".format(i + 1),
-                mac="00:00:0a:00:01:0{}".format(hex(i + 1)[2:]),
+                mac="00:00:0a:00:01:{}".format(hex(i + 1)[2:]),
             )
         )
 
@@ -152,7 +152,7 @@ def create_network():
     for i in range(rack_physical_num):
         switchoses[i].cmdPrint("ip route add default via 192.168.1.200")
         # leafswitchoses[i].cmdPrint("ip route add default via 192.168.1.200")
-    // CLI(net)
+    #CLI(net)
 
     def handler(signum, frame):
         print("Signal handler called with signal", signum)

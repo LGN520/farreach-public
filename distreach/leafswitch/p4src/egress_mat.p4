@@ -725,13 +725,9 @@ table eg_port_forward_tbl {
 		update_delreq_inswitch_to_delreq_seq_case3;
 		update_delreq_inswitch_to_delreq_seq_case3_beingevicted;
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
-		//forward_cache_evict_loadfreq_inswitch_ack;
 		update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
-		//forward_cache_evict_loaddata_inswitch_ack;
 		update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
-		//forward_loadsnapshotdata_inswitch_ack;
 		update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
-		//forward_setvalid_inswitch_ack;
 		NoAction;
 	}
 	default_action = NoAction();

@@ -66,7 +66,7 @@ def create_network():
             net.addHost(
                 "h{}".format(i + 1),
                 ip="10.0.1.{}/24".format(i + 1),
-                mac="00:00:0a:00:01:0{}".format(hex(i + 1)[2:]),
+                mac="00:00:0a:00:01:{}".format(hex(i + 1)[2:]),
             )
         )
 

@@ -22,7 +22,7 @@ host = []
 rackswitchs = []
 switchoses = []
 
-debug=True
+debug=False
 
 def create_network():
     net = Mininet(cleanup=True, autoStaticArp=True)
@@ -112,7 +112,7 @@ def create_network():
     net.start()
     for i in range(rack_physical_num):
         switchoses[i].cmdPrint("ip route add default via 192.168.1.200")
-    // CLI(net)
+    #CLI(net)
     def handler(signum, frame):
         print("Signal handler called with signal", signum)
         time.sleep(1)

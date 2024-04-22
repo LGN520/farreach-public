@@ -106,6 +106,9 @@ typedef RecoverPkt<netreach_key_t, val_t> recoverpkt_t;
 #define WARMUP_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "../benchmarkdist/output/%s-hotest.out", workload)
 
+#define WARMUP_NEARHOT_WORKLOAD(buf, workload) \
+	sprintf(buf, "../benchmarkdist/output/%s-nearhot.out", workload)
+
 #define DYNAMIC_RULEPATH(buf, workload, prefix) \
 	sprintf(buf, "../benchmarkdist/output/%s-%srules/", workload, prefix)
 // global
@@ -189,6 +192,7 @@ short reflector_cp2dpserver_port = -1;
 char raw_load_workload_filename[256];  // used by split_workload for loading phase
 char server_load_workload_dir[256];
 char raw_warmup_workload_filename[256];
+char raw_warmup_nearhot_workload_filename[256];
 char raw_run_workload_filename[256];  // used by split_workload for transaction phase
 char client_workload_dir[256];
 // size_t per_client_per_period_max_sending_rate;
@@ -479,6 +483,7 @@ inline void parse_ini(const char* config_file, uint32_t rack_idx = 0) {
     LOAD_RAW_WORKLOAD(raw_load_workload_filename, workload_name);
     LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, max_server_total_logical_num);  // get the split directory for loading phase
     WARMUP_RAW_WORKLOAD(raw_warmup_workload_filename, workload_name);
+    WARMUP_NEARHOT_WORKLOAD(raw_warmup_nearhot_workload_filename, workload_name);
     RUN_RAW_WORKLOAD(raw_run_workload_filename, workload_name);
     RUN_SPLIT_DIR(client_workload_dir, workload_name, client_total_logical_num);
     // max_sending_rate *= server_num;

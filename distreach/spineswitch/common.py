@@ -27,7 +27,8 @@ switch_max_vallen = int(config.get("switch", "switch_max_vallen"))
 switchos_sample_cnt = int(config.get("switch", "switchos_sample_cnt"))
 switchos_ptf_popserver_port = int(config.get("switch", "switchos_ptf_popserver_port"))
 switchos_ptf_snapshotserver_port = int(config.get("switch", "switchos_ptf_snapshotserver_port"))
-
+workload_name = config.get("global", "workload_name")
+dynamic_ruleprefix = config.get("global", "dynamic_ruleprefix")
 # reflector port
 reflector_dp2cpserver_port = int(config.get("reflector", "reflector_dp2cpserver_port"))
 reflector_ip_for_switchos = str(config.get("reflector", "reflector_ip_for_switchos"))
@@ -64,7 +65,9 @@ for i in range(server_physical_num):
     for j in range(len(server_logical_idxes)):
         server_logical_idxes[j] = int(server_logical_idxes[j])
     server_logical_idxes_list.append(server_logical_idxes)
-
+reflector_ips = []
+for i in range(int(server_physical_num / 2)):
+    reflector_ips.append(str(config.get(f"reflector{i}", "reflector_ip_for_switchos")))
 
 # force to recirculate to ingress pipeline of the first physical client fpport
 single_ingress_pipeidx = client_pipeidxes[0]

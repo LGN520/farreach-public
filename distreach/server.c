@@ -329,9 +329,9 @@ void transaction_main() {
         if (ret) {
             COUT_N_EXIT("Error of launching some server.worker:" << ret);
         }
-
+        printf("worker_i:%d\n",worker_i + current_server_logical_num * server_physical_idx);
         CPU_ZERO(&serverworker_cpuset);
-        CPU_SET(worker_i % server_worker_corenums[server_physical_idx], &serverworker_cpuset);
+        CPU_SET(worker_i + current_server_logical_num * server_physical_idx, &serverworker_cpuset);
         ret = pthread_setaffinity_np(worker_threads[worker_i], sizeof(serverworker_cpuset), &serverworker_cpuset);
         if (ret) {
             printf("Error of setaffinity for server.worker; errno: %d\n", errno);

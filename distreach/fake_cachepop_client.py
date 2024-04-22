@@ -16,10 +16,10 @@ import binascii
 this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 from spineswitch.common import *
-
+# import spineswitch.common
 # #define WARMUP_RAW_WORKLOAD(buf, workload) \
 # 	sprintf(buf, "../benchmark/output/%s-hotest.out", workload)
-
+# workload_name = "sythetic"
 # #define DYNAMIC_RULEPATH(buf, workload, prefix) \
 # 	sprintf(buf, "../benchmark/output/%s-%srules/", workload, prefix)
 warmup_raw_workload = f"../benchmarkdist/output/{workload_name}-hotest.out"
@@ -51,12 +51,7 @@ fake_cachepop_client_udpsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 fake_cachepop_client_udpsock.bind(("0.0.0.0", fake_cachepop_client_recvport))
 
 
-# [x] 预加载200个hotest key 和他们对应的每轮的规则
-# [x] 接受client每轮开始时候传来的logicalidx，表示当前使用的rulemap
-# [x] 可能有多个client，要对比一下传来的logicalidx是否变化
-# [x] 仿制假的cache_pop report发送给server对应的report端口
-# [x] 只需要发，因为是switch产生的所以不需要ack，无所谓
-#
+# print(NETCACHE_GETREQ_POP)
 class RegisterUpdate:
     def build_mapping_table(self, filepath):
         mapping_table = {}
@@ -69,7 +64,7 @@ class RegisterUpdate:
     def __init__(self, hotkey_scale):
         self.mapping_tables = []
         self.hotkeys = []
-        self.ruleidx = 0
+        self.ruleidx = -1
         self.hotkey_scale = hotkey_scale
 
         # init hotkey_scale(200) hotkeys
@@ -100,18 +95,19 @@ class RegisterUpdate:
             lo = truekey & 0xFFFFFFFF
             # first Q is to makesure key is 128bit
             # second Q is for clonehdr
-            packed_i = struct.pack(">HQI2HQ", NETCACHE_GETREQ_POP, 0, lo, hilo, hihi, 0)
-            print(binascii.hexlify(packed_i))
+            packed_i = struct.pack(">HQI2HQ", GETREQ_POP, 0, lo, hilo, hihi, 0)
+            # print(binascii.hexlify(packed_i))
             reflector_idx = get_hashpartition_idx(
-                struct.pack(">QI2H", 0, lo, hilo, hihi), 32768, 4
+                struct.pack(">QI2H", 0, lo, hilo, hihi), 32768, int(server_physical_num/2)
             )
             # print(
             #     f"target {(reflector_ips[reflector_idx], reflector_dp2cpserver_port)}"
             # )
+            # print(reflector_idx)
             fake_cachepop_client_udpsock.sendto(
-                packed_i, (reflector_ips[reflector_idx], reflector_dp2cpserver_port)
+                packed_i, (reflector_ips[reflector_idx], server_worker_port_start)
             )
-            if i == 10:
+            if i == 201:
                 break
 
     def setUp(self):
@@ -122,9 +118,9 @@ class RegisterUpdate:
         while True:
             # receive control packet
             recvbuf, client_addr = fake_cachepop_client_udpsock.recvfrom(1024)
-            print(recvbuf)
+            # print(recvbuf)
             tmpidx, recvbuf = struct.unpack(">I{}s".format(len(recvbuf) - 4), recvbuf)
-            if tmpidx != self.ruleidx:
+            if tmpidx != self.ruleidx and tmpidx <= 7:
                 self.ruleidx = tmpidx
                 print(f"ruleidx switch to {tmpidx}")
                 self.trigger_admission()

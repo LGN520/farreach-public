@@ -46,6 +46,10 @@ mx switchos1 ./switchos 0 > tmp_switchos0.out &
 mx switchos2 ./switchos 1 > tmp_switchos1.out &
 mx switchos3 ./switchos 2 > tmp_switchos2.out &
 mx switchos4 ./switchos 3 > tmp_switchos3.out &
+mx switchos5 ./switchos 4 > tmp_switchos4.out &
+mx switchos6 ./switchos 5 > tmp_switchos5.out &
+mx switchos7 ./switchos 6 > tmp_switchos6.out &
+mx switchos8 ./switchos 7 > tmp_switchos7.out &
 # if [ "x${recovermode}" == "xrecover" ]
 # then
 # 	sleep 10s # wait for data plane interfaces UP; wait for ptf_popserver

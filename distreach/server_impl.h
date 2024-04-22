@@ -448,6 +448,7 @@ void *run_server_worker(void * param) {
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
@@ -461,6 +462,7 @@ void *run_server_worker(void * param) {
 				val_t tmp_val;
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, &tmp_seq);
+				// tune latency
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
 #ifdef DEBUG_SERVER
@@ -489,6 +491,7 @@ void *run_server_worker(void * param) {
 		
 		case packet_type_t::GETREQ_NLATEST:
 			{
+				
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
@@ -537,10 +540,12 @@ void *run_server_worker(void * param) {
 					dump_buf(dynamicbuf.array(), rsp_size);
 #endif
 				}
+				usleep(30000);
 				break;
 			}
 		case packet_type_t::PUTREQ_SEQ:
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
@@ -552,6 +557,8 @@ void *run_server_worker(void * param) {
 				put_request_seq_t req(CURMETHOD_ID, dynamicbuf.array(), recv_size);
 				// COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
+				// tune latency
+				
 				UNUSED(tmp_stat);
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				
@@ -651,6 +658,7 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::GETREQ_POP: 
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
@@ -710,6 +718,7 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::PUTREQ_POP_SEQ: 
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
@@ -756,6 +765,7 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::PUTREQ_SEQ_CASE3:
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
@@ -827,6 +837,7 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::PUTREQ_POP_SEQ_CASE3: 
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
@@ -973,6 +984,7 @@ void *run_server_worker(void * param) {
 		case packet_type_t::PUTREQ_LARGEVALUE_SEQ_BEINGEVICTED:
 		case packet_type_t::PUTREQ_LARGEVALUE_SEQ_CASE3_BEINGEVICTED:
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif
@@ -1076,6 +1088,7 @@ void *run_server_worker(void * param) {
 		case packet_type_t::GETREQ_BEINGEVICTED_RECORD: 
 		case packet_type_t::GETREQ_LARGEVALUEBLOCK_RECORD:
 			{
+				usleep(30000);
 #ifdef DUMP_BUF
 				dump_buf(dynamicbuf.array(), recv_size);
 #endif

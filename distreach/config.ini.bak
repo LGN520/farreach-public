@@ -1,5 +1,5 @@
 [global]
-workload_name = workloada
+workload_name = synthetic
 workload_mode = 0
 dynamic_periodnum = 7
 dynamic_periodinterval = 10
@@ -8,10 +8,10 @@ max_vallen = 128
 load_batch_size = 10000
 client_physical_num = 2
 server_physical_num = 8
-client_total_logical_num = 4
+client_total_logical_num = 16
 server_total_logical_num = 16
 server_per_rack_logical_num = 2
-server_total_logical_num_for_rotation = 96
+server_total_logical_num_for_rotation = 16
 bottleneck_serveridx_for_rotation = 0
 
 [client]
@@ -22,7 +22,7 @@ client_worker_port_start = 8888
 client_upstreambackupreleaser_port = 1046
 
 [client0]
-client_logical_num = 2
+client_logical_num = 8
 client_ip = 10.0.1.1
 client_mac = 00:00:0a:00:01:01
 client_fpport = 1/0
@@ -30,7 +30,7 @@ client_pipeidx = 1
 client_ip_for_client0 = 192.168.1.1
 
 [client1]
-client_logical_num = 2
+client_logical_num = 8
 client_ip = 10.0.1.2
 client_mac = 00:00:0a:00:01:02
 client_fpport = 2/0
@@ -46,8 +46,8 @@ server_snapshotdataserver_port_start = 4444
 transaction_loadfinishserver_port = 8000
 
 [server0]
-server_worker_corenum = 1
-server_total_corenum = 2
+server_worker_corenum = 4
+server_total_corenum = 5
 server_logical_idxes = 0
 server_ip = 10.0.1.3
 server_mac = 00:00:0a:00:01:03
@@ -57,8 +57,8 @@ server_ip_for_controller = 192.168.1.3
 rack_idx = 0
 
 [server1]
-server_worker_corenum = 1
-server_total_corenum = 2
+server_worker_corenum = 4
+server_total_corenum = 5
 server_logical_idxes = 1
 server_ip = 10.0.1.4
 server_mac = 00:00:0a:00:01:04
@@ -68,8 +68,8 @@ server_ip_for_controller = 192.168.1.4
 rack_idx = 0
 
 [server2]
-server_worker_corenum = 1
-server_total_corenum = 2
+server_worker_corenum = 4
+server_total_corenum = 5
 server_logical_idxes = 2
 server_ip = 10.0.1.5
 server_mac = 00:00:0a:00:01:05
@@ -79,8 +79,8 @@ server_ip_for_controller = 192.168.1.5
 rack_idx = 1
 
 [server3]
-server_worker_corenum = 1
-server_total_corenum = 2
+server_worker_corenum = 4
+server_total_corenum = 5
 server_logical_idxes = 3
 server_ip = 10.0.1.6
 server_mac = 00:00:0a:00:01:06
@@ -90,8 +90,8 @@ server_ip_for_controller = 192.168.1.6
 rack_idx = 1
 
 [server4]
-server_worker_corenum = 1
-server_total_corenum = 2
+server_worker_corenum = 4
+server_total_corenum = 5
 server_logical_idxes = 4
 server_ip = 10.0.1.7
 server_mac = 00:00:0a:00:01:07
@@ -101,8 +101,8 @@ server_ip_for_controller = 192.168.1.7
 rack_idx = 2
 
 [server5]
-server_worker_corenum = 1
-server_total_corenum = 2
+server_worker_corenum = 4
+server_total_corenum = 5
 server_logical_idxes = 5
 server_ip = 10.0.1.8
 server_mac = 00:00:0a:00:01:08
@@ -112,8 +112,8 @@ server_ip_for_controller = 192.168.1.8
 rack_idx = 2
 
 [server6]
-server_worker_corenum = 1
-server_total_corenum = 2
+server_worker_corenum = 4
+server_total_corenum = 5
 server_logical_idxes = 6
 server_ip = 10.0.1.9
 server_mac = 00:00:0a:00:01:09
@@ -123,8 +123,8 @@ server_ip_for_controller = 192.168.1.9
 rack_idx = 3
 
 [server7]
-server_worker_corenum = 1
-server_total_corenum = 2
+server_worker_corenum = 4
+server_total_corenum = 5
 server_logical_idxes = 7
 server_ip = 10.0.1.10
 server_mac = 00:00:0a:00:01:0a
@@ -262,6 +262,198 @@ switchos_ptf_snapshotserver_port = 5007
 
 [reflector3]
 reflector_ip_for_switchos = 192.168.1.9
+reflector_dp2cpserver_port = 5008
+reflector_cp2dpserver_port = 5009
+
+[server8]
+server_worker_corenum = 4
+server_total_corenum = 5
+server_logical_idxes = 8
+server_ip = 10.0.1.11
+server_mac = 00:00:0a:00:01:0b
+server_fpport = 1/0
+server_pipeidx = 1
+server_ip_for_controller = 192.168.1.11
+rack_idx = 0
+
+[server9]
+server_worker_corenum = 4
+server_total_corenum = 5
+server_logical_idxes = 9
+server_ip = 10.0.1.12
+server_mac = 00:00:0a:00:01:0c
+server_fpport = 2/0
+server_pipeidx = 1
+server_ip_for_controller = 192.168.1.12
+rack_idx = 0
+
+[server10]
+server_worker_corenum = 4
+server_total_corenum = 5
+server_logical_idxes = 10
+server_ip = 10.0.1.13
+server_mac = 00:00:0a:00:01:0d
+server_fpport = 1/0
+server_pipeidx = 1
+server_ip_for_controller = 192.168.1.13
+rack_idx = 1
+
+[server11]
+server_worker_corenum = 4
+server_total_corenum = 5
+server_logical_idxes = 11
+server_ip = 10.0.1.14
+server_mac = 00:00:0a:00:01:0e
+server_fpport = 2/0
+server_pipeidx = 1
+server_ip_for_controller = 192.168.1.14
+rack_idx = 1
+
+[server12]
+server_worker_corenum = 4
+server_total_corenum = 5
+server_logical_idxes = 12
+server_ip = 10.0.1.15
+server_mac = 00:00:0a:00:01:0f
+server_fpport = 1/0
+server_pipeidx = 1
+server_ip_for_controller = 192.168.1.15
+rack_idx = 2
+
+[server13]
+server_worker_corenum = 4
+server_total_corenum = 5
+server_logical_idxes = 13
+server_ip = 10.0.1.16
+server_mac = 00:00:0a:00:01:10
+server_fpport = 2/0
+server_pipeidx = 1
+server_ip_for_controller = 192.168.1.16
+rack_idx = 2
+
+[server14]
+server_worker_corenum = 4
+server_total_corenum = 5
+server_logical_idxes = 14
+server_ip = 10.0.1.17
+server_mac = 00:00:0a:00:01:11
+server_fpport = 1/0
+server_pipeidx = 1
+server_ip_for_controller = 192.168.1.17
+rack_idx = 3
+
+[server15]
+server_worker_corenum = 4
+server_total_corenum = 5
+server_logical_idxes = 15
+server_ip = 10.0.1.18
+server_mac = 00:00:0a:00:01:12
+server_fpport = 2/0
+server_pipeidx = 1
+server_ip_for_controller = 192.168.1.18
+rack_idx = 3
+
+[controller4]
+controller_ip_for_server = 192.168.1.11
+controller_ip_for_switchos = 192.168.1.11
+controller_popserver_port_start = 5555
+controller_evictserver_port = 5002
+controller_snapshot_period = 10000
+controller_warmupfinishserver_port = 5010
+
+[switch4]
+switch_partition_count = 32768
+switch_kv_bucket_num = 10000
+switch_pipeline_num = 2
+switch_max_vallen = 128
+switchos_ip = 192.168.1.205
+switchos_sample_cnt = 10
+switchos_popserver_port = 5003
+switchos_snapshotserver_port = 5004
+switchos_specialcaseserver_port = 5005
+switchos_ptf_popserver_port = 5006
+switchos_ptf_snapshotserver_port = 5007
+
+[reflector4]
+reflector_ip_for_switchos = 192.168.1.11
+reflector_dp2cpserver_port = 5008
+reflector_cp2dpserver_port = 5009
+
+[controller5]
+controller_ip_for_server = 192.168.1.13
+controller_ip_for_switchos = 192.168.1.13
+controller_popserver_port_start = 5555
+controller_evictserver_port = 5002
+controller_snapshot_period = 10000
+controller_warmupfinishserver_port = 5010
+
+[switch5]
+switch_partition_count = 32768
+switch_kv_bucket_num = 10000
+switch_pipeline_num = 2
+switch_max_vallen = 128
+switchos_ip = 192.168.1.206
+switchos_sample_cnt = 10
+switchos_popserver_port = 5003
+switchos_snapshotserver_port = 5004
+switchos_specialcaseserver_port = 5005
+switchos_ptf_popserver_port = 5006
+switchos_ptf_snapshotserver_port = 5007
+
+[reflector5]
+reflector_ip_for_switchos = 192.168.1.13
+reflector_dp2cpserver_port = 5008
+reflector_cp2dpserver_port = 5009
+
+[controller6]
+controller_ip_for_server = 192.168.1.15
+controller_ip_for_switchos = 192.168.1.15
+controller_popserver_port_start = 5555
+controller_evictserver_port = 5002
+controller_snapshot_period = 10000
+controller_warmupfinishserver_port = 5010
+
+[switch6]
+switch_partition_count = 32768
+switch_kv_bucket_num = 10000
+switch_pipeline_num = 2
+switch_max_vallen = 128
+switchos_ip = 192.168.1.207
+switchos_sample_cnt = 10
+switchos_popserver_port = 5003
+switchos_snapshotserver_port = 5004
+switchos_specialcaseserver_port = 5005
+switchos_ptf_popserver_port = 5006
+switchos_ptf_snapshotserver_port = 5007
+
+[reflector6]
+reflector_ip_for_switchos = 192.168.1.15
+reflector_dp2cpserver_port = 5008
+reflector_cp2dpserver_port = 5009
+
+[controller7]
+controller_ip_for_server = 192.168.1.17
+controller_ip_for_switchos = 192.168.1.17
+controller_popserver_port_start = 5555
+controller_evictserver_port = 5002
+controller_snapshot_period = 10000
+controller_warmupfinishserver_port = 5010
+
+[switch7]
+switch_partition_count = 32768
+switch_kv_bucket_num = 10000
+switch_pipeline_num = 2
+switch_max_vallen = 128
+switchos_ip = 192.168.1.208
+switchos_sample_cnt = 10
+switchos_popserver_port = 5003
+switchos_snapshotserver_port = 5004
+switchos_specialcaseserver_port = 5005
+switchos_ptf_popserver_port = 5006
+switchos_ptf_snapshotserver_port = 5007
+
+[reflector7]
+reflector_ip_for_switchos = 192.168.1.17
 reflector_dp2cpserver_port = 5008
 reflector_cp2dpserver_port = 5009
 
