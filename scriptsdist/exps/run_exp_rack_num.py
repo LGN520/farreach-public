@@ -53,39 +53,14 @@ scale_list = [16,8,2]
 ### Create json backup directory
 os.makedirs(exp1_output_path, exist_ok=True)
 
+# set dynamic_periodinterval to 5000 is enough to run 1.5M requests
+# bottleneck idx is not needed in dist-method experiment, as we do not use server rotation
 for dynamic_periodinterval in [5000]:
     for exp1_method in exp1_method_list:
         for exp1_workload in exp1_core_workload_list:
             for exp1_physical_server_scale in scale_list:
                 exp1_server_scale = int(exp1_server_scale_total / exp1_physical_server_scale)
-                # if (
-                #     # (exp1_workload == "workloadb" and exp1_method== "distreach" and exp1_physical_server_scale== 6)
-                #     # or (exp1_workload == "workloadc" and exp1_method== "distreach" and exp1_physical_server_scale== 8)
-                #     # (exp1_workload == "workloadc" and exp1_method== "distcache" and exp1_physical_server_scale== 6)
-                #     # or (exp1_workload == "workloada" and exp1_method== "distcache" and exp1_physical_server_scale== 8)
-                #     # or (exp1_workload == "workloadd" and exp1_method== "distcache" and exp1_physical_server_scale== 8)
-                #     # or (exp1_workload == "workloadb" and exp1_method== "distreach" and exp1_physical_server_scale== 8)
-                #     # or (exp1_workload == "skewness-95" and exp1_method== "distreach" and exp1_physical_server_scale== 6)
-                #     # or (exp1_workload == "uniform" and exp1_method== "distreach" and exp1_physical_server_scale== 6)
-                #     # (exp1_workload == "workload-load" and exp1_method== "distcache")
-                #     # (exp1_workload == "skewness-90" and exp1_method== "distcache" and exp1_physical_server_scale== 4)
-                #     # or (exp1_workload == "skewness-90" and exp1_method== "distcache" and exp1_physical_server_scale== 2)
-                #     # or (exp1_workload == "skewness-90" and exp1_method== "distcache" and exp1_physical_server_scale== 6)
-                #     # or (exp1_method == "distnocache" and exp1_workload != 'uniform' and exp1_workload != 'skewness-95')
-                # ):
-                #     # do it
-                #     # print('lets do it')
-                # # else:
-                #     continue
-                if (
-                    # (exp1_workload == "workloadb" and exp1_method == "distreach")
-                    # or (exp1_workload == "synthetic" and exp1_method == "distcache")
-                    # or (exp1_workload == "skewness-90" and exp1_method == "distnocache")
-                    # or (exp1_workload == "workloadc" and exp1_method == "distreach")
-                    # or (exp1_workload == "skewness-90" and exp1_method == "distreach")
-                    # or (exp1_workload == "workloadd" and exp1_method == "distcache")
-                ):
-                    continue
+               
                 print(f"[exp1][{exp1_method}][{exp1_workload}]")
                 print(f"[exp1][{exp1_method}][{exp1_workload}] run workload with {exp1_workload}servers")
                 ### Preparation
