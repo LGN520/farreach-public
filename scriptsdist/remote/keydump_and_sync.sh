@@ -16,7 +16,7 @@ fi
 tmpworkloadname=$(readini keydump/config.ini "global" "workload_name")
 
 echo "Run keydump for workload: ${tmpworkloadname}"
-cd benchmark/ycsb
+cd benchmarkdist/ycsb
 # Generate hottest/nearhot/coldest keys; calculate bottleneck serveridx; pre-generate workloads for server rotation under static pattern
 if [ "x${tmpworkloadname}" == "xworkload-load" ]
 then

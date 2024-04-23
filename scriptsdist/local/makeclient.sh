@@ -2,10 +2,10 @@ cd ..
 cd common; make all; 
 
 cd ..
-cd benchmark/inswitchcache-java-lib; 
+cd benchmarkdist/inswitchcache-java-lib; 
 bash compile.sh; 
 cd ../../
-cd benchmark/ycsb; 
+cd benchmarkdist/ycsb; 
 bash compile.sh; 
 cd ../../
 
