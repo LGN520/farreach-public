@@ -1,7 +1,7 @@
 
 [submodule "benchmarkdist"]
 	path = benchmarkdist
-	url = https://github.com/zetta-cai/benchmarkdist
+	url = git@github.com:zetta-cai/benchmarkdist
 [submodule "benchmark"]
 	path = benchmark
-	url = https://github.com/LGN520/benchmark-private.git
+	url = git@github.com:LGN520/benchmark-private
