@@ -54,7 +54,7 @@ for i in range(4):
     # SWITCHOS_LOCAL_IP.append()
 # CPU settings
 
-SERVER_WORKER_CORENUM = 1
-SERVER_TOTAL_CORENUM = 2
+server_worker_corenum = 8
+server_total_corenum = 9
 
 is_global_included = 1

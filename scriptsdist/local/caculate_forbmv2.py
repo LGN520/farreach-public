@@ -11,19 +11,21 @@ import os
 # distcache 2 synthetic
 # distcache 2 workloada
 # distnocache 2 workloada
-exp_round= 10000
+exp_round= 515
 result_path = f"/root/aeresults/exp_rack/{exp_round}"
 print(result_path)
 # print(len(os.walk(result_path)))
 for root, dirs, files in os.walk(result_path):
     for filename in files:
+        if filename.endswith("txt"):
+            continue
         method_idx = 0
         split_filename = filename.split("-")
         client0_result = filename
         client1_result = filename.replace("client0", "client1")
         method = ""
         workload = ""
-        if split_filename[-1] == "client1.out ":
+        if split_filename[-1] == "client1.out " :
             continue
         if (
             split_filename[1] == "distcache"
@@ -36,7 +38,7 @@ for root, dirs, files in os.walk(result_path):
             method_idx = 2
             workload = split_filename[0] + "-" + split_filename[1]
         method = split_filename[method_idx]
-        print(split_filename)
+        # print(split_filename)
         rack_num = int(int(split_filename[method_idx + 2]) / 2)
 
         # skip bug
@@ -80,7 +82,7 @@ for root, dirs, files in os.walk(result_path):
             sumCachehits += np.array(item["perserverCachehits"])
             sumtotalOpsdone += item["totalOpsdone"]
             serverOpsdone = serverOpsdone + np.array(item["perserverOpsdone"])
-        print(exectime)
+        # print(exectime)
 
         # sum_of_squares = np.sum(np.square(serverOpsdone))
         # sum_of_elements = np.sum(serverOpsdone)
@@ -113,4 +115,4 @@ for root, dirs, files in os.walk(result_path):
         # )
         # print(serverOpsdone.max())
         # if workload =="skewness-90" or  workload =="skewness-95" or  workload =="synthetic" or  workload =="uniform": 
-        print(method, rack_num, workload, cache_hit_rate, fairness_index,(sum_of_elements+(np.sum(sumCachehits)))/exectime)#,serverOpsdone.max())
+        print('%12s'%method, rack_num, '%15s'%workload, '%.5f'%cache_hit_rate, '%.5f'%((sum_of_elements+(np.sum(sumCachehits)))/exectime))#,serverOpsdone.max())

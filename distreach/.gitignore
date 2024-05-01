@@ -12,7 +12,6 @@ split_workload
 loader
 remote_client
 server
-recover
 *.log
 *.out*
 *.pyc

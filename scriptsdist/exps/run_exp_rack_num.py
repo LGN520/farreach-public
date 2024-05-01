@@ -48,6 +48,7 @@ exp1_core_workload_list=workload_list = [
 # exp1_physical_server_scale=8
 exp1_server_scale_total = 16 
 exp1_server_scale=16
+client_logical_num=512
 exp1_output_path=f"{EVALUATION_OUTPUT_PREFIX}/exp_rack/{args.roundidx}"
 scale_list = [16,8,2]
 ### Create json backup directory
@@ -185,9 +186,9 @@ for dynamic_periodinterval in [5000]:
                 shutil.copyfile(f"{CLIENT_ROOTPATH}/{exp1_method}/config.ini",f"{CLIENT_ROOTPATH}/{exp1_method_dic[exp1_method]}/config.ini")
                 rules=[
                     ('global','client_physical_num','1'),
-                    ('global','client_total_logical_num','512'),
-                    ('client0','client_logical_num','512'),
-                    ('client1','client_logical_num','512')
+                    ('global','client_total_logical_num',f'{client_logical_num}'),
+                    ('client0','client_logical_num',f'{client_logical_num}'),
+                    ('client1','client_logical_num',f'{client_logical_num}')
                 ]
 
                 gennewconfig(
