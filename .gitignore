@@ -11,3 +11,8 @@ ycsb.iml
 *.sh.exp*
 *.pyc
 *.out
+.distnocachebak
+.distreach
+.scriptsdist
+*.log*
+benchmarkdist/.ycsb
