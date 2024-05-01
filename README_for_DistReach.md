@@ -17,13 +17,8 @@
 	2. [Workload Analysis & Dump Keys](#22-workload-analysis--dump-keys)
 3. [Running Experiments (Automatic Evaluation)](#3-running-experiments-automatic-evaluation)
 	1. [Normal Script Usage](#31-normal-script-usage)
-	2. [Perform Single Iteration](#32-perform-single-iteration)
-4. [Running Workloads (Manual Evaluation)](#4-running-workloads-manual-evaluation)
-	1. [Dynamic Workload (No Server Rotation)](#41-dynamic-workload-no-server-rotation)
-	2. [Static Workload (Server Rotation)](#42-static-workload-server-rotation)
-5. [Aggregate Statistics (Manual Evaluation)](#5-aggregate-statistics-manual-evaluation)
-	1. [Scripts](#51-scripts)
-	2. [Usage and Example](#52-usage-and-example)
+
+
 
 
 # Contents
@@ -193,7 +188,7 @@
 
 - **Note: if you want to add any new experiment script by youself in `scriptsdist/exps/`, the script file name should NOT include the reserved strings (ycsb, server, controller, reflector, and server_rotation); otherwise, the new experiment script may be killed by itself during evaluation.**
 
-## 3.1 Normal Script Usage
+## 3.1 Script Usage
 
 - To reproduce experiments in our evaluation, we provide the following scripts under `scriptsdist/exps/`
 	+ we do not use server rotation for dist-method
@@ -216,8 +211,8 @@
 - you could use scriptsdist/exps/run_exp_rack_num.py to run static pattern experiments and scriptsdist/exps/run_exp_rack_num_dynamic.py to run dynamic pattern experiments
 	- you could modify variable in the 2 py scripts to run what you want
 
-
-   | Exp #  | Description |
+	- scriptsdist/exps/run_exp_rack_num.py
+   | Variable  | Description |
    | :---:  | --- 					|
 	|exp1_core_workload_list| the workload you want to run		|
 	|exp1_server_scale_total| the sum of servers		| 
@@ -225,7 +220,9 @@
 	|scale_list|	e.g.[16,8,2] the number of server nodes (and it also determines racks, 16 server nodes need 8 racks)|
 	|dynamic_periodintervals|e.g. [10,5000]	clients' running time	| 
 
-
-
-
-
+|#Exp|exp1_core_workload_list|scale_list|client_logical_num|exp1_server_scale_total|
+|---|---|---|---|---|
+|10 Performance analysis under multiple switches.|["workloada", "workloadb","workloadc", "workloadf", "workloadd","workload-load",]|[4]|512|16|
+|11 Impact of write ratio under multiple switches.|["skewness-95", "skewness-90","synthetic","uniform"]|[4]|512|16|
+|12 Impact of key distribution under multiple switches|["synthetic","synthetic-25","synthetic-75","workloada", "workloadc"]|[4]|512|16|
+|13 Impact of per-layer switch number|["synthetic"]|[2,4,8,16]|512|16|
