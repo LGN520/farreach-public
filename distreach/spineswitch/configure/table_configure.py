@@ -853,7 +853,8 @@ class TableConfigure:
                                 "update_vallen_tbl", "set_and_get_vallen", matchspec0
                             )
                     matchspec0 = [
-                        hex(PUTRES_SPINE_SEQ),
+                        # hex(PUTRES_SPINE_SEQ),
+                        hex(PUTREQ_INSWITCH),
                         hex(is_cached),
                         hex(validvalue),
                         hex(is_latest),
