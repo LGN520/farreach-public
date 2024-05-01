@@ -230,3 +230,7 @@
 |11 Impact of write ratio under multiple switches.|["skewness-95", "skewness-90","synthetic","uniform"]|[4]|512|16|
 |12 Impact of key distribution under multiple switches|["synthetic","synthetic-25","synthetic-75","workloada", "workloadc"]|[4]|512|16|
 |13 Impact of per-layer switch number|["synthetic"]|[2,4,8,16]|512|16|
+
+	- scriptsdist/exps/run_exp_rack_num_dynamic.py
+		- basicly the same as scriptsdist/exps/run_exp_rack_num.py
+		- different variable exp1_dynamic_rule_list ["hotin","hotout","random"]

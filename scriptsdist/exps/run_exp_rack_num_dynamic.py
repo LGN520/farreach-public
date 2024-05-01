@@ -26,10 +26,7 @@ is_bmv2 = 1
 
 # "distreach","distnocache",
 exp1_method_list=["distreach","distnocache","distcache"]
-if args.roundidx ==205 or args.roundidx ==204:
-    exp1_method_list.pop()
-if args.roundidx ==205:
-    exp1_method_list.pop()
+
 exp1_method_dic = {
     "distreach": "farreach",
     "distcache": "netcache",
@@ -60,6 +57,7 @@ scale_list = [4]
 exp1_dynamic_rule_list = ["hotin","hotout","random"]
 os.makedirs(exp1_output_path, exist_ok=True)
 
+os.system(f"cd {SWITCH_ROOTPATH}/distreach/; nohup python fake_cachepop_client.py &")
 for exp1_method in exp1_method_list:
     for exp1_rule in exp1_dynamic_rule_list:
         for exp1_physical_server_scale in scale_list:
