@@ -18,68 +18,48 @@ lastcommitid=$(git show --summary | head -n 1 | awk '{print $2}')
 # Backup submodule git files
 mkdir ../tmp-farreach
 mv .gitmodules ../tmp-farreach
-mv benchmark/.git ../tmp-farreach
+mv benchmark/.git ../tmp-farreach/benchmark.git
+mv benchmarkdist/.git ../tmp-farreach/benchmarkdist.git
 
 # Remove submodule information
 mv benchmark benchmark-tmp
+mv benchmarkdist benchmarkdist-tmp
 git submodule deinit benchmark
+git submodule deinit benchmarkdist
 git rm --cached benchmark
+git rm --cached benchmarkdist
 rm -r benchmark
+rm -r benchmarkdist
 mv benchmark-tmp benchmark
+mv benchmarkdist-tmp benchmarkdist
 git add benchmark
+git add benchmarkdist
 git add -f benchmark/output/.placeholder
+git add -f benchmarkdist/output/.placeholder
 
 # Add link for publich repo, and remove link for remote repo
 git remote add publicrepo ${publicrepo}
 
 # Remove unnecessary files from private repo (commented files are moved to ./deprecated or ./*/deprecated)
-#rm -r ./common/reserved_files
 rm -r ./deprecated
-#rm -r ./distcache
-#rm -r ./distfarreach
-#rm -r ./distnocache
-#rm -r ./failedtrials
-#rm -r ./futuretrials
-#rm -r ./ovs
-#rm -r ./tommyds-2.2
-#rm ./scripts/local/calculate_statistics_helper.py.bak.*
-#rm -r ./scripts/remote/deprecated
 rm -r ./docs
 rm -r ./farreach/deprecated
-#rm -r ./farreach/deprecated-src
-#rm -r ./farreach/deprecated-synthetic
-#rm -r ./farreach/deprecated-tofino
-#rm -r ./farreach/deprecatedscripts
-#rm -r ./farreach/tofino/deprecate
-#rm -r ./farreach/workloadparser
 rm -r ./netcache/deprecated
-#rm -r ./netcache/deprecated-src
-#rm -r ./netcache/deprecated-synthetic
-#rm -r ./netcache/deprecated-tofino
-#rm -r ./netcache/deprecatedscripts
 rm -r ./nocache/deprecated
-#rm -r ./nocache/deprecated-src
-#rm -r ./nocache/deprecated-synthetic
-#rm -r ./nocache/deprecated-tofino
-#rm -r ./nocache/deprecatedscripts
 rm evaluation-progress.md
 rm rmhistory.sh
 rm update_public_repo.sh
 rm ycsb-implementation.md
 
-## Rename benchmark.md
-#mv benchmark.md README.md
-#git add README.md
-
-# Update projects/farreach-private/ as projects/farreach-public/
-tmpfiles=($(find nocache/ netcache/ farreach/ common/ scripts/ benchmark/ -type f -name "*.sh" -o -name "*.c" -o -name "*.h" | xargs grep -r -e "farreach-private/" -e "/farreach-private" -l | grep -v "update_publich_repo.sh"))
+# Update projects/farreach-private/ as projects/distreach/
+tmpfiles=($(find nocache/ distnocache/ netcache/ distcache/ farreach/ distreach/ common/ scripts/ scriptsbmv2/ scriptsdist/ benchmark/ -type f -name "*.sh" -o -name "*.c" -o -name "*.h" | xargs grep -r -e "farreach-private/" -e "/farreach-private" -l | grep -v "update_publich_repo.sh"))
 echo "${tmpfiles}"
 # In Linux
-echo "${tmpfiles}" | xargs sed -i 's!/farreach-private!/farreach-public!g'
-echo "${tmpfiles}" | xargs sed -i 's!farreach-private/!farreach-public/!g'
+echo "${tmpfiles}" | xargs sed -i 's!/farreach-private!/distreach!g'
+echo "${tmpfiles}" | xargs sed -i 's!farreach-private/!distreach/!g'
 # In MacOS
-#echo "${tmpfiles}" | xargs sed -i '' 's!/farreach-private!/farreach-public!g'
-#echo "${tmpfiles}" | xargs sed -i '' 's!farreach-private/!farreach-public/!g'
+#echo "${tmpfiles}" | xargs sed -i '' 's!/farreach-private!/distreach!g'
+#echo "${tmpfiles}" | xargs sed -i '' 's!farreach-private/!distreach/!g'
 
 # Commit
 git commit -am 're-organize for public repo'
@@ -95,13 +75,18 @@ git reset --hard ${lastcommitid}
 
 # Resume submodule git files
 mv ../tmp-farreach/.gitmodules ./
-mv ../tmp-farreach/.git benchmark/
+mv ../tmp-farreach/benchmark.git benchmark/
+mv ../tmp-farreach/benchmarkdist.git benchmarkdist/
 rm -r ../tmp-farreach
 
 # Resume submodule
 git submodule init
 git submodule update
 cd benchmark
+git checkout master
+git reset --hard HEAD
+cd ..
+cd benchmarkdist
 git checkout master
 git reset --hard HEAD
 cd ..
