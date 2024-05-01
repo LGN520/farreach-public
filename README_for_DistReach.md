@@ -214,23 +214,22 @@
 - Scripts for different experiments
 - you could use scriptsdist/exps/run_exp_rack_num.py to run static pattern experiments and scriptsdist/exps/run_exp_rack_num_dynamic.py to run dynamic pattern experiments
 	- you could modify variable in the 2 py scripts to run what you want
-
+	- scriptsdist/exps/run_exp_rack_num_dynamic.py
+		- basicly the same as scriptsdist/exps/run_exp_rack_num.py
+		- variable exp1_dynamic_rule_list = ["hotin","hotout","random"]
 	- scriptsdist/exps/run_exp_rack_num.py
    | Variable  | Description |
-   | :---:  | --- 					|
+   | :---:  | ---|
 	|exp1_core_workload_list| the workload you want to run		|
 	|exp1_server_scale_total| the sum of servers		| 
 	|client_logical_num| the number of logical clients			|
 	|scale_list|	e.g.[16,8,2] the number of server nodes (and it also determines racks, 16 server nodes need 8 racks)|
-	|dynamic_periodintervals|e.g. [10,5000]	clients' running time	| 
+	|dynamic_periodintervals|e.g. [10,5000]	clients' running time(s)	| 
+|#Exp|exp1_core_workload_list|scale_list|client_logical_num|exp1_server_scale_total|dynamic_periodintervals|
+|---|---|---|---|---|-|
+|10 Performance analysis under multiple switches.|["workloada", "workloadb","workloadc", "workloadf", "workloadd","workload-load",]|[4]|512|16|[1800]|
+|11 Impact of write ratio under multiple switches.|["skewness-95", "skewness-90","synthetic","uniform"]|[4]|512|16|[1800]|
+|12 Impact of key distribution under multiple switches|["synthetic","synthetic-25","synthetic-75","workloada", "workloadc"]|[4]|512|16|[1800]|
+|13 Impact of per-layer switch number|["synthetic"]|[2,4,8,16]|512|16|[1800]|
 
-|#Exp|exp1_core_workload_list|scale_list|client_logical_num|exp1_server_scale_total|
-|---|---|---|---|---|
-|10 Performance analysis under multiple switches.|["workloada", "workloadb","workloadc", "workloadf", "workloadd","workload-load",]|[4]|512|16|
-|11 Impact of write ratio under multiple switches.|["skewness-95", "skewness-90","synthetic","uniform"]|[4]|512|16|
-|12 Impact of key distribution under multiple switches|["synthetic","synthetic-25","synthetic-75","workloada", "workloadc"]|[4]|512|16|
-|13 Impact of per-layer switch number|["synthetic"]|[2,4,8,16]|512|16|
 
-	- scriptsdist/exps/run_exp_rack_num_dynamic.py
-		- basicly the same as scriptsdist/exps/run_exp_rack_num.py
-		- different variable exp1_dynamic_rule_list ["hotin","hotout","random"]
