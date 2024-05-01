@@ -75,8 +75,8 @@ git reset --hard ${lastcommitid}
 
 # Resume submodule git files
 mv ../tmp-farreach/.gitmodules ./
-mv ../tmp-farreach/benchmark.git benchmark/
-mv ../tmp-farreach/benchmarkdist.git benchmarkdist/
+mv ../tmp-farreach/benchmark.git benchmark/.git
+mv ../tmp-farreach/benchmarkdist.git benchmarkdist/.git
 rm -r ../tmp-farreach
 
 # Resume submodule
