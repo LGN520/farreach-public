@@ -15,8 +15,8 @@
 2. [Data Preparation](#2-data-preparation)
 	1. [Loading Phase](#21-loading-phase)
 	2. [Workload Analysis & Dump Keys](#22-workload-analysis--dump-keys)
-3. [Running Experiments (Automatic Evaluation)](#3-running-experiments-automatic-evaluation)
-	1. [Normal Script Usage](#31-normal-script-usage)
+3. [Running Experiments](#3-running-experiments)
+	1. [Script Usage](#31-script-usage)
 
 
 
@@ -43,18 +43,21 @@
 </br>
 
 - Network configuration and topology(in mininet)
+	+ you can refer to {method}/configs/config.ini.dynamic for more details. If you want to conduct a larger scale (more than 8 racks), you need to modify these files first.
 	+ All clients/servers/switch are in the same local area network (NOT bypass {switch} data plane)
 		* Main client: 192.168.1.1
 		* Secondary client: 192.168.1.2
 		* First server (co-located with controller): 192.168.1.3
 		* Second server: 192.168.1.4
-		* Nat host: 192.168.1.5
-		* Bmv2 switch OS: 192.168.1.6(as Bmv2 only simulate the data plane, we need to use an extra virtual node to play the role of switchos)
+		* ...... (multiple servers and controllers)
+		* Bmv2 switch OS: 192.168.1.201(as Bmv2 only simulate the data plane, we need to use an extra virtual node to play the role of switchos)
+		* ......(multiple switch OS)
 	+ bypass {switch} data plane
 		* Main client: 10.0.1.1
 		* Secondary client: 10.0.1.2
 		* First server: 10.0.1.3
 		* Second server: 10.0.1.4
+		* ......(multiple servers)
 	+ Testbed topology of programmable-switch-based network (bypass {switch} data plane)
 		* Main client (NIC: h1-eth0; MAC: 00:00:0a:00:01:01) <-> Bmv2 switch (front panel port: 1/0)
 		* Secondary client (NIC: h2-eth0; MAC: 00:00:0a:00:01:02) <-> Bmv2 switch (front panel port: 2/0)
@@ -181,7 +184,8 @@
 			- To complete this step quickly, you do not need to perform it on the mininet virtual node. You can perform it directly on the host machine.
 			- Update workload\_name as {workload} in `keydump/config.ini`
 				- Note: you do NOT need to change configurations related with server rotation scales (i.e., server\_total\_logical\_num and server\_total\_logical\_num\_for_rotation) in `keydump/config.ini`, which is NOT used here
-			- Run `bash scriptsdist/remote/keydump_and_sync.sh` to dump workload-related information (e.g., hot keys and bottleneck serveridx)
+			- Update {max_load_batch_size} and {load_batch_size} in `keydump/config.ini`. (e.g 40000 for 4 per-layer switches * 10000 records in cache) 
+			- Run `python scriptsdist/keydump_for_all.py` to dump workload-related information (e.g., hot keys and bottleneck serveridx)
   
 
 # 3 Running Experiments 
