@@ -53,10 +53,10 @@ exp1_output_path=f"{EVALUATION_OUTPUT_PREFIX}/exp_rack/{args.roundidx}"
 scale_list = [16,8,2]
 ### Create json backup directory
 os.makedirs(exp1_output_path, exist_ok=True)
-
+dynamic_periodintervals =[5000]
 # set dynamic_periodinterval to 5000 is enough to run 1.5M requests
 # bottleneck idx is not needed in dist-method experiment, as we do not use server rotation
-for dynamic_periodinterval in [5000]:
+for dynamic_periodinterval in dynamic_periodintervals:
     for exp1_method in exp1_method_list:
         for exp1_workload in exp1_core_workload_list:
             for exp1_physical_server_scale in scale_list:
