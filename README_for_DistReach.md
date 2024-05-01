@@ -218,6 +218,7 @@
 		- basicly the same as scriptsdist/exps/run_exp_rack_num.py
 		- variable exp1_dynamic_rule_list = ["hotin","hotout","random"]
 	- scriptsdist/exps/run_exp_rack_num.py
+	
    | Variable  | Description |
    | :---:  | ---|
 	|exp1_core_workload_list| the workload you want to run		|
