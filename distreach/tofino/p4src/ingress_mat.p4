@@ -414,7 +414,7 @@ action forward_backup(bit<9> eport){
 }
 
 action update_backup_to_backupack(bit<9> eport,bit<48> client_mac,bit<48>reflector_mac,bit<32>client_ip,bit<32>reflector_ip){
-	hdr.op_hdr.optype = BACKUPACK;
+	hdr.op_hdr.optype = BACKUP;
 	ig_tm_md.ucast_egress_port = eport;
 	hdr.ethernet_hdr.srcAddr=client_mac;
 	hdr.ethernet_hdr.dstAddr=reflector_mac;
@@ -445,5 +445,4 @@ table special_ig_port_forward_tbl {
 	default_action = NoAction();
 	size = 18;
 }
-
 

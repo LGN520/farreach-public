@@ -34,65 +34,61 @@
 
 #include "common_impl.h"
 
+template <class key_t, class val_t>
+class RevoverPkttofino : public Packet<key_t> {  // op_hdr +  vallen&value + shadowtype + seq + inswitch_hdr + frequenccy +  validvalue
+   public:
+    RevoverPkttofino() {}
+    RevoverPkttofino(method_t methodid, key_t key, val_t val);
+    RevoverPkttofino(method_t methodid, const char* data, uint32_t recv_size);
 
-template<class key_t, class val_t>
-class RevoverPkt : public Packet<key_t> { // op_hdr +  vallen&value + shadowtype + seq + inswitch_hdr + frequenccy +  validvalue
-	public:
-		RevoverPkt();
-		RevoverPkt(method_t methodid, key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
-		RevoverPkt(method_t methodid, const char * data, uint32_t recv_size);
+    val_t val() const {
+        return _val;
+    }
 
-		val_t val() const;
+    virtual uint32_t serialize(char* const data, uint32_t max_size);
+    uint32_t seq() { return _seq; }
+    uint32_t largevalueseq() { return _largevalueseq; }
+    uint32_t cache_frequency() { return _cache_frequency; }
+    uint16_t reg_meta_clientsid() { return _reg_meta_clientsid; }
+    uint8_t validvalue() { return _validvalue; }
 
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-        uint32_t seq(){return _seq;}
-        uint32_t largevalueseq(){return _largevalueseq;}
-        uint32_t cache_frequency() {return _cache_frequency;}
-    	uint32_t largevalueseq() {return _largevalueseq;}
-		uint16_t reg_meta_clientsid() {return _reg_meta_clientsid;}
-        uint8_t validvalue(){return _validvalue;}
-    
-        int is_cached(){return (_reg_meta_clientsid & 0x4000) >> 14;}
-        int is_deleted(){return (_reg_meta_clientsid & 0x0004) >> 2;}
-        int is_latest(){return (_reg_meta_clientsid & 0x0002) >> 1;}
-        int is_found(){return (_reg_meta_clientsid) & 1;}
-	protected:
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-		val_t _val;
-        uint32_t _seq;
-        uint32_t _largevalueseq;
-        uint32_t _cache_frequency;
-    	uint32_t _largevalueseq;
-		uint16_t _reg_meta_clientsid;
-        uint8_t _validvalue;
+    int is_cached() { return (_reg_meta_clientsid & 0x4000) >> 14; }
+    int is_deleted() { return (_reg_meta_clientsid & 0x0004) >> 2; }
+    int is_latest() { return (_reg_meta_clientsid & 0x0002) >> 1; }
+    int is_found() { return (_reg_meta_clientsid) & 1; }
+
+    uint16_t freeidx() { return _idx; }
+
+   protected:
+    virtual uint32_t size();
+    virtual void deserialize(const char* data, uint32_t recv_size);
+    val_t _val;
+    uint32_t _seq = 0;
+    uint32_t _largevalueseq = 0;
+    uint32_t _cache_frequency = 0;
+    uint16_t _reg_meta_clientsid = 0;
+    uint16_t _idx = 0;
+    uint8_t _validvalue = 0;
 };
 
-
-
-// RecoverPkt
+// RevoverPkttofino
 
 template <class key_t, class val_t>
-RecoverPkt<key_t, val_t>::RecoverPkt(method_t methodid, key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat)
-    : CachePopInswitch<key_t, val_t>(methodid, key, val, seq, freeidx, stat) {
-    this->_type = optype_t(packet_type_t::BACKUP);
-    this->cache_frequency = 0;
-    this->largevalueseq = 0;
-    this->vallen = 0;
-    this->reg_meta = 0;
+RevoverPkttofino<key_t, val_t>::RevoverPkttofino(method_t methodid, key_t key, val_t val)
+    : Packet<key_t>(methodid, packet_type_t::BACKUP, key), _val(val) {
+    // this->_type = optype_t(packet_type_t::BACKUP);
     INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
-    INVARIANT(seq >= 0);
-    INVARIANT(freeidx >= 0);
 }
 
 template <class key_t, class val_t>
-RecoverPkt<key_t, val_t>::RecoverPkt(method_t methodid, const char* data, uint32_t recvsize) {
+RevoverPkttofino<key_t, val_t>::RevoverPkttofino(method_t methodid, const char* data, uint32_t recvsize) {
     this->_methodid = methodid;
     this->deserialize(data, recvsize);
 }
 
 template <class key_t, class val_t>
-uint32_t RecoverPkt<key_t, val_t>::serialize(char* const data, uint32_t max_size) {
+uint32_t RevoverPkttofino<key_t, val_t>::serialize(char* const data, uint32_t max_size) {
+    // op_hdr +  vallen&value + shadowtype + seq + inswitch_hdr + frequenccy +  validvalue
     char* begin = data;
     uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
     begin += tmp_ophdrsize;
@@ -103,80 +99,116 @@ uint32_t RecoverPkt<key_t, val_t>::serialize(char* const data, uint32_t max_size
     uint32_t bigendian_seq = htonl(this->_seq);
     memcpy(begin, (void*)&bigendian_seq, sizeof(uint32_t));  // little-endian to big-endian
     begin += sizeof(uint32_t);
-    if (this->_methodid == FARREACH_ID) {  // seq_hdr.snapshot_token
+    if (this->_methodid == FARREACH_ID) {  // seq_hdr.largevalueseq
         // printf("[debug]\n");
         bigendian_seq = htonl(0);
         memcpy(begin, (void*)&bigendian_seq, sizeof(uint32_t));  // little-endian to big-endian
         begin += sizeof(uint32_t);
     }
+    // inswitch_hdr
     int tmp_inswitch_prev_bytes = Packet<key_t>::get_inswitch_prev_bytes(this->_methodid);
     memset(begin, 0, tmp_inswitch_prev_bytes);  // the first bytes of inswitch_hdr
     begin += tmp_inswitch_prev_bytes;
-    uint16_t bigendian_freeidx = htons(uint16_t(this->_freeidx));
+
+    uint16_t bigendian_freeidx = htons(uint16_t(this->_idx));
     memcpy(begin, (void*)&bigendian_freeidx, sizeof(uint16_t));  // little-endian to big-endian
     begin += sizeof(uint16_t);
-    memcpy(begin, (void*)&this->_stat, sizeof(bool));
-    begin += sizeof(bool);               // stat_hdr.stat
-    memset(begin, 0, sizeof(uint16_t));  // stat_hdr.nodeidx_foreval
-    begin += sizeof(uint16_t);
-    begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
-    // mark 0 for backup_hdr
-    memset(begin, 0, sizeof(uint32_t));
+
+    // frequenccy
+    uint32_t bigendian_frequenccy = htons(uint32_t(this->_cache_frequency));
+    memcpy(begin, (void*)&bigendian_frequenccy, sizeof(uint32_t));  // little-endian to big-endian
     begin += sizeof(uint32_t);
-    memset(begin, 0, sizeof(uint32_t));
-    begin += sizeof(uint32_t);
-    memset(begin, 0, sizeof(uint32_t));
-    begin += sizeof(uint32_t);
+
+    // validvalue
+    uint8_t bigendian_validvalue = htons(uint8_t(this->_validvalue));
+    memcpy(begin, (void*)&bigendian_validvalue, sizeof(uint8_t));  // little-endian to big-endian
+    begin += sizeof(uint8_t);
+    // // memcpy(begin, (void*)&this->_stat, sizeof(bool));
+    // begin += sizeof(bool);               // stat_hdr.stat
+    // memset(begin, 0, sizeof(uint16_t));  // stat_hdr.nodeidx_foreval
+    // begin += sizeof(uint16_t);
+    // begin += Packet<key_t>::get_stat_padding_bytes(this->_methodid);
+    // // mark 0 for backup_hdr
+    // memset(begin, 0, sizeof(uint32_t));
+    // begin += sizeof(uint32_t);
+    // memset(begin, 0, sizeof(uint32_t));
+    // begin += sizeof(uint32_t);
+    // memset(begin, 0, sizeof(uint32_t));
+    // begin += sizeof(uint32_t);
     return uint32_t(begin - data);
 }
 template <class key_t, class val_t>
-void RecoverPkt<key_t, val_t>::deserialize(const char* data, uint32_t recv_size) {
+void RevoverPkttofino<key_t, val_t>::deserialize(const char* data, uint32_t recv_size) {
+    // op_hdr +  vallen&value + shadowtype + seq + inswitch_hdr + frequenccy +  validvalue
     const char* begin = data;
     uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
     begin += tmp_ophdrsize;
     uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - uint32_t(begin - data));
     begin += tmp_valsize;
-    // memcpy((void*)&this->_seq, begin, sizeof(uint32_t));
-    // this->_seq = ntohl(this->_seq);  // Big-endian to little-endian
-    // begin += sizeof(uint32_t);
     // skip shadowtype
     begin += sizeof(uint16_t);
-    // skip seq
+    // seq
+    memcpy((void*)&this->_seq, begin, sizeof(uint32_t));
+    this->_seq = ntohl(this->_seq);
     begin += sizeof(uint32_t);
+    memcpy((void*)&this->_largevalueseq, begin, sizeof(uint32_t));
+    this->_largevalueseq = ntohl(this->_largevalueseq);
     begin += sizeof(uint32_t);
-    // skip inswitch hdr 5*32
-    int tmp_inswitch_prev_bytes = Packet<key_t>::get_inswitch_prev_bytes(this->_methodid);
-    begin += tmp_inswitch_prev_bytes;
-    memcpy((void*)&this->_freeidx, begin, sizeof(uint16_t));
-    this->_seq = ntohl(this->_freeidx);  // Big-endian to little-endian
+    // inswitch_hdr
+    memcpy((void*)&this->_reg_meta_clientsid, begin, sizeof(uint16_t));
+    this->_reg_meta_clientsid = ntohs(this->_reg_meta_clientsid);
     begin += sizeof(uint16_t);
-    // skip stat
+
+    int tmp_inswitch_prev_bytes = Packet<key_t>::get_inswitch_prev_bytes(this->_methodid);
+    begin += (tmp_inswitch_prev_bytes - sizeof(uint16_t));
+
+    memcpy((void*)&this->_idx, begin, sizeof(uint16_t));
+
+    this->_idx = ntohs(this->_idx);
+    // printf("%d\n",this->_idx);
+    begin += sizeof(uint16_t);
+    //  frequenccy +  validvalue
+    memcpy((void*)&this->_cache_frequency, begin, sizeof(uint32_t));
+    this->_cache_frequency = ntohl(this->_cache_frequency);
     begin += sizeof(uint32_t);
+    memcpy((void*)&this->_validvalue, begin, sizeof(uint8_t));
+    this->_largevalueseq = ntohl(this->_validvalue);
+    // begin += sizeof(uint8_t);
+    // // skip inswitch hdr 5*32
+    // int tmp_inswitch_prev_bytes = Packet<key_t>::get_inswitch_prev_bytes(this->_methodid);
+    // begin += tmp_inswitch_prev_bytes;
+    // memcpy((void*)&this->_freeidx, begin, sizeof(uint16_t));
+    // this->_seq = ntohl(this->_freeidx);  // Big-endian to little-endian
+    // begin += sizeof(uint16_t);
+    // // skip stat
+    // begin += sizeof(uint32_t);
     // deserialize backup
     // cache_frequency 32
-    memcpy((void*)&this->cache_frequency, begin, sizeof(uint32_t));
-    this->_seq = ntohl(this->cache_frequency);  // Big-endian to little-endian
-    begin += sizeof(uint32_t);
+    // memcpy((void*)&this->cache_frequency, begin, sizeof(uint32_t));
+    // this->_seq = ntohl(this->cache_frequency);  // Big-endian to little-endian
+    // begin += sizeof(uint32_t);
 
-    // largevalueseq 32
-    memcpy((void*)&this->largevalueseq, begin, sizeof(uint32_t));
-    this->_seq = ntohl(this->largevalueseq);  // Big-endian to little-endian
-    begin += sizeof(uint32_t);
-    // vallen 16
-    memcpy((void*)&this->vallen, begin, sizeof(uint16_t));
-    this->_seq = ntohl(this->vallen);  // Big-endian to little-endian
-    begin += sizeof(uint16_t);
-    // reg_meta 16
-    memcpy((void*)&this->reg_meta, begin, sizeof(uint16_t));
-    this->_seq = ntohl(this->reg_meta);  // Big-endian to little-endian
+    // // largevalueseq 32
+    // memcpy((void*)&this->largevalueseq, begin, sizeof(uint32_t));
+    // this->_seq = ntohl(this->largevalueseq);  // Big-endian to little-endian
+    // begin += sizeof(uint32_t);
+    // // vallen 16
+    // memcpy((void*)&this->vallen, begin, sizeof(uint16_t));
+    // this->_seq = ntohl(this->vallen);  // Big-endian to little-endian
+    // begin += sizeof(uint16_t);
+    // // reg_meta 16
+    // memcpy((void*)&this->reg_meta, begin, sizeof(uint16_t));
+    // this->_seq = ntohl(this->reg_meta);  // Big-endian to little-endian
     begin += sizeof(uint16_t);
 }
 template <class key_t, class val_t>
-uint32_t RecoverPkt<key_t, val_t>::size() {  // unused
+uint32_t RevoverPkttofino<key_t, val_t>::size() {  // unused
     return 0;
     // return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES + backup_hdr;
     // return Packet<key_t>::get_ophdrsize(this->_methodid) + sizeof(uint16_t) + val_t::SWITCH_MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + Packet<key_t>::get_inswitch_prev_bytes(this->_methodid) + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + Packet<key_t>::get_stat_padding_bytes(this->_methodid) + sizeof(uint32_t) * 3;
 }
+
+typedef RevoverPkttofino<netreach_key_t, val_t> recoverpkt_t_t;
 // 流程
 // [x] send recover start
 // switchos send key & idx 使用SWITCHOS_ADD_CACHE_LOOKUP
@@ -187,7 +219,7 @@ uint32_t RecoverPkt<key_t, val_t>::size() {  // unused
 
 // recover worker
 // [x]读取队列
-// 发送给switch RecoverPkt
+// 发送给switch RevoverPkttofino
 // 批量发
 
 // recover server
@@ -228,12 +260,13 @@ int recover_thread_count = 0;
 void* run_recover_server(void* param);
 void* run_recover_worker(void* param);
 void* main_recover(void* param);
-
+inline uint32_t serialize_remove_cache_lookup(char* buf, netreach_key_t key);
 inline uint32_t serialize_add_cache_lookup(char* buf, netreach_key_t key, uint16_t freeidx);
 void prepare_recover();
 
 bool volatile switchos_running = false;
 bool volatile main_recover_finish = false;
+bool volatile key_recover_finish = false;
 // 一个server 收key
 // 一个worker 发recover包
 int main() {
@@ -262,6 +295,9 @@ int main() {
     // recover();
     while (!main_recover_finish) {
     }
+    while (!key_recover_finish) {
+    }
+    
     switchos_running = false;
     printf("[recover] stop\n");
     void* status;
@@ -380,15 +416,16 @@ void* main_recover(void* param) {
     // printf("[Statistics] persist server: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
     // fflush(stdout);
     main_recover_finish = true;
+    while(!key_recover_finish){}
     close(recover_start_end_udpsock);
     pthread_exit(nullptr);
 }
 
 void prepare_recover() {
     // prepare recover
-    prepare_udpserver(recover_server_for_switchos_udpsock, true, recover_server_port, "switchos.recoversync", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);
+    prepare_udpserver(recover_server_for_switchos_udpsock, true, recover_server_port, "switchos.recoversync", 0, 1000);
     create_udpsock(recover_start_end_udpsock, true, "recover.start_end", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);
-    create_udpsock(recover_worker_for_switch_udpsock, true, "recover.worker", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);  //, 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);
+    create_udpsock(recover_worker_for_switch_udpsock, false, "recover.worker");  //, 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);
     create_udpsock(recover_popworker_popclient_for_ptf_udpsock, false, "recover.popworker.popclient_for_ptf");
     create_udpsock(fake_client_udpsock, true, "recover.fake.client", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);
 
@@ -420,7 +457,11 @@ void* run_recover_worker(void* param) {
     struct sockaddr_in client_addr;
     set_sockaddr(client_addr, inet_addr(client_ips[0]), 5008);  // port 没用反正会回来
     socklen_t client_addrlen = sizeof(struct sockaddr_in);
-
+   int tmpudpsock_for_reflector = -1;
+    create_udpsock(tmpudpsock_for_reflector, true, "switchos.recover.udpsock_for_reflector", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS);  // to reduce snapshot latency
+    sockaddr_in reflector_cp2dpserver_addr;
+    set_sockaddr(reflector_cp2dpserver_addr, inet_addr(reflector_ip_for_switchos), reflector_cp2dpserver_port);
+    int reflector_cp2dpserver_addr_len = sizeof(struct sockaddr);
     char ptfbuf[MAX_BUFSIZE];
     uint32_t ptf_sendsize = 0;
     int ptf_recvsize = 0;
@@ -453,8 +494,8 @@ void* run_recover_worker(void* param) {
             udprecvfrom(recover_server_for_switchos_udpsock, buf, MAX_BUFSIZE, 0, &switchos_recover_client_addr, &switchos_recover_client_addrlen, recvsize, "switchos.popserver");
 
             controltype = ((int*)buf)[0];
-            printf("[debug][recover_server]recv a packte %d %d\n", controltype, htonl(controltype));
-            fflush(stdout);
+            // printf("[debug][recover_server]recv a packte %d %d\n", controltype, htonl(controltype));
+            // fflush(stdout);
             if (controltype == EMPTY_CACHE_LOOKUP) {
                 // empty entry
                 idx_cached_is_recovered[((int*)buf)[1]] = true;
@@ -471,11 +512,11 @@ void* run_recover_worker(void* param) {
                 // 写进去
                 struct recover_key_idx* tmp_recover_key_idx = (struct recover_key_idx*)malloc(sizeof(struct recover_key_idx));
                 // printf("[debug][recover_server] gen tmp_recover_key_idx %d\n", recvsize);
-                dump_buf(buf, recvsize);
+                // dump_buf(buf, recvsize);
                 int keysize = tmp_recover_key_idx->recoverkey.deserialize(buf + sizeof(int), recvsize - sizeof(int) - sizeof(uint16_t));
                 tmp_recover_key_idx->idx = *(uint16_t*)(buf + recvsize - sizeof(uint16_t));
                 idx_cached_key[tmp_recover_key_idx->idx] = tmp_recover_key_idx;
-
+                // printf("%d\n",tmp_recover_key_idx->idx);
                 // 打标记
                 ((int*)buf)[0] = SWITCHOS_ADD_CACHE_LOOKUP_ACK;
                 udpsendto(recover_server_for_switchos_udpsock, buf, sizeof(int), 0, &switchos_recover_client_addr, switchos_recover_client_addrlen, "switchos.recover.popack");
@@ -490,27 +531,32 @@ void* run_recover_worker(void* param) {
         printf("[Statistics] fetch key: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
         fflush(stdout);
 
+        CUR_TIME(recover_t1);
         // 2.send switch recover pkt
         while (recover_ack_num < switch_kv_bucket_num) {
             // send switch recover pkt
             // NOTE: for tofino switch is not the bottleneck, no need for step
-            uint32_t  step = switch_kv_bucket_num;
+            // switch_kv_bucket_num = 1000;
+            uint32_t step = std::min((uint32_t)1000,switch_kv_bucket_num);
             for (uint32_t start = 0; start < switch_kv_bucket_num; start += step) {
                 for (int i = start; i < std::min(switch_kv_bucket_num, start + step); i++) {
                     if (idx_cached_is_recovered[i] == true)
                         continue;
                     if (idx_cached_key[i] == NULL) {
+                        // dump_buf()
                         printf("[error] wrong free of unrecover record\n");
                         exit(-1);
                     }
                     val_t tmp_val;
                     uint32_t tmp_seq = 0;
-                    recoverpkt_t tmp_recoverpkt(CURMETHOD_ID, idx_cached_key[i]->recoverkey, tmp_val, tmp_seq, idx_cached_key[i]->idx, 0);
+                    recoverpkt_t_t tmp_recoverpkt(CURMETHOD_ID, idx_cached_key[i]->recoverkey, tmp_val);
+
+                    // recoverpkt_t_t tmp_recoverpkt();
                     pktsize = tmp_recoverpkt.serialize(pktbuf, MAX_BUFSIZE);
                     udpsendto(recover_worker_for_switch_udpsock, pktbuf, pktsize, 0, &client_addr, client_addrlen, "recover.send");
                 }
-                printf("[debug] send switch recover pkt wait for ack\n");
-                fflush(stdout);
+                // printf("[debug] send switch recover pkt wait for ack\n");
+                // fflush(stdout);
                 // wait for ack
                 // loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
                 bool is_timeout = false;
@@ -518,30 +564,37 @@ void* run_recover_worker(void* param) {
                 while (true) {
                     is_timeout = udprecvfrom(recover_server_for_switchos_udpsock, buf, MAX_BUFSIZE, 0, &switchos_recover_client_addr, &switchos_recover_client_addrlen, recvsize, "switchos.popserver");
                     if (unlikely(is_timeout)) {
+                        // printf("timeout\n");
                         break;
                     }
+                    // dump_buf(buf,recvsize);
                     controltype = ((int*)buf)[0];
-                    if ((htonl(((uint16_t*)buf)[0]) >> 16) == uint16_t(packet_type_t::BACKUPACK)) {
-                        recoverpkt_t tmp_recoverpkt(CURMETHOD_ID, buf, recvsize);
+                    if ((htonl(((uint16_t*)buf)[0]) >> 16) == uint16_t(packet_type_t::BACKUP)) {
+                        recoverpkt_t_t tmp_recoverpkt(CURMETHOD_ID, buf, recvsize);
                         if (idx_cached_is_recovered[tmp_recoverpkt.freeidx()] == true)  // solved pkt
                             continue;
-                        printf("[debug] tmp_recoverpkt %x\n", tmp_recoverpkt.freeidx());
+                        // printf("[debug] tmp_recoverpkt %x\n", tmp_recoverpkt.freeidx());
                         //  switch recovered
                         //  send to switchos pop server
                         // NOTE: + 10000 to simulate .since we only have 1 switch
-                        ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_recoverpkt.key(), tmp_recoverpkt.freeidx() + 10000);
-                        udpsendto(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
-                        udprecvfrom(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
-                        INVARIANT(*((int*)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK);  // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
+                        // if (recover_ack_num == switch_kv_bucket_num - 1)
+                        //     ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_recoverpkt.key(), 20000);
+                        // else
+                        // ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_recoverpkt.key(), tmp_recoverpkt.freeidx() + switch_kv_bucket_num);
+                        // udpsendto(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+                        // // printf("[debug] send  %x\n", tmp_recoverpkt.freeidx());
+                        // udprecvfrom(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
+                        // INVARIANT(*((int*)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK);  // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
                         // store it and wait to do persistent to server
-                        idx_cached_meta[tmp_recoverpkt.freeidx()] = tmp_recoverpkt.getreg_meta();
+                        // printf("[debug] store it and wait to do persistent to server %x %d %d %d %d\n",tmp_recoverpkt.reg_meta_clientsid(), tmp_recoverpkt.is_cached(),tmp_recoverpkt.is_deleted(),tmp_recoverpkt.is_found(),tmp_recoverpkt.is_latest());
+                        idx_cached_meta[tmp_recoverpkt.freeidx()] = tmp_recoverpkt.is_cached() & (!tmp_recoverpkt.is_deleted()) & (tmp_recoverpkt.is_found()) & tmp_recoverpkt.is_latest();
                         idx_cached_val[tmp_recoverpkt.freeidx()] = tmp_recoverpkt.val();
 
                         // persistent_ack_num++;
                         recover_ack_num++;
                         idx_cached_is_recovered[tmp_recoverpkt.freeidx()] = true;
 
-                        free(idx_cached_key[tmp_recoverpkt.freeidx()]);  // successfully recover a record
+                        // free(idx_cached_key[tmp_recoverpkt.freeidx()]);  // successfully recover a record
                         if (recover_ack_num >= switch_kv_bucket_num)
                             break;
                     } else {
@@ -559,11 +612,37 @@ void* run_recover_worker(void* param) {
         }
         CUR_TIME(recover_t2);
         DELTA_TIME(recover_t2, recover_t1, recover_t3);
-        printf("[Statistics] recover switch: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
+        printf("[Statistics] load data from switch: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
         fflush(stdout);
-
+        // minic crash
+        for(int i= 0;i< switch_kv_bucket_num;i++){
+            ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, idx_cached_key[i]->recoverkey);
+            udpsendto(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+            udprecvfrom(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
+        }
+        sleep(2);
+        CUR_TIME(recover_t1);
+        for (int i = 0; i < switch_kv_bucket_num; i++) {
+            recoverpkt_t tmp_recoverpkt(CURMETHOD_ID, idx_cached_key[i]->recoverkey, idx_cached_val[i], 0, idx_cached_key[i]->idx, true,false);
+            pktsize = tmp_recoverpkt.serialize(pktbuf, MAX_BUFSIZE);
+            udpsendto(recover_worker_for_switch_udpsock, pktbuf, pktsize, 0, &client_addr, client_addrlen, "recover.send");
+            
+            ptf_sendsize = serialize_add_cache_lookup(ptfbuf,idx_cached_key[i]->recoverkey,i);
+            udpsendto(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+            // udprecvfrom(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
+            // INVARIANT(*((int*)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK);  // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
+            setvalid_inswitch_t tmp_setvalid_req(CURMETHOD_ID, idx_cached_key[i]->recoverkey, i, 1);
+            pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
+            udpsendto(tmpudpsock_for_reflector, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.recover.udpsock_for_reflector");
+        
+        }
+        CUR_TIME(recover_t2);
+        DELTA_TIME(recover_t2, recover_t1, recover_t3);
+        printf("[Statistics] recover switch: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
+         
         printf("[debug] do persistence in server\n");
         // 3.do persistence in server
+        CUR_TIME(recover_t1);
         for (int i = 0; i < switch_kv_bucket_num; i++) {
             if (idx_cached_is_persist[i] == true)
                 continue;
@@ -571,18 +650,18 @@ void* run_recover_worker(void* param) {
                 printf("[error] wrong free of unrecover record\n");
                 exit(-1);
             }
-            if (idx_cached_meta[i] != 0x4140) {
-                // printf("[debug] outdated item skip\n");
-                idx_cached_is_persist[i] = true;
-                persistent_ack_num++;
-            } else if (idx_cached_meta[i] == 0x4140) {
+            // if (idx_cached_meta[i] != 1) {
+            //     // printf("[debug] outdated item skip\n");
+            //     idx_cached_is_persist[i] = true;
+            //     persistent_ack_num++;
+            // } else if (idx_cached_meta[i] == 1) {
                 put_request_seq_t req(CURMETHOD_ID, idx_cached_key[i]->recoverkey, idx_cached_val[i], 0);
                 req_size = req.serialize(buf, MAX_BUFSIZE);
                 int server_idx = idx_cached_key[i]->recoverkey.get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
                 // dump_buf(buf,req_size);
                 // printf("[debug] send persistent %d req_size%d\n", server_idx, req_size);
                 while (true) {
-                    udpsendto(fake_client_udpsock, pktbuf, pktsize, 0, &server_addrs[server_idx], server_addrlen, "recover.client");
+                    udpsendto(fake_client_udpsock, buf, req_size, 0, &server_addrs[server_idx], server_addrlen, "recover.client");
 
                     bool is_timeout = false;
                     is_timeout = udprecvfrom(fake_client_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "recover.client");
@@ -593,21 +672,38 @@ void* run_recover_worker(void* param) {
                 }
                 idx_cached_is_recovered[i] = true;
                 persistent_ack_num++;
-                free(idx_cached_key[i]);
-            }
+                // free(idx_cached_key[i]);
+            // }
         }
         CUR_TIME(recover_t2);
         DELTA_TIME(recover_t2, recover_t1, recover_t3);
         printf("[Statistics] persist server: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
         fflush(stdout);
         // end of recover
+        
+        // 3.key_recover_finish
+        // CUR_TIME(recover_t1);
+        // while (true) {
+        //     udprecvfrom(recover_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
+        //         // break;
+        //     dump_buf(ptfbuf,ptf_recvsize);
+        //     break;
+        // }
+        // CUR_TIME(recover_t2);
+        // DELTA_TIME(recover_t2, recover_t1, recover_t3);
+        // printf("[Statistics] admit key: %f s w/ cache size %d\n", GET_MICROSECOND(recover_t3) / 1000.0 / 1000.0, switch_kv_bucket_num);
+        // fflush(stdout);
+        key_recover_finish = true;
         break;
     }
+
+
     printf("[recover server] exit\n");
     // switchos_popserver_finish = true;
     close(fake_client_udpsock);
     close(recover_popworker_popclient_for_ptf_udpsock);
     close(recover_server_for_switchos_udpsock);
+    close(tmpudpsock_for_reflector);
     printf("[recover worker] exit\n");
     close(recover_worker_for_switch_udpsock);
     pthread_exit(nullptr);
@@ -617,4 +713,9 @@ inline uint32_t serialize_add_cache_lookup(char* buf, netreach_key_t key, uint16
     uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
     memcpy(buf + sizeof(int) + tmp_keysize, &freeidx, sizeof(uint16_t));
     return sizeof(int) + tmp_keysize + sizeof(uint16_t);
+}
+inline uint32_t serialize_remove_cache_lookup(char* buf, netreach_key_t key) {
+    memcpy(buf, &SWITCHOS_REMOVE_CACHE_LOOKUP, sizeof(int));
+    uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
+    return sizeof(int) + tmp_keysize;
 }

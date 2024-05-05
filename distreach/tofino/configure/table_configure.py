@@ -512,15 +512,15 @@ class TableConfigure(BfRuntimeTest):
 		# update_cache_evict_inswitch_forward_to_cache_evict_inswitch;
 		# forward_backup;
 		# update_backup_to_backupack;
+        # keys.append(self.special_ig_port_forward_tbl.make_key(
+        #         [gc.KeyTuple('hdr.op_hdr.optype', BACKUP),
+        #          gc.KeyTuple('ig_intr_md.ingress_port', self.reflector_devport),
+        #         ]))
+        # datas.append(self.special_ig_port_forward_tbl.make_data(
+        #     [gc.DataTuple('eport', int(self.recir_devports[0]))],'farreachIngress.forward_backup'))
         keys.append(self.special_ig_port_forward_tbl.make_key(
                 [gc.KeyTuple('hdr.op_hdr.optype', BACKUP),
                  gc.KeyTuple('ig_intr_md.ingress_port', self.reflector_devport),
-                ]))
-        datas.append(self.special_ig_port_forward_tbl.make_data(
-            [gc.DataTuple('eport', int(self.recir_devports[0]))],'farreachIngress.forward_backup'))
-        keys.append(self.special_ig_port_forward_tbl.make_key(
-                [gc.KeyTuple('hdr.op_hdr.optype', BACKUP),
-                 gc.KeyTuple('ig_intr_md.ingress_port', int(self.recir_devports[1])),
                 ]))
         datas.append(self.special_ig_port_forward_tbl.make_data(
             [gc.DataTuple('eport', self.reflector_devport),
@@ -528,7 +528,18 @@ class TableConfigure(BfRuntimeTest):
              gc.DataTuple('reflector_mac', self.reflector_mac_for_switch),
              gc.DataTuple('client_ip', client_ips[0]),
              gc.DataTuple('reflector_ip', self.reflector_ip_for_switch)],
-            'farreachIngress.update_backup_to_backupack'))
+            'farreachIngress.update_backup_to_backup'))
+        keys.append(self.special_ig_port_forward_tbl.make_key(
+                [gc.KeyTuple('hdr.op_hdr.optype', BACKUPACK),
+                 gc.KeyTuple('ig_intr_md.ingress_port', self.reflector_devport),
+                ]))
+        datas.append(self.special_ig_port_forward_tbl.make_data(
+            [gc.DataTuple('eport', self.reflector_devport),
+             gc.DataTuple('client_mac', client_macs[0]),
+             gc.DataTuple('reflector_mac', self.reflector_mac_for_switch),
+             gc.DataTuple('client_ip', client_ips[0]),
+             gc.DataTuple('reflector_ip', self.reflector_ip_for_switch)],
+            'farreachIngress.update_backup_to_backup'))
         self.special_ig_port_forward_tbl.entry_add(self.target, keys, datas)
 
 
@@ -2084,4 +2095,3 @@ class TableConfigure(BfRuntimeTest):
         # Table: drop_tbl (default: NoAction	; size = 2)
         print("Configuring forward_tbl")
         # self.configure_forward_tbl()
-
