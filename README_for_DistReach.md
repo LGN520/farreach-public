@@ -21,15 +21,17 @@
 
 
 
+
+
 # Contents
 
 ## 0 Overview
 
 ### 0.1 Methods
 
-- farreach: our in-switch write-back caching
-- nocache: a baseline without in-switch caching
-- netcache: a baseline with in-switch write-through caching
+- DistReach: our in-switch write-back caching under multi-switchs settting
+- Distnocache: a baseline without in-switch caching under multi-switchs settting
+- Distcache: a baseline with in-switch write-through caching under multi-switchs settting
 
 ### 0.2 Our Testbed
 
@@ -42,32 +44,30 @@
 
 </br>
 
-- Network configuration and topology(in mininet)
-	+ you can refer to {method}/configs/config.ini.dynamic for more details. If you want to conduct a larger scale (more than 8 racks), you need to modify these files first.
+- Network configuration and topology (in mininet)
 	+ All clients/servers/switch are in the same local area network (NOT bypass {switch} data plane)
 		* Main client: 192.168.1.1
 		* Secondary client: 192.168.1.2
 		* First server (co-located with controller): 192.168.1.3
 		* Second server: 192.168.1.4
 		* ...... (multiple servers and controllers)
-		* Bmv2 switch OS: 192.168.1.201(as Bmv2 only simulate the data plane, we need to use an extra virtual node to play the role of switchos)
-		* ......(multiple switch OS)
+		* Bmv2 switch OS: 192.168.1.201 (as Bmv2 only simulate the data plane, we need to use an extra virtual node to play the role of switchos)
+		* ...... (multiple switch OS)
 	+ bypass {switch} data plane
 		* Main client: 10.0.1.1
 		* Secondary client: 10.0.1.2
 		* First server: 10.0.1.3
 		* Second server: 10.0.1.4
-		* ......(multiple servers)
+		* ...... (multiple servers)
 	+ Testbed topology of programmable-switch-based network (bypass {switch} data plane)
 		* Main client (NIC: h1-eth0; MAC: 00:00:0a:00:01:01) <-> Bmv2 switch (front panel port: 1/0)
 		* Secondary client (NIC: h2-eth0; MAC: 00:00:0a:00:01:02) <-> Bmv2 switch (front panel port: 2/0)
 		* First server (NIC: h3-eth0; MAC: 00:00:0a:00:01:03) <-> Bmv2 switch (front panel port: 3/0)
 		* Second server (NIC: h4-eth0; MAC: 00:00:0a:00:01:04) <-> Bmv2 switch (front panel port: 4/0)
 		* Bmv2 doesn't need in-switch cross-pipeline recirculation
-
+	+ You can refer to {method}/configs/config.ini.dynamic for more details. 
 # 1 System Preparation
 
-- **Note: system preparation has already been done in our AE testbed, so AEC members do NOT need to re-execute the following steps.**
 
 ## 1.1 Dependency Installation
 + Python 3.8.10
@@ -98,18 +98,18 @@
 
 | Dependencies repo  | Version |
 | --- | --- |
-| [protobuf](https://github.com/protocolbuffers/protobuf) | 3.18 |
-| [grpc](https://github.com/grpc/grpc) |  1.43 |
-| [PI](https://github.com/p4lang/PI) | v0.1 |
-| [bmv2](https://github.com/p4lang/behavioral-model) | 1.15 |
-| [p4c](https://github.com/p4lang/p4c) | Latest |
-| [mininet](https://github.com/mininet/mininet)  | Latest |
+| [protobuf] (https://github.com/protocolbuffers/protobuf) | 3.18 |
+| [grpc] (https://github.com/grpc/grpc) |  1.43 |
+| [PI] (https://github.com/p4lang/PI) | v0.1 |
+| [bmv2] (https://github.com/p4lang/behavioral-model) | 1.15 |
+| [p4c] (https://github.com/p4lang/p4c) | Latest |
+| [mininet] (https://github.com/mininet/mininet)  | Latest |
 
 | bmv2_deps repo | Version |
 | --- | --- | 
 | nnpy | pip install nnpy |
-| [nanomsg](https://github.com/nanomsg/nanomsg/releases/tag/1.) | 1.0.0 |
-| [thrift](https://github.com/apache/thrift/releases/tag/0.11.0) | 0.11.0 |
+| [nanomsg] (https://github.com/nanomsg/nanomsg/releases/tag/1.) | 1.0.0 |
+| [thrift] (https://github.com/apache/thrift/releases/tag/0.11.0) | 0.11.0 |
 
 ## 1.2 Configuration Settings
 - It is best not to change our configuration files at will. The experimental script will automatically modify part of them at runtime.
@@ -125,7 +125,7 @@
 		+ `cd rocksdb-6.22.1`
 		+ `PORTABLE=1 make static_lib`
 			* We already comment -Wstrict-prototype and -Werror in RocksDB's Makefile to fix compilation errors due to strict-alias warning
-			* We use PORTABLE=1 to fix runtime error of illegal instruction when open()
+			* We use PORTABLE=1 to fix runtime error of illegal instruction when open ()
 		+ For each method (farreach or nocache or netcache)
 			* Run `mkdir /tmp/{method}` to prepare the directory (e.g., /tmp/farreach) for database in advance
 			* use /tmp/farreach for distreach, /tmp/netcache for distcache, /tmp/nocache for distnocache
@@ -140,12 +140,11 @@
 
 # 2 Data Preparation
 
-- **Note: data preparation has already been done in our AE testbed, so AEC members do NOT need to re-execute the following steps.**
 
 ## 2.1 Loading Phase
 
 - Perform the loading phase and backup for evaluation time reduction (**TIME: around 40 minutes**; **ONLY need to perform once**)
-	+ Dataset(100M records) is approximately 16GB
+	+ Dataset (100M records) is approximately 16GB
 	+ Modify these options in `recordload/config.ini`
 		- \[server0\]: server_ip:127.0.0.1
 		- \[client0\]: client_ip:127.0.0.1
@@ -208,16 +207,16 @@
 
 - Note: if you encouter any other problem, you can **keep the critical information and contact us if available (sysheng21@cse.cuhk.edu.hk) for help**
 	- The causes of problem may be testbed mis-configuration, script mis-usage, resource confliction, bmv2 hardware bugs, and our code bugs
-	- The critical information should include: command history of terminal, dumped information of scripts, log files generated by scripts(e.g., `{method}/tmp\_\*.out` in servers and switch, `benchmark/ycsb/tmp\_\*.out` in clients, and `{method}/Bmv2/tmp\_\*.out` in switch), and raw statistics generated by YCSB clients (e.g., `benchmark/ycsb/{method}-statistics/`)
+	- The critical information should include: command history of terminal, dumped information of scripts, log files generated by scripts (e.g., `{method}/tmp\_\*.out` in servers and switch, `benchmark/ycsb/tmp\_\*.out` in clients, and `{method}/Bmv2/tmp\_\*.out` in switch), and raw statistics generated by YCSB clients (e.g., `benchmark/ycsb/{method}-statistics/`)
 
 </br>
 
 - Scripts for different experiments
-- you could use scriptsdist/exps/run_exp_rack_num.py to run static pattern experiments and scriptsdist/exps/run_exp_rack_num_dynamic.py to run dynamic pattern experiments
-	- you could modify variable in the 2 py scripts to run what you want
+- You could use scriptsdist/exps/run_exp_rack_num.py to run static pattern experiments and scriptsdist/exps/run_exp_rack_num_dynamic.py to run dynamic pattern experiments
+	- You could modify variable in the 2 py scripts to run what you want
 	- scriptsdist/exps/run_exp_rack_num_dynamic.py
 		- basicly the same as scriptsdist/exps/run_exp_rack_num.py
-		- variable exp1_dynamic_rule_list = ["hotin","hotout","random"]
+		- set the variable {exp1_dynamic_rule_list} (e.g. = ["hotin","hotout","random"])
 	- scriptsdist/exps/run_exp_rack_num.py
 
    | Variable  | Description |
@@ -226,7 +225,7 @@
 	|exp1_server_scale_total| the sum of servers		| 
 	|client_logical_num| the number of logical clients			|
 	|scale_list|	e.g.[16,8,2] the number of server nodes (and it also determines racks, 16 server nodes need 8 racks)|
-	|dynamic_periodintervals|e.g. [10,5000]	clients' running time(s)	| 
+	|dynamic_periodintervals|e.g. [10,5000]	clients' running time (s)	| 
 |#Exp|exp1_core_workload_list|scale_list|client_logical_num|exp1_server_scale_total|dynamic_periodintervals|
 |---|---|---|---|---|-|
 |10 Performance analysis under multiple switches.|["workloada", "workloadb","workloadc", "workloadf", "workloadd","workload-load",]|[4]|512|16|[1800]|
@@ -235,11 +234,10 @@
 |13 Impact of per-layer switch number|["synthetic"]|[2,4,8,16]|512|16|[1800]|
 
 
-## 3.2 recovery time exp
-- in the folder distreach/ has 2 file recover.c (bmv2 recover) and recover_tofino.c (tofino recover)
-- you only need to start the switch and run any experiments (or just warmup the switch)
-- and then, you exec the following cmd on the host which runs controller
+## 3.2 Special for recovery time exp
+- In the folder distreach/ has 2 file recover.c (bmv2 recover) and recover_tofino.c (tofino recover).
+- You only need to start the switch and run any experiments (or just warmup the switch).
+- And then, you exec the following cmd on the host which runs controller to get results.
 ```
 ./recover (or ./recover_tofino)
 ```
-- you can get the results of recover
