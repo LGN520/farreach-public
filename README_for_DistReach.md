@@ -66,6 +66,8 @@
 		* Second server (NIC: h4-eth0; MAC: 00:00:0a:00:01:04) <-> Bmv2 switch (front panel port: 4/0)
 		* Bmv2 doesn't need in-switch cross-pipeline recirculation
 	+ You can refer to {method}/configs/config.ini.dynamic for more details. 
+	+ If you want to modify the network configuration and topology, you need to modify  {method}/configs/config.ini.dynamic and  {method}/leafswitch/network.py. And you can check the setting with mininet cli after you start the topology.
+
 # 1 System Preparation
 
 
