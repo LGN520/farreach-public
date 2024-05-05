@@ -235,3 +235,11 @@
 |13 Impact of per-layer switch number|["synthetic"]|[2,4,8,16]|512|16|[1800]|
 
 
+## 3.2 recovery time exp
+- in the folder distreach/ has 2 file recover.c (bmv2 recover) and recover_tofino.c (tofino recover)
+- you only need to start the switch and run any experiments (or just warmup the switch)
+- and then, you exec the following cmd on the host which runs controller
+```
+./recover (or ./recover_tofino)
+```
+- you can get the results of recover
