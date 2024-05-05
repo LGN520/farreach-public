@@ -1,0 +1,30 @@
+[2][hotin][0]
+average bwcost of entire control plane: 0.0283073802817 MiB/s
+[2][hotin][2500]
+average bwcost of entire control plane: 1.33397721429 MiB/s
+[2][hotin][5000]
+average bwcost of entire control plane: 0.730040466667 MiB/s
+[2][hotin][7500]
+average bwcost of entire control plane: 0.3745222 MiB/s
+[2][hotin][10000]
+average bwcost of entire control plane: 0.316866375 MiB/s
+[2][hotout][0]
+average bwcost of entire control plane: 0.0222953648649 MiB/s
+[2][hotout][2500]
+average bwcost of entire control plane: 1.48729762963 MiB/s
+[2][hotout][5000]
+average bwcost of entire control plane: 0.6868866 MiB/s
+[2][hotout][7500]
+average bwcost of entire control plane: 0.4137102 MiB/s
+[2][hotout][10000]
+average bwcost of entire control plane: 0.331161875 MiB/s
+[2][random][0]
+average bwcost of entire control plane: 0.0234291408451 MiB/s
+[2][random][2500]
+average bwcost of entire control plane: 1.37316807407 MiB/s
+[2][random][5000]
+average bwcost of entire control plane: 0.6997494 MiB/s
+[2][random][7500]
+average bwcost of entire control plane: 0.4283397 MiB/s
+[2][random][10000]
+average bwcost of entire control plane: 0.31946025 MiB/s

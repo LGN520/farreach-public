@@ -1,6 +1,0 @@
-fieldlength=128
-fieldcount=1
-fieldlengthdistribution=constant
-threads=10
-recordcount=1000000
-operationcount=1000000
