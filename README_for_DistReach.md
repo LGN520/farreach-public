@@ -30,8 +30,8 @@
 ### 0.1 Methods
 
 - DistReach: our in-switch write-back caching under multi-switchs settting
-- Distnocache: a baseline without in-switch caching under multi-switchs settting
-- Distcache: a baseline with in-switch write-through caching under multi-switchs settting
+- DistNoCache: a baseline without in-switch caching under multi-switchs settting
+- DistCache: a baseline with in-switch write-through caching under multi-switchs settting
 
 ### 0.2 Our Testbed
 

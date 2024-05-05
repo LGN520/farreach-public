@@ -36,9 +36,9 @@
 
 ### 0.1 Methods
 
-- farreach: our in-switch write-back caching
-- nocache: a baseline without in-switch caching
-- netcache: a baseline with in-switch write-through caching
+- FarReach: our in-switch write-back caching
+- NoCache: a baseline without in-switch caching
+- NetCache: a baseline with in-switch write-through caching
 
 ### 0.2 Our Testbed
 
