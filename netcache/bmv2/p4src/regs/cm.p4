@@ -79,7 +79,7 @@ action update_cm3() {
 	if(cm3_res >= hdr.inswitch_hdr.hot_threshold){
 		meta.meta.cm3_predicate = 2;
 	}
-	cm1_reg.write((bit<32>)hdr.inswitch_hdr.hashval_for_cm3,cm3_res+1);
+	cm3_reg.write((bit<32>)hdr.inswitch_hdr.hashval_for_cm3,cm3_res+1);
 }
 
 action initialize_cm3_predicate() {
@@ -108,7 +108,7 @@ action update_cm4() {
 	if(cm4_res >= hdr.inswitch_hdr.hot_threshold){
 		meta.meta.cm4_predicate = 2;
 	}
-	cm1_reg.write((bit<32>)hdr.inswitch_hdr.hashval_for_cm4,cm4_res+1);
+	cm4_reg.write((bit<32>)hdr.inswitch_hdr.hashval_for_cm4,cm4_res+1);
 }
 
 action initialize_cm4_predicate() {
