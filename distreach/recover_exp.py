@@ -142,6 +142,7 @@ def main():
             # Step 5: Execute /simu_failure on server0
             print("Executing ./simu_failure on server0...")
             execute_command(client0, "./simu_failure",Distreach_home)
+            time.sleep(30)
             # Step 6: Execute ./simu_recover_switch on server0
             print("Executing ./simu_recover_switch on server0...")
             output = execute_command(client0, "./simu_recover_switch",Distreach_home)
