@@ -239,7 +239,8 @@
 ## 3.2 Special for recovery time exp
 - In the folder distreach/ has 2 file recover.c (bmv2 recover) and recover_tofino.c (tofino recover).
 - You only need to start the switch and run any experiments (or just warmup the switch).
+- Then, you should run 'simu_recover_prepare' in folder `distreach`
 - And then, you exec the following cmd on the host which runs controller to get results.
 ```
-./recover (or ./recover_tofino)
+python3 recover_exp.py {number of switches} # may be 1 3 5 7 to simulate crashes under 2 4 6 8 switches
 ```

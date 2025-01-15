@@ -209,6 +209,7 @@ class TableConfigure(BfRuntimeTest):
         for client_fpport in client_fpports:
             port, chnl = client_fpport.split("/")
             devport = int(port)
+            print(devport)
             self.port_table.entry_add(
                 self.target,
                 [self.port_table.make_key([gc.KeyTuple('$DEV_PORT', devport)])],
@@ -517,29 +518,33 @@ class TableConfigure(BfRuntimeTest):
         #          gc.KeyTuple('ig_intr_md.ingress_port', self.reflector_devport),
         #         ]))
         # datas.append(self.special_ig_port_forward_tbl.make_data(
-        #     [gc.DataTuple('eport', int(self.recir_devports[0]))],'farreachIngress.forward_backup'))
-        keys.append(self.special_ig_port_forward_tbl.make_key(
-                [gc.KeyTuple('hdr.op_hdr.optype', BACKUP),
-                 gc.KeyTuple('ig_intr_md.ingress_port', self.reflector_devport),
-                ]))
-        datas.append(self.special_ig_port_forward_tbl.make_data(
-            [gc.DataTuple('eport', self.reflector_devport),
-             gc.DataTuple('client_mac', client_macs[0]),
-             gc.DataTuple('reflector_mac', self.reflector_mac_for_switch),
-             gc.DataTuple('client_ip', client_ips[0]),
-             gc.DataTuple('reflector_ip', self.reflector_ip_for_switch)],
-            'farreachIngress.update_backup_to_backup'))
-        keys.append(self.special_ig_port_forward_tbl.make_key(
-                [gc.KeyTuple('hdr.op_hdr.optype', BACKUPACK),
-                 gc.KeyTuple('ig_intr_md.ingress_port', self.reflector_devport),
-                ]))
-        datas.append(self.special_ig_port_forward_tbl.make_data(
-            [gc.DataTuple('eport', self.reflector_devport),
-             gc.DataTuple('client_mac', client_macs[0]),
-             gc.DataTuple('reflector_mac', self.reflector_mac_for_switch),
-             gc.DataTuple('client_ip', client_ips[0]),
-             gc.DataTuple('reflector_ip', self.reflector_ip_for_switch)],
-            'farreachIngress.update_backup_to_backup'))
+        #     [gc.DataTuple('eport', self.reflector_devport)],'farreachIngress.forward_backup'))
+        for tmp_server_physical_idx in range(server_physical_num):
+            tmp_devport = self.server_devports[tmp_server_physical_idx]
+            tmp_server_mac = server_macs[tmp_server_physical_idx]
+            tmp_server_ip = server_ips[tmp_server_physical_idx]
+            keys.append(self.special_ig_port_forward_tbl.make_key(
+                    [gc.KeyTuple('hdr.op_hdr.optype', BACKUPACK),
+                    gc.KeyTuple('ig_intr_md.ingress_port', tmp_devport),
+                    ]))
+            datas.append(self.special_ig_port_forward_tbl.make_data(
+                [gc.DataTuple('eport', self.reflector_devport),
+                gc.DataTuple('client_mac', client_macs[0]),
+                gc.DataTuple('reflector_mac', tmp_server_mac),
+                gc.DataTuple('client_ip', client_ips[0]),
+                gc.DataTuple('reflector_ip', tmp_server_ip)],
+                'farreachIngress.update_backup_to_backupack'))
+            keys.append(self.special_ig_port_forward_tbl.make_key(
+                    [gc.KeyTuple('hdr.op_hdr.optype', BACKUP),
+                    gc.KeyTuple('ig_intr_md.ingress_port', tmp_devport),
+                    ]))
+            datas.append(self.special_ig_port_forward_tbl.make_data(
+                [gc.DataTuple('eport', self.reflector_devport),
+                gc.DataTuple('client_mac', client_macs[0]),
+                gc.DataTuple('reflector_mac', tmp_server_mac),
+                gc.DataTuple('client_ip', client_ips[0]),
+                gc.DataTuple('reflector_ip', tmp_server_ip)],
+                'farreachIngress.update_backup_to_backupack'))
         self.special_ig_port_forward_tbl.entry_add(self.target, keys, datas)
 
 
@@ -2095,3 +2100,4 @@ class TableConfigure(BfRuntimeTest):
         # Table: drop_tbl (default: NoAction	; size = 2)
         print("Configuring forward_tbl")
         # self.configure_forward_tbl()
+
