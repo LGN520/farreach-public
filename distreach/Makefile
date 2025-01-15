@@ -129,6 +129,31 @@ SWITCH_TARGETS :=
 SERVER_TARGETS := 
 
 
+simu_failure: simu_failure.c $(UTILS_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += simu_failure.d
+CLEAN += simu_failure.o
+CLIENT_TARGETS += simu_failure
+simu_recover_load_persist: simu_recover_load_persist.c $(UTILS_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += simu_recover_load_persist.d
+CLEAN += simu_recover_load_persist.o
+CLIENT_TARGETS += simu_recover_load_persist
+simu_recover_prepare: simu_recover_prepare.c $(UTILS_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += simu_recover_prepare.d
+CLEAN += simu_recover_prepare.o
+CLIENT_TARGETS += simu_recover_prepare
+# simu_recover_server: simu_recover_server.c $(UTILS_OBJECTS)
+# 	$(LINK) $^ $(LDLIBS) -o $@
+# DEPS += simu_recover_server.d
+# CLEAN += simu_recover_server.o
+# CLIENT_TARGETS += simu_recover_server
+simu_recover_switch: simu_recover_switch.c $(UTILS_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += simu_recover_switch.d
+CLEAN += simu_recover_switch.o
+CLIENT_TARGETS += simu_recover_switch
 
 warmup_client: warmup_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
@@ -156,11 +181,11 @@ CLEAN += controller.o
 SERVER_TARGETS += controller
 
 
-recover: recover.o $(UTILS_OBJECTS)
+recover_tofino: recover_tofino.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += recover.d
-CLEAN += recover.o
-SERVER_TARGETS += recover
+DEPS += recover_tofino.d
+CLEAN += recover_tofino.o
+SERVER_TARGETS += recover_tofino
 
 # 1: 1.o $(UTILS_OBJECTS)
 # 	$(LINK) $^ $(LDLIBS) -o $@
