@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 with open(
-    "/root/P4/farreach-private/benchmarkdist/output/latest-statistics/farreach-hotin-client1.out"
+    "/root/farreach-private/benchmarkdist/output/latest-statistics/farreach-hotin-client1.out"
 ) as f:
     python_dict = json.load(f)
 
@@ -40,7 +40,7 @@ print('cache hit ratio',np.sum(sumCachehits) / sumtotalOpsdone)
 print(f"Jain's fairness index: {fairness_index}")
 # Jain's fairness index: 0.9357433921326883
 with open(
-    "/root/P4/farreach-private/benchmarkdist/output/latest-statistics/farreach-hotin-client0.out"
+    "/root/farreach-private/benchmarkdist/output/latest-statistics/farreach-hotin-client0.out"
 ) as f:
     python_dict = json.load(f)
 
